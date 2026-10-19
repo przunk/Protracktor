@@ -64,9 +64,12 @@ fun RandomScreen(
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    onReroll: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding)
+        RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding, onReroll = onReroll, active = state.randomMode)
+        Text(stringResource(R.string.random_double_tap_hint), style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = SESSION_HEADER_EDGE, vertical = 4.dp))
 
         if (state.randomPicks.isEmpty()) {
             // Two different empties, and telling them apart is the whole of this branch. "Rolling"
@@ -75,8 +78,11 @@ fun RandomScreen(
             // screen that says "Rolling…" for ever while nothing arrives is a screen telling lies.
             Text(
                 text = stringResource(
-                    if (state.randomExhausted) R.string.random_nothing_to_pick
-                    else R.string.random_rolling
+                    when {
+                        state.randomMode && state.loadingTrack -> R.string.random_rolling
+                        state.randomExhausted -> R.string.random_nothing_to_pick
+                        else -> R.string.random_list_empty
+                    }
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -93,7 +99,7 @@ fun RandomScreen(
             showFileName = true,
             listenedIds = state.listenedIds,
             listState = listState,
-            currentIndex = state.randomIndex.takeIf { it >= 0 },
+            currentIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode },
             onPlayAt = onPlayAt,
             onRemoveAt = onRemoveAt,
             // Nothing to reorder: the order is the dice's, and a handle that answers nothing is
@@ -137,6 +143,8 @@ private fun RandomHeader(
     browse: BrowseState,
     onFilter: () -> Unit,
     contentPadding: PaddingValues,
+    onReroll: () -> Unit,
+    active: Boolean,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -147,15 +155,10 @@ private fun RandomHeader(
             .height(SESSION_HEADER_HEIGHT)
             .padding(horizontal = SESSION_HEADER_EDGE),
     ) {
-        Icon(
-            imageVector = PlayerIcons.Dice,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(28.dp),
-        )
+        RandomDice(onReroll = onReroll)
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.random_playing_title),
+                text = stringResource(if (active) R.string.random_playing_title else R.string.domain_random_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             // What is set, not what is playing. A pick read ahead under the old scope keeps that

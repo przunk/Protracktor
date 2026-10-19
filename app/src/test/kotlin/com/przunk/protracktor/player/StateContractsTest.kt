@@ -23,21 +23,21 @@ class StateContractsTest {
     }
 
     @Test
-    fun `current track prefers transient then results then the saved queue`() {
+    fun `current track comes only from the active source independently of the visible playlist`() {
         val queued = ref("playlist")
         val result = ref("result")
         val transient = ref("transient")
         val playlist = PlayerUiState(queue = PlayQueue(listOf(queued)).startAt(0))
-        val search = playlist.copy(resultsQueue = PlayQueue(listOf(result)).startAt(0))
+        val search = playlist.copy(playback = collectionPlayback(PlayQueue(listOf(result)).startAt(0)))
         assertEquals(queued, playlist.current)
         assertEquals(result, search.current)
-        assertEquals(transient, search.copy(transient = transient).current)
+        assertEquals(transient, search.copy(playback = randomPlayback(transient)).current)
         assertNull(PlayerUiState().current)
     }
 
     @Test
     fun `an undescribed track does not show a fallback bar or offer seeking`() {
-        val waiting = PlayerUiState(transient = ref("loading"), fallbackLengthSeconds = 180)
+        val waiting = PlayerUiState(playback = randomPlayback(ref("loading")), fallbackLengthSeconds = 180)
         assertEquals(0.0, waiting.bar.seconds, 0.0)
         assertFalse(waiting.bar.approximate)
         assertFalse(waiting.seekable)
@@ -46,13 +46,13 @@ class StateContractsTest {
         assertTrue(described.bar.approximate)
         assertTrue(described.seekable)
         assertFalse(described.copy(metadata = mapOf("seekable" to "0")).seekable)
-        assertFalse(described.copy(transient = null).seekable)
+        assertFalse(described.copy(playback = null).seekable)
     }
 
     @Test
     fun `an external file has no neighbour but can navigate its subsongs`() {
         val external = PlayerUiState(
-            transient = ref("external"), externalOpen = true, subsongCount = 3,
+            playback = externalPlayback(ref("external")), subsongCount = 3,
         )
         assertFalse(external.canGoNextFile)
         assertFalse(external.canGoPreviousFile)

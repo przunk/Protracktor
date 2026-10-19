@@ -1,5 +1,39 @@
 # Architecture
 
+## Active playback queue — owner accepted, 2026-10-19
+
+Implemented on `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`
+types own file-level transport decisions outside Android. `PlayQueue` retains finite-order,
+repeat/shuffle/history rules; `RandomHistory` supplies its growing heard record and private
+speculation. `PlaybackController` executes typed steps against the existing decoder/focus/adapters.
+
+`PlayerUiState.queue` is the selected playlist's editable draft, not necessarily what is playing.
+`playback` records the active source/order. `activePlayback` links to the draft only while that
+same playlist is selected; selecting another playlist captures the old source's order and does
+not stop audio. Derived current/mode/capability properties share this single effective owner.
+`withPlayback` publishes explicit playback selection and synchronizes the source playlist cursor
+only when that playlist is visible. Playlist persistence still snapshots the selected ID/draft.
+
+Collection activation captures the loaded results and History origin; opening a folder or another
+view cannot transfer transport. Random can remain remembered while a different source plays.
+Playback intent epochs prevent a delayed Random query from stealing a newer source. Queue UI
+uses the existing track/info presentation without selection editing, removal or reordering.
+
+Device-feedback refinement (2026-10-19): Queue is a sibling of the expandable dock card, not a
+child action. Its fresh list state starts at the active cursor; `KeepRowInView` still governs later
+changes without resetting other lists on arrival. Shell Back routing follows the visible screen's
+priority (scanner, Settings, Browse, Random), with one shared callback for Random's arrow/system
+Back to Browse. This changes navigation only, never the playback owner.
+
+Schema remains 23; temporary queues/Random records remain in memory. Startup still restores the
+selected playlist paused, not every temporary source. The retained-but-unavailable AMP index guard
+preserves the parallel trial's data and must be reconciled with AMP availability when that branch
+is integrated. The temporary APK code-1221 exception has ended; new builds use the commit count.
+
+The owner accepted queue behaviour and authorized integration on 2026-10-19; normal-version cleanup
+is undergoing fresh verification before merging. This supersedes the older playback/session
+descriptions below once integrated. [Full contract and evidence](QUEUE_EXPERIMENT.md).
+
 This document records what has been decided and **why**. A decision without its reason gets
 re-litigated every few weeks, or worse, applied in a situation it was never meant for.
 

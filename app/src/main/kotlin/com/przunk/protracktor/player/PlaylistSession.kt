@@ -247,7 +247,7 @@ internal class PlaylistSession(
                 trackWrites.withLock {
                     store.replaceTracks(id, emptyList())
                     store.renamePlaylist(id, defaultPlaylistName())
-                    stopPlayback()
+                    if (state.ownsPlayback) stopPlayback()
                     state.emptyPlaylist(store::playlists)
                     invalidateTrackWrites(id)
                 }
@@ -265,7 +265,7 @@ internal class PlaylistSession(
 
     /**
      * Switches the active playlist and abandons edits after the UI has confirmed their loss.
-     * Stops playback so transport and the replacement queue refer to the same playlist.
+     * Browsing another playlist never transfers playback ownership.
      */
     fun switchToPlaylist(id: Long) {
         val generation = ++activationGeneration
@@ -274,8 +274,6 @@ internal class PlaylistSession(
         scope.launch {
             try {
                 saveNow(::current)
-                if (!current()) return@launch
-                stopPlayback()
                 if (!current()) return@launch
                 val tracks = store.tracksIn(id)
                 if (!current()) return@launch

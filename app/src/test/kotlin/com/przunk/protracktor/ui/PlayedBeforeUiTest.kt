@@ -59,6 +59,7 @@ class PlayedBeforeUiTest {
         activity.get().setContent {
             MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
                 val state = PlayerUiState(queue = PlayQueue(listOf(track)), listenedIds = heard.value,
+                    playback = if (screen == "random") com.przunk.protracktor.player.randomPlayback(track) else null,
                     randomPicks = listOf(track), randomIndex = 0, learnedTitles = titles.value)
                 when (screen) {
                     "playlist" -> PlaylistScreen(
@@ -66,7 +67,7 @@ class PlayedBeforeUiTest {
                         onPlayAt = {}, onRemoveAt = {}, onMove = { _, _ -> }, onShowNeighbours = {},
                         onShareFile = {}, onShareAudio = {}, onShareLink = {}, onSendToWeb = {},
                         onBrowse = {}, onPickDownloads = {}, canBrowse = true, stateKnown = true,
-                        onReturnToPlaylist = {}, contentPadding = PaddingValues(),
+                        contentPadding = PaddingValues(),
                     )
                     "random" -> RandomScreen(
                         state = state, browse = BrowseState(), listState = rememberLazyListState(),

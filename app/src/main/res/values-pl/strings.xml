@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="random_list_empty">Ta lista Random jest jeszcze pusta.</string>
+    <string name="queue_title">Kolejka</string>
+    <string name="queue_empty">Odtwórz utwór, aby rozpocząć kolejkę.</string>
+    <string name="queue_playlist">Playlista: %1$s</string>
+    <string name="queue_search">Wyszukiwanie: %1$s</string>
+    <string name="queue_external">Plik otwarty z innej aplikacji</string>
+    <string name="random_reroll_list">Rozpocznij nową listę Random</string>
+    <string name="random_double_tap_hint">Dotknij dwukrotnie kostki, aby wylosować nową listę</string>
+    <string name="notice_catalogue_not_in_trial">Ten katalog jest niedostępny w eksperymencie QUEUE. Jego dane pozostają zapisane dla wersji AMP.</string>
     <string name="saved_places_title">Zapisane miejsca</string>
     <string name="saved_places_body">Foldery autorów i gier, do których chcesz wrócić.</string>
     <string name="saved_places_empty">Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.</string>
@@ -23,12 +32,7 @@
     <string name="played_before_explanation">Odtwarzano przez co najmniej 5 sekund albo do końca bez przewijania lub utwór był w historii przed dodaniem tej funkcji. Wyczyszczenie historii usuwa to oznaczenie.</string>
     <string name="app_name">Protracktor</string>
 
-    <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>
-    <string name="external_playing_title">Odtwarzanie pliku z zewnątrz</string>
-    <string name="external_playing_body">Inna aplikacja podała ten plik Protracktorowi. Nic po nim nie następuje.\nPlus go zachowuje.</string>
     <string name="random_playing_title">Odtwarzanie losowe</string>
-    <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
-    <string name="random_back_to_playlist">Wróć do playlisty</string>
     <string name="random_filter">Filtr</string>
     <string name="random_rolling">Losuję…</string>
     <string name="random_nothing_to_pick">Nie ma z czego losować. Zaindeksuj katalog albo poszerz filtr.</string>
@@ -520,10 +524,4 @@
         <item quantity="many">%1$,d zostało na telefonie, który je wysłał.</item>
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
-    <string name="session_from_search">Odtwarzanie z wyszukiwania: %1$s</string>
-    <string name="session_from_folder">Odtwarzanie z: %1$s</string>
-    <string name="session_from_history">Odtwarzanie z historii</string>
-    <string name="session_body">Nic z tej playlisty nie gra. Następny i poprzedni idą po tamtej liście.</string>
-    <string name="action_back_to_list">Wróć do listy</string>
-    <string name="action_back_to_random">Wróć do losowania</string>
 </resources>

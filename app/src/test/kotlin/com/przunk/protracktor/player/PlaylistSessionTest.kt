@@ -126,7 +126,7 @@ class PlaylistSessionTest {
         gate.complete(Unit)
         drain()
         assertFalse(f.events.contains("tracks:2"))
-        assertEquals(1, f.events.count { it == "stop" })
+        assertEquals(0, f.events.count { it == "stop" })
         assertEquals(1, f.events.count { it == "resolve" })
         assertEquals(3L, f.player.value.activePlaylistId)
         assertEquals(3L, f.session.playlistId)
@@ -207,7 +207,7 @@ class PlaylistSessionTest {
         restore(f)
         val oldEdit = track("old-edit")
         val played = track("played")
-        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(oldEdit)), transient = played, dirty = true)
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(oldEdit)), playback = randomPlayback(played), dirty = true)
         val completed = mutableListOf<PlaylistHeartSave.Outcome>()
         val saver = PlaylistHeartSave(f.player,
             save = { done -> f.session.savePlaylist(done) }, resolveMetadata = {},
@@ -405,7 +405,7 @@ class PlaylistSessionTest {
         yield()
         f.player.value = f.player.value.copy(
             queue = PlayQueue(listOf(track("new")), shuffle = true, repeat = RepeatMode.PLAYLIST).startAt(0),
-            transient = track("random"), resultsQueue = PlayQueue(listOf(track("result"))).startAt(0),
+            playback = randomPlayback(track("random"), shuffle = true, repeat = RepeatMode.PLAYLIST),
             playAllSubsongs = true, fallbackLengthSeconds = 420, dirty = true,
         )
         f.browse.value = f.browse.value.copy(randomScope = RandomScope.Favourites)
@@ -436,7 +436,7 @@ class PlaylistSessionTest {
         assertEquals(listOf(1L to listOf(track("old"))), f.writes)
         assertEquals(listOf(track("new")), f.rows[2])
         assertEquals(listOf(resolved), f.player.value.queue.tracks)
-        assertEquals(listOf("save:1", "stop", "tracks:2", "lists", "resolve", "save:2", "replace:1", "lists"), f.events)
+        assertEquals(listOf("save:1", "tracks:2", "lists", "resolve", "save:2", "replace:1", "lists"), f.events)
         assertEquals(1, f.player.value.playlists.first { it.id == 1L }.trackCount)
         assertEquals(0, f.player.value.playlists.first { it.id == 2L }.trackCount)
     }
@@ -862,7 +862,7 @@ class PlaylistSessionTest {
             f.language = "pl"
             drain()
             val expectedName = if (name.isBlank()) "pl default" else name
-            assertEquals(listOf("create:$expectedName", "lists", "save:1", "stop", "tracks:99", "lists", "resolve", "save:99"), f.events)
+            assertEquals(listOf("create:$expectedName", "lists", "save:1", "tracks:99", "lists", "resolve", "save:99"), f.events)
             assertEquals(expectedName, f.player.value.activePlaylistName)
             assertEquals(99L, f.session.playlistId)
             assertTrue(f.writes.isEmpty())
@@ -894,19 +894,18 @@ class PlaylistSessionTest {
             f.player.value = f.player.value.copy(
                 queue = PlayQueue(listOf(track("a")), shuffle = true, repeat = RepeatMode.ONE),
                 playing = true, dirty = true, metadata = mapOf("title" to "Old"),
-                positionSeconds = 42.0, durationSeconds = 99.0, transient = track("random"),
+                positionSeconds = 42.0, durationSeconds = 99.0, playback = randomPlayback(track("random")),
                 subsong = 3, loadingTrack = true,
             )
             val before = f.player.value
             f.language = "pl"
             f.session.deletePlaylist(1)
             drain()
-            assertEquals(listOf("lists", "replace:1", "rename:1:pl default", "stop", "lists"), f.events)
+            assertEquals(listOf("lists", "replace:1", "rename:1:pl default", "lists"), f.events)
             assertEquals(listOf(1L to emptyList<TrackRef>()), f.writes)
             assertEquals(before.copy(
                 queue = PlayQueue(emptyList(), shuffle = true, repeat = RepeatMode.ONE),
-                playlists = f.lists.values.toList(), playing = false, dirty = false, metadata = emptyMap(),
-                positionSeconds = 0.0, durationSeconds = 0.0, message = f.player.value.message,
+                playlists = f.lists.values.toList(), dirty = false, message = f.player.value.message,
             ), f.player.value)
             assertEquals("pl:PLAYLIST_EMPTIED", f.player.value.message?.text)
             assertEquals(listOf(PlaylistSessionState.Notice.PLAYLIST_EMPTIED), f.notices)
@@ -935,14 +934,14 @@ class PlaylistSessionTest {
         restore(f)
         f.session.deletePlaylist(1)
         drain()
-        assertEquals(listOf("lists", "delete:1", "lists", "save:1", "stop", "tracks:2", "lists", "resolve", "save:2"), f.events)
+        assertEquals(listOf("lists", "delete:1", "lists", "save:1", "tracks:2", "lists", "resolve", "save:2"), f.events)
         assertEquals(2L, f.session.playlistId)
         assertEquals(listOf(track("b")), f.player.value.queue.tracks)
         assertEquals(listOf(1L, 2L), f.savedStates.map { it.activePlaylistId })
     }
 
     @Test(timeout = 5_000)
-    fun `switch saves settings before stop publishes the ID with its queue and abandons only playlist edits`() = runBlocking {
+    fun `switch preserves playback while publishing a different selected playlist and abandoning its edits`() = runBlocking {
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         val old = track("old")
@@ -952,7 +951,7 @@ class PlaylistSessionTest {
         f.player.value = f.player.value.copy(
             queue = PlayQueue(listOf(old), shuffle = true, repeat = RepeatMode.ONE).startAt(0),
             playing = true, dirty = true, metadata = mapOf("format" to "test"),
-            positionSeconds = 12.0, durationSeconds = 34.0, transient = track("random"), subsong = 2,
+            positionSeconds = 12.0, durationSeconds = 34.0, playback = randomPlayback(track("random"), shuffle = true, repeat = RepeatMode.ONE), subsong = 2,
         )
         f.onStop = { assertEquals(1L, f.session.playlistId); assertEquals("old", f.savedStates.single().currentTrackId) }
         f.before = { if (it == "tracks:2") { entered.complete(Unit); gate.await() } }
@@ -966,9 +965,9 @@ class PlaylistSessionTest {
         drain()
         assertEquals(before.copy(
             queue = PlayQueue(listOf(next), shuffle = true, repeat = RepeatMode.ONE), playlists = f.lists.values.toList(),
-            activePlaylistId = 2, playing = false, dirty = false, metadata = emptyMap(), positionSeconds = 0.0, durationSeconds = 0.0,
+            activePlaylistId = 2, dirty = false,
         ), f.player.value)
-        assertEquals(listOf("save:1", "stop", "tracks:2", "lists", "resolve", "save:2"), f.events)
+        assertEquals(listOf("save:1", "tracks:2", "lists", "resolve", "save:2"), f.events)
         assertTrue(f.writes.isEmpty())
         assertNull(f.savedStates.last().currentTrackId)
     }

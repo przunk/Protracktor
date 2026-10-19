@@ -67,17 +67,11 @@ import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
-import com.przunk.protracktor.player.SessionSource
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.TrackRef
 
-/**
- * The one real destination (`docs/OPEN_QUESTIONS.md` Q1): the active playlist.
- *
- * Not the whole library. Shuffle and repeat operate inside this list (R6), so this is also the
- * thing whose contents the user needs to see.
- */
+/** The selected playlist editor; its draft is independent of the active playback source. */
 @Composable
 fun PlaylistScreen(
     state: PlayerUiState,
@@ -105,39 +99,9 @@ fun PlaylistScreen(
      * both are wrong while the answer is still being read off the disk.
      */
     stateKnown: Boolean,
-    onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    /** Back to where the session plays from -- Random, or the list in Browse (A61). */
-    onReturnToSource: () -> Unit = {},
 ) {
-    // Random and a search both play something that is not in this list, so the list goes behind
-    // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
-    // and more portable than a blur, which needs API 31 and this app runs from 29.
-    // Random has a screen of its own now (`docs/PLAN_RANDOM.md`); the glass is for the two that
-    // still have nothing to show — a file another app handed us, and a search result playing.
-    // **Every session, Random included** (A61): Back from Random no longer ends it, so the playlist
-    // is where it is left from as well, and the cover says what plays and leads back to it.
-    if (state.awayFromPlaylist) {
-        Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(
-                state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {},
-                loadingCurrent = false, contentPadding = contentPadding, enabled = false,
-            )
-            AwayScrim(
-                source = when {
-                    state.externalMode -> Away.External
-                    state.searchMode -> state.sessionSource?.let { Away.List(it) } ?: Away.List(SessionSource.Search(""))
-                    else -> Away.Random
-                },
-                onReturnToPlaylist = onReturnToPlaylist,
-                onReturnToSource = onReturnToSource,
-                contentPadding = contentPadding,
-            )
-        }
-        return
-    }
-
     if (state.queue.tracks.isEmpty()) {
         if (stateKnown) {
             EmptyPlaylist(
@@ -165,7 +129,7 @@ fun PlaylistScreen(
     PlaylistBody(
         tracks = state.queue.tracks,
         listState = listState,
-        currentIndex = state.queue.currentIndex,
+        currentIndex = state.queue.currentIndex.takeIf { !state.awayFromPlaylist },
         onPlayAt = onPlayAt,
         onRemoveAt = onRemoveAt,
         onMove = onMove,
@@ -222,6 +186,7 @@ internal fun PlaylistBody(
      * is exactly the defect `docs/STATUS.md` C23, C30 and C31 each were.
      */
     reorderable: Boolean = true,
+    readOnly: Boolean = false,
     /**
      * What identifies a row to the list.
      *
@@ -289,7 +254,8 @@ internal fun PlaylistBody(
                 onToggle = {
                     selected = if (track.id in selected) selected - track.id else selected + track.id
                 },
-                onStartSelecting = { selected = selected + track.id },
+                onStartSelecting = { if (!readOnly) selected = selected + track.id },
+                readOnly = readOnly,
                 onPlay = { onPlayAt(index) },
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
@@ -497,6 +463,7 @@ private fun TrackRow(
      */
     dragHandleModifier: Modifier?,
     showFileName: Boolean,
+    readOnly: Boolean,
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
@@ -582,7 +549,7 @@ private fun TrackRow(
                                 )
                             }
                             ShareMenuEntry(shares) { sharing = true }
-                            DropdownMenuItem(
+                            if (!readOnly) DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete)) },
                                 leadingIcon = { Icon(PlayerIcons.Remove, contentDescription = null) },
                                 onClick = { menuOpen = false; onRemove() },
@@ -660,12 +627,12 @@ private fun TrackRow(
                 // The loose end `docs/BACKLOG.md` A8 left open: a long press with no answer feels
                 // like a press that missed, and this one silently changes what every other tap on
                 // the screen will do.
-                onLongClick = {
+                onLongClick = if (readOnly) null else ({
                     if (!selecting) {
                         haptics.gestureEnd()
                         onStartSelecting()
                     }
-                },
+                }),
             ),
     )
 }
@@ -735,100 +702,6 @@ private fun EmptyPlaylist(
                         if (canBrowse) R.string.action_browse else R.string.download_pick_open
                     )
                 )
-            }
-        }
-    }
-}
-
-/** What the cover is over: a file another app handed us, the dice, or a list in Browse (A61). */
-private sealed interface Away {
-    data object External : Away
-    data object Random : Away
-    data class List(val source: SessionSource) : Away
-}
-
-/**
- * The glass over the playlist while something else plays -- **saying truly what** (A61).
- *
- * It said "Playing from search" for a folder, for History and for a local folder too, which the
- * owner called a lie. Now it names the source and offers both ways out, each an icon with its name:
- * back to that source as it was, and back to the playlist -- the one that ends the session.
- *
- * One component for every detour, because from the playlist they are the same situation: what you
- * are hearing is not on this list. In the middle of the screen with labels rather than in a corner:
- * the playlist is covered, so there is room, and a mode you can enter but not obviously leave is a
- * trap.
- */
-@Composable
-private fun AwayScrim(
-    source: Away,
-    onReturnToPlaylist: () -> Unit,
-    onReturnToSource: () -> Unit,
-    contentPadding: PaddingValues,
-) {
-    val icon = when (source) {
-        Away.External -> PlayerIcons.Folder
-        Away.Random -> PlayerIcons.Dice
-        is Away.List -> when (source.source) {
-            is SessionSource.Search -> PlayerIcons.Search
-            is SessionSource.Folder -> PlayerIcons.Folder
-            SessionSource.History -> PlayerIcons.History
-        }
-    }
-    val title = when (source) {
-        Away.External -> stringResource(R.string.external_playing_title)
-        Away.Random -> stringResource(R.string.random_playing_title)
-        is Away.List -> when (val from = source.source) {
-            is SessionSource.Search ->
-                if (from.query.isBlank()) stringResource(R.string.search_playing_title)
-                else stringResource(R.string.session_from_search, from.query)
-            is SessionSource.Folder -> stringResource(R.string.session_from_folder, from.path)
-            SessionSource.History -> stringResource(R.string.session_from_history)
-        }
-    }
-    val body = when (source) {
-        Away.External -> stringResource(R.string.external_playing_body)
-        Away.Random -> stringResource(R.string.random_playing_body)
-        is Away.List -> stringResource(R.string.session_body)
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
-            // Swallows taps so a row underneath cannot be pressed through the glass.
-            .clickable(enabled = true, onClick = {})
-            .padding(contentPadding),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(horizontal = 24.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            // A file from another app has nowhere to go back to but here.
-            if (source !is Away.External) {
-                OutlinedButton(onClick = onReturnToSource) {
-                    IconLabel(
-                        icon,
-                        stringResource(if (source is Away.Random) R.string.action_back_to_random else R.string.action_back_to_list),
-                    )
-                }
-            }
-            Button(onClick = onReturnToPlaylist) {
-                IconLabel(PlayerIcons.Playlist, stringResource(R.string.random_back_to_playlist))
             }
         }
     }

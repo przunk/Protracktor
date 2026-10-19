@@ -1,11 +1,74 @@
 # Status
 
-Updated: 2026-10-18 — Browse stability merged; prepared release 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — QUEUE accepted for integration, normal versioning restored; prepared release 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B45 accepted — pre-merge verification, 2026-10-19
+
+The owner confirmed that Queue behaves as intended and authorized merging it into develop before
+the next iteration. Additional colleague feedback has not yet been described; no fix or severity
+is inferred. AMP work/integration is deferred until after that iteration, with its branch untouched.
+
+Pre-merge cleanup restores commit-derived versionCode for every build and removes the two unused
+search-cover strings. VersionName remains 1.2.0 until a release procedure. Existing code-1221 APKs
+remain historical; installing a new higher-code APK ends ordinary replacement by the older AMP APK.
+Do not uninstall or clear data to bypass the version check. Schema 23 and retained AMP data guards
+are unchanged. No playback or UI behaviour is modified by this cleanup.
+
+**In progress:** fresh forced full gate/lint, integration and minified normal-code APK.
+The general positive phone report is owner acceptance, not a separately reported result for every
+device checklist item. No push, master/tag change, AMP merge or store release is authorized.
+
+## B45 follow-up — four owner-reported UI refinements, 2026-10-19
+
+The owner tried the initial QUEUE build and reported a promising overall result, not merge approval.
+Queue is now a separate far-right dock action outside the expandable player card. Both Random
+Back paths return to Browse; the system handler follows visible-screen priority so an author or
+Settings over remembered Random closes first. The direct playlist shortcut remains unchanged.
+The dice hint names its double-tap target in both languages. Each fresh Queue sheet starts at the
+current row, at the top where possible; later playback changes retain shared list following.
+
+**Checked:** clean source `bc32bea`, forced full gate **535 s**, **956 tests / 128 suites**, zero
+failures/errors/skips; all companion checks passed. Lint: **0 errors / 73 unchanged warnings**.
+Minified release APK built in **107 s**:
+`dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk`, **11,830,331 bytes**.
+APK v2 signature, package/name/code, absence of the debuggable flag, R8 mapping and three engine
+ABIs were verified. Public test certificate matches the AMP reference. Regression tests detect the
+old card boundary/initial scroll and a deliberately incorrect Back priority; eight focused cases
+passed before the full gate. Four updated documents have 78 valid local links.
+
+Phone acceptance of these refinements remains **unchecked**. Version name 1.2.0/test code 1221,
+schema 23 and the AMP permission hold are unchanged. No merge or push authorized. The previous
+build below remains historical evidence; [new artifact hashes and test details](QUEUE_EXPERIMENT.md).
+
+## B45 QUEUE experiment — unmerged, ready for owner phone testing, 2026-10-18
+
+Owner-selected isolated `feature/playback-queue-experiment` from develop `9ca86ea`.
+One source-aware queue owns transport; playlist selection and navigation do not interrupt music.
+The read-only queue sheet opens fully expanded. Random keeps its record when reopened, first entry
+starts as before, and double-tapping the animated dice starts a new list; single tap has no action.
+The experiment may be rejected; no merge, push or release is authorized.
+
+The owner approved code 1221 only for this branch's test APKs to alternate with the existing AMP
+APK. Schema remains 23. Native SQLite tests confirm AMP index/playlist/History/bookmark retention,
+with retained AMP rows excluded from discovery; this branch does not implement AMP playback.
+**Checked:** clean source `da75839`, forced full gate **510 s**, **953 tests / 128 suites**,
+zero failures/errors/skips; all companion checks passed. Lint: **0 errors / 73 warnings** (one
+new unused legacy search-cover heading). Minified, non-debuggable, test-signed APK:
+`dist/protracktor-release-1.2.0-1221-da75839-20261018-235148.apk`, **11,828,663 bytes**.
+Its package/name/code/certificate match the reference AMP APK; APK v2, three engine ABIs, packaged
+source/privacy assets and R8 mapping were verified. Exact hashes and failed/reproduced/corrected
+intermediate checkpoints are recorded in the experiment report.
+
+**Unchecked:** all phone behaviour and actual AMP -> QUEUE -> AMP interchange. Temporary queues
+remain memory-only; process death restores the selected playlist paused, as before. No merge,
+push, tag change or store release occurred. Later documentation does not relabel this APK.
+Remove the temporary version override and unused legacy heading before an accepted merge.
+[Full contract, decisions and evidence](QUEUE_EXPERIMENT.md); [device checklist](TESTING.md).
 
 ## C109 — Same Game SPC cannot be played — owner report, 2026-10-18
 

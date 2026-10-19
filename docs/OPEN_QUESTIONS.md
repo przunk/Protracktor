@@ -89,25 +89,29 @@ opposite-phase material, level changes and transitions; Mono can cancel opposite
 
 ## Q13 — Playback queue and navigation
 
-**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B45.** After discussing
-the report with its author, the owner proposed an explicit active queue whose source follows
-the playback context, so returning from search/author browsing to the playlist preserves music.
-This revises A61's deliberate session-ending Playlist action. Implementation is for the future.
+**Experiment selected, 2026-10-18; owner accepted Queue and authorized integration, 2026-10-19.**
+Real user feedback B45 was originally recorded on 2026-10-13. Pre-merge cleanup and verification
+are in progress on `feature/playback-queue-experiment`. Further colleague feedback awaits details
+and a separate next iteration; no unspecified behaviour change is selected here.
 
-The desired continuity is recorded; the transition rules are not yet selected:
+The owner selected one active playback queue independent of navigation and the selected playlist.
+Selecting another playlist only displays it; playing a row activates its collection. Returning
+from Browse/Search/Random leaves music and transport ownership unchanged, without a playlist cover.
+The queue is a read-only, full-height Now Playing-like sheet with row playback and information,
+not removal/reordering. Reopening Random preserves its record and does not steal transport from
+an author collection. Next supplies ordinary new draws; double-tapping the dice starts a new
+Random record with the same filter. A single dice tap does nothing; provide help and accessibility.
+First-ever Random entry still starts automatically. C97's heard-history boundary is preserved.
 
-- Change the active queue only when a track/source is explicitly played; navigation alone keeps
-  the current queue. Provisional recommendation, because viewing another list need not replace
-  the source driving Next/Previous.
-- Switch the queue when the user enters a new context; define whether this takes effect during
-  the current track or at the next track and how it interacts with the continuity requirement.
+[Full decisions, transitions, architecture, APK interchange and tests](QUEUE_EXPERIMENT.md).
+The historical test-only code-1221 exception ended before integration; all new builds use the
+commit count. Higher-code APKs cannot ordinarily be replaced by the older AMP APK. AMP remains
+separate and deferred until after the next queue iteration; its permission hold is unchanged.
 
-Discuss how the queue is identified/shown, how the user intentionally returns playback to a
-playlist, and what happens with Random, search, author folders, History and external links.
-Settle Next/Previous, shuffle/repeat ownership, whether a queue snapshots its source or follows
-live edits/search results, end-of-queue behaviour and process/session restoration. Saved playlist
-contents must not be overwritten merely to represent another active source. No transition rule,
-UI design, migration or implementation is selected by this record.
+Unselected extensions are not included: visible speculative Random picks, new Random mode rules,
+or persistence of every temporary session across process death. Existing finite-result limits,
+playlist editing rules and paused selected-playlist restoration remain the conservative baseline.
+This experiment deliberately changes A61, rather than fixing a regression in its old contract.
 
 ---
 

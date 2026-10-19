@@ -52,57 +52,8 @@ data class PlayerUiState(
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
-    /**
-     * Playing, but not part of the playlist.
-     *
-     * What Random produces: it plays first, and keeping it is a separate decision taken after
-     * hearing it.
-     */
-    val transient: TrackRef? = null,
-    /**
-     * Whether [transient] came from outside the app — a file another app handed us.
-     *
-     * A transient track is not necessarily a random pick: a tune opened from a file manager also
-     * plays outside the playlist. Next must not roll the dice for it, and the scrim over the
-     * playlist must not say "Next picks another", because next picks nothing. One file arrived,
-     * and that is all there is.
-     */
-    val externalOpen: Boolean = false,
-    /**
-     * Playing from search results rather than from the playlist.
-     *
-     * The results become the queue while you are in them: next and previous walk what you found,
-     * and the playlist is left exactly as it was. Playing something you searched for must not
-     * rewrite the list you were keeping.
-     */
-    val resultsQueue: PlayQueue? = null,
-    /**
-     * Whether [resultsQueue] is History's list (A56). Set where a results list is made -- tapping a
-     * row, or walking into an author's folder -- and not where it is walked, so next and previous
-     * keep it. Meaningless once [resultsQueue] is gone, and [HistoryRecording] never reads it then.
-     */
-    val resultsFromHistory: Boolean = false,
-    /**
-     * A Random session waiting under a digression (`docs/BACKLOG.md` A41).
-     *
-     * "More from this author" from the dice moves playback to that folder; the record and the
-     * cursor stay where they are, and this says there is something to go back to. Back out of the
-     * folder returns to it; a playlist, an external file or a link end it for good.
-     */
-    val diceWaiting: Boolean = false,
-    /**
-     * A search waiting under a digression: "More from this author" from its results, the owner's
-     * "identically" to [diceWaiting] (2026-09-24). Back out of the author's folder returns to the
-     * results, their words and their scope as they were.
-     */
-    val searchWaiting: Boolean = false,
-    /**
-     * Which list in Browse is playing, for the playlist's cover to name and lead back to (A61).
-     * Meaningful while [searchMode] -- a list is what plays -- and set where a list starts playing.
-     */
-    val sessionSource: SessionSource? = null,
-    /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
-    val randomHasPrevious: Boolean = false,
+    /** The only playback owner; queue remains the selected playlist's editable draft. */
+    val playback: ActiveQueue? = null,
     /**
      * What the dice has actually given this session, oldest first.
      *
@@ -123,6 +74,7 @@ data class PlayerUiState(
      */
     val randomExhausted: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
+    /** Legacy persistence name: the selected editor playlist, not necessarily the playback owner. */
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
     val restored: Boolean = false,
@@ -138,7 +90,40 @@ data class PlayerUiState(
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
-    val current: TrackRef? get() = transient ?: resultsQueue?.current ?: queue.current
+    /** A selected source playlist stays live; leaving its view captures its current order. */
+    val activePlayback: ActiveQueue
+        get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.copy(order = queue) else it }
+            ?: ActiveQueue(QueueSource.Playlist(activePlaylistId, activePlaylistName.orEmpty()), queue)
+    val transportQueue: PlayQueue get() = activePlayback.order
+    val current: TrackRef? get() = activePlayback.current
+    val transient: TrackRef? get() = current.takeIf { randomMode || externalMode }
+    val externalOpen: Boolean get() = externalMode
+    val resultsQueue: PlayQueue? get() = transportQueue.takeIf { searchMode }
+    val resultsFromHistory: Boolean get() = activePlayback.fromHistory
+    val sessionSource: SessionSource? get() = (activePlayback.source as? QueueSource.Collection)?.origin
+    val randomHasPrevious: Boolean get() = randomMode && activePlayback.hasPrevious
+
+    fun withPlayback(next: ActiveQueue): PlayerUiState = copy(
+        playback = next,
+        queue = if (next.belongsTo(activePlaylistId)) next.order else queue,
+    )
+
+    fun preparingRandom(session: Long): PlayerUiState = withPlayback(ActiveQueue(
+        QueueSource.Random(session),
+        PlayQueue(emptyList(), shuffle = transportQueue.shuffle, repeat = transportQueue.repeat),
+    )).copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false,
+        playing = false, loadingTrack = true, positionSeconds = 0.0, durationSeconds = 0.0,
+        metadata = emptyMap())
+
+    /** Labels may improve without changing playback identity, order or the selected source. */
+    fun withLearnedTrack(improved: TrackRef): PlayerUiState {
+        fun enrich(rows: List<TrackRef>) = rows.map { if (it.id == improved.id) improved else it }
+        val active = activePlayback
+        return copy(
+            queue = queue.withTracks(enrich(queue.tracks)),
+            playback = active.copy(order = active.order.withTracks(enrich(active.order.tracks))),
+        )
+    }
 
     /**
      * Whether the current backend can move to a position at all.
@@ -193,45 +178,15 @@ data class PlayerUiState(
         get() = (playAllSubsongs && subsong > 0) || canGoPreviousFile
 
     /** Whether there is another **file** — what a long press on next asks for. */
-    val canGoNextFile: Boolean
-        get() = when {
-            externalMode -> false
-            randomMode -> true
-            searchMode -> resultsQueue?.hasNext == true
-            else -> queue.hasNext
-        }
-
-    val canGoPreviousFile: Boolean
-        get() = when {
-            externalMode -> false
-            randomMode -> randomHasPrevious
-            searchMode -> resultsQueue?.hasPrevious == true
-            else -> queue.hasPrevious
-        }
+    val canGoNextFile: Boolean get() = activePlayback.hasNext
+    val canGoPreviousFile: Boolean get() = activePlayback.hasPrevious
 
     val activePlaylistName: String?
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 
-    /** True while Random is driving playback rather than the playlist. */
-    val randomMode: Boolean get() = transient != null && !externalOpen
+    val randomMode: Boolean get() = activePlayback.source is QueueSource.Random
+    val externalMode: Boolean get() = activePlayback.source == QueueSource.External
+    val searchMode: Boolean get() = activePlayback.source is QueueSource.Collection
+    val awayFromPlaylist: Boolean get() = !activePlayback.belongsTo(activePlaylistId)
 
-    /** True while a file handed to us by another app is playing. */
-    val externalMode: Boolean get() = transient != null && externalOpen
-
-    /**
-     * True while search results are driving playback rather than the playlist.
-     *
-     * **A queue left behind is not a queue playing.** Playing a dice pick does not clear the list
-     * Browse was last played from, so `resultsQueue != null` alone answered yes while the dice was
-     * the only source — and the Random view, which closes itself when results take over
-     * (`docs/STATUS.md` C49), closed in the frame it opened.
-     *
-     * The condition is the one [nextFile] already applies: a transient tune owns the transport
-     * unless the dice is waiting under a list, in which case the list owns it and this is a
-     * digression (`docs/BACKLOG.md` A41).
-     */
-    val searchMode: Boolean get() = resultsQueue != null && (transient == null || diceWaiting)
-
-    /** True whenever what is playing did not come from the active playlist. */
-    val awayFromPlaylist: Boolean get() = transient != null || searchMode
 }

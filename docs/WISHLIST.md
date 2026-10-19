@@ -114,22 +114,24 @@ gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK 
 clean source `f289863`, is ready. Phone retest is pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
-## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss
+## B45. Active playback queue independent of the visible playlist — owner accepted, 2026-10-19
 
-Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after
-playing a search result or browsing an author should keep the music playing. After discussing
-the request with the reporter, the owner identified an explicit current playback queue as
-the proposed approach, with its source changing according to the playback context.
+Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after playing
+from search or an author should not interrupt playback. The owner selected an isolated, reversible
+experiment on `feature/playback-queue-experiment` on 2026-10-18. The latest candidate passed 956
+host tests and lint. On 2026-10-19 the owner confirmed the intended behaviour and authorized
+integration. Normal-version cleanup and fresh verification are in progress before merging.
+Further colleague feedback awaits details and a separate iteration; AMP remains deferred.
 
-Treat the visible playlist and the active playback queue as distinct concepts. The existing
-[A61 navigation contract](BACKLOG.md) intentionally ends a session
-when the Playlist action is chosen; this request proposes changing that contract, rather than
-establishing a regression. The meaning of context changes, Next/Previous, shuffle/repeat,
-playlist edits and restoring sessions must be discussed before implementation. See
-[Q13](OPEN_QUESTIONS.md#q13--playback-queue-and-navigation).
-The desired continuity and queue direction are recorded; implementation is explicitly deferred.
-The owner reaffirmed on 2026-10-13 that queue behaviour needs a separate discussion before work.
-This concerns playback ownership, not the deferred swipe gesture in B25.
+One active queue owns transport; navigation and playlist selection only change what is shown.
+Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
+playback selection and information. Random preserves its remembered record; only a dice double
+tap resets the list, with help/animation and an equivalent accessibility action. First entry starts
+Random as before. No automatic return/resume control transfers audio when a source view is reopened.
+
+[Consolidated contract and implementation plan](QUEUE_EXPERIMENT.md); [Q13](OPEN_QUESTIONS.md#q13--playback-queue-and-navigation).
+This supersedes A61's intentional session-ending Playlist action for the experiment only. No owner
+phone acceptance, merge or publication is inferred. This is playback ownership, not swipe idea B25.
 
 **Related renewed user request:** stereo/headphone mixing is tracked in existing
 [B6](#b6-fold-hard-panned-channels-together)

@@ -133,12 +133,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
-    fun resumeDice() {
-        // Comes back paused, and a paused transport in the notification is still the player: the
-        // next press of play is on that tune, and it may well come from the notification itself.
-        ensureServiceRunning()
-        controller.resumeDice()
-    }
     fun resumeSearch() {
         // The same reason: a results tune left waiting paused is still what the notification plays.
         ensureServiceRunning()
@@ -188,6 +182,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         controller.addToPlaylist(targetPlaylistId, tracks)
     fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) =
         controller.createPlaylistAndAdd(name, tracks)
+
+    fun playQueueAt(index: Int) {
+        ensureServiceRunning()
+        controller.playQueueAt(index)
+    }
 
     fun playAt(index: Int) {
         ensureServiceRunning()
