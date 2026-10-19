@@ -51,6 +51,29 @@ assertions (an ambiguous title selector and an unrelated cache-status update); n
 as a passing run or a new application defect. The final assertions distinguish navigation from
 asynchronously derived cache status. Local Markdown targets (115) and `git diff --check` pass.
 
-Forced full gate/lint and release APK verification are pending at this implementation checkpoint.
+**Checked:** clean source `fa09e7a57ad722393326129fbe5d270cf75869d7` passed
+`scripts/test-protracktor.sh --really` in **498 s**. Fresh JUnit XML: **963 tests / 129 suites**,
+zero failures/errors/skips; all 31 unit-build tasks executed, unit stage **322.9 s**.
+Lint completed in **83.1 s**, **0 errors / 72 warnings**, unchanged from the accepted baseline.
+All companion stages passed: metadata, runner and release-flow fixtures, web page/engine/SAP,
+web database upgrade, native audio, icons, PWA and local server.
+
+The minified release APK was built from that same clean source with the project script, supervised
+to a 1200-second deadline; it completed in **90.8 s**. No application change followed the gate.
+
+- Artifact: `dist/protracktor-release-1.2.0-1231-fa09e7a-20261019-231016.apk`.
+- Package/version: `com.przunk.protracktor`, **1.2.0 (1231)**; code matches the source commit count.
+- Size: **11,831,347 bytes**.
+- SHA-256: `597e0a2aaab9f6cc4e3db35f44d0742490ea8fb8362aae67b82ce1dfda8132d5`.
+- APK Signature Scheme v2 verified; one test signer, `CN=Android Debug`, certificate SHA-256
+  `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching the previous APK.
+- R8 executed, nonempty mapping retained; manifest has no debuggable flag, minSdk 29/targetSdk 36,
+  and the engine is packaged for arm64-v8a, armeabi-v7a and x86_64.
+
+Logs, JUnit XML, lint XML, mapping, manifest and signature evidence are retained in ignored
+`dist/browse-root-verification/fa09e7a/`. The later documentation closeout does not relabel this
+artifact or its tested source. This is a test-signed release APK, not a store AAB.
+
 Phone scenarios are **unchecked**; see [TESTING](TESTING.md#c110--browse-root-navigation).
-No merge, push, release tag or master movement is authorized. AMP remains deferred and untouched.
+No merge, push, release tag or master movement occurred. Develop remains `a8539a2`,
+AMP `8e92002`, master `794d8f9`; AMP remains deferred. Wait for owner acceptance before merging.
