@@ -1,345 +1,219 @@
-# Playback context and manual queue analysis
+# Playback context and manual queue — implementation contract
 
-Updated: 2026-10-19. Owner and colleague feedback following the accepted playback context
-experiment. The owner requested this complete analysis be saved before any Browse fix starts.
+Updated: 2026-10-19. Owner/colleague feedback, analysis audit and provisional implementation decisions.
+This supersedes the pre-implementation analysis retained in Git at `a8539a2`. The owner authorized
+a separate implementation branch after accepting C110, and delegated unresolved choices to the
+implementer. Questions below are for evaluation after implementation, not prerequisites.
+**Provisional choices are agent decisions, not claims that the owner approved each behaviour.**
+The experiment may still be rejected.
 
-The merged mechanism supplies a playback source and cursor independent of navigation. The new
-proposal adds a separate FIFO of manually requested tracks which temporarily interrupts that
-source, then returns to its continuation. Preserve the working context rather than replace it
-with an unrelated player or merge manual entries into a source playlist.
+## Baseline, scope and audit
 
-The recommended next task is the independent Browse navigation defect C110. Manual queue
-implementation still needs the decisions below; a combined editable view is explicitly deferred.
-This save authorizes documentation only, not a code change, build, feature branch or merge.
+The playback context was accepted and merged as `7cab210`. C110 generic Browse entry was accepted
+and merged as `7e7f242`, whose tree equals accepted branch `57a9d65` and whose code equals tested
+`fa09e7a`. Its 963 tests/lint/APK are historical evidence, not verification of this new feature.
+[Existing artifact and acceptance](PR_C110_BROWSE_ROOT_NAVIGATION.md): APK 1.2.0 (1231).
 
-**Subsequent checkpoint:** the owner separately requested C110. Its isolated implementation is on
-`fix/browse-root-navigation`, based on develop `a8539a2`; 963 host tests, lint without errors and
-release APK verification passed, with phone acceptance pending.
-[Implementation record](PR_C110_BROWSE_ROOT_NAVIGATION.md). The original analysis below
-records the pre-fix state; manual queue decisions and the AMP hold are unchanged.
+C111 inconsistent Add music/Online catalogues padding is recorded separately in
+[Status](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding); do not fix it
+incidentally here. AMP stays at `8e92002` on `feature/amp-catalogue`, with permission/integration
+deferred. No AMP rebase, playback or merge is included; retained-data guards remain intact.
 
-## Current implementation and handoff
+VersionName stays 1.2.0 until the owner releases. APK code is the commit count, with source SHA,
+timestamp and test signing. No old code-1221 exception, data-clearing downgrade, new dependency,
+schema/migration, decoder, web queue, release tag, master movement, push or automatic merge.
+Pending/traversal state is session memory; existing paused selected-playlist restoration remains.
 
-The accepted experiment was merged into develop as `7cab210`. Baseline at the start of this
-documentation task is `0d83b86`, a documentation closeout over that merge. The experiment branch
-`feature/playback-queue-experiment` is integrated and must not receive the next iteration.
-
-The APK supplied before this analysis was
-`dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk`, version **1.2.0 (1228)**.
-The owner subsequently reported that the app started, then supplied the feedback below. Launch
-confirmation is not a separately completed device regression checklist; an installed build ID
-was not supplied independently. Earlier owner acceptance of the intended context behaviour stands.
-
-Historical host verification: clean source `069b238` passed 956 tests in 128 suites with no
-failures, errors or skips; lint had zero errors and 72 warnings. The merge tree equals that source.
-APK identity, test signature, minification and packaging were checked. These are not test results
-for the proposed manual queue. Artifact hashes and full evidence remain in
-[the original experiment report](QUEUE_EXPERIMENT.md).
-
-Normal versioning is restored: every build uses the source commit count. VersionName stays
-1.2.0 until the owner's release procedure; do not reintroduce the temporary code-1221 exception.
-The older AMP APK cannot ordinarily replace a higher-code build. Do not uninstall or clear data
-to force interchange. AMP remains on `feature/amp-catalogue` at `8e92002`, with permission pending;
-its integration is deferred until the queue topic is completed in the next iteration. Master
-remains `794d8f9`. No push, release tag or store publication is part of this work.
-
-## Owner requests and design status
-
-The owner distinguishes the existing playback context from a manual queue. The context may be a
-playlist, Search, History, an online author, a local folder or Random. Navigating elsewhere must
-not replace it. The requested manual queue lets a user add tracks from elsewhere without
-immediately interrupting playback or adopting those tracks' source as the new context.
-
-The proposed sequence is: finish the current track, play manually added entries in their insertion
-order, then continue the original context. Additional entries join the end of that manual FIFO,
-not ahead of earlier requests. Empty manual queue presentation must distinguish it from the
-still available context.
-
-The owner initially proposed separate Context and Queue tabs. A later combined view is explicitly
-deferred; the owner suggested indentation or an icon to distinguish manual entries if that view
-is developed. The owner also requested swipe removal from the manual queue. Swipe is related to
-existing wishlist B25, not authorization for new gestures on every list.
-
-Shuffle, repeat, transport history, changing context with pending entries and several editing
-details remain design choices. The recommendations below are not confirmed requirements merely
-because they are written down. The owner has not authorized implementing them in this save.
-
-## Context and queue responsibilities
-
-| State | Responsibility |
+| Earlier gap, doubt or inconsistency | Resolution for this experiment |
 | --- | --- |
-| Playback context | Source identity, source collection, cursor and continuation order, including existing shuffle and Random state |
-| Manual queue | Ordered occurrences explicitly requested by the user and not yet started |
-| Current playback | The occurrence actually loading or playing, whether supplied by the context or manually |
-| Transport history | Navigable record needed for Previous and forward replay across context tracks and manual insertions |
+| Stale text said C110 was unimplemented and code unauthorized | Record accepted C110 and the subsequent independent implementation instruction. |
+| Queue meant both source and manual additions | Define context, pending requests, actual occurrence and transport record separately. |
+| Forward replay conflicted with unconditional play-next insertion | Pending FIFO outranks recorded forward replay; retain the forward suffix instead of truncating it. |
+| Repeat/subsong boundaries were undefined | Existing Repeat One/subsong policy first; at file boundary route pending, recorded forward, then context. |
+| Context cursor was confused with actual audio | Expose actual occurrence independently; never falsely animate a suspended source row. |
+| Replaying snapshots could restore deleted playlist contents or old modes | Restore continuation deliberately, remap against the current source collection, retain current modes; never restore an editor draft. |
+| File ID could not distinguish duplicates, retry and Undo | Stable monotonic session occurrence/request IDs, not file IDs or row indexes. |
+| Idle/failure/context replacement/reroll/lifetime were open | Explicit transition table below; preserve pending requests, retain manual failure for retry, no new persistence. |
+| History could inherit the parked context's origin | Capture origin per request; actual occurrence owns History/listened bookkeeping. |
+| Gesture/transport availability/Undo lacked an integration contract | Shared scheduler; pending-only swipe/removal and occurrence-specific Undo. |
+| Test matrix accidentally selected Clear/reordering | Both are excluded in v1; verify selected operations only. |
 
-Transport history is not the application's History screen. Enqueueing a track must not itself
-record a listen, mark it played before or change playlist membership.
+## Terms and invariants
 
-For example, with context `A -> B -> C -> D`, while B plays, enqueue X, Y and Z:
-
-```text
-Playback: B -> X -> Y -> Z -> C -> D
-Context:  paused at its continuation after B during X, Y and Z
-```
-
-The return is to C, not a restart of B. The context cursor must not advance once for every manual
-track. With shuffle, retain the existing permutation and cursor; do not activate the context by
-calling its ordinary row-selection path again, which can deal a new shuffle. With Random, retain
-the heard record, cursor and eligible prepared future rather than starting a new session.
-
-The current context list and its manual additions must not be confused with a saved playlist.
-Deleting a queued occurrence does not delete a file, a History entry or a source playlist row.
-
-## Proposed Next and Previous behaviour
-
-At the live end of playback, Next chooses the first manual pending entry. Only when none remains
-does it request the next context entry. Natural completion follows that routing subject to repeat
-and the existing subsong policy. A manual entry becomes current and leaves the pending list when
-it starts; its transport record remains available for Previous.
-
-Previous should navigate the actually played sequence across both kinds of occurrence. After
-`B -> X -> Y -> C`, repeated Previous leads through Y, X and B. Without another explicit action,
-Next should retrace that forward sequence instead of consuming pending entries again. Replaying
-a historical manual occurrence is not a second dequeue and must not append a duplicate request.
-
-### Adding after going backward
-
-The recommendation is to honour a new manual request as an insertion before the existing forward
-continuation, preserving that continuation behind it. Earlier pending manual requests retain
-their FIFO priority. Do not truncate the old heard future as a side effect of enqueueing.
-
-The exact precedence between a replayable manual occurrence, older pending requests and a new
-insertion still needs a complete transition table. In particular, the promises that Previous
-followed by Next is reversible and that a new manual request plays next are conditional on what
-the user changed between the two commands. Do not implement competing unconditional priority
-rules and assume that both promises hold.
-
-C97 remains relevant: a Random filter change preserves its heard record and forward history;
-only unplayed speculation is replaced. Manual insertion is a new explicit operation, not a
-reason to revive the old history-truncation defect.
-
-### Existing transport boundaries
-
-The current finite unshuffled context uses the adjacent source row for Previous; shuffled contexts
-use heard history. Random has its own heard boundary. Decide how the mixed transport record
-falls back at its beginning without silently rewriting those existing behaviours.
-
-System Back remains navigation only. It does not mean Previous track and must not stop playback.
-Retain the existing distinction between subsong movement and next/previous file. The proposed
-FIFO is initially discussed in terms of file references, not separately selected subsongs.
-Whether to enqueue an individual subsong is a separate unresolved extension.
-
-## Proposed shuffle and repeat rules
-
-| Mode | Recommendation |
+| State | Meaning |
 | --- | --- |
-| Shuffle | Does not reorder manual requests. Preserve the context's own shuffle order for continuation. |
-| Repeat Off | Drain manual entries, then continue the context. Stop when neither has another entry. |
-| Repeat All | Repeat the context, not already consumed manual requests. Otherwise the manual block could prevent return to the source forever. |
-| Repeat One | Repeat the actual current track, including a manual track. Explicit Next escapes it and advances normally. |
+| Context | Source identity, collection, cursor and continuation order: playlist, Search, History, online/local folder, Random or external file |
+| Pending queue | Ordered manually requested file occurrences not yet selected for loading |
+| Actual occurrence | The file loading/playing/paused/failed now, supplied by context or a manual request |
+| Transport record | Session-local backward/forward traversal of selected occurrences, not the persistent History screen |
 
-Under Repeat One, a manual queue may wait indefinitely while the current context track repeats.
-That consequence should be visible rather than appear to be a failed enqueue. The owner suggested
-respecting repeat but has not confirmed this per-mode interpretation or an override by manual requests.
+Enqueue does not start/resume audio, change context, save a playlist, record a listen or mark a
+file heard. A request leaves pending when selected for loading. A failure is not a listen.
+Duplicate files are valid distinct requests. Removal never deletes source data or physical files.
 
-The existing Play all subsongs setting remains a separate policy. Queue insertion must not
-incidentally change a normal Next into a file skip or discard remaining subsongs. Confirm the
-interaction before implementation, including repeat and completion of multi-subsong files.
+Source `A -> B -> C -> D`, B current, X/Y/Z pending: play `B -> X -> Y -> Z -> C -> D`.
+Advance context once after the manual block, not once per request or back to B. Preserve source
+shuffle permutation, Random heard boundary/cursor and valid hidden future. Enqueue never rerolls.
 
-## Context position and currently playing row
+## Transport transition table
 
-The owner raised a usability concern: a playlist's playing selection could suddenly disappear
-when a queued local file starts, leaving the actual sequence visible only in the playback panel.
+These are file-level rules, after the established subsong layer. Screen, notification, headset
+and natural completion must enter the same scheduler.
 
-The recommendation is to distinguish the context position from an actually playing occurrence:
+| Event | Provisional outcome |
+| --- | --- |
+| Enqueue while playing/paused/loading | Append after older pending requests; do not disturb actual playback. |
+| File Next with pending | Select oldest request and insert after current transport position; retain the recorded forward suffix. |
+| File Next, no pending, recorded forward exists | Replay that occurrence without dequeuing it again. Restore its context anchor, not a saved playlist draft. |
+| File Next with neither | Ask existing context for next; disable Next if none. |
+| File Previous within transport record | Replay previous occurrence; retain forward record and pending requests. |
+| Previous at record boundary | Use that occurrence's source anchor and existing adjacent-row/shuffle-history/Random-heard rules; prepend result, preserve forward traversal. |
+| Natural completion under Repeat One | Repeat actual current subsong/file, including manual; pending requests wait. |
+| Natural file completion otherwise | Pending, recorded forward, context completion; stop at total exhaustion. |
+| Explicit Play on a pending row | Select only that occurrence now; leave earlier pending requests and recorded forward entries intact. |
+| Explicit Play on any source/context row | Replace context/reset mixed traversal, preserve pending. Do not silently requeue an interrupted manual occurrence. |
+| Random reroll | Explicit context replacement as above; pending survives. |
+| Navigation/filter changes only | Do not replace context or pending. C110 Browse still opens ROOT; Random filter changes replace eligible speculation only. |
+| Remove pending | Remove exactly its occurrence ID; do not touch actual track, source, position or equal-file requests. |
+| Undo pending removal | Restore before surviving next neighbour, otherwise after surviving previous neighbour, otherwise bounded original index. Never duplicate an already restored ID. |
+| Enqueue from idle | Stay idle; explicit Play/Next selects first pending before default source. |
+| Pause/Stop during loading | Retire load intent, retain actual occurrence for explicit resume/retry; no delayed takeover. |
+| Manual read/open failure | Visible failed actual occurrence, explicit Play retries it, Next can skip it. Do not apply Random auto-skip because the parked context is Random. |
+| Process death | Lose transient pending/traversal; retain existing paused selected-playlist restoration. |
 
-- While a context entry plays, use the normal playing indication.
-- During a manual insertion, preserve a quieter context-position or continuation marker, without
-  falsely indicating that the old source row is still sounding.
-- Now Playing, notification, progress, metadata and heart actions refer to the actual manual track.
-- Do not highlight a source row merely because its file ID equals that of a manual occurrence.
-- A marker's meaning must be accessible without relying only on a colour change.
+Example: record `B, X, Y, C`, cursor X, pending P/Q. Next yields P, Q, Y, C:
+`B, X, P, Q, Y, C`. Explicit requests outrank forward replay without losing it.
+Without intervening requests, Previous/Next is reversible. Replayed manual occurrences do not
+re-enter pending. Restoring source anchors keeps current shuffle/repeat and remaps against current
+source tracks. Source edits must not resurrect editor contents. Heard references remain replayable;
+missing files receive normal errors. Removed cursors follow existing PlayQueue remapping policy.
+Selecting another editor playlist alone changes neither context nor pending.
 
-Enqueueing from local storage is a temporary insertion, not a switch to a local-folder context.
-Ordinary explicit Play from that folder does change the context; the previous playlist then has
-no active playback claim. These two actions must remain distinguishable.
+## Shuffle, repeat and subsongs
 
-The exact marker, label, treatment of selection and any explanatory text are not selected yet.
-The implementation must not solve the visual concern by keeping a false playing animation.
+Shuffle never changes manual FIFO; it governs context continuation. A mode toggle during a
+manual occurrence updates continuation, not pending or the sounding file.
+Repeat Off drains pending then remaining context. Repeat All repeats context, not consumed manual
+requests; an empty/external context does not manufacture a manual loop. Repeat One repeats the
+actual current tune and takes precedence over requests. Explain why pending waits; file Next escapes.
 
-## Playback panel and editing
+Keep `SubsongAdvance`: Play all subsongs makes ordinary Next/Previous traverse tunes inside a file
+first; long-press file transport skips files. Natural completion finishes subsongs first, except
+Repeat One repeats the current subsong. Requests identify files, not individual subsongs. No new
+notification/headset gesture is introduced.
 
-Keep the proposed two tabs for the first design iteration: Context on the left, manual Queue
-on the right. Context retains the current inspection/row-play/info behaviour without source
-removal or reordering. The manual tab contains pending entries and exposes their editing actions.
-Exact panel/button naming, initial tab and whether to remember the last selected tab are open.
+## UI and editing
 
-A common current-track header is recommended. If the last manual entry is playing and no others
-are pending, the queue can be empty while music continues. An empty-state explanation should
-refer to remaining requests and the context that follows, not imply that playback has stopped.
+The existing far-right labelled Queue entry opens one full-height playback panel with two
+icon-and-label tabs: Context left, Queue right. Fresh entry starts on Context; tab scroll/selection
+survives only while that panel remains open. A unified view is explicitly deferred; preserve the
+owner's indentation/icon idea for a later iteration, not this implementation.
 
-Manual removal is requested. Reordering and an explicit Clear queue action were recommended but
-have not been separately selected. Editing pending entries must not mutate the underlying context.
-The behaviour of tapping a pending entry for immediate playback also remains open: decide what
-happens to earlier pending entries rather than accidentally discarding them.
+The common header identifies the actual current file and its manual/context origin. Reuse existing
+learned-title/Now Playing presentation rather than add a second metadata parser. Context remains
+read-only apart from row playback/info. During manual playback, show a quiet textual context-position
+explanation rather than falsely mark its old row as sounding. Actual metadata/progress/notification,
+heart and sharing use the manual file. Matching file IDs alone never give a manual copy a source
+playing marker. Accessibility must not rely on colour. Replayed context occurrences restore cursor.
 
-### Combined view deferred
+Queue displays pending only; its current manual item is in the common header. Empty text explains
+that context continuation follows, not that audio has stopped. Pending rows offer Info, labelled
+Play and Remove. Tap for Info does not skip FIFO; explicit Play selects only that occurrence.
+No pending reorder, bulk edit or Clear queue in v1.
 
-The owner suggested indentation or an icon before manually inserted rows in a future unified
-view. Preserve that idea without implementing the view in this iteration. Any future design must
-make editing authority clear: manual pending entries may be editable, source continuation rows
-are not. Colour alone is insufficient.
+Add to queue is a distinct icon-and-label row action on playlist, Browse/Search/History, Random and
+context tracks. Call sites pass the row's History origin rather than infer it from parked playback.
+Enqueue gives feedback without switching view or opening the panel. Unavailable retained catalogue
+references are explained, not silently accepted as playable.
 
-Random's speculative read-ahead is not a promised visible schedule. A combined view must not
-expose disposable picks as guaranteed future tracks without a separate design decision.
+Pending removal supports end-to-start swipe with Material's default threshold and ordinary vertical
+scroll. A labelled Remove is its accessible equivalent. Use the existing short snackbar lifetime
+and occurrence-specific Undo, never the playlist's last-removal buffer. No swipe on actual/current,
+context or other source rows. Broader B25 gestures and unified editing remain deferred.
 
-### Swipe removal
+## Origin, lifetime and races
 
-The owner requested swipe removal from the manual queue. Recommendations for that interaction:
+History-origin requests retain the rule that replay from History does not move its row to the top.
+Other manual origins record normally, including over a History context. Existing five-seconds-or-
+natural-completion qualification belongs to the actual file, not the parked context. Title/author
+learning preserves occurrence identity, FIFO order and source shuffle.
 
-- Restrict it to pending manual entries, not source/context rows or the currently playing item.
-- Remove one occurrence; keep the physical file and source playlist untouched.
-- Offer snackbar Undo and an equivalent labelled/icon menu action for accessibility.
-- Give each queued occurrence its own stable ID so removing one repeated file does not remove all.
-- Keep vertical scrolling reliable. If reordering is later selected, define how its handle and
-  swipe coexist with tap/long press instead of adding another ambiguous row gesture.
+Use immutable pending/traversal state. Explicit source choice resets traversal but preserves pending;
+navigation resets neither. Cache eviction does not erase requests; later fetching is allowed.
+Revoked local grants/unavailable retained archives yield explicit errors, not regained permissions.
 
-Swipe direction, activation threshold and the exact Undo window still need selection. Earlier
-B25 concerns about gesture competition remain applicable; the renewed request does not select
-swipe-to-add across Browse, Search or ordinary playlist rows.
+Each playback selection retires epoch/load intent. Retry captures occurrence identity: a stale
+completion/retry cannot take over a newer choice, even for the same file. Prefetch prioritises pending,
+then recorded-next/context, without publishing speculative Random rows. Enqueue/removal/Undo/mode
+changes refresh read-ahead ownership, not the actual in-flight file. Keep existing Random session/
+generation, focus/Bluetooth, listening-generation and source-read guards. One engine/service and
+one shared scheduling rule remain authoritative.
 
-## Other transition recommendations and open cases
+## Architecture and implementation stages
 
-These are recommendations or open decisions, not implementation authorization:
-
-- Adding must not interrupt the current track or automatically resume paused playback.
-- A queue without a context can play its manual entries and then stop; it should not require a
-  fake playlist. Starting from idle and the resulting Play/Next availability need explicit rules.
-- Ordinary Play in another source should, by recommendation, replace the context but preserve
-  pending manual entries. Confirm that rule and what happens to an interrupted manual occurrence.
-- Clearing pending entries should not stop the current track. Removal of a current item, if ever
-  exposed, needs a separate skip/stop rule rather than sharing pending-row deletion.
-- Allow duplicate requests as separate occurrences. A manually played file may also appear later
-  in the context; do not silently skip it or introduce deduplication without owner selection.
-- A failed download/open must not erase the context or falsely record a successful listen.
-  Decide retry, skip, retention and user feedback; do not loop indefinitely or fail silently.
-- Decide whether queue state survives process death. The accepted baseline restores the selected
-  playlist paused and does not persist every temporary context. No new migration is selected.
-- Decide History-origin behaviour for a track enqueued from History; its bookkeeping must not be
-  inferred merely from the suspended context's origin.
-- A new Random list or filter change must not accidentally clear unrelated manual requests.
-  Pending-request survival on explicit reroll still needs confirmation.
-
-## Architecture implications
-
-The existing [ActiveQueue](../app/src/main/kotlin/com/przunk/protracktor/player/ActiveQueue.kt)
-is the context model in this discussion. Its source variants and finite/Random rules remain useful;
-do not rename every occurrence of queue or rewrite PlayQueue merely to change UI terminology.
-
-[PlayerUiState](../app/src/main/kotlin/com/przunk/protracktor/player/PlayerUiState.kt) currently
-derives `current` from `activePlayback.current`. A manual entry requires that actual playback be
-independent of the suspended context's cursor. Otherwise metadata, progress, notification,
-playlist highlights and the notification heart could act on the wrong track.
-
+Keep [ActiveQueue](../app/src/main/kotlin/com/przunk/protracktor/player/ActiveQueue.kt) as context
+and PlayQueue as source ordering; do not cosmetically rename every old queue symbol. Add a pure
+immutable scheduler for occurrences, pending, mixed traversal, removal/Undo and typed outcomes.
+[PlayerUiState](../app/src/main/kotlin/com/przunk/protracktor/player/PlayerUiState.kt) separates actual
+current from context current. Audit current/index/mode consumers: availability, playlist/Random/
+Browse markers, metadata, History, notification heart, retry and prefetch.
 [PlaybackController](../app/src/main/kotlin/com/przunk/protracktor/player/PlaybackController.kt)
-currently sends file Next/Previous/completion directly to ActiveQueue. One shared pure scheduling
-model should arbitrate the context, pending manual occurrences and transport history for every
-entry point: screen controls, headset, notification and natural completion. Do not add another
-player or duplicate the rules in each adapter.
+integrates after subsong handling and before source advance. Snapshot restoration restores
+continuation, never a stale selected editor draft; asynchronous Random selection remains guarded.
 
-The design needs explicit occurrence identity and origin, immutable pending/history state,
-continuation ownership and typed transition outcomes. The model must distinguish an enqueued
-copy of a file from the same file occurring in the context or twice in the manual FIFO.
+1. Create `feature/manual-playback-queue` from accepted develop after this audit. Implement pure
+   FIFO/occurrence/traversal/removal/Undo rules and regression tests.
+2. Integrate actual-file projection, shared transports, loading/retry and prefetch. Preserve
+   no-manual behaviour, persistence, C97, C110, subsongs and Bluetooth.
+3. Wire row actions, two-tab panel, honest markers, pending swipe/Remove/Undo and EN/PL strings.
+4. Force full tests/lint, build minified test-signed APK into dist, verify identity/signature and
+   record actual evidence/device scenarios. Stop unmerged for owner acceptance.
 
-Read-ahead must prioritise the actual upcoming manual request and then the appropriate context
-continuation. Preserve Random's hidden speculative boundary and the existing epoch/generation
-guards: a delayed fetch or query must not steal playback after another explicit choice. Retries
-must refer to the current occurrence/intent, not a stale source snapshot.
+Each stage has a local commit and an explicit partial verification state. A pure scheduler is not
+a working phone feature. Baseline C110 test counts must not be reused as feature evidence.
 
-No new dependency, database migration, decoder, web implementation or new file-editing capability
-has been selected. Persistence requirements, if later accepted, need separate schema planning.
+## Questions retained for post-implementation evaluation
 
-## Browse navigation defect C110
+The owner explicitly made these non-blocking. Choices are provisional, not settled product rules.
 
-Owner report, 2026-10-19, after the normal-code Queue handoff:
-
-1. Play a track from History.
-2. Back to the main Browse view.
-3. Back again to the playlist.
-4. Press Browse.
-5. History reopens instead of the main Browse view.
-
-Expected by the owner: Browse is the general entry to browsing, not an implicit return to the
-source that happens to be playing. Music and its context must continue unchanged. Exact installed
-build ID/device were not supplied independently; 1.2.0 (1228) is the last handed-over candidate.
-
-### Cause established by code inspection
-
-In [ProtracktorApp](../app/src/main/kotlin/com/przunk/protracktor/ui/ProtracktorApp.kt), `openBrowse`
-calls `returnToSession()` before falling back to `openDomain(BrowseDomain.ROOT)`.
-`playFromResults()` saves `sessionBrowse`; `returnToSession()` restores it while `searchMode`
-is true. Despite its name, `searchMode` means any `QueueSource.Collection`, not only Search.
-
-[SessionSource](../app/src/main/kotlin/com/przunk/protracktor/player/SessionSource.kt) maps History,
-Search, online author folders and local folders to collection origins. Therefore the same restore
-mechanism covers all those sources. It is a surviving A61 return-to-source convention, inconsistent
-with the new independent-navigation expectation. This is code evidence, not an agent-run phone
-reproduction or a completed regression test.
-
-Random follows a different source/entry path, so this finding does not prove the same defect in
-Random. Include it in the regression matrix because it previously had a distinct Back problem.
-
-### Recommended correction boundary
-
-The generic Browse action should open ROOT regardless of playback. Explicit author/source jumps
-retain their own destinations, and Back moves one navigation level. Opening a context/queue panel
-is an inspection action, not a reason to replace audio or automatically resume another source.
-
-Keep the active context, its cursor, paused/playing state and current fetch intent intact. Do not
-fix this by clearing the saved context or invoking a stop. Review all generic Browse entry points
-in the shell and dock; do not indiscriminately remove snapshots needed for explicit navigation.
-
-## Recommended work sequence
-
-First, after a separate instruction to proceed, create `fix/browse-root-navigation` from the
-current develop. Reproduce C110 with a regression test that exercises the actual Browse action,
-then correct navigation without implementing a manual queue. Cover History, Search, local folders,
-online author folders and Random, both toolbar/system Back, playing/paused states, explicit author
-jumps and repeated entry. Assert that current track/context/cursor do not change.
-
-Run the complete forced tests and lint, build a minified test-signed release APK in dist with the
-normal commit-derived code, and provide device scenarios. Merge only after the owner's acceptance.
-The present documentation task does not start this fix.
-
-Next, settle the manual queue rules and create a separate experimental feature from an accepted
-develop baseline. The suggested scope is FIFO insertion and return, mixed Next/Previous, agreed
-repeat/shuffle rules, clear actual-playing/context markers, two tabs and pending removal/Undo.
-Retain the requested swipe proposal; its exact interaction needs confirmation. Do not combine
-the later unified view or AMP integration with this experiment.
-
-## Verification required for a manual queue experiment
-
-Pure state tests should cover the transition table before Android integration. New regressions
-must fail against the missing/broken rule, not only call a helper beneath an untested gesture.
-Host UI checks cover real row actions, Back dispatch, swipe/menu removal and Undo; those do not
-replace the owner's phone tests. Important scenarios include:
-
-| Scenario | Property to verify |
+| Question | Provisional answer and reason |
 | --- | --- |
-| B playing, X/Y/Z added | B completes, FIFO plays, context continues at C exactly once |
-| Context shuffle enabled | Manual FIFO unchanged, source permutation preserved |
-| Repeat Off at the last source row | Pending items still play; stop only when both continuations are exhausted |
-| Repeat All and Repeat One | Selected scope and explicit Next escape are consistent across controls |
-| Previous across manual/context boundary | Real played sequence and forward replay survive without double dequeue |
-| New insertion after Previous | Agreed precedence applies, old forward record remains reachable |
-| Random filter change during manual playback | C97 heard boundary survives and only eligible speculation changes |
-| Same file enqueued twice or also in source | Stable occurrence identity, no accidental deduplication or cursor transfer |
-| Removal, Clear and Undo | Only intended pending entries change, current track/source untouched |
-| Pause, empty context and context switch | Agreed start/survival rules, no unexpected playback restart |
-| Late fetch, load failure and retry | No stale takeover, silent loss or false listen record |
-| Notification, heart, progress and highlights | All use actual playback; suspended context is not falsely shown as playing |
-| Multi-subsong files | Existing transport layer and agreed completion boundary are preserved |
+| New request after Previous versus recorded forward? | FIFO first, old forward retained: honour explicit intent without repeating C97-style truncation. |
+| Pending after Play/context replacement/reroll? | Preserve; deliberate requests must not silently disappear. |
+| Requeue an interrupted manual occurrence? | No; it was already selected, and hidden duplicates are worse than explicit re-enqueue. |
+| Repeat One versus waiting requests? | Keep existing Repeat One semantics; explain waiting. |
+| Repeat All scope? | Context only; replaying consumed requests forever blocks continuation. |
+| Subsongs as queue entries? | Whole files only; existing subsong controls remain. |
+| Pending-row immediate Play? | Only that occurrence; preserve earlier pending and forward record. |
+| Enqueue from idle starts audio? | No; explicit Play/Next is required. |
+| Failed manual load? | Retain current for visible retry/skip; never silent Random skipping. |
+| Marker during manual playback? | Quiet textual context position, no false animation; actual file remains in common header/dock. |
+| Initial tab? | Context, predictable fresh entry; remember only during that opening. |
+| Swipe/Undo details? | End-to-start, Material threshold, existing short snackbar, accessible Remove. |
+| Reorder/Clear/bulk/unified view? | Excluded; assess real use before more editing controls. |
+| Persist pending/history? | Session memory only; no migration in this experiment. |
+| History-origin requests? | Preserve non-reordering, capture origin per request. |
+| Replay after source edits? | References may replay without restoring editor contents; missing-file errors apply. |
+| Bound transport memory? | Session-local like existing Random record; no arbitrary truncation/new disk data in v1. |
+| Naming beyond the two tabs? | Retain discoverable Queue entry, evaluate actual labels on the phone. |
 
-No manual queue code or tests exist as a result of this analysis. This documentation-only save
-requires content, link and diff checks, not another application build or full test run.
+## Verification contract
+
+New guards need negative/mutation evidence. Cover real shell/row gestures and production paths,
+not only a helper called below the gesture. Required cases:
+
+- B/X/Y/Z/C FIFO, duplicate occurrences, insertion after Previous, reversible forward replay,
+  source-boundary Previous, shuffle/repeat and unchanged no-manual behaviour.
+- Paused/idle/loading, pending Play, source replacement/reroll, source edits/remapping, preserved
+  Random/filter heard boundary, empty/external context and exhaustion.
+- Origin-specific History/listened rules, title enrichment, actual-file heart/progress/notification/
+  markers, subsong completion and explicit file transport.
+- Pending swipe/Remove/Undo, repeated equal files, consumed neighbours and stale actions;
+  no context editing gestures, independent playlist Undo.
+- Late fetch/native-open/retry, focus refusal, manual failure over Random, prefetch invalidation
+  and no source takeover merely from navigation.
+- Existing database/AMP retention, all project gates/lint and exact APK SHA/code/signature/R8/ABIs.
+
+Device audio, notification/service layout, gestures, Bluetooth and usability remain **unchecked**
+until owner testing. Record actual executed counts and pending cases in Status/handoff. Merge
+still requires owner acceptance.

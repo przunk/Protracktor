@@ -47,14 +47,16 @@ Phone behaviour remains **unchecked**; no merge/push. Develop, AMP and master ar
 [Implementation, hashes and evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md);
 [complete queue discussion](QUEUE_CONTEXT_ANALYSIS.md). No manual queue or AMP change is included.
 
-## Manual queue proposal saved for the next discussion
+## Manual queue contract audited — implementation authorized, 2026-10-19
 
-The owner distinguishes the merged playback context from a FIFO of manual requests which would
-play before context continuation. Two tabs are the initial proposal; a combined view is deferred,
-with indentation/icon suggested for manual entries. Swipe removal is requested under existing B25.
-Next/Previous, repeat interpretation, context-position markers and queue editing need the decisions
-recorded in [the complete analysis](QUEUE_CONTEXT_ANALYSIS.md). No manual queue implementation,
-application tests, APK or merge accompanies this documentation-only save. AMP remains deferred.
+The owner requested an analysis audit and implementation on a separate branch, delegating open
+choices to the agent without blocking questions. [The revised contract](QUEUE_CONTEXT_ANALYSIS.md)
+records gaps/inconsistencies, a full transition table, provisional choices and questions for later
+evaluation. FIFO/preserved forward traversal, current-versus-context identity, subsongs, repeat,
+failure/retry, source edits, lifetime, two tabs and pending swipe/Remove/Undo are now explicit.
+Unified view, reordering/Clear, persistence, web queue and AMP remain excluded. This checkpoint
+changes documentation only; implementation starts separately from accepted develop. No new
+application verification, feature APK or feature merge is claimed by this audit.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 

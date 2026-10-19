@@ -95,10 +95,11 @@ Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and 
 `7cab210`. The owner subsequently supplied the context/manual queue distinction, the C110 Browse
 report, a context-position visibility concern and swipe-removal request. The full
 [follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md) separates owner proposals from agent recommendations
-and open decisions. C110 is implemented separately on unmerged `fix/browse-root-navigation`:
-963 tests, lint without errors and release APK verified; phone acceptance pending
-([handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md)). Manual FIFO,
-mixed transport history and repeat/UI details need confirmation before a new experimental feature.
+and open decisions. C110 was accepted and merged as `7e7f242`
+([handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md)). On 2026-10-19 the owner authorized the manual queue
+implementation and delegated unresolved choices to the agent, asking to retain questions for
+post-implementation evaluation. The analysis now supplies a transition table and provisional
+FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owner approvals.
 The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
 
 The owner selected one active playback queue independent of navigation and the selected playlist.

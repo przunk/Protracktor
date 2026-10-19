@@ -125,7 +125,9 @@ and the feature was merged into develop as `7cab210`. A minified normal-code APK
 prepared; the owner later reported startup, not a separate detailed checklist. Subsequent
 colleague/owner feedback distinguishes this context from a manual FIFO, raises context-position
 visibility and requests swipe removal. [Complete follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md).
-This is design work for a new task branch, not an implemented extension; AMP remains deferred.
+On 2026-10-19 the owner authorized a new task branch and delegated unsettled choices to the agent,
+with questions retained for evaluation after implementation. The audited analysis is the provisional
+contract; this documentation checkpoint does not claim a completed extension. AMP remains deferred.
 
 One active queue owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
@@ -761,8 +763,10 @@ that has just gone would draw nothing, and the chip that set it is disabled the 
 
 **Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the proposed
 manual queue. This does not select a gesture for ordinary playlist, context, Browse or Search
-rows. Recommendations are pending-only removal, snackbar Undo and an equivalent menu action;
-direction, threshold and interaction with possible reordering remain open. No implementation.
+rows. The owner subsequently authorized implementation with agent-selected details: pending-only
+end-to-start swipe, Material threshold, short snackbar Undo and a labelled Remove equivalent.
+These are provisional choices for later evaluation, not broader source-list gestures. Reordering
+remains excluded; this documentation checkpoint is not a completed implementation.
 [Queue/context analysis and gesture scope](QUEUE_CONTEXT_ANALYSIS.md).
 
 **Original rationale before B45, retained as history:** the following description predates the
