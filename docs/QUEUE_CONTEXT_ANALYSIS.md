@@ -12,6 +12,11 @@ The recommended next task is the independent Browse navigation defect C110. Manu
 implementation still needs the decisions below; a combined editable view is explicitly deferred.
 This save authorizes documentation only, not a code change, build, feature branch or merge.
 
+**Subsequent checkpoint:** the owner separately requested C110. Its isolated implementation is on
+`fix/browse-root-navigation`, based on develop `a8539a2`; verification and phone acceptance are
+pending. [Implementation record](PR_C110_BROWSE_ROOT_NAVIGATION.md). The original analysis below
+records the pre-fix state; manual queue decisions and the AMP hold are unchanged.
+
 ## Current implementation and handoff
 
 The accepted experiment was merged into develop as `7cab210`. Baseline at the start of this

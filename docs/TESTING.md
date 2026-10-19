@@ -1,5 +1,28 @@
 # What only a phone can prove
 
+## C110 — Browse root navigation
+
+Branch `fix/browse-root-navigation`; release artifact and host evidence are recorded in
+[the handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). All scenarios below are **unchecked on a phone**.
+Install over the existing test-signed build without uninstalling or clearing data.
+
+1. Play History. Toolbar Back to Browse, system Back to the playlist, then Browse: the main
+   Browse view opens, not History. Music, position and the active context remain unchanged.
+2. Repeat with Search (also with a platform/catalogue scope), an online author's folder and a
+   scanned local folder. Back should move one level; every fresh generic Browse opens the root.
+   Repeat entry/exit several times, including during a slow read; no stale folder should reappear.
+3. Repeat while paused. Navigation must not resume, stop, replace or rewind the current track.
+   Next/Previous after returning still follow the original context, not the selected playlist.
+4. Play Random and repeat both toolbar and system Back: Random → Browse → playlist. Enter Browse:
+   root first. Open Random: the remembered list is retained, without rerolling or resuming a paused
+   session. Repeat after playing an author from Random; navigation must not steal author transport.
+5. Explicit More from this author must still open that author's folder rather than the root.
+   Back returns to the place the jump came from, including Search/Random. A subsequent generic
+   Browse still opens root. Check saved-place opening/Back and the read-only context sheet too.
+
+Report the installed build ID, steps and expected/observed result. Host navigation with preset
+playback does not prove device audio output, notification/service behaviour or gestures.
+
 ## QUEUE — accepted and merged; detailed regression checklist retained, 2026-10-19
 
 The owner confirmed the intended Queue behaviour and authorized integration on 2026-10-19.

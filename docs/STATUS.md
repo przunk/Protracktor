@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-19 — context/manual queue analysis saved, Browse defect C110 open; APK 1.2.0 (1228), prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — C110 correction on `fix/browse-root-navigation`, verification in progress; latest handed-over APK 1.2.0 (1228), prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -15,17 +15,18 @@ Exact device and installed build ID were not independently supplied; the last ha
 normal-code Queue APK 1.2.0 (1228). The owner reported that the app started after that handoff;
 this is launch evidence, not a completed detailed regression matrix.
 
-**Partially checked by code inspection:** `ProtracktorApp.openBrowse` first calls
-`returnToSession()`. That restores the snapshot saved by `playFromResults()` whenever
+**Mechanism:** the former `ProtracktorApp.openBrowse` first called
+`returnToSession()`. That restored the snapshot saved by `playFromResults()` whenever
 `searchMode` is true; that property covers every `QueueSource.Collection`, not just Search.
 The same restore path covers History, Search, online authors and local folders. Random has a
-different path and still needs regression coverage; its earlier Back defect is not assumed to
-be the same mechanism. No agent-run phone reproduction or regression test has been performed.
+different path; its earlier Back defect is not assumed to be the same mechanism.
 
-**Open, not fixed.** Recommended separate task: `fix/browse-root-navigation` from develop, test
-the actual Browse action, preserve explicit jumps and one-level Back, then full gate/lint,
-minified APK and owner acceptance before merge. No fix is started by the current documentation
-request. [Reproduction, mechanism, complete queue discussion and next steps](QUEUE_CONTEXT_ANALYSIS.md).
+**Implemented on an unmerged branch; phone acceptance pending.** The actual shell regression
+failed before the correction and passed afterwards with preset playback, not decoded audio.
+Generic Browse now opens ROOT independently of its playing source. Explicit destination events
+and one-level Back remain separate. Seven expanded shell regressions passed; the forced full
+gate/lint/APK are pending. [Implementation and evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md);
+[complete queue discussion](QUEUE_CONTEXT_ANALYSIS.md). No manual queue or AMP change is included.
 
 ## Manual queue proposal saved for the next discussion
 

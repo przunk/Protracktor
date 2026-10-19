@@ -167,14 +167,10 @@ fun ProtracktorApp(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(viewModel::importPlaylist) }
 
-    // Opening Browse from a button starts at the top; opening it from a jump does not, because the
-    // jump has already aimed it. Tying the reset to the button rather than to the sheet being shown
-    // is what keeps those two apart.
-    // **While a list plays, Browse opens on it** (A61): the same words, the same folder, the playing
-    // row marked. Only with nothing playing from Browse does it start at the top -- a new search from
-    // the uncovered playlist starts fresh, which is what the reset was for.
+    // Generic Browse starts at root, independently of playback. Explicit jumps already have a
+    // destination and open through showBrowse instead, without this reset.
     val openBrowse = {
-        if (!viewModel.returnToSession()) viewModel.openDomain(BrowseDomain.ROOT)
+        viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
     // Back restores navigation only; the active queue is independent.
