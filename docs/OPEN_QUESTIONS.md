@@ -95,7 +95,9 @@ Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and 
 `7cab210`. The owner subsequently supplied the context/manual queue distinction, the C110 Browse
 report, a context-position visibility concern and swipe-removal request. The full
 [follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md) separates owner proposals from agent recommendations
-and open decisions. C110 is the recommended independent next fix, not implemented yet. Manual FIFO,
+and open decisions. C110 is implemented separately on unmerged `fix/browse-root-navigation`:
+963 tests, lint without errors and release APK verified; phone acceptance pending
+([handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md)). Manual FIFO,
 mixed transport history and repeat/UI details need confirmation before a new experimental feature.
 The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
 

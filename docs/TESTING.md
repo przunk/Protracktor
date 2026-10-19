@@ -1,14 +1,38 @@
 # What only a phone can prove
 
+## C110 — Browse root navigation
+
+Branch `fix/browse-root-navigation`; APK **1.2.0 (1231)**, source `fa09e7a`. Artifact and host evidence are in
+[the handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). All scenarios below are **unchecked on a phone**.
+Install over the existing test-signed build without uninstalling or clearing data.
+
+1. Play History. Toolbar Back to Browse, system Back to the playlist, then Browse: the main
+   Browse view opens, not History. Music, position and the active context remain unchanged.
+2. Repeat with Search (also with a platform/catalogue scope), an online author's folder and a
+   scanned local folder. Back should move one level; every fresh generic Browse opens the root.
+   Repeat entry/exit several times, including during a slow read; no stale folder should reappear.
+3. Repeat while paused. Navigation must not resume, stop, replace or rewind the current track.
+   Next/Previous after returning still follow the original context, not the selected playlist.
+4. Play Random and repeat both toolbar and system Back: Random → Browse → playlist. Enter Browse:
+   root first. Open Random: the remembered list is retained, without rerolling or resuming a paused
+   session. Repeat after playing an author from Random; navigation must not steal author transport.
+5. Explicit More from this author must still open that author's folder rather than the root.
+   Back returns to the place the jump came from, including Search/Random. A subsequent generic
+   Browse still opens root. Check saved-place opening/Back and the read-only context sheet too.
+
+Report the installed build ID, steps and expected/observed result. Host navigation with preset
+playback does not prove device audio output, notification/service behaviour or gestures.
+
 ## QUEUE — accepted and merged; detailed regression checklist retained, 2026-10-19
 
 The owner confirmed the intended Queue behaviour and authorized integration on 2026-10-19.
 Individual checklist results and the installed build ID were not separately supplied; keep this
 list for regression testing rather than treating every item as independently certified.
 Merged into develop as `7cab210`, with a tree equal to tested source `069b238` (956 host tests;
-lint 0 errors/72 warnings). Current minified normal-code APK:
+lint 0 errors/72 warnings). Accepted baseline's minified normal-code APK:
 `dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk`.
-The artifact/signature/version are verified, but this new APK has not yet been tested on a phone.
+The artifact/signature/version are verified. The owner reported startup, not individual results
+for the detailed phone checklist below.
 Previous code-1221 artifacts remain historical. Installing this higher-code build prevents ordinary
 replacement by the old code-1221 AMP APK. AMP integration is deferred. Do not uninstall or clear storage.
 

@@ -12,13 +12,19 @@ The recommended next task is the independent Browse navigation defect C110. Manu
 implementation still needs the decisions below; a combined editable view is explicitly deferred.
 This save authorizes documentation only, not a code change, build, feature branch or merge.
 
+**Subsequent checkpoint:** the owner separately requested C110. Its isolated implementation is on
+`fix/browse-root-navigation`, based on develop `a8539a2`; 963 host tests, lint without errors and
+release APK verification passed, with phone acceptance pending.
+[Implementation record](PR_C110_BROWSE_ROOT_NAVIGATION.md). The original analysis below
+records the pre-fix state; manual queue decisions and the AMP hold are unchanged.
+
 ## Current implementation and handoff
 
 The accepted experiment was merged into develop as `7cab210`. Baseline at the start of this
 documentation task is `0d83b86`, a documentation closeout over that merge. The experiment branch
 `feature/playback-queue-experiment` is integrated and must not receive the next iteration.
 
-The last supplied APK is
+The APK supplied before this analysis was
 `dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk`, version **1.2.0 (1228)**.
 The owner subsequently reported that the app started, then supplied the feedback below. Launch
 confirmation is not a separately completed device regression checklist; an installed build ID

@@ -65,7 +65,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C110 | Browse reopens playing History instead of the main Browse view | Owner report, 2026-10-19; shared collection-restore mechanism confirmed by code inspection, no agent-run reproduction or fix. Cover Search, online/local folders and Random navigation. [Analysis and proposed next task](QUEUE_CONTEXT_ANALYSIS.md). |
+| C110 | Browse reopens playing History instead of the main Browse view | Owner report, 2026-10-19; actual shell regression failed before the correction and passed after it with preset playback. Unmerged `fix/browse-root-navigation`: 963 tests, lint without errors, verified release APK 1.2.0 (1231). Phone acceptance pending. [Handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
