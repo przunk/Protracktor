@@ -77,3 +77,12 @@ artifact or its tested source. This is a test-signed release APK, not a store AA
 Phone scenarios are **unchecked**; see [TESTING](TESTING.md#c110--browse-root-navigation).
 No merge, push, release tag or master movement occurred. Develop remains `a8539a2`,
 AMP `8e92002`, master `794d8f9`; AMP remains deferred. Wait for owner acceptance before merging.
+
+## Owner acceptance and integration — 2026-10-19
+
+The owner reported the correction satisfactory and explicitly requested merge, separately reporting
+the Browse padding mismatch as C111. Merged into develop as `7e7f242a403983214c3d3a806b0c9ebf6fee7208`.
+**Checked:** the complete merge tree equals accepted branch `57a9d65`; the code equals tested
+candidate `fa09e7a`. This is a Git comparison, not a fresh gate/build or an independently confirmed
+result for every phone checklist item. The existing APK keeps its original source SHA/code/hash.
+AMP and master are unchanged; no push, release tag or publication.

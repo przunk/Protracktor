@@ -1,13 +1,27 @@
 # Status
 
-Updated: 2026-10-19 — C110 unmerged, host gates passed and ready for phone testing; APK 1.2.0 (1231), prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — C110 accepted and merged; C111 Browse padding mismatch reported; APK 1.2.0 (1231), prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C110 Browse restores the playing collection instead of its root
+## C111 Add music and Online catalogues have inconsistent padding
+
+Owner/user report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
+views visibly changes content padding. Expected: consistent alignment and spacing through that
+transition. Exact edges/measurements and installed build ID were not independently supplied;
+the latest handoff was C110 APK 1.2.0 (1231). **Open, not fixed**; phone report only, no agent-run
+layout reproduction or cause established. Separate from manual queue work; do not silently bundle
+this UI fix into that experiment.
+
+## ~~C110 Browse restores the playing collection instead of its root~~ — accepted and merged, 2026-10-19
+
+The owner accepted the correction and requested integration. Merged as `7e7f242`; its complete
+tree equals branch checkpoint `57a9d65`. No repeat build/gate is claimed for the merge; application
+sources equal tested source `fa09e7a`. Individual checklist/device/build details were not separately
+reported. The original handoff evidence below remains historical; no push or store release.
 
 Owner report, 2026-10-19: play History, Back to Browse, Back to the playlist, press Browse.
 Observed: History reopens. Expected: the main Browse view opens, with music/context unchanged.
@@ -21,7 +35,7 @@ this is launch evidence, not a completed detailed regression matrix.
 The same restore path covers History, Search, online authors and local folders. Random has a
 different path; its earlier Back defect is not assumed to be the same mechanism.
 
-**Implemented on an unmerged branch; phone acceptance pending.** The actual shell regression
+**At the original handoff, before the acceptance above:** the actual shell regression
 failed before the correction and passed afterwards with preset playback, not decoded audio.
 Generic Browse now opens ROOT independently of its playing source. Explicit destination events
 and one-level Back remain separate. Clean source `fa09e7a` passed the forced full gate in **498 s**:

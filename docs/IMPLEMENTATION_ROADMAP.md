@@ -65,7 +65,8 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C110 | Browse reopens playing History instead of the main Browse view | Owner report, 2026-10-19; actual shell regression failed before the correction and passed after it with preset playback. Unmerged `fix/browse-root-navigation`: 963 tests, lint without errors, verified release APK 1.2.0 (1231). Phone acceptance pending. [Handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
+| C111 | Add music and Online catalogues content padding changes between views | Owner/user report, 2026-10-19; visible alignment/spacing mismatch. Measurements and cause not established; not fixed or included in queue work. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
+| ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |

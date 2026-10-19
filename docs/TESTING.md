@@ -3,7 +3,9 @@
 ## C110 — Browse root navigation
 
 Branch `fix/browse-root-navigation`; APK **1.2.0 (1231)**, source `fa09e7a`. Artifact and host evidence are in
-[the handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). All scenarios below are **unchecked on a phone**.
+[the handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). The owner accepted the correction on 2026-10-19;
+merged as `7e7f242`. Individual results for every scenario below were not separately supplied;
+retain this as a regression checklist, not a claim that all items were independently certified.
 Install over the existing test-signed build without uninstalling or clearing data.
 
 1. Play History. Toolbar Back to Browse, system Back to the playlist, then Browse: the main
