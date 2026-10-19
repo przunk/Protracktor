@@ -24,8 +24,8 @@ by source rows and learned-title map rather than recomputed on progress updates.
 
 No new service/player, dependency, schema or persistence is introduced. Pending and mixed traversal
 die with the process; existing paused selected-playlist restoration remains. AMP/C111/web queue
-work is excluded. The first APK passed host gates; second-iteration verification and owner phone
-acceptance are separate states, not established by this architecture description.
+work is excluded. The second-iteration APK passed 1013 host tests and lint, but owner phone
+acceptance remains pending; host verification does not establish device behaviour.
 [Contract](QUEUE_CONTEXT_ANALYSIS.md), [implementation evidence](MANUAL_QUEUE_IMPLEMENTATION.md),
 [second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md).
 

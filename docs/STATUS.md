@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-20 — manual queue first APK 1.2.0 (1238), unmerged, second iteration in progress; C110 merged, C111 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — manual queue second iteration complete, APK 1.2.0 (1239), unmerged/phone checks pending; C110 merged, C111 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -70,9 +70,19 @@ The first clean-source forced gate passed **1011 tests / 133 suites**, zero fail
 all companion stages and lint (**0 errors / 72 warnings**) in 525 s. Minified test-signed APK
 **1.2.0 (1238)** from `783d8fa` built and verified; it is an **intermediate artifact**, not the test
 candidate. The owner requested a requirements/all-commits audit after it and a corrected,
-reverified APK. [Second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) records policy/coverage,
-title projection and documentation findings. Final verification/build remain pending.
-All phone behaviour is unchecked; no feature merge.
+reverified APK. [Second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) records five corrected findings:
+one production History policy, visible Undo restoration checks, cached title projection with full
+keys, accurate ownership documentation and awaited test-fixture teardown.
+
+**Second iteration completed:** clean source `3d27868` passed the **forced** full gate in **481 s**:
+**1013 tests / 133 suites**, zero failures/errors/skips, all companion stages; lint **0 errors /
+72 warnings** (81.9 s). Two negative probes fail under old History policy/incomplete title keys;
+the restored corrective focused run passed 89 tests. Minified release APK built in **98.8 s**:
+`dist/protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk`, **11,881,447 bytes**.
+Package/code, v2 public test signature, absent debuggable flag, R8 mapping and all three engine
+ABIs checked. Exact hashes/evidence in the second-iteration report. This, not the first APK, is
+the candidate for owner testing. App behaviour is checked partially on the host; all phone
+behaviour is **unchecked**. Unmerged; develop, AMP and master unchanged. No push/tag/store release.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 

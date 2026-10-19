@@ -29,6 +29,7 @@ Retained reports: `dist/manual-queue-verification/783d8fa/` (ignored artifacts, 
 | `bc426e5` | Pure FIFO/occurrence identity, mixed backward/forward insertion, source replay anchors, removal/Undo, metadata enrichment, tests and checkpoint docs. IDs separate equal files; source drafts are not restored from snapshots. Later positional-prefix protection fixes duplicate Random anchors. No extra editing/reordering/persistence is implied. |
 | `91477f2` | All controller transport/completion/retry/prefetch changes; state/current/origin projection; playlist ownership/removal; VM/service entry; EN/PL feedback and domain/controller tests. Found an obsolete History policy still tested separately from production (F1). Paused resume and no-source boundaries are completed in the next commit. |
 | `783d8fa` | All row-menu wiring, two-tab/modal/snackbar layout, pending gestures, dock availability, honest source markers, vector/EN/PL resources, absent-context rules, tests and documents. C110 fixture extraction preserves its seven scenarios. Found missing restored-row visibility assertion (F2), avoidable title-list allocation (F3), and architecture/status text needing the current ownership distinction (F4). |
+| `3d27868` | Corrective diff reviewed before committing and again at closeout: one actual-origin History policy and production call, legacy-fixture adaptation, complete title-cache keys, restored-row visibility checks, awaited fixture teardown and F1–F5 documentation. Both deliberate mutations are absent. No version/schema/dependency/native/web/build-script changes. |
 
 ## Requirements recheck
 
@@ -89,7 +90,9 @@ read-only. Update it to distinguish actual occurrence, source continuation and p
 retain older accepted-baseline evidence as history. Link the second-iteration report and do not
 reuse the first APK's counts/SHA for a later build. Architecture, contract, implementation evidence,
 Status, roadmap, wishlist and Q13 now distinguish these states. Stale retry/ownership comments were
-also corrected and shortened. Local path checks passed for 151 links; final review remains.
+also corrected and shortened. The final document review also reconciled leftover proposal-only
+wording and marked read-only sheet descriptions as accepted-baseline history. Local path checks
+are part of the documentation closeout, not phone verification.
 
 ### F5 — test cleanup could close SQLite before cancelled controller tasks finished
 
@@ -102,10 +105,36 @@ it does not prove the sole cause of every earlier SQLITE_BUSY or claim an applic
 
 ## Completion evidence
 
-Corrective code and tests have been self-reviewed as a diff against `783d8fa`, including restoration
+Corrective code and tests were self-reviewed as a diff against `783d8fa`, including restoration
 of both deliberate mutations. The combined corrective focused run passed **89 tests / 8 suites**,
-zero failures/errors/skips in 43 s; final forced full gate,
-lint and new release APK are pending. The corrective commit/report closeout will also be reviewed.
+zero failures/errors/skips in 43 s. All four implementation/corrective commits above and the final
+documentation-only closeout were reviewed; the closeout does not change application sources or
+relabel either artifact.
+
+Clean source **`3d27868b4f8ba3f097f7419729c9691be2dafae1`** passed the second **forced** full gate
+in **481 s**: **1013 tests / 133 suites**, zero failures/errors/skips, unit stage **309.9 s**.
+The Gradle test task executed (31 tasks executed), not UP-TO-DATE/FROM-CACHE. All companion stages
+listed for the first iteration passed again, with the same page/engine/SAP/server counts. Lint:
+**0 errors / 72 warnings**, **81.9 s**. F1–F5 are corrected/covered within the stated host scope;
+no further selected requirement omission was found. This is not a claim that the code is ideal
+or that provisional product decisions have been accepted.
+
+**Final second-iteration phone candidate:**
+[protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk](../dist/protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk)
+— **11,881,447 bytes**, built in **98.8 s** from that clean source.
+SHA-256: `9c2f6c4d13b17c53a3d84790421210e91682e1c0a95bbf206c16ed34cabeacad`.
+Package `com.przunk.protracktor`, versionName **1.2.0**, code **1239**, APK v2 signature with the
+same public test certificate as the first build. Absent debuggable flag, actual R8 task/nonempty
+mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked again. Not an AAB/store release.
+
+Retained evidence: `dist/manual-queue-verification/3d27868/` contains fresh JUnit/lint reports,
+all gate/build logs, mapping, manifest/badging, public signature output and earlier focused/
+negative probes under `probes/`. The first iteration remains separately under `783d8fa/`.
+
+Application code is **checked partially**: domain/controller/host UI behaviour, full host gates,
+lint and release artifact properties were executed/checked. Actual device behaviour is **unchecked**.
+Develop remains `d6d3297`, AMP `8e92002`, master `794d8f9`; no merge, push or tag/release change.
+Later documentation commits increase HEAD's commit count, not the already-built APK's code/SHA.
 All device audio, notification/service layout, gesture feel, Bluetooth and usability remain
 **unchecked**. [Phone checklist](TESTING.md#manual-queue--unmerged-experiment-phone-checks-pending)
 and [provisional product questions](QUEUE_CONTEXT_ANALYSIS.md#questions-retained-for-post-implementation-evaluation).

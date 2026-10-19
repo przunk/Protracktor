@@ -3,8 +3,10 @@
 Branch `feature/manual-playback-queue`, based on audited develop `d6d3297`, 2026-10-19.
 [Contract, audit findings, delegated choices and retained questions](QUEUE_CONTEXT_ANALYSIS.md).
 No merge or push authorized. AMP and C111 padding work are excluded; versionName/schema unchanged.
-The stage notes below retain their checkpoint evidence. The first complete APK/gate and the
+The stage notes below retain their checkpoint evidence. Both APK/gates and the completed
 owner-requested second-iteration audit are recorded in [the second-iteration report](MANUAL_QUEUE_SECOND_ITERATION.md).
+Final phone candidate: **1.2.0 (1239)**, clean source `3d27868`, **1013 host tests**, lint 0 errors/
+72 warnings. Unmerged; all phone behaviour unchecked. The first code-1238 APK is intermediate.
 
 ## Stage 1 — pure scheduler
 
@@ -76,5 +78,5 @@ The owner requested a second iteration **after** the first verified APK: review 
 all branch commits, record findings, fix justified issues, repeat verification and rebuild if code
 changes. Neither this checkpoint nor the first APK is the final test candidate. The first forced
 gate passed 1011 tests/lint (0 errors, 72 warnings) and APK 1.2.0 (1238) was built from clean
-`783d8fa`; exact artifacts and ongoing corrective work are in the second-iteration report.
+`783d8fa`; exact artifacts and the completed corrective iteration are in the second-iteration report.
 All phone behaviour remains unchecked. No merge, release or push.

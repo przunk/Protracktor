@@ -101,14 +101,15 @@ implementation and delegated unresolved choices to the agent, asking to retain q
 post-implementation evaluation. The analysis now supplies a transition table and provisional
 FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owner approvals.
 Implementation is now on `feature/manual-playback-queue`; its first verified APK is intermediate.
-The owner requested a [second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) before phone testing.
-Unsettled product answers remain provisional even after host tests; the branch is unmerged.
+The owner requested a [second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) before phone testing;
+it is complete with corrected code, 1013 host tests/lint and final APK 1.2.0 (1239).
+Unsettled product answers remain provisional; phone checks and merge acceptance are pending.
 The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
 
-The owner selected one active playback queue independent of navigation and the selected playlist.
+In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning
 from Browse/Search/Random leaves music and transport ownership unchanged, without a playlist cover.
-The queue is a read-only, full-height Now Playing-like sheet with row playback and information,
+That baseline's queue sheet is read-only and full-height, with row playback and information,
 not removal/reordering. Reopening Random preserves its record and does not steal transport from
 an author collection. Next supplies ordinary new draws; double-tapping the dice starts a new
 Random record with the same filter. A single dice tap does nothing; provide help and accessibility.

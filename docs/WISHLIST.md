@@ -128,10 +128,11 @@ visibility and requests swipe removal. [Complete follow-up analysis](QUEUE_CONTE
 On 2026-10-19 the owner authorized a new task branch and delegated unsettled choices to the agent,
 with questions retained for evaluation after implementation. The audited analysis is the provisional
 contract. The extension is implemented on unmerged `feature/manual-playback-queue`; the first
-1011-test/lint-verified APK is intermediate. An owner-requested second iteration precedes phone
-testing; see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). AMP remains deferred.
+1011-test/lint-verified APK is intermediate. The requested second iteration is now complete:
+1013 host tests/lint and final APK 1.2.0 (1239), pending phone testing and acceptance;
+see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). AMP remains deferred.
 
-One active queue owns transport; navigation and playlist selection only change what is shown.
+In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
 playback selection and information. Random preserves its remembered record; only a dice double
 tap resets the list, with help/animation and an equivalent accessibility action. First entry starts
@@ -763,12 +764,14 @@ that has just gone would draw nothing, and the chip that set it is disabled the 
 
 ## B25. A swipe on a track row — to discuss
 
-**Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the proposed
+**Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the experimental
 manual queue. This does not select a gesture for ordinary playlist, context, Browse or Search
 rows. The owner subsequently authorized implementation with agent-selected details: pending-only
 end-to-start swipe, Material threshold, short snackbar Undo and a labelled Remove equivalent.
 These are provisional choices for later evaluation, not broader source-list gestures. Reordering
-remains excluded; this documentation checkpoint is not a completed implementation.
+remains excluded. Pending-only swipe and visible Undo restoration are implemented on the unmerged
+manual-queue branch, with second-iteration host evidence; phone usability/acceptance remain pending.
+[Final audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md).
 [Queue/context analysis and gesture scope](QUEUE_CONTEXT_ANALYSIS.md).
 
 **Original rationale before B45, retained as history:** the following description predates the

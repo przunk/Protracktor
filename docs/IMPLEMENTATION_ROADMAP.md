@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-19. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-20. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The owner-approved unpublished version-history correction restores release baseline 1.1.0;
 release 1.2.0 now has a prepared tagged AAB (Play publication unconfirmed). Historical IDs/SHAs below refer to the archived original graph,
@@ -24,12 +24,13 @@ it is no longer open. [Verification and acceptance](PLAN_HISTORY_SEARCH.md).
 B45 active playback queue was accepted and merged on 2026-10-19 (`7cab210`), after normal-version
 cleanup and a fresh 956-test full gate/lint. It is no longer open inventory work. Further colleague
 feedback is now captured in the [context and manual queue analysis](QUEUE_CONTEXT_ANALYSIS.md).
-The extension remains a proposal, separate from the accepted baseline; AMP stays deferred.
+The extension is implemented on an unmerged trial branch, separate from the accepted baseline;
+phone acceptance is pending and AMP stays deferred.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Add manual FIFO and mixed transport traversal around the existing context | Implemented on unmerged `feature/manual-playback-queue`; first APK passed 1011 host tests/lint. Owner-requested second iteration is correcting audit findings before the final test candidate. Provisional answers remain open to evaluation; unified view and AMP deferred. B25 supplies pending swipe removal. [Contract](QUEUE_CONTEXT_ANALYSIS.md), [audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md). |
+| B45 follow-up / Q13 | Add manual FIFO and mixed transport traversal around the existing context | Implemented on unmerged `feature/manual-playback-queue`; second iteration complete, 1013 host tests/lint and final APK 1.2.0 (1239). Owner phone checks/acceptance pending. Provisional answers remain open to evaluation; unified view and AMP deferred. B25 supplies pending swipe removal. [Contract](QUEUE_CONTEXT_ANALYSIS.md), [audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |

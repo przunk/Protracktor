@@ -7,6 +7,8 @@ Branch `feature/manual-playback-queue`. Use the final **second-iteration** artif
 All scenarios below are **unchecked on a phone**. Install over the existing test-signed build;
 do not uninstall or clear storage. VersionName/schema are unchanged; commit-derived versionCode
 does not permit ordinary replacement by the older AMP APK.
+Final second-iteration candidate: **1.2.0 (1239)**, source `3d27868`,
+`dist/protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk` (1013 host tests; lint 0 errors).
 
 1. Play source A/B/C/D at B. Add X, Y and Z from different views: B continues uninterrupted,
    then file Next/completion gives X/Y/Z/C/D. Merely browsing or selecting another editor playlist
