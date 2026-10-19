@@ -1594,7 +1594,7 @@ class PlaybackController private constructor(private val context: Context) {
         // A play History started leaves History as it is: no new time, no new place, no count
         // (A56, `HistoryRecording`).
         val now = _state.value
-        if (now.resultsFromHistory) return
+        if (!HistoryRecording.records(now.resultsFromHistory)) return
         historyWrites.record(ref, generation)
     }
 
@@ -2590,27 +2590,11 @@ class PlaybackController private constructor(private val context: Context) {
         playlistSession.scheduleSave()
     }
 
-    /**
-     * How to try the last thing the user asked for again, kept until something opens.
-     *
-     * Without it, play after a failure starts the playlist: a failed open leaves nothing loaded,
-     * and "nothing loaded" is also what a fresh restart looks like. From the sofa that reads as the
-     * app ignoring you and playing something of its own choosing.
-     *
-     * **A closure rather than a `TrackRef`**, because there are two ways to be playing a track and
-     * they are not interchangeable: a playlist track goes through `openAndPlay` and a search result
-     * or random pick through `playTransient`, which marks the detour. Retrying the first as though
-     * it were the second would quietly move the user off their playlist -- the exact class of
-     * surprise this is fixing.
-     *
-     * **Retried whatever the failure was**, including a format nothing here plays. Pressing play
-     * then gives the same message a second time, which is honest; the alternative is an app that
-     * sometimes obeys and sometimes substitutes, and unpredictable is worse than useless.
-     */
     /** Navigation snapshots never own playback. */
     private var sessionBrowse: BrowseState? = null
     private var waitingBrowse: BrowseState? = null
 
+    /** Retry the actual occurrence only while its playback intent remains current. */
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {

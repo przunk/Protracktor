@@ -3,6 +3,8 @@
 Branch `feature/manual-playback-queue`, based on audited develop `d6d3297`, 2026-10-19.
 [Contract, audit findings, delegated choices and retained questions](QUEUE_CONTEXT_ANALYSIS.md).
 No merge or push authorized. AMP and C111 padding work are excluded; versionName/schema unchanged.
+The stage notes below retain their checkpoint evidence. The first complete APK/gate and the
+owner-requested second-iteration audit are recorded in [the second-iteration report](MANUAL_QUEUE_SECOND_ITERATION.md).
 
 ## Stage 1 — pure scheduler
 
@@ -47,7 +49,7 @@ An earlier 92-test run also passed before adding the source-emptying projection 
 No complete UI feature or release APK is claimed yet. Row actions, two tabs, honest source markers,
 pending swipe/Remove/Undo, host UI regressions and the final forced full gate/lint remain pending.
 
-## Stage 3 — panel and row actions (verification in progress)
+## Stage 3 — panel and row actions
 
 Playlist, Browse/Search/History, Random and Context row menus now offer Add to queue through one
 shared menu item. The playback panel separates read-only Context and pending Queue. Its common
@@ -72,5 +74,7 @@ The corrected focused rerun passed **63 tests / 6 suites**, zero failures/errors
 
 The owner requested a second iteration **after** the first verified APK: review requirements and
 all branch commits, record findings, fix justified issues, repeat verification and rebuild if code
-changes. Neither this checkpoint nor the first APK is the final test candidate. Full gate, lint,
-release APKs and all phone behaviour remain pending. No merge, release or push.
+changes. Neither this checkpoint nor the first APK is the final test candidate. The first forced
+gate passed 1011 tests/lint (0 errors, 72 warnings) and APK 1.2.0 (1238) was built from clean
+`783d8fa`; exact artifacts and ongoing corrective work are in the second-iteration report.
+All phone behaviour remains unchecked. No merge, release or push.

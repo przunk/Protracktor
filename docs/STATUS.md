@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-19 — C110 accepted and merged; C111 Browse padding mismatch reported; APK 1.2.0 (1231), prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — manual queue first APK 1.2.0 (1238), unmerged, second iteration in progress; C110 merged, C111 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -66,9 +66,13 @@ UI wiring now includes two tabs, shared row actions, quiet context markers and p
 Undo inside the modal. The final focused run passed 63 tests / 6 suites, zero failures/errors/skips,
 after correcting an existing reactive Random test's snapshot/clock synchronization. Idle/no-source and
 paused-resume boundaries are explicit. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
-Full feature gates, release APK and phone behaviour remain pending; no feature merge. The owner
-requested a requirements/all-commits audit after the first APK and a corrected, reverified APK
-before the second iteration can be offered for phone testing.
+The first clean-source forced gate passed **1011 tests / 133 suites**, zero failures/errors/skips,
+all companion stages and lint (**0 errors / 72 warnings**) in 525 s. Minified test-signed APK
+**1.2.0 (1238)** from `783d8fa` built and verified; it is an **intermediate artifact**, not the test
+candidate. The owner requested a requirements/all-commits audit after it and a corrected,
+reverified APK. [Second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) records policy/coverage,
+title projection and documentation findings. Final verification/build remain pending.
+All phone behaviour is unchecked; no feature merge.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 

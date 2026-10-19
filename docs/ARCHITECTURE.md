@@ -1,5 +1,34 @@
 # Architecture
 
+## Manual playback queue — implemented on an unmerged branch, 2026-10-20
+
+`feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
+identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
+`PlaybackSchedule` owns pending FIFO requests with stable occurrence IDs and a backward/forward
+transport record. `PlayerUiState.current` projects its actual occurrence, falling back to context
+when no mixed record exists. An explicit absent source prevents a never-started editor playlist
+from silently becoming continuation for manual playback.
+
+Controller file transport and natural completion enter that scheduler after the existing subsong
+layer. It chooses pending, then retained forward traversal, then source continuation; Repeat One
+retains the actual tune. Replay anchors restore source position against live tracks/modes/shuffle,
+never restore editor contents. Explicit source Play resets traversal but preserves pending; mere
+navigation or playlist selection resets neither. Retry binds to playback epoch and occurrence.
+History recording uses actual origin through one pure policy, not whichever source is parked.
+
+The dock's Queue action opens Context and Queue tabs. Only pending requests are removable, with
+occurrence-specific Undo inside the modal. Context stays read-only apart from playback/info/row
+actions. A quiet marker distinguishes parked source position from actual playback even when file
+IDs match. Shared Now Playing subtitle logic describes the actual file; title projection is cached
+by source rows and learned-title map rather than recomputed on progress updates.
+
+No new service/player, dependency, schema or persistence is introduced. Pending and mixed traversal
+die with the process; existing paused selected-playlist restoration remains. AMP/C111/web queue
+work is excluded. The first APK passed host gates; second-iteration verification and owner phone
+acceptance are separate states, not established by this architecture description.
+[Contract](QUEUE_CONTEXT_ANALYSIS.md), [implementation evidence](MANUAL_QUEUE_IMPLEMENTATION.md),
+[second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md).
+
 ## Active playback queue — accepted and merged, 2026-10-19
 
 Implemented on `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`

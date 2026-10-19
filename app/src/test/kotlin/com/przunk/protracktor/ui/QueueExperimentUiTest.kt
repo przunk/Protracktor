@@ -209,4 +209,25 @@ class QueueExperimentUiTest {
         measure()
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
     }
+
+    @Test fun `open context learns titles without moving rows or losing the source filename`() {
+        compose.mainClock.autoAdvance = false
+        val rows = listOf(TrackRef("a", "a.mod", fileName = "a.mod"), TrackRef("b", "b.mod", fileName = "b.mod"))
+        val shown = androidx.compose.runtime.mutableStateOf(PlayerUiState(
+            playback = collectionPlayback(PlayQueue(rows).startAt(0))))
+        activity.get().setContent { MaterialTheme {
+            QueueScreen(shown.value, onPlay = {}, onShowNeighbours = {}, onShareFile = {},
+                onShareAudio = {}, onShareLink = {}, onSendToWeb = {}, onAddToPlaylist = {})
+        } }
+        measure()
+        val before = compose.onNodeWithContentDescription("Actions for b.mod").fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle {
+            shown.value = shown.value.copy(learnedTitles = mapOf("b" to "Learned title"), positionSeconds = 4.0)
+            Snapshot.sendApplyNotifications()
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("Learned title").assertIsDisplayed()
+        assertEquals(before, compose.onNodeWithContentDescription("Actions for Learned title").fetchSemanticsNode().boundsInRoot)
+        assertEquals("b.mod", shown.value.activePlayback.order.tracks[1].fileName)
+    }
 }

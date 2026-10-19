@@ -127,7 +127,9 @@ colleague/owner feedback distinguishes this context from a manual FIFO, raises c
 visibility and requests swipe removal. [Complete follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md).
 On 2026-10-19 the owner authorized a new task branch and delegated unsettled choices to the agent,
 with questions retained for evaluation after implementation. The audited analysis is the provisional
-contract; this documentation checkpoint does not claim a completed extension. AMP remains deferred.
+contract. The extension is implemented on unmerged `feature/manual-playback-queue`; the first
+1011-test/lint-verified APK is intermediate. An owner-requested second iteration precedes phone
+testing; see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). AMP remains deferred.
 
 One active queue owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
@@ -770,7 +772,8 @@ remains excluded; this documentation checkpoint is not a completed implementatio
 [Queue/context analysis and gesture scope](QUEUE_CONTEXT_ANALYSIS.md).
 
 **Original rationale before B45, retained as history:** the following description predates the
-independent playback context. There is still no implemented manual FIFO, but the current context
+independent playback context. The accepted develop baseline has no manual FIFO (the extension is
+implemented separately on an unmerged branch), but the current context
 is no longer necessarily the selected playlist.
 
 **Two things make this a conversation rather than a task.**

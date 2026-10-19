@@ -68,7 +68,7 @@ class QueueSelectionTest {
         player.value = player.value.withPlayback(collectionPlayback(PlayQueue(a).startAt(1), SessionSource.History))
         session.switchPlaylist(2, b, lists)
         assertTrue(player.value.resultsFromHistory)
-        assertFalse(HistoryRecording.records(player.value.searchMode, player.value.resultsFromHistory))
+        assertFalse(HistoryRecording.records(player.value.resultsFromHistory))
         assertEquals(a[1], player.value.current)
     }
 

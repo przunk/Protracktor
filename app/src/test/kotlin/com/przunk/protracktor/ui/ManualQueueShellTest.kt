@@ -85,6 +85,8 @@ class ManualQueueShellTest : PlaybackShellTest() {
             .performTouchInput { click() }
         frame(200)
         compose.runOnIdle { assertEquals(pending, player.value.schedule.pending) }
+        compose.onNodeWithTag("manual-request-${pending[0].id}").assertIsDisplayed()
+        compose.onNodeWithTag("play-request-${pending[0].id}").assertIsDisplayed()
         compose.onNodeWithTag("remove-request-${pending[1].id}").performClick()
         frame(200)
         compose.runOnIdle {

@@ -7,9 +7,12 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.data.ProtracktorDatabase
+import com.przunk.protracktor.data.HistoryStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
@@ -46,7 +49,9 @@ class ManualQueueControllerTest {
 
     @After fun stop() {
         if (::controller.isInitialized) {
-            ReflectionHelpers.getField<CoroutineScope>(controller, "scope").cancel()
+            val scope = ReflectionHelpers.getField<CoroutineScope>(controller, "scope")
+            scope.cancel()
+            await { scope.coroutineContext[Job]!!.isCompleted }
             controller.release()
             ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "backgroundWork").close()
             ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "scanWork").close()
@@ -180,5 +185,36 @@ class ManualQueueControllerTest {
         assertEquals(QueueSource.None, state.value.activePlayback.source)
         assertFalse(state.value.canGoNextFile)
         assertEquals(draft, state.value.queue)
+    }
+
+    @Test fun `actual History write preserves request origin rather than suspended context origin`() {
+        val writes = ReflectionHelpers.getField<HistoryWrites>(controller, "historyWrites")
+        val history = HistoryStore(app)
+        val manual = track("X")
+        writes.record(manual, writes.generation)
+        await { writes.revision.value.number == 1L }
+        val original = runBlocking { history.page(0, 10) }.single()
+
+        controller.enqueueTrack(manual, fromHistory = true)
+        controller.nextFile()
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "recordPlayed",
+            ReflectionHelpers.ClassParameter.from(TrackRef::class.java, manual),
+            ReflectionHelpers.ClassParameter.from(Long::class.javaPrimitiveType!!, writes.generation))
+        // A following accepted write is a barrier for the ordered writer; no arbitrary sleep.
+        val barrier = track("Barrier")
+        writes.record(barrier, writes.generation)
+        await { runBlocking { history.count() } == 2 }
+        assertEquals(original, runBlocking { history.page(0, 10) }.single { it.trackId == manual.id })
+
+        state.value = state.value.copy(playback = state.value.activePlayback.copy(
+            source = QueueSource.Collection(SessionSource.History)))
+        controller.enqueueTrack(track("Outside History"))
+        controller.nextFile()
+        val outside = state.value.current!!
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "recordPlayed",
+            ReflectionHelpers.ClassParameter.from(TrackRef::class.java, outside),
+            ReflectionHelpers.ClassParameter.from(Long::class.javaPrimitiveType!!, writes.generation))
+        await { runBlocking { history.count() } == 3 }
+        assertEquals(1, runBlocking { history.page(0, 10) }.single { it.trackId == outside.id }.playCount)
     }
 }

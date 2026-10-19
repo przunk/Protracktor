@@ -52,7 +52,7 @@ data class PlayerUiState(
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
-    /** The only playback owner; queue remains the selected playlist's editable draft. */
+    /** Source continuation; schedule may temporarily supply actual playback instead. */
     val playback: ActiveQueue? = null,
     /** Manual requests and mixed traversal; playback remains the independently resumable context. */
     val schedule: PlaybackSchedule = PlaybackSchedule(),

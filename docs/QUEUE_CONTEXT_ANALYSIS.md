@@ -1,11 +1,14 @@
 # Playback context and manual queue — implementation contract
 
-Updated: 2026-10-19. Owner/colleague feedback, analysis audit and provisional implementation decisions.
+Updated: 2026-10-20. Owner/colleague feedback, analysis audit and provisional implementation decisions.
 This supersedes the pre-implementation analysis retained in Git at `a8539a2`. The owner authorized
 a separate implementation branch after accepting C110, and delegated unresolved choices to the
 implementer. Questions below are for evaluation after implementation, not prerequisites.
 **Provisional choices are agent decisions, not claims that the owner approved each behaviour.**
 The experiment may still be rejected.
+[Implementation evidence](MANUAL_QUEUE_IMPLEMENTATION.md) and
+[post-first-APK requirements/commit audit](MANUAL_QUEUE_SECOND_ITERATION.md) record execution,
+including corrections to this contract where implementation exposes a gap.
 
 ## Baseline, scope and audit
 
@@ -141,6 +144,8 @@ History-origin requests retain the rule that replay from History does not move i
 Other manual origins record normally, including over a History context. Existing five-seconds-or-
 natural-completion qualification belongs to the actual file, not the parked context. Title/author
 learning preserves occurrence identity, FIFO order and source shuffle.
+The pure HistoryRecording policy must consume actual origin and remain the controller's production
+entry point; tests of the old screen/results flags alone do not cover manual playback.
 
 Use immutable pending/traversal state. Explicit source choice resets traversal but preserves pending;
 navigation resets neither. Cache eviction does not erase requests; later fetching is allowed.

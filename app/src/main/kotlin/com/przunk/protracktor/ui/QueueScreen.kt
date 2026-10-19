@@ -51,7 +51,9 @@ fun QueueScreen(
     onRemovePending: (Long) -> Unit = {},
 ) {
     val active = state.activePlayback
-    val tracks = active.order.tracks.map { LearnedTitles.display(it, state.learnedTitles) }
+    val tracks = remember(active.order.tracks, state.learnedTitles) {
+        active.order.tracks.map { LearnedTitles.display(it, state.learnedTitles) }
+    }
     val contextList = rememberLazyListState(initialFirstVisibleItemIndex = active.order.currentIndex ?: 0)
     val pendingList = rememberLazyListState()
     var tab by remember { mutableIntStateOf(0) }

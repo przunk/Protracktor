@@ -103,7 +103,8 @@ class RuleCasesTest {
         assertEquals(
             case.why(),
             case.bool("expect"),
-            HistoryRecording.records(case.bool("walkingResults"), case.bool("fromHistory")),
+            // Shared legacy fixtures encode origin as two flags; production receives actual origin.
+            HistoryRecording.records(case.bool("walkingResults") && case.bool("fromHistory")),
         )
     }
 

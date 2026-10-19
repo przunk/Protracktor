@@ -100,6 +100,9 @@ and open decisions. C110 was accepted and merged as `7e7f242`
 implementation and delegated unresolved choices to the agent, asking to retain questions for
 post-implementation evaluation. The analysis now supplies a transition table and provisional
 FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owner approvals.
+Implementation is now on `feature/manual-playback-queue`; its first verified APK is intermediate.
+The owner requested a [second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) before phone testing.
+Unsettled product answers remain provisional even after host tests; the branch is unmerged.
 The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
 
 The owner selected one active playback queue independent of navigation and the selected playlist.

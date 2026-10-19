@@ -16,6 +16,7 @@ import com.przunk.protracktor.data.ProtracktorDatabase
 import com.przunk.protracktor.player.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -55,7 +56,12 @@ abstract class PlaybackShellTest {
 
     @After fun stopShell() {
         if (::controller.isInitialized) {
-            ReflectionHelpers.getField<CoroutineScope>(controller, "scope").cancel()
+            val scope = ReflectionHelpers.getField<CoroutineScope>(controller, "scope")
+            scope.cancel()
+            compose.waitUntil(10_000) {
+                shadowOf(Looper.getMainLooper()).idle()
+                scope.coroutineContext[Job]!!.isCompleted
+            }
             controller.release()
             ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "backgroundWork").close()
             ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "scanWork").close()

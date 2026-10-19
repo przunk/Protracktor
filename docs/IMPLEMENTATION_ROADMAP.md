@@ -29,7 +29,7 @@ The extension remains a proposal, separate from the accepted baseline; AMP stays
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Add manual FIFO and mixed transport traversal around the existing context | Owner authorized implementation and delegated open choices, 2026-10-19; analysis audited, provisional transition/UI/error rules and later questions recorded. Separate feature branch, no automatic merge; unified view and AMP deferred. B25 supplies pending swipe removal. [Contract](QUEUE_CONTEXT_ANALYSIS.md). |
+| B45 follow-up / Q13 | Add manual FIFO and mixed transport traversal around the existing context | Implemented on unmerged `feature/manual-playback-queue`; first APK passed 1011 host tests/lint. Owner-requested second iteration is correcting audit findings before the final test candidate. Provisional answers remain open to evaluation; unified view and AMP deferred. B25 supplies pending swipe removal. [Contract](QUEUE_CONTEXT_ANALYSIS.md), [audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
