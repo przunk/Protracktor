@@ -232,4 +232,21 @@ class PlaybackScheduleTest {
         val unrelated = live.copy(source = QueueSource.Playlist(2, "Another"))
         assertEquals(unrelated, state.contextForReplay(state.current!!, unrelated))
     }
+
+    @Test fun `Random anchor restoration retains duplicate position when heard record grows`() {
+        val source = ActiveQueue(QueueSource.Random(1), PlayQueue(listOf("R", "S", "R").map(::track)).startAt(0))
+        val state = start(source)
+        val live = source.copy(order = source.order.copy(tracks = source.order.tracks + track("T")).startAt(3))
+        val restored = state.contextForReplay(state.current!!, live)
+        assertEquals(0, restored.order.currentIndex)
+        assertEquals(live.order.tracks, restored.order.tracks)
+    }
+
+    @Test fun `title enrichment never remaps repeated context files to their last occurrence`() {
+        val source = ActiveQueue(QueueSource.Random(1), PlayQueue(listOf("R", "S", "R").map(::track)).startAt(0))
+        val manual = selected(start(source).enqueue(track("X")).next(source)).schedule
+        val enriched = manual.withLearnedTrack(track("R").copy(title = "Learned"))
+        assertEquals(0, enriched.current!!.context.order.currentIndex)
+        assertEquals("Learned", enriched.current!!.context.current!!.title)
+    }
 }

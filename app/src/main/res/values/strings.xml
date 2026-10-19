@@ -53,6 +53,7 @@
 
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="notice_queued_track">Added to queue: %1$s</string>
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>

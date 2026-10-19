@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -1593,7 +1594,7 @@ class PlaybackController private constructor(private val context: Context) {
         // A play History started leaves History as it is: no new time, no new place, no count
         // (A56, `HistoryRecording`).
         val now = _state.value
-        if (!HistoryRecording.records(now.searchMode, now.resultsFromHistory)) return
+        if (now.resultsFromHistory) return
         historyWrites.record(ref, generation)
     }
 
@@ -1885,16 +1886,16 @@ class PlaybackController private constructor(private val context: Context) {
         launchRandomAdvance(epoch)
     }
 
-    private fun randomNext() {
+    private fun randomNext(placement: SchedulePlacement = SchedulePlacement.APPEND) {
         val epoch = ++playbackEpoch
         stopPlayback()
         _state.update { it.copy(playing = false, loadingTrack = true) }
-        launchRandomAdvance(epoch)
+        launchRandomAdvance(epoch, placement)
     }
 
-    private fun launchRandomAdvance(epoch: Long) {
+    private fun launchRandomAdvance(epoch: Long, placement: SchedulePlacement = SchedulePlacement.REPLACE) {
         scope.launch {
-            try { advanceRandom(epoch) }
+            try { advanceRandom(epoch, placement) }
             finally {
                 if (epoch == playbackEpoch) _state.update { it.copy(loadingTrack = false) }
             }
@@ -1922,18 +1923,18 @@ class PlaybackController private constructor(private val context: Context) {
             }
             return
         }
-        randomNext()
+        nextFile()
     }
 
-    private fun randomPrevious() {
+    private fun randomPrevious(placement: SchedulePlacement) {
         val pick = randomHistory.previous() ?: return
-        playTransient(pick)
+        playTransient(pick, placement = placement)
         publishRandomPicks()
         prepareRandomQueue()
     }
 
     /** Next walks heard history before consuming a new, previously invisible pick. */
-    private suspend fun advanceRandom(epoch: Long) {
+    private suspend fun advanceRandom(epoch: Long, placement: SchedulePlacement) {
         if (epoch != playbackEpoch) return
         val generation = randomHistory.generation
         // Replaying history or a prepared pick must not wait for another database query.
@@ -1957,7 +1958,7 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(randomExhausted = false) }
         publishRandomPicks()
         // No suspension between cursor publication and handing that same pick to playback.
-        playTransient(pick)
+        playTransient(pick, placement = placement)
         prepareRandomQueue()
     }
 
@@ -2046,7 +2047,8 @@ class PlaybackController private constructor(private val context: Context) {
         // while browsing. All three are "I am hearing something I did not choose to keep", and the
         // moment just after hearing it is when a person decides — so this is not Random's alone,
         // even though that is where the idea came from.
-        val ref = _state.value.transient ?: _state.value.resultsQueue?.current ?: return
+        val now = _state.value
+        val ref = now.current?.takeIf { now.awayFromPlaylist } ?: return
         // Its own wording, because this one knows the track's name and the general notice does not.
         //
         // Not `addToPlaylist` with the message overwritten afterwards: that would depend on
@@ -2358,8 +2360,9 @@ class PlaybackController private constructor(private val context: Context) {
         val currentState = _state.value
         val (kept, removed) = TrackEditing.remove(currentState.queue.tracks, indices)
         if (removed.isEmpty()) return
-        val wasPlaying = currentState.activePlayback.belongsTo(currentState.activePlaylistId) &&
-            removed.any { it.index == currentState.queue.currentIndex }
+        val wasPlaying = !currentState.manualCurrent &&
+            currentState.activePlayback.belongsTo(currentState.activePlaylistId) &&
+            removed.any { it.track.id == currentState.current?.id }
 
         if (wasPlaying) stopPlayback()
         lastRemoval = removed
@@ -2367,6 +2370,7 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update {
             it.copy(
                 queue = it.queue.withTracks(kept),
+                schedule = if (wasPlaying) it.schedule.resetTraversal() else it.schedule,
                 playing = if (wasPlaying) false else it.playing,
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
@@ -2454,7 +2458,7 @@ class PlaybackController private constructor(private val context: Context) {
      * Deliberately **not** on the notification or a headset button. Those have no long press, and
      * inventing a double-tap for them would be a second vocabulary for one idea.
      */
-    fun nextFile() = applyQueueStep(_state.value.activePlayback.next())
+    fun nextFile() = applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback))
 
     fun previous() {
         val now = _state.value
@@ -2466,7 +2470,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
-    fun previousFile() = applyQueueStep(_state.value.activePlayback.previous())
+    fun previousFile() = applyScheduledStep(_state.value.schedule.previous(_state.value.activePlayback))
 
     /**
      * Moves the playing position.
@@ -2625,6 +2629,15 @@ class PlaybackController private constructor(private val context: Context) {
                 retry()
                 return
             }
+            val now = _state.value
+            if (now.schedule.current != null) {
+                now.current?.let(::startActualPlayback)
+                return
+            }
+            if (now.schedule.pending.isNotEmpty()) {
+                nextFile()
+                return
+            }
             // Nothing loaded -- which is the normal state after a restart, where the queue already
             // knows which track it was on. Resume that one, not the top of the list.
             val queue = _state.value.activePlayback
@@ -2736,17 +2749,34 @@ class PlaybackController private constructor(private val context: Context) {
             SubsongAdvance.Next.FileFinished -> Unit
         }
 
-        applyQueueStep(_state.value.activePlayback.ended())
+        applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback, completed = true))
     }
 
-    private fun applyQueueStep(step: QueueStep) {
+    private fun applyScheduledStep(step: ScheduledStep) {
         when (step) {
-            is QueueStep.Play -> activateQueue(step.queue)
+            is ScheduledStep.Context -> applyQueueStep(step.step, step.placement)
+            is ScheduledStep.Select -> {
+                sampleListening()
+                val anchor = step.schedule.contextForReplay(step.occurrence, _state.value.activePlayback)
+                if (anchor.source is QueueSource.Random && anchor.source.session == randomSession) {
+                    anchor.order.currentIndex?.takeIf { it != randomHistory.cursor }?.let(randomHistory::select)
+                    publishRandomPicks()
+                }
+                _state.update { it.withPlayback(anchor).copy(schedule = step.schedule) }
+                playlistSession.scheduleSave()
+                startActualPlayback(step.occurrence.track)
+            }
+        }
+    }
+
+    private fun applyQueueStep(step: QueueStep, placement: SchedulePlacement) {
+        when (step) {
+            is QueueStep.Play -> activateQueue(step.queue, placement)
             QueueStep.RandomNext -> {
                 _state.update { it.copy(playing = false) }
-                randomNext()
+                randomNext(placement)
             }
-            QueueStep.RandomPrevious -> randomPrevious()
+            QueueStep.RandomPrevious -> randomPrevious(placement)
             QueueStep.Replay -> {
                 val playing = track?.restart() ?: false
                 beginListeningAgain(playing)
@@ -2762,25 +2792,73 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Plays something that is not in the playlist. */
-    private fun playTransient(ref: TrackRef, external: Boolean = false) {
+    private fun playTransient(ref: TrackRef, external: Boolean = false,
+        placement: SchedulePlacement = SchedulePlacement.REPLACE) {
         val modes = _state.value.transportQueue
         val order = if (external) PlayQueue(listOf(ref), shuffle = modes.shuffle, repeat = modes.repeat).startAt(0)
             else PlayQueue(randomHistory.playedPicks, shuffle = modes.shuffle, repeat = modes.repeat)
                 .startAt(randomHistory.cursor)
-        activateQueue(ActiveQueue(if (external) QueueSource.External else QueueSource.Random(randomSession), order))
+        activateQueue(ActiveQueue(if (external) QueueSource.External else QueueSource.Random(randomSession), order), placement)
     }
 
     private fun openAndPlay(queue: PlayQueue) = activateQueue(ActiveQueue(
         QueueSource.Playlist(_state.value.activePlaylistId, _state.value.activePlaylistName.orEmpty()), queue,
     ))
 
-    private fun activateQueue(queue: ActiveQueue) {
+    private fun activateQueue(queue: ActiveQueue, placement: SchedulePlacement = SchedulePlacement.REPLACE) {
         val ref = queue.current ?: return
-        ++playbackEpoch
-        pendingRetry = { activateQueue(_state.value.activePlayback) }
-        _state.update { it.withPlayback(queue).copy(playing = false, positionSeconds = 0.0) }
+        sampleListening()
+        _state.update {
+            val schedule = when {
+                placement == SchedulePlacement.REPLACE && it.schedule.pending.isEmpty() -> it.schedule.resetTraversal()
+                it.schedule.record.isEmpty() && it.schedule.pending.isEmpty() -> it.schedule
+                else -> it.schedule.contextSelected(queue, placement)
+            }
+            it.withPlayback(queue).copy(schedule = schedule)
+        }
         playlistSession.scheduleSave()
+        startActualPlayback(ref)
+    }
+
+    private fun startActualPlayback(ref: TrackRef) {
+        val epoch = ++playbackEpoch
+        val occurrence = _state.value.schedule.current?.id
+        pendingRetry = {
+            if (epoch == playbackEpoch && occurrence == _state.value.schedule.current?.id &&
+                ref.id == _state.value.current?.id) startActualPlayback(ref)
+        }
+        _state.update { it.copy(playing = false, positionSeconds = 0.0, durationSeconds = 0.0,
+            metadata = emptyMap(), subsong = 0, subsongCount = 1) }
         load(ref)
+    }
+
+    fun enqueueTrack(ref: TrackRef, fromHistory: Boolean = false) {
+        if (CatalogueRetention.blocksReference(ref.id)) {
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_catalogue_not_in_trial))) }
+            return
+        }
+        _state.update { it.copy(schedule = it.schedule.enqueue(ref, fromHistory),
+            message = Message(context.getString(R.string.notice_queued_track, ref.title))) }
+        prefetchUpcoming()
+    }
+
+    fun playPendingRequest(id: Long) {
+        val now = _state.value
+        now.schedule.playRequest(id, now.activePlayback)?.let(::applyScheduledStep)
+    }
+
+    fun removePendingRequest(id: Long) {
+        if (_state.value.schedule.pending.none { it.id == id }) return
+        val next = _state.updateAndGet { it.copy(schedule = it.schedule.remove(id)) }.schedule
+        val token = requireNotNull(next.removal)
+        val notice = Message(context.getString(R.string.notice_removed_one, token.request.track.title), actionLabel = UNDO)
+        _state.update { it.copy(message = notice.copy(action = {
+            if (_state.value.message?.id == notice.id) {
+                _state.update { state -> state.copy(schedule = state.schedule.undo(token.id), message = null) }
+                prefetchUpcoming()
+            }
+        })) }
+        prefetchUpcoming()
     }
 
     fun playQueueAt(index: Int) {
@@ -2823,7 +2901,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             if (bytes == null) {
                 _state.update { it.copy(message = Message(describeFailure(ref, fetched = false))) }
-                if (_state.value.randomMode && !_state.value.externalOpen) skipFailedRandomPick()
+                if (_state.value.randomMode && !_state.value.manualCurrent) skipFailedRandomPick()
                 return@launch
             }
 
@@ -2851,7 +2929,7 @@ class PlaybackController private constructor(private val context: Context) {
                 //
                 // Bounded, and the bound is the point: an index full of unplayable rows would
                 // otherwise spin through them all. After a few in a row it stops and says so.
-                if (_state.value.randomMode && !_state.value.externalOpen) skipFailedRandomPick()
+                if (_state.value.randomMode && !_state.value.manualCurrent) skipFailedRandomPick()
                 return@launch
             }
             // A pick that played resets the run of failures.
@@ -3119,7 +3197,9 @@ class PlaybackController private constructor(private val context: Context) {
             QueueSource.External -> emptyList()
             is QueueSource.Playlist, is QueueSource.Collection -> listOfNotNull(active.order.upcoming)
         }
-        readAhead.prepare(wanted)
+        val schedule = _state.value.schedule
+        readAhead.prepare((schedule.pending.map { it.track } + listOfNotNull(schedule.forward?.track) + wanted)
+            .distinctBy { it.id }.take(READ_AHEAD))
     }
 
     private fun stopPlayback() {

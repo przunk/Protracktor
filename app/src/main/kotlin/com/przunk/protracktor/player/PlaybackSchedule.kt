@@ -128,7 +128,7 @@ data class PlaybackSchedule(
             pending = pending.map(::request),
             record = record.map { entry -> entry.copy(track = improve(entry.track),
                 request = entry.request?.let(::request),
-                context = entry.context.copy(order = entry.context.order.withTracks(entry.context.order.tracks.map(::improve)))) },
+                context = entry.context.copy(order = entry.context.order.copy(tracks = entry.context.order.tracks.map(::improve)))) },
             removal = removal?.let { it.copy(request = request(it.request)) },
         )
     }

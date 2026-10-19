@@ -55,6 +55,7 @@
 
     <string name="action_show_in_playlist">Pokaż na playliście</string>
     <string name="action_browse">Przeglądaj</string>
+    <string name="notice_queued_track">Dodano do kolejki: %1$s</string>
     <string name="action_add_folder">Dodaj katalog</string>
     <string name="action_add_files">Dodaj pliki</string>
 

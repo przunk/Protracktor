@@ -59,8 +59,10 @@ changes documentation only; implementation starts separately from accepted devel
 application verification, feature APK or feature merge is claimed by this audit.
 
 Implementation has started on `feature/manual-playback-queue` from `d6d3297`. The first checkpoint
-adds a pure scheduler and focused regression tests with a failing FIFO mutation probe; it is not
-yet connected to the audio controller/UI. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
+adds a pure scheduler with a failing FIFO mutation probe. The next checkpoint integrates the
+controller/actual-file projection and passes 93 focused tests, including real-controller failure
+and stale-retry cases; negative Random-anchor and manual-failure probes detect broken rules.
+UI integration is still pending. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
 Full feature gates, release APK and phone behaviour remain pending; no feature merge.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19

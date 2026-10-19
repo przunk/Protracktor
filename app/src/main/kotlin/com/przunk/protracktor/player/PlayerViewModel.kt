@@ -163,6 +163,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         controller.playRandomAt(index)
     }
     fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
+
+    fun enqueueTrack(track: TrackRef, fromHistory: Boolean = false) = controller.enqueueTrack(track, fromHistory)
+    fun removePendingRequest(id: Long) = controller.removePendingRequest(id)
+    fun playPendingRequest(id: Long) {
+        ensureServiceRunning()
+        controller.playPendingRequest(id)
+    }
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
     fun returnToSession(): Boolean = controller.returnToSession()
