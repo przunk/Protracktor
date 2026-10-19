@@ -58,6 +58,11 @@ Unified view, reordering/Clear, persistence, web queue and AMP remain excluded. 
 changes documentation only; implementation starts separately from accepted develop. No new
 application verification, feature APK or feature merge is claimed by this audit.
 
+Implementation has started on `feature/manual-playback-queue` from `d6d3297`. The first checkpoint
+adds a pure scheduler and focused regression tests with a failing FIFO mutation probe; it is not
+yet connected to the audio controller/UI. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
+Full feature gates, release APK and phone behaviour remain pending; no feature merge.
+
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 
 The owner confirmed that Queue behaves as intended and authorized merging it into develop before

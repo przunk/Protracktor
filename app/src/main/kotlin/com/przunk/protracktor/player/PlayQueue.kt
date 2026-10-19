@@ -212,6 +212,11 @@ data class PlayQueue(
 
     fun withRepeat(mode: RepeatMode): PlayQueue = copy(repeat = mode)
 
+    /** Restore traversal without undoing newer source edits, global modes or shuffle choices. */
+    fun restoringCursorFrom(earlier: PlayQueue): PlayQueue = earlier.withTracks(tracks).copy(
+        shuffle = shuffle, repeat = repeat, shuffleSeed = shuffleSeed, shuffleFrom = shuffleFrom,
+    )
+
     /**
      * Turns shuffle on or off.
      *
