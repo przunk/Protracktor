@@ -122,8 +122,10 @@ experiment on `feature/playback-queue-experiment` on 2026-10-18. The latest cand
 host tests and lint. On 2026-10-19 the owner confirmed the intended behaviour and authorized
 integration. Normal-version cleanup passed another 956-test full gate (lint 0 errors/72 warnings),
 and the feature was merged into develop as `7cab210`. A minified normal-code APK 1.2.0 (1228) is
-prepared; its new artifact has not yet been phone-tested. Further colleague feedback awaits
-details and a new task branch in the next iteration; AMP remains deferred.
+prepared; the owner later reported startup, not a separate detailed checklist. Subsequent
+colleague/owner feedback distinguishes this context from a manual FIFO, raises context-position
+visibility and requests swipe removal. [Complete follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md).
+This is design work for a new task branch, not an implemented extension; AMP remains deferred.
 
 One active queue owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
@@ -132,8 +134,9 @@ tap resets the list, with help/animation and an equivalent accessibility action.
 Random as before. No automatic return/resume control transfers audio when a source view is reopened.
 
 [Consolidated contract and implementation plan](QUEUE_EXPERIMENT.md); [Q13](OPEN_QUESTIONS.md#q13--playback-queue-and-navigation).
-This supersedes A61's intentional session-ending Playlist action for the experiment only. No owner
-phone acceptance, merge or publication is inferred. This is playback ownership, not swipe idea B25.
+The accepted baseline supersedes A61's session-ending Playlist action. Its acceptance and merge
+do not establish store publication or approval of all proposed manual-queue rules. Swipe removal
+of pending manual entries is a renewed B25 request, not part of the merged baseline.
 
 **Related renewed user request:** stereo/headphone mixing is tracked in existing
 [B6](#b6-fold-hard-panned-channels-together)
@@ -755,6 +758,16 @@ removed, and deleting the favourites puts Random back to `Everything` — a scop
 that has just gone would draw nothing, and the chip that set it is disabled the moment it goes.
 
 ## B25. A swipe on a track row — to discuss
+
+**Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the proposed
+manual queue. This does not select a gesture for ordinary playlist, context, Browse or Search
+rows. Recommendations are pending-only removal, snackbar Undo and an equivalent menu action;
+direction, threshold and interaction with possible reordering remain open. No implementation.
+[Queue/context analysis and gesture scope](QUEUE_CONTEXT_ANALYSIS.md).
+
+**Original rationale before B45, retained as history:** the following description predates the
+independent playback context. There is still no implemented manual FIFO, but the current context
+is no longer necessarily the selected playlist.
 
 **Two things make this a conversation rather than a task.**
 

@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-18. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-19. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The owner-approved unpublished version-history correction restores release baseline 1.1.0;
 release 1.2.0 now has a prepared tagged AAB (Play publication unconfirmed). Historical IDs/SHAs below refer to the archived original graph,
@@ -23,10 +23,13 @@ B49 live History search was accepted by the owner and merged on 2026-10-15 (`ef8
 it is no longer open. [Verification and acceptance](PLAN_HISTORY_SEARCH.md).
 B45 active playback queue was accepted and merged on 2026-10-19 (`7cab210`), after normal-version
 cleanup and a fresh 956-test full gate/lint. It is no longer open inventory work. Further colleague
-feedback awaits details and a separate next iteration; AMP stays deferred. [Evidence](QUEUE_EXPERIMENT.md).
+feedback is now captured in the [context and manual queue analysis](QUEUE_CONTEXT_ANALYSIS.md).
+The extension remains a proposal, separate from the accepted baseline; AMP stays deferred.
+[Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B45 follow-up / Q13 | Distinguish the existing playback context from a manual FIFO and its transport history | Owner/colleague proposal recorded 2026-10-19; rules and markers need agreement, combined view deferred, swipe request relates to B25. C110 is recommended first. [Complete analysis](QUEUE_CONTEXT_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -62,6 +65,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
+| C110 | Browse reopens playing History instead of the main Browse view | Owner report, 2026-10-19; shared collection-restore mechanism confirmed by code inspection, no agent-run reproduction or fix. Cover Search, online/local folders and Random navigation. [Analysis and proposed next task](QUEUE_CONTEXT_ANALYSIS.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |

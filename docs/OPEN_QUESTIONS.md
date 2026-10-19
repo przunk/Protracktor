@@ -92,8 +92,12 @@ opposite-phase material, level changes and transitions; Mono can cancel opposite
 **Experiment selected, 2026-10-18; owner accepted Queue and authorized integration, 2026-10-19.**
 Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and a fresh full gate
 (956 tests, lint without errors), `feature/playback-queue-experiment` was merged into develop as
-`7cab210`. Further colleague feedback awaits details and a new task branch in the next iteration;
-no unspecified behaviour change is selected here.
+`7cab210`. The owner subsequently supplied the context/manual queue distinction, the C110 Browse
+report, a context-position visibility concern and swipe-removal request. The full
+[follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md) separates owner proposals from agent recommendations
+and open decisions. C110 is the recommended independent next fix, not implemented yet. Manual FIFO,
+mixed transport history and repeat/UI details need confirmation before a new experimental feature.
+The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
 
 The owner selected one active playback queue independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

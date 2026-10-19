@@ -7,6 +7,11 @@ and authorized merging on 2026-10-19. Normal-version cleanup and fresh host/arti
 passed; merged into develop as `7cab210` (section 13). Earlier pending states and fixed-code
 artifacts are historical. Follow-up work starts on a new task branch from develop.
 
+Subsequent owner/colleague feedback distinguishes this implemented context from a proposed manual
+queue. The complete [follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md) records that proposal, open
+transport/UI decisions and the independent Browse navigation defect C110. No manual queue or
+navigation correction is implemented by that documentation save.
+
 ## 1. Why an experiment
 
 Real user feedback initiated B45: returning to the playlist from playback in Browse or Search

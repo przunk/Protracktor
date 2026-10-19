@@ -1,17 +1,47 @@
 # Status
 
-Updated: 2026-10-19 — QUEUE merged, normal-code APK 1.2.0 (1228) prepared; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — context/manual queue analysis saved, Browse defect C110 open; APK 1.2.0 (1228), prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C110 Browse restores the playing collection instead of its root
+
+Owner report, 2026-10-19: play History, Back to Browse, Back to the playlist, press Browse.
+Observed: History reopens. Expected: the main Browse view opens, with music/context unchanged.
+Exact device and installed build ID were not independently supplied; the last handoff was the
+normal-code Queue APK 1.2.0 (1228). The owner reported that the app started after that handoff;
+this is launch evidence, not a completed detailed regression matrix.
+
+**Partially checked by code inspection:** `ProtracktorApp.openBrowse` first calls
+`returnToSession()`. That restores the snapshot saved by `playFromResults()` whenever
+`searchMode` is true; that property covers every `QueueSource.Collection`, not just Search.
+The same restore path covers History, Search, online authors and local folders. Random has a
+different path and still needs regression coverage; its earlier Back defect is not assumed to
+be the same mechanism. No agent-run phone reproduction or regression test has been performed.
+
+**Open, not fixed.** Recommended separate task: `fix/browse-root-navigation` from develop, test
+the actual Browse action, preserve explicit jumps and one-level Back, then full gate/lint,
+minified APK and owner acceptance before merge. No fix is started by the current documentation
+request. [Reproduction, mechanism, complete queue discussion and next steps](QUEUE_CONTEXT_ANALYSIS.md).
+
+## Manual queue proposal saved for the next discussion
+
+The owner distinguishes the merged playback context from a FIFO of manual requests which would
+play before context continuation. Two tabs are the initial proposal; a combined view is deferred,
+with indentation/icon suggested for manual entries. Swipe removal is requested under existing B25.
+Next/Previous, repeat interpretation, context-position markers and queue editing need the decisions
+recorded in [the complete analysis](QUEUE_CONTEXT_ANALYSIS.md). No manual queue implementation,
+application tests, APK or merge accompanies this documentation-only save. AMP remains deferred.
+
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 
 The owner confirmed that Queue behaves as intended and authorized merging it into develop before
-the next iteration. Additional colleague feedback has not yet been described; no fix or severity
-is inferred. AMP work/integration is deferred until after that iteration, with its branch untouched.
+the next iteration. The subsequently supplied colleague/owner feedback is recorded in
+[the follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md); it does not reopen the accepted baseline.
+AMP work/integration is deferred until after that iteration, with its branch untouched.
 
 Pre-merge cleanup restores commit-derived versionCode for every build and removes the two unused
 search-cover strings. VersionName remains 1.2.0 until a release procedure. Existing code-1221 APKs
@@ -33,8 +63,9 @@ the test-signing path; versionName remains **1.2.0**, not a new store release. E
 verification evidence are in [the report](QUEUE_EXPERIMENT.md).
 
 The general positive phone report is owner acceptance, not a separately reported result for every
-device checklist item. This new normal-code artifact has not yet been tested on a phone. Further
-work starts on a new task branch from develop, not on the integrated experiment branch.
+device checklist item. The owner later reported startup after the normal-code handoff, without
+independently supplying its installed build ID or the detailed checklist. Further work starts
+on a new task branch from develop, not on the integrated experiment branch.
 AMP remains `8e92002`, master `794d8f9`; no push, tag movement or store release occurred.
 Subsequent documentation commits do not relabel this artifact or its tested source.
 
