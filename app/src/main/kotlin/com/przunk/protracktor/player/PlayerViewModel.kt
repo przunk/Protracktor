@@ -166,6 +166,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun enqueueTrack(track: TrackRef, fromHistory: Boolean = false) = controller.enqueueTrack(track, fromHistory)
     fun removePendingRequest(id: Long) = controller.removePendingRequest(id)
+    fun removeContextEntry(id: Long) = controller.removeContextEntry(id)
     fun playPendingRequest(id: Long) {
         ensureServiceRunning()
         controller.playPendingRequest(id)

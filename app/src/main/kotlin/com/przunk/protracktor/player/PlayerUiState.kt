@@ -54,7 +54,7 @@ data class PlayerUiState(
     val loadingTrack: Boolean = false,
     /** Source continuation; schedule may temporarily supply actual playback instead. */
     val playback: ActiveQueue? = null,
-    /** Manual requests and mixed traversal; playback remains the independently resumable context. */
+    /** One-shot manual requests; source history remains owned by playback. */
     val schedule: PlaybackSchedule = PlaybackSchedule(),
     /**
      * What the dice has actually given this session, oldest first.
@@ -94,7 +94,7 @@ data class PlayerUiState(
 ) {
     /** A selected source playlist stays live; leaving its view captures its current order. */
     val activePlayback: ActiveQueue
-        get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.copy(order = queue) else it }
+        get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.withOrder(queue) else it }
             ?: ActiveQueue(QueueSource.Playlist(activePlaylistId, activePlaylistName.orEmpty()), queue)
     val transportQueue: PlayQueue get() = activePlayback.order
     val current: TrackRef? get() = schedule.current?.track ?: activePlayback.current

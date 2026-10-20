@@ -212,13 +212,15 @@ data class PlayQueue(
 
     fun withRepeat(mode: RepeatMode): PlayQueue = copy(repeat = mode)
 
-    /** Restore traversal without undoing newer source edits, global modes or shuffle choices. */
-    fun restoringCursorFrom(earlier: PlayQueue): PlayQueue {
-        // Random grows by appending and may repeat a file: ID remapping would select its last copy.
-        val samePrefix = earlier.tracks.indices.all { tracks.getOrNull(it)?.id == earlier.tracks[it].id }
-        val restored = if (samePrefix) earlier.copy(tracks = tracks) else earlier.withTracks(tracks)
-        return restored.copy(shuffle = shuffle, repeat = repeat, shuffleSeed = shuffleSeed, shuffleFrom = shuffleFrom)
+    /** A jump within the displayed playback order must not deal a new shuffle. */
+    fun jumpTo(index: Int): PlayQueue {
+        require(index in tracks.indices)
+        return appended(index)
     }
+
+    fun withoutPosition(): PlayQueue = copy(history = emptyList(), historyCursor = -1)
+
+    val playbackIndices: List<Int> get() = order
 
     /**
      * Turns shuffle on or off.

@@ -88,3 +88,19 @@ C111 padding and the cramped dock subsong label (`1 of 2 Tracks`) remain separat
 
 All new device behaviour is **unchecked** until owner testing. The existing positive phone report
 motivated changed requirements; it is not acceptance of this unimplemented iteration.
+
+## Checkpoint evidence
+
+Stage 2 replaces the mixed manual traversal record with one actual occurrence and a pending FIFO.
+Source occurrence identities/omissions are session-local; selected draft tracks are unchanged.
+The controller supports pending/current removal, source-only Previous, generation-bound source
+Undo, in-list jumps without reshuffling, and omission-aware read-ahead/Random advancement.
+Pure projection inserts the marked manual block in actual finite source order or Random heard order.
+
+Checked partially: the Previous-anchor mutation failed as intended
+(`/tmp/protracktor-unified-previous-mutation.log`, 22 s). Restored focused domain/controller run
+passed in 35 s (`/tmp/protracktor-unified-domain-final.log`); exact suite counts are recorded at
+handoff. An earlier run stopped on an incorrectly updated intermediate assertion (expected B where
+the second FIFO item Y should still play); the assertion was corrected, not the application rule.
+The old mixed-history expectations are deliberately replaced by the owner-selected one-shot rules.
+UI wiring, new real gestures, full gates/lint and a fresh APK are still pending. No phone claim.

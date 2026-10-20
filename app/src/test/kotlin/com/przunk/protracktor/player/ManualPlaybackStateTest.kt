@@ -45,11 +45,12 @@ class ManualPlaybackStateTest {
         assertTrue(PlayerUiState(schedule = PlaybackSchedule().enqueue(requested)).canGoNextFile)
     }
 
-    @Test fun `manual Previous can return to source and Next availability includes forward replay`() {
+    @Test fun `manual Previous can return to source and consumed manual is not a forward destination`() {
         val state = manual()
         assertTrue(state.canGoPreviousFile)
-        val back = state.schedule.previous(context) as ScheduledStep.Select
-        assertTrue(state.copy(schedule = back.schedule).canGoNextFile)
+        val back = (state.schedule.previous(context) as ScheduledStep.Context).step as QueueStep.Play
+        val returned = state.copy(schedule = state.schedule.contextSelected(back.queue, SchedulePlacement.PREPEND))
+        assertFalse(returned.canGoNextFile)
     }
 
     @Test fun `subsong availability uses actual file and is independent of source size`() {

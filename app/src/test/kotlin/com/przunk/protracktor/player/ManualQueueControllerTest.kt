@@ -84,7 +84,7 @@ class ManualQueueControllerTest {
         assertNotEquals(state.value.schedule.pending[0].id, state.value.schedule.pending[1].id)
     }
 
-    @Test fun `real file Next drains requests before advancing context and Previous replays`() {
+    @Test fun `real file Next drains requests and Previous never resurrects consumed manual rows`() {
         controller.enqueueTrack(track("X"))
         controller.enqueueTrack(track("Y"))
         controller.nextFile()
@@ -97,7 +97,7 @@ class ManualQueueControllerTest {
         assertEquals("C", state.value.current!!.title)
         assertEquals("C", state.value.activePlayback.current!!.title)
         controller.previousFile()
-        assertEquals("Y", state.value.current!!.title)
+        assertEquals("B", state.value.current!!.title)
         assertEquals("B", state.value.activePlayback.current!!.title)
         controller.nextFile()
         assertEquals("C", state.value.current!!.title)
@@ -154,7 +154,7 @@ class ManualQueueControllerTest {
         assertEquals("A", state.value.current!!.title)
         assertFalse(state.value.manualCurrent)
         assertEquals(listOf("Y"), state.value.schedule.pending.map { it.track.title })
-        assertEquals(listOf("A"), state.value.schedule.record.map { it.track.title })
+        assertEquals("A", state.value.schedule.current!!.track.title)
     }
 
     @Test fun `Keep over a collection saves actual manual track and not suspended source track`() {
@@ -216,5 +216,47 @@ class ManualQueueControllerTest {
             ReflectionHelpers.ClassParameter.from(Long::class.javaPrimitiveType!!, writes.generation))
         await { runBlocking { history.count() } == 3 }
         assertEquals(1, runBlocking { history.page(0, 10) }.single { it.trackId == outside.id }.playCount)
+    }
+
+    @Test fun `context removal is session only and Undo cannot revive another source`() {
+        val before = state.value.queue
+        val id = state.value.activePlayback.entryIds.last()
+        controller.removeContextEntry(id)
+        val undo = state.value.message!!.action!!
+        assertEquals(before, state.value.queue)
+        assertEquals(listOf("A", "B"), state.value.activePlayback.visibleIndices.map { state.value.queue.tracks[it].title })
+        undo()
+        assertTrue(state.value.activePlayback.omitted.isEmpty())
+        controller.removeContextEntry(id)
+        val stale = state.value.message!!.action!!
+        controller.playAt(0)
+        stale()
+        assertTrue(state.value.activePlayback.omitted.isEmpty())
+        assertEquals("A", state.value.current!!.title)
+    }
+
+    @Test fun `removing current manual advances once and Undo restores it pending not playing`() {
+        controller.enqueueTrack(track("X"))
+        controller.enqueueTrack(track("Y"))
+        controller.nextFile()
+        val x = state.value.schedule.current!!.id
+        controller.removePendingRequest(x)
+        assertEquals("Y", state.value.current!!.title)
+        val undo = state.value.message!!.action!!
+        undo()
+        assertEquals("Y", state.value.current!!.title)
+        assertEquals(listOf("X"), state.value.schedule.pending.map { it.track.title })
+    }
+
+    @Test fun `removing current source selects pending before next source without editing playlist`() {
+        val tracks = state.value.queue.tracks
+        controller.enqueueTrack(track("X"))
+        controller.removeContextEntry(state.value.activePlayback.currentEntryId!!)
+        assertEquals("X", state.value.current!!.title)
+        assertEquals(tracks, state.value.queue.tracks)
+        controller.nextFile()
+        assertEquals("C", state.value.current!!.title)
+        controller.previousFile()
+        assertEquals("A", state.value.current!!.title)
     }
 }
