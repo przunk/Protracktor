@@ -2627,6 +2627,12 @@ class PlaybackController private constructor(private val context: Context) {
             cancelPendingPlayback()
             return
         }
+        val scheduled = _state.value
+        if (scheduled.activePlayback.source == QueueSource.None && scheduled.schedule.consumed &&
+            scheduled.schedule.pending.isNotEmpty()) {
+            nextFile()
+            return
+        }
         val open = track
         if (open == null) {
             pendingRetry?.let { retry ->
@@ -2843,15 +2849,67 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun startActualPlayback(ref: TrackRef) {
-        val epoch = ++playbackEpoch
+        ++playbackEpoch
+        installPendingRetry(ref)
+        _state.update { it.copy(playing = false, positionSeconds = 0.0, durationSeconds = 0.0,
+            metadata = emptyMap(), subsong = 0, subsongCount = 1, schedule = it.schedule.resumeCurrent()) }
+        load(ref)
+    }
+
+    private fun installPendingRetry(ref: TrackRef) {
+        val epoch = playbackEpoch
         val occurrence = _state.value.schedule.current?.id
         pendingRetry = {
             if (epoch == playbackEpoch && occurrence == _state.value.schedule.current?.id &&
                 ref.id == _state.value.current?.id) startActualPlayback(ref)
         }
-        _state.update { it.copy(playing = false, positionSeconds = 0.0, durationSeconds = 0.0,
-            metadata = emptyMap(), subsong = 0, subsongCount = 1, schedule = it.schedule.resumeCurrent()) }
-        load(ref)
+    }
+
+    /** Detach continuation without closing the current decoder or restarting its in-flight open. */
+    fun clearQueue() {
+        val before = _state.value
+        val cleared = PlaybackPlan(before.activePlayback, before.schedule).clear()
+        if (cleared == null) {
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_queue_already_clear))) }
+            return
+        }
+        invalidateQueueWork()
+        val notice = Message(context.getString(R.string.notice_queue_cleared), actionLabel = UNDO)
+        _state.update { it.copy(playback = cleared.after.context, schedule = cleared.after.schedule,
+            message = notice.copy(action = { undoQueueClear(cleared, notice.id) })) }
+        if (cleared.after.schedule.current == null) {
+            stopPlayback()
+            _state.update { it.copy(loadingTrack = false, playing = false) }
+        } else {
+            // Random can be drawing its successor without opening a file. Its cancelled intent
+            // has nobody left to clear the spinner; an actual open job must keep running instead.
+            if (_state.value.loadingTrack && openJob?.isActive != true)
+                _state.update { it.copy(loadingTrack = false) }
+            if (pendingRetry != null) _state.value.current?.let(::installPendingRetry)
+        }
+    }
+
+    private fun undoQueueClear(cleared: QueueClear, messageId: Long) {
+        val live = _state.value
+        if (live.message?.id != messageId) return
+        // A linked editor may have been changed while its source was detached; never roll it back.
+        val editorChanged = cleared.before.context.belongsTo(live.activePlaylistId) &&
+            live.queue.tracks.map { it.id } != cleared.before.context.order.tracks.map { it.id }
+        val restored = if (editorChanged) null else cleared.undo(PlaybackPlan(live.activePlayback, live.schedule))
+        if (restored == null) {
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_queue_undo_expired))) }
+            return
+        }
+        invalidateQueueWork()
+        _state.update { it.copy(playback = restored.context, schedule = restored.schedule, message = null) }
+        if (pendingRetry != null) _state.value.current?.let(::installPendingRetry)
+        if (_state.value.randomMode) prepareRandomQueue() else prefetchUpcoming()
+    }
+
+    private fun invalidateQueueWork() {
+        ++playbackEpoch
+        randomHistory.changeScope()
+        readAhead.clear()
     }
 
     fun enqueueTrack(ref: TrackRef, fromHistory: Boolean = false) {

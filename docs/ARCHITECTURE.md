@@ -59,7 +59,11 @@ above remain historical. [Current handoff](QUEUE_PRESENTATION_POLISH.md#final-ve
 phone checks and acceptance remain pending, with no merge. The current scroll-first candidate is
 source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all host gates/lint
 (0 errors/72 unchanged warnings) and artifact inspection passed.
-[Latest handoff](QUEUE_SWIPE_INTENT.md#final-verification-and-apk). No Clear queue implementation.
+[Swipe handoff](QUEUE_SWIPE_INTENT.md#final-verification-and-apk). The subsequently approved
+[Clear queue](QUEUE_CLEAR.md) is in progress: a pure immutable `PlaybackPlan` detaches the source
+and pending requests while retaining actual current identity as a one-shot. The controller
+invalidates speculative intent without closing current audio; guarded Undo restores transport
+state directly, never through a playlist-editor write or audio restart.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

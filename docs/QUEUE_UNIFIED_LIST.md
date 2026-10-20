@@ -7,8 +7,8 @@ handoffs. The subsequent [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) 
 departures, explicit Info haptics and on-demand gesture Help. Its source **6043902** passed 1043
 tests/full gates and lint; APK **1.2.0 (1250)** records that handoff. The subsequent
 [scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
-**f6a5ee4**; APK **1.2.0 (1252)** is the current unmerged phone candidate. Clear queue remains a
-discussion, not an approved or implemented extension.
+**f6a5ee4**; APK **1.2.0 (1252)** records that unmerged handoff. The owner subsequently approved
+[Clear queue](QUEUE_CLEAR.md); that follow-up is in progress on the same branch.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.
@@ -97,8 +97,8 @@ C111 padding and the cramped dock subsong label (`1 of 2 Tracks`) remain separat
 - Current removal/exhaustion: advance or stop; Undo restores content only, never transport.
 - Same-source explicit restart resets omissions; tapping within the unified list does not.
 - No context available: drain manual requests and stop; Previous cannot invent a source.
-- Session-only queue/omissions, no persistence, source reorder or Clear. The follow-up allows
-  reordering only waiting manual requests.
+- Session-only queue/omissions, no persistence or source reorder. Follow-ups allow reordering
+  only waiting manual requests and separately authorize [Clear queue](QUEUE_CLEAR.md).
 - Existing Repeat One/subsong behaviour remains; consumed manual entries do not join source laps.
 
 All new device behaviour is **unchecked** until owner testing. The existing positive phone report

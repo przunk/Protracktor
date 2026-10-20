@@ -1,5 +1,29 @@
 # What only a phone can prove
 
+## Clear queue — phone checks pending
+
+The [Clear queue follow-up](QUEUE_CLEAR.md) is in progress on the unmerged feature branch.
+Use the new release APK identified in [Status](STATUS.md) once available, not APK 1252.
+
+1. Play a playlist, Search, Browse, History, Random or external file, with several pending manual
+   requests. Open Queue and press Clear queue: only the actual current track remains, with no
+   audible break, seek/reset, metadata loss or position jump. Repeat while paused and loading.
+2. Add B, C, B after Clear on A. Next/completion plays B, C, B, consuming the preceding one-shot
+   each time, then stops. Previous must not revive A or the old context. Repeat All cannot revive
+   them; Repeat One still holds the current track until explicit Next.
+3. Clear during a slow Random draw or network open. No delayed callback may restore the source.
+   Reopening Random or the playlist only changes navigation; explicit row Play can select it again.
+   After failed loading, retry the retained current track; it must not retry an older occurrence.
+4. Press Undo before advancing: restore source/pending order without rewinding or unpausing audio.
+   After an advance, completion, enqueue or linked playlist edit, old Undo must not replace new
+   work. A visible expired action explains it; an already-clear action gives feedback.
+5. Exhaust the manual-only list, add new requests and press Play: start the new first request,
+   not the finished previous track. Try duplicates, swipe/remove/Undo and bounded grip reorder.
+6. Saved playlists, dirty draft, History and files must remain intact. Check EN/PL header labels,
+   small screens, large fonts, TalkBack, dock, notifications and Bluetooth transport.
+
+Host tests and compilation are partial evidence, not real audio or device acceptance.
+
 ## Scroll-first row gestures — phone checks pending
 
 The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md) is unmerged. Use release APK **1.2.0 (1252),
@@ -21,7 +45,7 @@ APK 1250 is the previous handoff, not proof of this change.
    is max(24 dp, twice platform touch slop), with more than 2:1 horizontal dominance. Real-world
    comfort needs owner testing; host gesture checks do not prove it.
 
-Clear queue is a separate design discussion, not part of this build.
+Clear queue is not part of APK 1252; the later owner-approved follow-up is described above.
 
 ## Queue presentation polish — phone checks pending
 

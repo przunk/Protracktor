@@ -142,7 +142,8 @@ on-demand Help. [Presentation source 6043902](QUEUE_PRESENTATION_POLISH.md) pass
 tests/full gates and lint; **APK 1.2.0 (1250)** records that handoff. Further user feedback selected
 [scroll-first swipes](QUEUE_SWIPE_INTENT.md): source **f6a5ee4**, 1056 tests/full gates/lint passed,
 **APK 1.2.0 (1252)** is the current unmerged phone candidate. Earlier handoffs remain historical.
-Clear queue as a manual-only starting point is recorded for discussion, not implementation.
+The owner subsequently approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting point;
+implementation and verification are in progress on the same unmerged branch.
 AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.

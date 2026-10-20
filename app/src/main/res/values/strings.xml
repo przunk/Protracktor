@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="queue_clear">Clear queue</string>
+    <string name="queue_clear_body">Keep only the current track, without interrupting it. Remove the context and waiting requests; saved playlists stay unchanged. Undo restores the plan until playback advances or you build a new queue.</string>
+    <string name="notice_queue_cleared">Playback queue cleared.</string>
+    <string name="notice_queue_already_clear">Queue is already clear.</string>
+    <string name="notice_queue_undo_expired">Cannot undo: the playback plan has changed.</string>
     <string name="random_list_empty">No tracks in this Random list yet.</string>
     <string name="queue_title">Queue</string>
     <string name="queue_help">Help</string>

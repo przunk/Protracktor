@@ -119,12 +119,12 @@ source **6043902**; APK **1.2.0 (1250)** records that handoff. The subsequent
 [scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
 **f6a5ee4**; APK **1.2.0 (1252)** is the current unmerged candidate, phone checks pending.
 
-2026-10-20: the owner asks about Clear queue as a manual-only starting point. This is a discussion,
-not implementation approval. The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md#clear-queue--discussion-only)
-records the recommendation to clear future manual/source continuation without interrupting the
-current track or modifying saved playlists, plus unresolved control/Undo semantics. Clearing
-only pending manual requests would leave source continuation active. The existing no-Clear
-contract remains until an owner decision; swipe tuning must not silently implement the proposal.
+2026-10-20 follow-up: the owner approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting
+point, superseding the earlier no-Clear restriction. Keep the actual current occurrence as a
+one-shot without interrupting audio; remove the source and waiting requests, not saved playlists.
+New requests drain once without returning to the cleared source. Implementation adds guarded
+snackbar Undo and a labelled header control; host verification and phone acceptance are tracked
+in the follow-up. Pinned/permanent queue entries are not selected; playlists remain durable.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

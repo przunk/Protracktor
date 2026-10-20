@@ -90,16 +90,17 @@ companion logs, focused/negative probes, mapping, manifest/badging, signature an
 lint and release artifact identity. **Unchecked:** real device touch comfort/speed, TalkBack,
 audio/service/notification/Bluetooth and long-term use. Phone acceptance and merge remain pending.
 Develop `d6d3297`, AMP `8e92002` and master `794d8f9` are unchanged. No push/tag, schema, versionName
-or store change. Documentation-only closeout does not relabel this APK. Clear queue below remains
-a discussion, not an implemented function.
+or store change. Documentation-only closeout does not relabel this APK. Clear queue below was
+discussion-only at that handoff; its subsequent approval is recorded separately.
 Closeout checked 195 existing local link destinations in nine updated documents; application,
 native, web and script sources still match the APK source. No additional build is needed for
 this documentation-only update.
 
-## Clear queue — discussion only
+## Clear queue — initial discussion, subsequently approved
 
-The owner asks about building a manual queue from an empty starting point. Not implemented or
-approved for implementation; the existing no-Clear contract still applies.
+The owner initially asked about building a manual queue from an empty starting point. It was
+not part of this swipe fix. Subsequent explicit approval supersedes the old no-Clear restriction;
+see [the selected contract and implementation record](QUEUE_CLEAR.md).
 
 Agent recommendation for discussion: clear all future playback (manual requests and source
 continuation), leave the currently sounding/paused track unchanged, then play only newly added
@@ -107,4 +108,5 @@ manual requests and stop when exhausted. Saved playlists/files/History stay unto
 only pending requests would still resume the source and would not deliver the requested blank
 starting point. Consider Undo for the cleared upcoming list, with generation protection against
 restoring an unrelated source after another explicit Play. Final semantics/control placement and
-Undo behaviour need owner agreement; do not silently implement this as part of swipe tuning.
+Undo behaviour were open at this stage. The later task selects a separate Clear operation, not
+an unannounced part of swipe tuning.

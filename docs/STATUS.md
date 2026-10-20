@@ -1,13 +1,19 @@
 # Status
 
-Updated: 2026-10-20 — scroll-first swipe correction ready for phone testing, unmerged; release APK 1.2.0 (1252), source f6a5ee4; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — Clear queue in progress on the existing feature branch; previous release APK 1.2.0 (1252), source f6a5ee4; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Queue swipes steal vertical scrolling — ready for phone testing, 2026-10-20
+## Clear queue — in progress, 2026-10-20
+
+Owner approved clearing source continuation and waiting requests while retaining only the actual
+current track as a one-shot. Saved playlists remain untouched. [Contract](QUEUE_CLEAR.md).
+Domain/controller, UI, tests/lint and a new release APK are pending. No merge authorized.
+
+## Queue swipes steal vertical scrolling — previous handoff, 2026-10-20
 
 Owner report: attempting up/down scrolling can accidentally move the row sideways. Latest
 supplied APK was 1250; installed ID not separately reported. The horizontal detector claims
@@ -30,7 +36,7 @@ R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. S
 gesture comfort, flick/diagonal behaviour, accessibility and playback/service/Bluetooth scenarios.
 No merge/push/tag. Develop, AMP and master are unchanged; C111/C112 remain excluded. APK 1250 below
 is historical; documentation-only closeout does not change this APK's source SHA/code.
-Clear queue is a separate discussion, not an implemented or owner-approved function.
+Clear queue was discussion-only at this handoff; the later owner approval is recorded above.
 
 ## Queue presentation feedback — previous handoff, 2026-10-20
 

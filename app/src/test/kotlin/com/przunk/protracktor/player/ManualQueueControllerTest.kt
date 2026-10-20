@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
@@ -82,6 +83,164 @@ class ManualQueueControllerTest {
         assertFalse(state.value.playing)
         assertEquals(2, state.value.schedule.pending.size)
         assertNotEquals(state.value.schedule.pending[0].id, state.value.schedule.pending[1].id)
+    }
+
+    @Test fun `Clear preserves paused transport and draft and Undo restores only the playback plan`() {
+        controller.enqueueTrack(track("X"))
+        val before = state.value
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        val generation = before.schedule.generation
+        controller.clearQueue()
+        val cleared = state.value
+        assertEquals(QueueSource.None, cleared.activePlayback.source)
+        assertEquals(before.queue, cleared.queue)
+        assertEquals(before.dirty, cleared.dirty)
+        assertEquals(before.playlists, cleared.playlists)
+        assertEquals(before.current, cleared.current)
+        assertEquals(before.metadata, cleared.metadata)
+        assertEquals(12.5, cleared.positionSeconds, 0.0)
+        assertFalse(cleared.playing)
+        assertFalse(cleared.canGoPreviousFile)
+        assertFalse(cleared.canGoNextFile)
+        assertTrue(cleared.schedule.pending.isEmpty())
+        assertTrue(ReflectionHelpers.getField<Long>(controller, "playbackEpoch") > epoch)
+        controller.playContextEntry(before.activePlayback.entryIds.first(), generation)
+        assertEquals(cleared, state.value)
+        state.value = state.value.copy(positionSeconds = 17.0)
+        state.value.message!!.action!!.invoke()
+        assertEquals(before.activePlayback, state.value.activePlayback)
+        assertEquals(before.schedule.pending, state.value.schedule.pending)
+        assertEquals(17.0, state.value.positionSeconds, 0.0)
+        assertEquals(before.queue, state.value.queue)
+        assertFalse(state.value.playing)
+    }
+
+    @Test fun `Clear retains the actual loading job rather than reopening or cancelling it`() {
+        val job = Job()
+        ReflectionHelpers.setField(controller, "openJob", job)
+        state.value = state.value.copy(loadingTrack = true)
+        controller.clearQueue()
+        assertSame(job, ReflectionHelpers.getField<Job>(controller, "openJob"))
+        assertTrue(job.isActive)
+        assertTrue(state.value.loadingTrack)
+        assertEquals("B", state.value.current!!.title)
+        state.value.message!!.action!!.invoke()
+        assertSame(job, ReflectionHelpers.getField<Job>(controller, "openJob"))
+        assertTrue(state.value.loadingTrack)
+    }
+
+    @Test fun `Clear preserves playing state and has no source previous after adding new requests`() {
+        state.value = state.value.copy(playing = true)
+        controller.clearQueue()
+        assertTrue(state.value.playing)
+        controller.enqueueTrack(track("X"))
+        controller.nextFile()
+        assertEquals("X", state.value.current!!.title)
+        assertFalse(state.value.canGoPreviousFile)
+        assertEquals(listOf("X"), state.value.schedule.rows(state.value.activePlayback).map { it.track.title })
+        controller.previousFile()
+        assertEquals("X", state.value.current!!.title)
+        assertEquals(tracks, state.value.queue.tracks)
+    }
+
+    @Test fun `Clear during a Random successor draw does not leave a spinner or revive consumed current`() {
+        val active = state.value.activePlayback.copy(source = QueueSource.Random(1))
+        state.value = state.value.copy(playback = active, loadingTrack = true,
+            schedule = state.value.schedule.contextSelected(active, SchedulePlacement.REPLACE).finishCurrent())
+        assertNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+        controller.clearQueue()
+        assertFalse(state.value.loadingTrack)
+        assertFalse(state.value.playing)
+        assertTrue(state.value.schedule.consumed)
+        assertTrue(state.value.schedule.rows(state.value.activePlayback).isEmpty())
+        controller.enqueueTrack(track("fresh"))
+        controller.togglePlayPause()
+        assertEquals("fresh", state.value.current!!.title)
+    }
+
+    @Test fun `Clear invalidates an in-flight random fill but preserves the heard record and navigation`() = runBlocking {
+        val history = ReflectionHelpers.getField<RandomHistory>(controller, "randomHistory")
+        history.fill(1, 1) { listOf(tracks[1]) }
+        history.advance()
+        ReflectionHelpers.setField(controller, "randomSession", 1L)
+        state.value = state.value.copy(playback = state.value.activePlayback.copy(source = QueueSource.Random(1)))
+        val result = kotlinx.coroutines.CompletableDeferred<List<TrackRef>>()
+        val filling = launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            history.fill(1, 1) { result.await() }
+        }
+        controller.clearQueue()
+        result.complete(listOf(track("stale")))
+        filling.join()
+        assertTrue(history.upcoming(3).isEmpty())
+        assertEquals(listOf(tracks[1]), history.playedPicks)
+        controller.openRandom()
+        assertEquals(QueueSource.None, state.value.activePlayback.source)
+        assertEquals("B", state.value.current!!.title)
+    }
+
+    @Test fun `Clear refreshes failed occurrence retry while the stale retry cannot change playback`() {
+        controller.enqueueTrack(track("X"))
+        controller.nextFile()
+        await { !state.value.loadingTrack }
+        val stale = requireNotNull(ReflectionHelpers.getField<(() -> Unit)?>(controller, "pendingRetry"))
+        controller.clearQueue()
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        val live = requireNotNull(ReflectionHelpers.getField<(() -> Unit)?>(controller, "pendingRetry"))
+        stale()
+        assertEquals(epoch, ReflectionHelpers.getField<Long>(controller, "playbackEpoch"))
+        live()
+        assertTrue(ReflectionHelpers.getField<Long>(controller, "playbackEpoch") > epoch)
+        assertEquals("X", state.value.current!!.title)
+        assertEquals(QueueSource.None, state.value.activePlayback.source)
+    }
+
+    @Test fun `expired Clear Undo reports changed playback instead of overwriting it`() {
+        controller.clearQueue()
+        val undo = state.value.message!!.action!!
+        state.value = state.value.copy(schedule = state.value.schedule.finishCurrent())
+        undo()
+        assertEquals(QueueSource.None, state.value.activePlayback.source)
+        assertEquals("Cannot undo: the playback plan has changed.", state.value.message!!.text)
+        assertNull(state.value.message!!.action)
+    }
+
+    @Test fun `Clear Undo cannot roll back linked playlist edits or replace a newer snackbar`() {
+        controller.clearQueue()
+        val undo = state.value.message!!.action!!
+        controller.addToPlaylist(listOf(track("new draft")))
+        val draft = state.value.queue
+        undo()
+        assertEquals(draft, state.value.queue)
+        assertEquals(QueueSource.None, state.value.activePlayback.source)
+        controller.enqueueTrack(track("Y"))
+        val message = state.value.message
+        undo()
+        assertEquals(message, state.value.message)
+        assertEquals("Y", state.value.schedule.pending.single().track.title)
+    }
+
+    @Test fun `Play after manual-only exhaustion starts newly queued track instead of replaying the old one`() {
+        controller.clearQueue()
+        state.value = state.value.copy(schedule = state.value.schedule.finishCurrent())
+        controller.enqueueTrack(track("new"))
+        controller.togglePlayPause()
+        assertEquals("new", state.value.current!!.title)
+        assertTrue(state.value.schedule.pending.isEmpty())
+        assertFalse(state.value.schedule.consumed)
+    }
+
+    @Test fun `Clear on idle draft empties transport without touching editor and repeated Clear is a no-op`() {
+        state.value = state.value.copy(queue = PlayQueue(tracks), playback = null)
+        controller.clearQueue()
+        assertTrue(state.value.schedule.rows(state.value.activePlayback).isEmpty())
+        assertNull(state.value.current)
+        assertEquals(tracks, state.value.queue.tracks)
+        val before = state.value
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        controller.clearQueue()
+        assertEquals(before.copy(message = state.value.message), state.value)
+        assertEquals(epoch, ReflectionHelpers.getField<Long>(controller, "playbackEpoch"))
+        assertEquals("Queue is already clear.", state.value.message!!.text)
     }
 
     @Test fun `reordering pending duplicates preserves source transport and next uses the new first occurrence`() {
