@@ -1,5 +1,10 @@
 # Playback context and manual queue — implementation contract
 
+**Superseded for the next iteration:** owner testing selected a single list, one-shot manual
+entries, context-only Previous, source-session removal and global enqueue gestures. See
+[the third-iteration contract](QUEUE_UNIFIED_LIST.md). The two-tab/mixed-history text below records
+the previous implemented APK, not the new requested behaviour.
+
 Updated: 2026-10-20. Owner/colleague feedback, analysis audit and provisional implementation decisions.
 This supersedes the pre-implementation analysis retained in Git at `a8539a2`. The owner authorized
 a separate implementation branch after accepting C110, and delegated unresolved choices to the
