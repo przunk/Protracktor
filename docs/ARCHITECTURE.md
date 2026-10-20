@@ -29,6 +29,10 @@ playback, generation and request origin remain unchanged by reorder.
 The presentation follow-up uses stable-key lazy-item fades/placement, not delayed scheduler
 consumption; placement yields to active grip movement. Info requests shared View haptics and the
 source header offers a labelled Help dialog instead of permanent instructions.
+The scroll-first correction separates pure direction/distance intent from pointer consumption.
+Movement stays available to the vertical parent until deliberate horizontal intent wins; a
+latched vertical rejection cannot become a later swipe. Initial-pass abandoned-release handling
+prevents an under-threshold drag from playing the row. [Verification in progress](QUEUE_SWIPE_INTENT.md).
 [Presentation verification](QUEUE_PRESENTATION_POLISH.md) passed full host gates/lint; phone
 behaviour is unchecked.
 Source actions carry their generation to reject stale UI events. All other track lists share the

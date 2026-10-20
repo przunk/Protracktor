@@ -117,6 +117,13 @@ tests/full gates and lint; APK 1.2.0 (1248) records that unmerged handoff. Its s
 [presentation polish](QUEUE_PRESENTATION_POLISH.md) passed 1043 tests/full gates and lint at
 source **6043902**; APK **1.2.0 (1250)** is the current unmerged candidate, phone checks pending.
 
+2026-10-20: the owner asks about Clear queue as a manual-only starting point. This is a discussion,
+not implementation approval. The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md#clear-queue--discussion-only)
+records the recommendation to clear future manual/source continuation without interrupting the
+current track or modifying saved playlists, plus unresolved control/Undo semantics. Clearing
+only pending manual requests would leave source continuation active. The existing no-Clear
+contract remains until an owner decision; swipe tuning must not silently implement the proposal.
+
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning
 from Browse/Search/Random leaves music and transport ownership unchanged, without a playlist cover.

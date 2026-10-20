@@ -5,7 +5,8 @@ package com.przunk.protracktor.ui
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,9 +27,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -42,6 +46,7 @@ import com.przunk.protracktor.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 /** Gesture end commits once; enqueue never dismisses the original row. Vertical scrolling stays free. */
 @Composable
@@ -61,6 +66,7 @@ internal fun QueueSwipeRow(
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     val minimum = with(LocalDensity.current) { 56.dp.toPx() }
+    val swipeStartMinimum = with(LocalDensity.current) { 24.dp.toPx() }
     val addLabel = stringResource(R.string.action_add_to_queue)
     val removeLabel = stringResource(R.string.queue_remove)
     val reset = {
@@ -76,26 +82,77 @@ internal fun QueueSwipeRow(
                 if (onRemove != null) add(CustomAccessibilityAction(removeLabel) { liveRemove?.invoke(); true })
             }
         }
-        .pointerInput(onAdd != null, onRemove != null, minimum) {
-            // Latch before a parent swipe cancels the child grip and releases its live lock.
-            var permitted = false
-            detectHorizontalDragGestures(
-                onDragStart = { permitted = liveCanSwipe(); settling?.cancel(); offset = 0f },
-                onHorizontalDrag = { change, amount ->
-                    if (permitted) {
-                        change.consume()
-                        offset = (offset + amount).coerceIn(if (liveRemove != null) -width else 0f, if (liveAdd != null) width else 0f)
+        .pointerInput(onAdd != null, onRemove != null, minimum, swipeStartMinimum) {
+            val touchSlop = viewConfiguration.touchSlop
+            val startDistance = queueSwipeStartDistance(swipeStartMinimum, touchSlop)
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                // Latch before a parent swipe could cancel the child grip and release its lock.
+                val permitted = liveCanSwipe()
+                if (!permitted) return@awaitEachGesture
+                var total = Offset.Zero
+                var swiping = false
+                var rejected = false
+                var movedBeyondSlop = false
+                try {
+                    while (true) {
+                        // Cancel an abandoned drag's click before a child handles the release.
+                        val initial = awaitPointerEvent(PointerEventPass.Initial)
+                        val release = initial.changes.firstOrNull { it.id == down.id }
+                        if (release != null && !release.pressed && !swiping && movedBeyondSlop) {
+                            release.consume()
+                            return@awaitEachGesture
+                        }
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                        if (change.isConsumed || !liveCanSwipe() ||
+                            event.changes.any { it.id != down.id && it.pressed }) return@awaitEachGesture
+                        if (!change.pressed) {
+                            if (swiping) {
+                                val threshold = maxOf(minimum, width * 0.30f)
+                                val action = when {
+                                    offset >= threshold -> liveAdd
+                                    offset <= -threshold -> liveRemove
+                                    else -> null
+                                }
+                                if (action != null) { haptics.press(); action() }
+                            }
+                            return@awaitEachGesture
+                        }
+                        val delta = change.positionChange()
+                        total += delta
+                        movedBeyondSlop = movedBeyondSlop || total.getDistance() > touchSlop
+                        var amount = delta.x
+                        if (!swiping && !rejected) {
+                            when (queueSwipeIntent(total.x, total.y, touchSlop, startDistance)) {
+                                QueueSwipeIntent.VERTICAL -> rejected = true
+                                QueueSwipeIntent.UNDECIDED -> Unit
+                                QueueSwipeIntent.HORIZONTAL -> {
+                                    if (total.x > 0 && liveAdd == null || total.x < 0 && liveRemove == null) {
+                                        rejected = true
+                                    } else {
+                                        swiping = true
+                                        settling?.cancel()
+                                        offset = 0f
+                                        amount = total.x - sign(total.x) * startDistance
+                                    }
+                                }
+                            }
+                        }
+                        if (swiping) {
+                            change.consume()
+                            offset = (offset + amount).coerceIn(if (liveRemove != null) -width else 0f,
+                                if (liveAdd != null) width else 0f)
+                        } else {
+                            // The parent scrollable handles Main after this child.
+                            if (awaitPointerEvent(PointerEventPass.Final).changes.any { it.isConsumed })
+                                return@awaitEachGesture
+                        }
                     }
-                },
-                onDragCancel = { reset() },
-                onDragEnd = {
-                    val threshold = maxOf(minimum, width * 0.30f)
-                    val action = if (!permitted || !liveCanSwipe()) null else
-                        when { offset >= threshold -> liveAdd; offset <= -threshold -> liveRemove; else -> null }
-                    reset()
-                    if (action != null) { haptics.press(); action() }
-                },
-            )
+                } finally {
+                    if (swiping) reset()
+                }
+            }
         }) {
         if (offset != 0f) {
             val adding = offset > 0

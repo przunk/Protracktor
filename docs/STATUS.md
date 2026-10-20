@@ -1,13 +1,24 @@
 # Status
 
-Updated: 2026-10-20 — queue animation/haptic/header polish ready for phone testing, unmerged; release APK 1.2.0 (1250), source 6043902; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — scroll-first swipe correction in progress, unmerged; latest supplied release APK 1.2.0 (1250), source 6043902; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Queue presentation feedback — ready for phone testing, 2026-10-20
+## Queue swipes steal vertical scrolling — in progress, 2026-10-20
+
+Owner report: attempting up/down scrolling can accidentally move the row sideways. Latest
+supplied APK was 1250; installed ID not separately reported. The horizontal detector claims
+small sideways motion before the scrolling parent. [Scroll-first intent fix](QUEUE_SWIPE_INTENT.md)
+is implemented on the same feature branch. Original wobble and abandoned-click regressions
+failed before correction; lowering dominance to 1:1 failed the real-list diagonal test.
+Restored combined verification passed **98 tests / 9 suites**, zero failures/errors/skips.
+Full gates/lint, a new APK and phone acceptance are pending.
+Clear queue is a separate discussion, not an implemented or owner-approved function.
+
+## Queue presentation feedback — previous handoff, 2026-10-20
 
 The owner reports abrupt disappearance of consumed manual rows, missing Info-hold vibration and
 an inelegant persistent gesture hint. Installed build ID was not separately supplied; latest

@@ -1,5 +1,26 @@
 # What only a phone can prove
 
+## Scroll-first row gestures — phone checks pending
+
+The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md) is in progress, unmerged. APK 1250 is the
+previous handoff, not proof of this change; use the new artifact once recorded in [Status](STATUS.md).
+
+1. In a long Queue, scroll up/down with slight sideways wobble and diagonal starts. Rows should
+   stay still horizontally; no green/red reveal, manual addition, removal, playback or Info.
+   Repeat on Playlist, Random and Browse/Search/History track rows.
+2. Move a little horizontally then continue vertically; vertical scrolling should take priority.
+   Start vertically then drift sideways farther: the same gesture must not turn into a swipe.
+3. Perform clear horizontal swipes in both queue directions, including a small vertical drift.
+   After a deliberate start, reveal the action, commit once on release and retain Undo. Partial,
+   reversed, cancelled and multi-finger gestures must not enqueue/remove or accidentally play.
+4. Outside Queue, unsupported left swipes must not play a track. Normal taps and holds must still
+   work afterwards; test Info haptics and the bounded manual grip drag/edge scroll as before.
+5. Try quick flicks, slow scrolling and one-handed use on the phone. The proposed start distance
+   is max(24 dp, twice platform touch slop), with more than 2:1 horizontal dominance. Real-world
+   comfort needs owner testing; host gesture checks do not prove it.
+
+Clear queue is a separate design discussion, not part of this build.
+
 ## Queue presentation polish — phone checks pending
 
 The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Use release APK **1.2.0
