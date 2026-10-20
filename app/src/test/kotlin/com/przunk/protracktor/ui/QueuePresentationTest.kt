@@ -80,6 +80,25 @@ class QueuePresentationTest : PlaybackShellTest() {
         compose.runOnIdle { assertEquals(before, player.value) }
     }
 
+    @Test fun `row Info hold survives playback progress recompositions without starting audio`() {
+        val pending = open()
+        val current = player.value.schedule.current
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        row(pending.first().id).performTouchInput { down(center) }
+        repeat(8) {
+            compose.runOnIdle { player.value = player.value.copy(positionSeconds = player.value.positionSeconds + 0.1) }
+            frame(100)
+        }
+        compose.onNodeWithTag("playback-panel").performTouchInput { up() }
+        frame(200)
+        compose.onNodeWithText("Close").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(current, player.value.schedule.current)
+            assertEquals(epoch, ReflectionHelpers.getField<Long>(controller, "playbackEpoch"))
+            assertFalse(player.value.playing)
+        }
+    }
+
     @Test fun `consuming manual current moves surviving rows through intermediate positions`() {
         assertConsumptionMotion(showSourceAnchor = true)
     }

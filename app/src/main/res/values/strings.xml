@@ -12,11 +12,11 @@
     <string name="queue_help_left">Swipe left</string>
     <string name="queue_help_left_body">Remove this occurrence from playback. Undo restores it; saved playlists and files stay unchanged.</string>
     <string name="queue_help_right">Swipe right</string>
-    <string name="queue_help_right_body">Add another copy to the end of the manual queue. Indented rows play before the context continues.</string>
+    <string name="queue_help_right_body">Add another copy to the end of the manual queue. Manual requests play before the context continues.</string>
     <string name="queue_help_hold">Hold a row</string>
     <string name="queue_help_hold_body">Open track information. Tap a row to play it.</string>
     <string name="queue_help_drag">Drag a grip</string>
-    <string name="queue_help_drag_body">Reorder waiting manual tracks inside the indented block. The current track and context rows stay in place.</string>
+    <string name="queue_help_drag_body">Use the grips to reorder waiting manual tracks among themselves. The current track and context rows stay in place.</string>
     <string name="queue_move_earlier">Move earlier</string>
     <string name="queue_move_later">Move later</string>
     <string name="queue_info_request">Information about %1$s</string>

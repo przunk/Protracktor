@@ -1,5 +1,26 @@
 # What only a phone can prove
 
+## Queue follow and branch audit — phone checks pending
+
+[C116](QUEUE_AUTO_FOLLOW.md) and [the complete branch review](QUEUE_BRANCH_REVIEW.md) extend the
+unmerged candidate. Use the final APK in [Status](STATUS.md) once available; APK 1258 predates
+these corrections. The focused host run passed 218 tests / 14 suites; phone behaviour is unchecked.
+
+1. With a long Queue open, repeatedly press Next until it scrolls at the lower edge. Surviving
+   rows must remain visible throughout, without a whole-list flash/fade. Try several rapid Next
+   presses, natural completion and Previous near the upper edge. The actual current row should
+   end fully visible above the dock. Repeat with Random and manual inserts.
+2. Consumed/removed manual rows should still fade and close the gap smoothly. New rows appear
+   immediately, without fading the rest of the list. Retest Clear/Undo, full-width highlighting,
+   saved-playlist drag, bounded manual grips and vertical-versus-horizontal intent below.
+3. With shuffle enabled on a three-track source, choose C, choose B repeatedly inside Queue,
+   then choose A. Swipe-left B from this session. Previous must still reach C; Next must cross
+   the omitted B history and return to A. The saved playlist must retain all three tracks.
+4. Hold a Queue row for Info while progress is updating. Check haptic feedback, no accidental
+   Play and EN/PL Help wording for manual requests both inside a context and after Clear.
+
+No merge acceptance is inferred from host results or installation alone.
+
 ## Queue row and playlist drag corrections — phone checks pending
 
 [C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Use release APK **1.2.0 (1258),

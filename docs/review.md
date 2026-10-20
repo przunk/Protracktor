@@ -1,5 +1,9 @@
 # Code review — round 5, 2026-09-03
 
+Later scoped review, 2026-10-21: the complete unmerged manual-queue code delta and its C116/C117
+corrections are recorded in [Queue branch audit](QUEUE_BRANCH_REVIEW.md). Its current verification
+and pending phone acceptance are separate from the historical round-five findings below.
+
 A review of the whole `develop` tree after round 5's six implementation items, as `GOAL.md` Phase 2
 asks for.
 

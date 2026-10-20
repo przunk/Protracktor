@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C116 Queue auto-follow flicker corrected in host tests; full branch review/final gates pending; previous APK 1.2.0 (1258), source aca3cd6, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — C116 auto-follow and C117 omitted-history corrections implemented; full branch review complete, final gates/APK pending; previous APK 1.2.0 (1258), source aca3cd6, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -14,8 +14,19 @@ scrolling and a brief whole-list flash. Installed build ID was not separately su
 [Investigation and verification](QUEUE_AUTO_FOLLOW.md). The corrected real-Dock pixel test
 reproduces a lazy-item animator reset at the final scroll snap. Queue appearance fading is
 disabled; disappearance/placement remain animated. Restored verification passed 18 host tests /
-4 suites, zero failures/errors/skips. Full branch review, complete gates and the final APK
-remain pending. Device behaviour is unchecked; no merge. The previous handoff remains below.
+4 suites, zero failures/errors/skips. The later [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+passed 218 focused tests / 14 suites, including rapid Next, Info during progress updates,
+departure/placement, Clear, playlist/manual grips and swipe regressions. Complete gates and the
+final APK remain pending. Device behaviour is unchecked; no merge. Previous handoffs remain below.
+
+## C117 Omitted shuffle history can prematurely disable transport — open, 2026-10-21
+
+Code-review finding, not a user-reported incident. Repeated in-list selections create more
+history entries than source rows. The old omission walk stopped after one list length and
+could miss a surviving earlier/later destination. Both pure-model reproductions failed before
+correction. PlayQueue now supplies a bounded budget covering history plus a fresh lap;
+218-test focused verification passed. [Audit](QUEUE_BRANCH_REVIEW.md). Full gates/APK and phone
+checks pending. No source order, saved playlist, shuffle or manual FIFO policy change.
 
 ## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
 

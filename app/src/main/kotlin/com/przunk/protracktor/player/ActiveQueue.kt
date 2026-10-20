@@ -68,7 +68,7 @@ data class ActiveQueue(
     private fun finiteMove(forward: Boolean): ActiveQueue? {
         if (order.tracks.indices.none { entryIds[it] !in omitted }) return null
         var at = order
-        repeat(order.tracks.size + 1) {
+        repeat(order.maxTraversalSteps) {
             if (forward && !at.hasNext || !forward && !at.hasPrevious) return null
             at = if (forward) at.next() else at.previous()
             if (entryIds[at.currentIndex!!] !in omitted) return copy(order = at)

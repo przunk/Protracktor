@@ -132,7 +132,7 @@ class QueueClearUiTest : PlaybackShellTest() {
         assertTrue(clearBounds.right <= helpBounds.left)
         compose.onNodeWithTag("queue-help").performTouchInput { click() }
         frame(200)
-        compose.onNodeWithText("Zmień kolejność oczekujących utworów ręcznych w obrębie wcięcia. Bieżący utwór i wiersze kontekstu pozostają na miejscu.")
+        compose.onNodeWithText(application.getString(com.przunk.protracktor.R.string.queue_help_drag_body))
             .performScrollTo()
         compose.onNodeWithText("Zachowaj tylko bieżący utwór, bez przerywania odtwarzania. Usuń kontekst i oczekujące utwory; zapisane playlisty pozostają bez zmian. Cofnij przywraca plan, dopóki odtwarzanie nie przejdzie dalej lub nie ułożysz nowej kolejki.")
             .performScrollTo().assertIsDisplayed()

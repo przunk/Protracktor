@@ -72,4 +72,32 @@ class ActiveQueueTest {
         assertEquals(original.source, selected.source)
         assertEquals(tracks, selected.order.tracks)
     }
+
+    private fun repeatedOmittedHistory(): PlayQueue {
+        var order = PlayQueue(tracks).withShuffle(true, 47).startAt(2)
+        repeat(12) { order = order.jumpTo(1) }
+        return order.jumpTo(0)
+    }
+
+    @Test fun `Previous crosses all omitted shuffle history entries not just one list length`() {
+        val source = ActiveQueue(QueueSource.Playlist(1), repeatedOmittedHistory()).omit(1)
+        assertTrue("A surviving earlier source is still reachable", source.hasPrevious)
+        val previous = (source.previous() as QueueStep.Play).queue
+        assertEquals(tracks[2], previous.current)
+        assertEquals(source.omitted, previous.omitted)
+        assertEquals(source.order.playbackIndices, previous.order.playbackIndices)
+        assertFalse(previous.hasPrevious)
+    }
+
+    @Test fun `Next crosses a long omitted forward history before reaching the retained source`() {
+        var order = repeatedOmittedHistory()
+        repeat(13) { order = order.previous() }
+        assertEquals(tracks[2], order.current)
+        val source = ActiveQueue(QueueSource.Collection(SessionSource.History), order).omit(1)
+        assertTrue("Forward history may be longer than the source list", source.hasNext)
+        val next = (source.next() as QueueStep.Play).queue
+        assertEquals(tracks[0], next.current)
+        assertEquals(source.omitted, next.omitted)
+        assertEquals(source.order.playbackIndices, next.order.playbackIndices)
+    }
 }

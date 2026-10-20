@@ -222,6 +222,9 @@ data class PlayQueue(
 
     val playbackIndices: List<Int> get() = order
 
+    /** A filtered move may cross retained history before at most one fresh source lap. */
+    internal val maxTraversalSteps: Int get() = history.size + tracks.size + 1
+
     /**
      * Turns shuffle on or off.
      *
