@@ -43,4 +43,26 @@ The corrected run passed **20 tests / 4 suites**, zero failures/errors/skips, co
 Clear/Undo, presentation animations/haptics and manual grips. Rendered-pixel sampling is shared
 with the existing animation regression, using the same hardware RenderNode path.
 
-C115 implementation, complete gates and the new APK remain pending. Device fixes are unchecked.
+## Playlist-drag checkpoint
+
+C115 is implemented. The outer swipe item owns translation and z-order, while its subtree stays
+enabled and uses the shared swipe-ownership gate during a grip. Numeric viewport anchoring runs
+in SideEffect after the new item provider is composed; a synchronous request inside onMove can
+remeasure old data and consume the override too early. Gesture-local order bridges event batches,
+and live membership changes cancel safely. Membership is cached across pointer events rather
+than rebuilding whole-playlist sets for every pixel. Release/cancel clears the offset and lock.
+
+The initial corrected run passed 28 tests / 4 suites, including six playlist gesture/rendering
+cases and existing queue layout, manual grips and swipe tests. Reintroducing the old enabled
+branch failed the actual-grip regression; removing viewport pinning and lowering the outer layer
+each failed its regression. The first batching probe incorrectly allowed time between moves and
+did not fail; zero-delay moves now share a frame and the stale-index mutation fails as intended.
+All fault injections are restored before final verification. The optional ignored Gradle init
+script disables fail-fast only for the multi-probe run, never normal gates or builds.
+
+Tests select the unmerged grip Icon, not the merged clickable row. They measure a descendant's
+draw-transformed bounds for finger tracking: outer wrapper semantics describe its allocated slot.
+Preliminary whole-row gesture/slot-coordinate attempts are not counted as reproductions.
+
+Final restored combined verification passed **147 tests / 14 suites**, zero failures/errors/skips,
+in 98.4 s. Complete gates and the new APK remain pending. Device fixes are unchecked.

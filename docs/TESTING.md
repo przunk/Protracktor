@@ -1,5 +1,29 @@
 # What only a phone can prove
 
+## Queue row and playlist drag corrections — phone checks pending
+
+[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Use the new release APK in
+[Status](STATUS.md) once available; APK 1255 is the reported predecessor, not a verified fix.
+
+1. Clear while a source or manual track is current. With no source rows, the retained current
+   and newly queued tracks align normally, without a group inset. Undo restores the source and
+   its indented manual block, without a playback/seek change.
+2. A current manual row inside a context highlights its whole width, including the inset. Tap
+   and hold that margin: it belongs to the row (Play/Info respectively), not a dead gutter.
+3. On the saved playlist, grab the first row and move it down across several rows. It stays
+   under the finger and above neighbours; the viewport must not follow its key back to the top.
+   Repeat upward, from the middle, with a partially scrolled list and with music playing.
+4. Begin with a small grip movement, pause, continue across a cell, pause and continue again.
+   Try a fast burst across several cells. The same row must remain held, with no offset left
+   behind after release/cancel. Cancel a partial move, then grab again and try a row right-swipe.
+5. Reordering changes only the playlist draft: no unexpected Play, queue addition or file edit.
+   Check Save/Revert, current-track identity, selection, row menus/Info, normal vertical scrolling
+   and right-add gestures. Rerun bounded manual-queue grip/edge-scroll checks below.
+6. Check release performance, long lists, EN/PL, large text and TalkBack on the actual phone.
+
+Host gesture/render tests are partial evidence; device timing, feel and regression acceptance
+remain unchecked until owner confirmation. No merge is authorized.
+
 ## Clear queue — phone checks pending
 
 The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Use release APK **1.2.0 (1255), source
