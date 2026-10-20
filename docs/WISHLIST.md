@@ -144,7 +144,11 @@ tests/full gates and lint; **APK 1.2.0 (1250)** records that handoff. Further us
 **APK 1.2.0 (1252)** records that unmerged handoff. Earlier handoffs remain historical.
 The owner subsequently approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting point;
 source **1aec1aa** passed 1080 tests/full gates and lint, with release **APK 1.2.0 (1255)** ready
-on the same unmerged branch. [Current handoff](QUEUE_CLEAR.md#final-verification-and-apk);
+on the same unmerged branch. [Historical Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk).
+The next owner report selected C113–C115: standalone Clear alignment, full-width manual highlight
+and saved-playlist drag ownership/layering/viewport corrections. Source **aca3cd6** passed
+**1090 tests / 141 suites**, full gates and lint; release **APK 1.2.0 (1258)** is the current
+unmerged candidate. [Current handoff](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
 phone behaviour and acceptance remain pending.
 AMP remains deferred.
 

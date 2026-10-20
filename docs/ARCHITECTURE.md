@@ -1,6 +1,6 @@
 # Architecture
 
-## Manual playback queue — implemented on an unmerged branch, 2026-10-20
+## Manual playback queue — implemented on an unmerged branch, 2026-10-21
 
 `feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
 identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
@@ -55,7 +55,7 @@ Those counts/artifact precede the reorder/long-press follow-up. Its clean source
 unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.md).
 The presentation handoff is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
 tests / 136 suites**, full gates and lint (0 errors/72 unchanged warnings). Its predecessor counts
-above remain historical. [Current handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
+above remain historical. [Presentation handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
 phone checks and acceptance remain pending, with no merge. The scroll-first handoff is
 source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all host gates/lint
 (0 errors/72 unchanged warnings) and artifact inspection passed.
@@ -67,10 +67,20 @@ state directly, never through a snapshot replacing editor tracks/position or res
 When Undo relinks the selected source playlist, its live editor mirrors only transport modes
 so the active-source getter cannot revive the pre-Clear Repeat/Shuffle settings.
 Explicit Play can draw after Undo restores Random before its first pick; Undo itself stays idle.
-Current unmerged handoff: source **1aec1aa**, APK **1.2.0 (1255)**, **1080 tests / 139 suites**,
+Historical Clear handoff: source **1aec1aa**, APK **1.2.0 (1255)**, **1080 tests / 139 suites**,
 complete gates/lint (0 errors/72 unchanged warnings) and artifact checks passed.
 [Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk). Device behaviour and merge acceptance
-remain unchecked; prior source/count records above are historical, not the latest candidate.
+remain unchecked.
+
+C113/C114 keep standalone manual lists aligned: indent manual content only while source rows
+exist, with highlight and tap/hold outside that inset. C115 keeps the playlist swipe subtree
+mounted during a grip, gates competing swipes and moves/raises the outer lazy item rather than
+its clipped child. A post-composition numeric viewport pin prevents keyed-item anchoring from
+following the first reordered row; gesture-local order handles moves before recomposition.
+No scheduler, transport or saved-data policy changes. Current unmerged handoff: source
+**aca3cd6**, APK **1.2.0 (1258)**, **1090 tests / 141 suites**, complete gates/lint (0 errors /
+72 unchanged warnings) and artifact inspection passed. [Row-regression handoff](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk).
+Device behaviour and merge acceptance remain unchecked; prior artifacts/counts are historical.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

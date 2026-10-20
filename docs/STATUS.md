@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C113–C115 queue presentation/playlist drag corrections implemented, full gates pending, unmerged; previous APK 1.2.0 (1255), source 1aec1aa; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — C113–C115 queue presentation/playlist drag corrections ready for phone testing, unmerged; APK 1.2.0 (1258), source aca3cd6; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -17,8 +17,21 @@ C113/C114 are implemented and passed 20 host tests / 4 suites; Clear alignment, 
 highlight and inset-hold regressions failed before correction. C115 is implemented; grip,
 viewport, drawing-layer and same-frame stale-index negative probes failed as intended. Final
 restored combined verification passed 147 host tests / 14 suites, zero failures/errors/skips.
-Complete gates and a new APK remain pending. Device fixes are unchecked;
-no merge authorized. C111/C112 and AMP remain excluded.
+Clean source **aca3cd6** passed the forced complete gate in **545 s**: **1090 tests / 141 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(ID/severity/message/file records match APK 1255).
+
+Minified test-signed release APK built in **104.1 s**:
+[protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk](../dist/protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk),
+**11,915,735 bytes**. Package/code, v2 public test certificate, absence of debuggable flag,
+executed R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`f7d0396c6080b908900a536b081a9d5d13b34dd48b2e444bf4fab5ed2777904f`.
+[Evidence](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-row-and-playlist-drag-corrections--phone-checks-pending).
+**Checked partially:** host gestures/layout/rendering and artifact properties. **Unchecked:**
+device dragging/viewport, visual comfort, audio, notifications, Bluetooth, accessibility and
+long-term use. No merge/push/tag; develop, AMP and master unchanged. C111/C112 remain excluded.
+APK 1255 below is historical; documentation-only closeout does not change APK source SHA/code.
 
 ## Clear queue — previous handoff, 2026-10-20
 

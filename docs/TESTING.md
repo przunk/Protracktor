@@ -2,8 +2,10 @@
 
 ## Queue row and playlist drag corrections — phone checks pending
 
-[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Use the new release APK in
-[Status](STATUS.md) once available; APK 1255 is the reported predecessor, not a verified fix.
+[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Use release APK **1.2.0 (1258),
+source aca3cd6**, identified in [Status](STATUS.md). It passed 1090 host tests/full gates and
+lint; APK 1255 is the reported predecessor, not a verified fix. Subsequent sections name their
+historical handoffs; rerun those regression scenarios on APK 1258 as well.
 
 1. Clear while a source or manual track is current. With no source rows, the retained current
    and newly queued tracks align normally, without a group inset. Undo restores the source and
@@ -26,10 +28,9 @@ remain unchecked until owner confirmation. No merge is authorized.
 
 ## Clear queue — phone checks pending
 
-The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Use release APK **1.2.0 (1255), source
-1aec1aa**, identified in [Status](STATUS.md), not APK 1252. It passed 1080 host tests/full gates
-and lint; real audio/device behaviour is unchecked. Subsequent sections name their historical
-handoffs; rerun those regression scenarios on this current APK as well.
+The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Its historical handoff was release APK
+**1.2.0 (1255), source 1aec1aa**, with 1080 host tests/full gates and lint passed. Use the current
+APK 1258 identified above for these checks; real audio/device behaviour is unchecked.
 
 1. Play a playlist, Search, Browse, History, Random or external file, with several pending manual
    requests. Open Queue and press Clear queue: only the actual current track remains, with no

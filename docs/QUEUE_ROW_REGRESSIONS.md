@@ -18,7 +18,7 @@ no merge authorized. C111/C112 and AMP remain outside scope.
   keyed first-visible-item anchoring follows the dragged first item when its data index changes.
 
 The phone observations are the reproduction evidence for device behaviour. Host regressions
-will exercise production gestures, layout and rendered pixels, not just move callbacks.
+exercise production gestures, layout and rendered pixels, not just move callbacks.
 
 ## Selected correction
 
@@ -65,4 +65,34 @@ draw-transformed bounds for finger tracking: outer wrapper semantics describe it
 Preliminary whole-row gesture/slot-coordinate attempts are not counted as reproductions.
 
 Final restored combined verification passed **147 tests / 14 suites**, zero failures/errors/skips,
-in 98.4 s. Complete gates and the new APK remain pending. Device fixes are unchecked.
+in 98.4 s. Complete gates and artifact checks are recorded below; device fixes are unchecked.
+
+## Final verification and APK
+
+2026-10-21: clean source **aca3cd6**, commit count **1258**, passed the forced complete gate in
+**545 s**: **1090 tests / 141 suites**, zero failures/errors/skips, all companion checks and lint
+**0 errors / 72 unchanged warnings**. Warning ID/severity/message/file records match source
+`1aec1aa` exactly, ignoring shifted line numbers. Unit tests took 371.3 s and lint 88.5 s.
+
+Minified test-signed release APK built in **104.1 s**:
+[protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk](../dist/protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk),
+**11,915,735 bytes**. Package `com.przunk.protracktor`, versionName `1.2.0`, code `1258`,
+minSdk 29/targetSdk 36, absence of debuggable flag, executed R8/nonempty mapping and engine
+libraries for arm64-v8a, armeabi-v7a and x86_64 checked. APK Signature Scheme v2 verified with
+public test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is a release-variant test APK, not a Play upload artifact. APK SHA-256:
+`f7d0396c6080b908900a536b081a9d5d13b34dd48b2e444bf4fab5ed2777904f`.
+
+Ignored `dist/row-regression-verification/aca3cd6/` retains JUnit/lint reports, full/companion/
+build logs, focused/negative probes, mapping, badging/manifest, signature and ZIP contents.
+The earlier `fffbafc` layout checkpoint is not the final artifact source.
+
+**Checked partially:** host Compose gestures/layout/rendering, complete gates/lint and artifact
+properties. **Unchecked:** phone drag ownership/viewport/visual comfort, audio, notification,
+Bluetooth, TalkBack and long-term use. [Phone checklist](TESTING.md#queue-row-and-playlist-drag-corrections--phone-checks-pending).
+Owner acceptance and merge remain pending. No push/tag, schema, dependency, native, web, AMP or
+versionName changes. Develop `d6d3297`, AMP `8e92002` and master `794d8f9` are unchanged.
+Documentation-only closeout does not relabel or rebuild this APK.
+Closeout checked 223 existing local link destinations across ten updated documents and the new
+handoff/checklist headings. Application, native, web and build-script sources still match the
+APK source; no additional application build is needed for this documentation-only update.

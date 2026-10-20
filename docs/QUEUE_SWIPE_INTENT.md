@@ -112,5 +112,10 @@ Undo behaviour were open at this stage. The later task selects a separate Clear 
 an unannounced part of swipe tuning.
 
 The later Clear follow-up is ready at source **1aec1aa**, release APK **1.2.0 (1255)**, with
-1080 tests/full gates and lint passed. [Current handoff](QUEUE_CLEAR.md#final-verification-and-apk)
+1080 tests/full gates and lint passed. [Historical Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk)
 remains unmerged and requires phone acceptance; APK 1252 above is its historical predecessor.
+
+The subsequent [C113–C115 row/playlist corrections](QUEUE_ROW_REGRESSIONS.md) preserve these swipe
+thresholds while keeping the playlist grip subtree mounted and gating competing swipes. Current
+candidate: source **aca3cd6**, release APK **1.2.0 (1258)**, 1090 tests/full gates/lint passed,
+unmerged with phone checks pending.

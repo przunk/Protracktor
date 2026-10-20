@@ -10,7 +10,10 @@ tests/full gates and lint; APK **1.2.0 (1250)** records that handoff. The subseq
 **f6a5ee4**; APK **1.2.0 (1252)** records that unmerged handoff. The owner subsequently approved
 [Clear queue](QUEUE_CLEAR.md); that follow-up is ready on the same branch: source **1aec1aa**,
 1080 tests/full gates and lint passed, release APK **1.2.0 (1255)**, unmerged. Phone behaviour
-and owner acceptance remain pending.
+and owner acceptance remain pending. The later [C113–C115 corrections](QUEUE_ROW_REGRESSIONS.md)
+cover standalone Clear alignment, full-width manual highlighting and saved-playlist dragging:
+source **aca3cd6**, 1090 tests/full gates/lint passed, release APK **1.2.0 (1258)** ready,
+unmerged. Phone acceptance remains pending; earlier artifacts above are historical.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.
@@ -22,6 +25,8 @@ The previous APK/reports remain historical evidence, not verification of these c
 - One list combines context rows with a marked/indented block of manual occurrences after the
   parked context position. Only the actual occurrence is marked playing. The same dock remains
   visible and operable below the panel; remove the duplicate Playback/current-track header.
+  Indent manual content only while source rows exist; standalone manual lists align normally.
+  Playing highlight and tap/hold cover the full row, including any content inset.
 - FIFO additions go after older manual requests, including when added during another manual file.
   Equal files are independent occurrences. A right swipe adds a copy; it does not remove/move
   the original context row or deduplicate requests.

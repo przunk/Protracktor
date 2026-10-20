@@ -2,6 +2,12 @@
 
 Owner decision, 2026-10-20. Follow-up on `feature/manual-playback-queue`; no merge authorized.
 
+2026-10-21 presentation/playlist follow-up: [C113–C115](QUEUE_ROW_REGRESSIONS.md) keep standalone
+manual rows aligned, highlight their full width and correct saved-playlist dragging. Manual
+content is indented only when visible source rows distinguish it as an inserted block. Current
+candidate: source **aca3cd6**, release APK **1.2.0 (1258)**, 1090 tests/full gates/lint passed;
+phone checks pending. The APK 1255 evidence below is historical; Clear/Undo semantics are unchanged.
+
 ## Contract
 
 - Clear removes the source context and every waiting manual occurrence. Saved playlists,

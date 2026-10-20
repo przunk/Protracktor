@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-20. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-21. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The owner-approved unpublished version-history correction restores release baseline 1.1.0;
 release 1.2.0 now has a prepared tagged AAB (Play publication unconfirmed). Historical IDs/SHAs below refer to the archived original graph,
@@ -30,7 +30,7 @@ phone acceptance is pending and AMP stays deferred.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Owner-approved [Clear queue](QUEUE_CLEAR.md) extends reorder/Info/presentation and scroll-first swipes. Source 1aec1aa passed 1080 tests/full gates and lint; release APK 1.2.0 (1255) ready on the same unmerged branch, phone acceptance pending. Earlier handoffs are historical. AMP/C112 remain deferred. |
+| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Clear/reorder/Info/presentation and scroll-first swipes now include [C113–C115 row/playlist corrections](QUEUE_ROW_REGRESSIONS.md). Source aca3cd6 passed 1090 tests/full gates and lint; release APK 1.2.0 (1258) ready on the same unmerged branch, phone acceptance pending. Earlier handoffs are historical. AMP/C111/C112 remain deferred. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -66,6 +66,9 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
+| C113 | Clear leaves the standalone manual list indented | Owner phone report, 2026-10-20. Conditional content inset implemented; negative layout probe failed as intended. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
+| C114 | Current manual row highlight/hit area excludes its inset | Owner phone report, 2026-10-20. Full-width paint and tap/hold implemented; pixel/hold negative probes failed. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
+| C115 | Playlist grip loses ownership, row layering and viewport tracking | Owner phone report, 2026-10-20. Stable subtree, outer drag layer, numeric viewport pin and batched-move correction implemented; negative probes failed. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | C111 | Add music and Online catalogues content padding changes between views | Owner/user report, 2026-10-19; visible alignment/spacing mismatch. Measurements and cause not established; not fixed or included in queue work. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
