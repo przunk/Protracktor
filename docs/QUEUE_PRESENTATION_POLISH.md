@@ -2,6 +2,10 @@
 
 Ready for phone testing: **APK 1.2.0 (1250), source 6043902**, unmerged. Final evidence below.
 
+Subsequent owner feedback selected [scroll-first swipes](QUEUE_SWIPE_INTENT.md). Its APK **1252**
+is now the current unmerged candidate, with 1056 host tests/full gates/lint passed. This document
+retains code-1250 evidence; neither handoff has device acceptance of all behaviour.
+
 Owner feedback, 2026-10-20, after the manual-reorder handoff (latest supplied APK 1.2.0/1248;
 installed build ID not independently supplied). Continue on `feature/manual-playback-queue`,
 without merging. [Previous contract/evidence](QUEUE_MANUAL_REORDER.md).

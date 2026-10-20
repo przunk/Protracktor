@@ -139,8 +139,10 @@ The later owner-selected waiting-block reorder/long-press Info follow-up passed 
 full gates and lint; [APK 1.2.0 (1248)](QUEUE_MANUAL_REORDER.md#final-verification-and-apk) records
 that handoff. Subsequent user feedback selected animated departures, explicit Info haptics and
 on-demand Help. [Presentation source 6043902](QUEUE_PRESENTATION_POLISH.md) passed 1043 host
-tests/full gates and lint; **APK 1.2.0 (1250)** is the current unmerged phone candidate. Older
-code-1248/1245 handoffs remain historical evidence.
+tests/full gates and lint; **APK 1.2.0 (1250)** records that handoff. Further user feedback selected
+[scroll-first swipes](QUEUE_SWIPE_INTENT.md): source **f6a5ee4**, 1056 tests/full gates/lint passed,
+**APK 1.2.0 (1252)** is the current unmerged phone candidate. Earlier handoffs remain historical.
+Clear queue as a manual-only starting point is recorded for discussion, not implementation.
 AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.

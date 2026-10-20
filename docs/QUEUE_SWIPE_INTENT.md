@@ -1,5 +1,7 @@
 # Scroll-first queue gestures
 
+Ready for phone testing: **APK 1.2.0 (1252), source f6a5ee4**, unmerged. Final evidence below.
+
 Owner feedback, 2026-10-20, after the [presentation handoff](QUEUE_PRESENTATION_POLISH.md).
 Latest supplied build: APK 1.2.0 (1250), source 6043902; installed build ID was not separately
 reported. Continue on `feature/manual-playback-queue`, unmerged.
@@ -55,7 +57,44 @@ Lowering horizontal dominance from 2:1 to 1:1 failed the real diagonal-scroll re
 restored afterwards. Final restored combined run passed **98 tests / 9 suites**, zero failures/
 errors/skips, **67.0 s** (`/tmp/protracktor-scroll-first-final-focused.log`). It includes scheduler/
 controller, scrolling/direction policy, queue shell, Info/animation, manual grips and navigation.
-Full gates/lint and the new APK are pending; phone behaviour remains unchecked.
+At that checkpoint full gates/lint and the new APK were pending. Final evidence follows;
+phone behaviour remains unchecked.
+
+## Final verification and APK
+
+Clean source **f6a5ee4**, versionName **1.2.0**, commit-count versionCode **1252** passed
+`./scripts/test-protracktor.sh --really` in **531 s**:
+
+- **1056 tests / 137 suites**, zero failures/errors/skips; tests actually executed, not up-to-date.
+  Includes the real scrolling-parent regressions, abandonment/cancellation protection, supported
+  and unsupported directions, normal taps/holds, grip ownership, Undo, presentation and navigation.
+- Store metadata, runner/release-flow fixtures, web page/engine/database upgrade, SAP, native
+  audio, icons, PWA and local server checks passed.
+- Lint **0 errors / 72 warnings**, equal to the archived code-1250 issue ID/message/file records.
+
+Minified test-signed release APK built in **96.3 s**:
+[protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk](../dist/protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk),
+**11,907,283 bytes**. SHA-256:
+`c228e109f54247ffb2957bd44d0da0a307149c561bc4f8e5dc095b4235795024`.
+
+Checked package `com.przunk.protracktor`, version/code, APK v2 signature with the unchanged public
+test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`,
+absence of debuggable flag, executed R8/nonempty mapping, minSdk **29**/targetSdk **36**, and actual
+engine libraries for **arm64-v8a / armeabi-v7a / x86_64**. No AAB or publication-key operation.
+
+Ignored `dist/swipe-intent-verification/f6a5ee4/` retains JUnit/lint reports, full gate/build and
+companion logs, focused/negative probes, mapping, manifest/badging, signature and APK contents.
+[Phone scenarios](TESTING.md#scroll-first-row-gestures--phone-checks-pending).
+
+**Checked partially:** host pointer/scroll behaviour, domain/controller regressions, full gates/
+lint and release artifact identity. **Unchecked:** real device touch comfort/speed, TalkBack,
+audio/service/notification/Bluetooth and long-term use. Phone acceptance and merge remain pending.
+Develop `d6d3297`, AMP `8e92002` and master `794d8f9` are unchanged. No push/tag, schema, versionName
+or store change. Documentation-only closeout does not relabel this APK. Clear queue below remains
+a discussion, not an implemented function.
+Closeout checked 195 existing local link destinations in nine updated documents; application,
+native, web and script sources still match the APK source. No additional build is needed for
+this documentation-only update.
 
 ## Clear queue — discussion only
 

@@ -115,7 +115,9 @@ The owner subsequently selected long-press Info and reorder only inside waiting 
 not across source/current rows. [Follow-up](QUEUE_MANUAL_REORDER.md): source `0082064` passed 1037
 tests/full gates and lint; APK 1.2.0 (1248) records that unmerged handoff. Its subsequent
 [presentation polish](QUEUE_PRESENTATION_POLISH.md) passed 1043 tests/full gates and lint at
-source **6043902**; APK **1.2.0 (1250)** is the current unmerged candidate, phone checks pending.
+source **6043902**; APK **1.2.0 (1250)** records that handoff. The subsequent
+[scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
+**f6a5ee4**; APK **1.2.0 (1252)** is the current unmerged candidate, phone checks pending.
 
 2026-10-20: the owner asks about Clear queue as a manual-only starting point. This is a discussion,
 not implementation approval. The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md#clear-queue--discussion-only)

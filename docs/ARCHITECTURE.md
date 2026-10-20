@@ -32,7 +32,8 @@ source header offers a labelled Help dialog instead of permanent instructions.
 The scroll-first correction separates pure direction/distance intent from pointer consumption.
 Movement stays available to the vertical parent until deliberate horizontal intent wins; a
 latched vertical rejection cannot become a later swipe. Initial-pass abandoned-release handling
-prevents an under-threshold drag from playing the row. [Verification in progress](QUEUE_SWIPE_INTENT.md).
+prevents an under-threshold drag from playing the row. [Host verification passed](QUEUE_SWIPE_INTENT.md);
+device touch comfort is unchecked.
 [Presentation verification](QUEUE_PRESENTATION_POLISH.md) passed full host gates/lint; phone
 behaviour is unchecked.
 Source actions carry their generation to reject stale UI events. All other track lists share the
@@ -52,10 +53,13 @@ establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#f
 Those counts/artifact precede the reorder/long-press follow-up. Its clean source `0082064` passed
 1037 tests/full gates and lint (0 errors/72 unchanged warnings); APK 1.2.0 (1248) is ready,
 unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.md).
-The current presentation candidate is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
+The presentation handoff is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
 tests / 136 suites**, full gates and lint (0 errors/72 unchanged warnings). Its predecessor counts
 above remain historical. [Current handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
-phone checks and acceptance remain pending, with no merge.
+phone checks and acceptance remain pending, with no merge. The current scroll-first candidate is
+source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all host gates/lint
+(0 errors/72 unchanged warnings) and artifact inspection passed.
+[Latest handoff](QUEUE_SWIPE_INTENT.md#final-verification-and-apk). No Clear queue implementation.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

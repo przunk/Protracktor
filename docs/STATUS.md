@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-20 — scroll-first swipe correction in progress, unmerged; latest supplied release APK 1.2.0 (1250), source 6043902; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — scroll-first swipe correction ready for phone testing, unmerged; release APK 1.2.0 (1252), source f6a5ee4; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Queue swipes steal vertical scrolling — in progress, 2026-10-20
+## Queue swipes steal vertical scrolling — ready for phone testing, 2026-10-20
 
 Owner report: attempting up/down scrolling can accidentally move the row sideways. Latest
 supplied APK was 1250; installed ID not separately reported. The horizontal detector claims
@@ -15,7 +15,21 @@ small sideways motion before the scrolling parent. [Scroll-first intent fix](QUE
 is implemented on the same feature branch. Original wobble and abandoned-click regressions
 failed before correction; lowering dominance to 1:1 failed the real-list diagonal test.
 Restored combined verification passed **98 tests / 9 suites**, zero failures/errors/skips.
-Full gates/lint, a new APK and phone acceptance are pending.
+Clean source **f6a5ee4** passed the forced full gate in **531 s**: **1056 tests / 137 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(issue ID/message/file records compared with APK 1250).
+
+Minified test-signed release APK built in **96.3 s**:
+[protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk](../dist/protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk),
+**11,907,283 bytes**. Package/code, v2 public test certificate, absence of debuggable flag, executed
+R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`c228e109f54247ffb2957bd44d0da0a307149c561bc4f8e5dc095b4235795024`.
+[Evidence](QUEUE_SWIPE_INTENT.md#final-verification-and-apk);
+[phone checklist](TESTING.md#scroll-first-row-gestures--phone-checks-pending).
+**Checked partially:** host gestures/regression and artifact properties. **Unchecked:** device
+gesture comfort, flick/diagonal behaviour, accessibility and playback/service/Bluetooth scenarios.
+No merge/push/tag. Develop, AMP and master are unchanged; C111/C112 remain excluded. APK 1250 below
+is historical; documentation-only closeout does not change this APK's source SHA/code.
 Clear queue is a separate discussion, not an implemented or owner-approved function.
 
 ## Queue presentation feedback — previous handoff, 2026-10-20

@@ -5,7 +5,10 @@ waiting manual block**. [Follow-up contract/evidence](QUEUE_MANUAL_REORDER.md) s
 earlier trailing Info control and manual-reorder exclusion. APKs 1248/1245 record earlier
 handoffs. The subsequent [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) adds animated
 departures, explicit Info haptics and on-demand gesture Help. Its source **6043902** passed 1043
-tests/full gates and lint; APK **1.2.0 (1250)** is ready for phone testing, unmerged.
+tests/full gates and lint; APK **1.2.0 (1250)** records that handoff. The subsequent
+[scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
+**f6a5ee4**; APK **1.2.0 (1252)** is the current unmerged phone candidate. Clear queue remains a
+discussion, not an approved or implemented extension.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.
