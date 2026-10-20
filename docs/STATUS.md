@@ -1,11 +1,21 @@
 # Status
 
-Updated: 2026-10-21 — C113–C115 queue presentation/playlist drag corrections ready for phone testing, unmerged; APK 1.2.0 (1258), source aca3cd6; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — C116 Queue auto-follow flicker corrected in host tests; full branch review/final gates pending; previous APK 1.2.0 (1258), source aca3cd6, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C116 Queue flashes when Next follows below the viewport — open, 2026-10-21
+
+Phone report after the APK 1258 handoff: Next near the bottom triggers automatic downward
+scrolling and a brief whole-list flash. Installed build ID was not separately supplied.
+[Investigation and verification](QUEUE_AUTO_FOLLOW.md). The corrected real-Dock pixel test
+reproduces a lazy-item animator reset at the final scroll snap. Queue appearance fading is
+disabled; disappearance/placement remain animated. Restored verification passed 18 host tests /
+4 suites, zero failures/errors/skips. Full branch review, complete gates and the final APK
+remain pending. Device behaviour is unchecked; no merge. The previous handoff remains below.
 
 ## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
 

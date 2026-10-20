@@ -92,7 +92,8 @@ fun QueueScreen(
                         is PlaybackRow.Manual -> onRemovePending(row.request.id)
                         is PlaybackRow.Source -> onRemoveContext(row.id)
                     } }, modifier = Modifier.animateItem(
-                        fadeInSpec = tween(160),
+                        // Scroll-to-item resets the animator; appearance fades would blink every visible row.
+                        fadeInSpec = null,
                         // The grip already owns placement while a finger is moving the block.
                         placementSpec = if (reorder.draggedId == null) tween(220) else null,
                         fadeOutSpec = tween(160),
