@@ -82,3 +82,36 @@ regression failed before correction. Play now delegates this case to the existin
 Next path, preserving source ownership and normal empty-catalogue feedback. The second full
 gate was deliberately interrupted at 299 s for this addition; neither interrupted run is a pass.
 The final restored release-candidate run passed **137 tests / 12 suites**, zero failures/errors/skips.
+
+## Final verification and APK
+
+Clean source **1aec1aa**, commit count **1255**, passed the forced complete gate in **521 s**:
+**1080 tests / 139 suites**, zero failures/errors/skips, all companion checks, lint **0 errors /
+72 unchanged warnings**. Warning ID/severity/message/file records match the preceding source
+`f6a5ee4` exactly. Unit tests took 349.5 s and lint 85.7 s; the two interrupted earlier runs are
+not used as evidence of a passing gate.
+
+Minified test-signed release APK built in **107.9 s**:
+[protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk](../dist/protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk),
+**11,913,319 bytes**. Package `com.przunk.protracktor`, versionName `1.2.0`, code `1255`,
+minSdk 29/targetSdk 36, no debuggable flag, executed R8/nonempty mapping and engine libraries for
+arm64-v8a, armeabi-v7a and x86_64 checked. APK Signature Scheme v2 verified with the public
+test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is an installable release-variant test APK, not a Play upload artifact. APK SHA-256:
+`6fb98c1bfbcaa1df0de966b2299e45a11970b2d388e2068ef7e27f04a97e2606`.
+
+Ignored `dist/clear-queue-verification/1aec1aa/` retains all JUnit/lint reports, full/companion/
+build logs, focused/negative probes, R8 mapping, manifest/badging, signature and ZIP contents.
+The pre-hardening interrupted runs remain under the earlier `7912871` and `5c509b0` evidence
+directories; neither identifies the final APK. The initial manual signature-verification command
+lacked Java on PATH; verification succeeded after selecting the existing project JDK, unchanged.
+
+**Checked partially:** host domain/controller/Compose behaviour, complete gates/lint and artifact
+properties. **Unchecked:** real audio continuity, loading/Random timing on device, notification/
+Bluetooth transport, TalkBack, visual comfort and long-term use. [Phone checklist](TESTING.md#clear-queue--phone-checks-pending).
+Owner acceptance and merge remain pending. No push/tag, schema, dependency, native, web, AMP or
+versionName change. Develop `d6d3297`, AMP `8e92002` and master `794d8f9` are unchanged.
+Documentation-only closeout does not relabel or rebuild this APK.
+Closeout checked 207 existing local link destinations in nine updated documents and the new
+handoff/checklist headings. Application, native, web and build-script sources still match the
+APK source; no additional application build is needed for this documentation-only update.

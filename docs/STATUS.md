@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-20 — Clear queue in progress on the existing feature branch; previous release APK 1.2.0 (1252), source f6a5ee4; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — Clear queue ready for phone testing, unmerged; release APK 1.2.0 (1255), source 1aec1aa; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Clear queue — in progress, 2026-10-20
+## Clear queue — ready for phone testing, 2026-10-20
 
 Owner approved clearing source continuation and waiting requests while retaining only the actual
 current track as a one-shot. Saved playlists remain untouched. [Contract](QUEUE_CLEAR.md).
@@ -17,7 +17,21 @@ Review also corrected Undo overriding live Repeat/Shuffle on playlist relinking;
 failed before the correction. Another failing regression covered explicit Play after Undo restores
 Random before its first pick; that path now draws or explains the lack of candidates. The two
 earlier full gates were deliberately interrupted for those additions, not passed.
-Full tests/lint and a new release APK are pending. Phone behaviour is unchecked. No merge authorized.
+Clean source **1aec1aa** passed the forced complete gate in **521 s**: **1080 tests / 139 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(ID/severity/message/file records compared with APK 1252).
+
+Minified test-signed release APK built in **107.9 s**:
+[protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk](../dist/protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk),
+**11,913,319 bytes**. Package/code, v2 public test certificate, absence of debuggable flag,
+executed R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`6fb98c1bfbcaa1df0de966b2299e45a11970b2d388e2068ef7e27f04a97e2606`.
+[Evidence](QUEUE_CLEAR.md#final-verification-and-apk);
+[phone checklist](TESTING.md#clear-queue--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** device audio,
+loading/Random timing, UI/accessibility, notifications, Bluetooth and long-term use. No merge/push/
+tag; develop, AMP and master unchanged. C111/C112 remain excluded. APK 1252 below is historical;
+documentation-only closeout does not change this APK's source SHA/code.
 
 ## Queue swipes steal vertical scrolling — previous handoff, 2026-10-20
 

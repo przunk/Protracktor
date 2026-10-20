@@ -56,16 +56,21 @@ unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.m
 The presentation handoff is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
 tests / 136 suites**, full gates and lint (0 errors/72 unchanged warnings). Its predecessor counts
 above remain historical. [Current handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
-phone checks and acceptance remain pending, with no merge. The current scroll-first candidate is
+phone checks and acceptance remain pending, with no merge. The scroll-first handoff is
 source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all host gates/lint
 (0 errors/72 unchanged warnings) and artifact inspection passed.
 [Swipe handoff](QUEUE_SWIPE_INTENT.md#final-verification-and-apk). The subsequently approved
-[Clear queue](QUEUE_CLEAR.md) is in progress: a pure immutable `PlaybackPlan` detaches the source
+[Clear queue](QUEUE_CLEAR.md) is implemented: a pure immutable `PlaybackPlan` detaches the source
 and pending requests while retaining actual current identity as a one-shot. The controller
 invalidates speculative intent without closing current audio; guarded Undo restores transport
 state directly, never through a snapshot replacing editor tracks/position or restarting audio.
 When Undo relinks the selected source playlist, its live editor mirrors only transport modes
 so the active-source getter cannot revive the pre-Clear Repeat/Shuffle settings.
+Explicit Play can draw after Undo restores Random before its first pick; Undo itself stays idle.
+Current unmerged handoff: source **1aec1aa**, APK **1.2.0 (1255)**, **1080 tests / 139 suites**,
+complete gates/lint (0 errors/72 unchanged warnings) and artifact checks passed.
+[Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk). Device behaviour and merge acceptance
+remain unchecked; prior source/count records above are historical, not the latest candidate.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

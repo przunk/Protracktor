@@ -117,14 +117,16 @@ tests/full gates and lint; APK 1.2.0 (1248) records that unmerged handoff. Its s
 [presentation polish](QUEUE_PRESENTATION_POLISH.md) passed 1043 tests/full gates and lint at
 source **6043902**; APK **1.2.0 (1250)** records that handoff. The subsequent
 [scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
-**f6a5ee4**; APK **1.2.0 (1252)** is the current unmerged candidate, phone checks pending.
+**f6a5ee4**; APK **1.2.0 (1252)** records that unmerged handoff, phone checks pending.
 
 2026-10-20 follow-up: the owner approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting
 point, superseding the earlier no-Clear restriction. Keep the actual current occurrence as a
 one-shot without interrupting audio; remove the source and waiting requests, not saved playlists.
 New requests drain once without returning to the cleared source. Implementation adds guarded
 snackbar Undo and a labelled header control; host verification and phone acceptance are tracked
-in the follow-up. Pinned/permanent queue entries are not selected; playlists remain durable.
+in the follow-up. Source **1aec1aa** passed 1080 tests/full gates and lint; release APK **1.2.0
+(1255)** is ready, unmerged, with device checks and owner acceptance pending. Pinned/permanent
+queue entries are not selected; playlists remain durable.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

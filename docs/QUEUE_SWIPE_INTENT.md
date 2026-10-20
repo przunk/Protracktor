@@ -110,3 +110,7 @@ starting point. Consider Undo for the cleared upcoming list, with generation pro
 restoring an unrelated source after another explicit Play. Final semantics/control placement and
 Undo behaviour were open at this stage. The later task selects a separate Clear operation, not
 an unannounced part of swipe tuning.
+
+The later Clear follow-up is ready at source **1aec1aa**, release APK **1.2.0 (1255)**, with
+1080 tests/full gates and lint passed. [Current handoff](QUEUE_CLEAR.md#final-verification-and-apk)
+remains unmerged and requires phone acceptance; APK 1252 above is its historical predecessor.

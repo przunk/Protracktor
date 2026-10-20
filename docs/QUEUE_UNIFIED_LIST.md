@@ -8,7 +8,9 @@ departures, explicit Info haptics and on-demand gesture Help. Its source **60439
 tests/full gates and lint; APK **1.2.0 (1250)** records that handoff. The subsequent
 [scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
 **f6a5ee4**; APK **1.2.0 (1252)** records that unmerged handoff. The owner subsequently approved
-[Clear queue](QUEUE_CLEAR.md); that follow-up is in progress on the same branch.
+[Clear queue](QUEUE_CLEAR.md); that follow-up is ready on the same branch: source **1aec1aa**,
+1080 tests/full gates and lint passed, release APK **1.2.0 (1255)**, unmerged. Phone behaviour
+and owner acceptance remain pending.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.

@@ -2,8 +2,10 @@
 
 ## Clear queue — phone checks pending
 
-The [Clear queue follow-up](QUEUE_CLEAR.md) is in progress on the unmerged feature branch.
-Use the new release APK identified in [Status](STATUS.md) once available, not APK 1252.
+The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Use release APK **1.2.0 (1255), source
+1aec1aa**, identified in [Status](STATUS.md), not APK 1252. It passed 1080 host tests/full gates
+and lint; real audio/device behaviour is unchecked. Subsequent sections name their historical
+handoffs; rerun those regression scenarios on this current APK as well.
 
 1. Play a playlist, Search, Browse, History, Random or external file, with several pending manual
    requests. Open Queue and press Clear queue: only the actual current track remains, with no
