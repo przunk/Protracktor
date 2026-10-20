@@ -1,22 +1,36 @@
 # Status
 
-Updated: 2026-10-20 — queue animation/haptic/header polish in progress, unmerged; latest supplied release APK 1.2.0 (1248), source 0082064; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — queue animation/haptic/header polish ready for phone testing, unmerged; release APK 1.2.0 (1250), source 6043902; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Queue presentation feedback — in progress, 2026-10-20
+## Queue presentation feedback — ready for phone testing, 2026-10-20
 
 The owner reports abrupt disappearance of consumed manual rows, missing Info-hold vibration and
 an inelegant persistent gesture hint. Installed build ID was not separately supplied; latest
 handoff was APK 1248. UI-only animations, explicit Info haptics and on-demand labelled Help are
-being implemented on the existing feature branch. [Scope and evidence](QUEUE_PRESENTATION_POLISH.md).
+implemented on the existing feature branch. [Scope and evidence](QUEUE_PRESENTATION_POLISH.md).
 Restored focused verification passed 78 tests/7 suites; placement/fade/Help negative probes
-failed as intended, and the missing-haptic regression failed before the change. Full gates/lint
-and a new release APK are pending. No phone verification or merge. C111/C112 and AMP remain
-outside this task.
+failed as intended, and the missing-haptic regression failed before the change. An initial full
+gate stopped on an inconsistent single-frame pixel test; the refined sequence test passed its
+negative probe and a forced presentation run. Final clean source **6043902** passed the complete
+forced gate in **521 s**: **1043 tests / 136 suites**, zero failures/errors/skips, all companion
+checks and lint **0 errors / 72 unchanged warnings**, compared by issue/message/file.
+
+Minified test-signed release APK built in **86.6 s**:
+[protracktor-release-1.2.0-1250-6043902-20261020-194651.apk](../dist/protracktor-release-1.2.0-1250-6043902-20261020-194651.apk),
+**11,907,759 bytes**. Package/code, v2 public test signature, absence of debuggable flag, R8 mapping,
+minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`809da54fa82bd4d57aae4be5aecfe6d63b269b9061ea49373509cfebb62a999d`.
+[Artifact/evidence](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-presentation-polish--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** device animation
+feel/layout, actual vibration, TalkBack and playback/service/Bluetooth behaviour. No merge/push/tag;
+develop, AMP and master are unchanged. C111/C112 and AMP remain outside this task. APK 1248 below
+is historical; a later documentation-only commit does not relabel this APK.
 
 ## Manual-block reorder and long-press Info — previous handoff, 2026-10-20
 

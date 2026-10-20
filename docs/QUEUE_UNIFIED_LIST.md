@@ -2,9 +2,10 @@
 
 2026-10-20 follow-up: the owner selected long-press Info and drag reordering **only inside the
 waiting manual block**. [Follow-up contract/evidence](QUEUE_MANUAL_REORDER.md) supersedes the
-earlier trailing Info control and manual-reorder exclusion. APK 1248 is the new candidate;
-code-1245 evidence below remains historical. A subsequent [presentation follow-up](QUEUE_PRESENTATION_POLISH.md)
-is in progress: animated departures, explicit Info haptics and on-demand gesture Help.
+earlier trailing Info control and manual-reorder exclusion. APKs 1248/1245 record earlier
+handoffs. The subsequent [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) adds animated
+departures, explicit Info haptics and on-demand gesture Help. Its source **6043902** passed 1043
+tests/full gates and lint; APK **1.2.0 (1250)** is ready for phone testing, unmerged.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.

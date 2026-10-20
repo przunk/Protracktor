@@ -136,8 +136,11 @@ session-only source removal, marked duplicates and shared enqueue gestures. The 
 is historical, not the current test candidate. Third-iteration source `613b154` passed 1028 host
 tests/full gates and lint; minified APK 1.2.0 (1245) is ready, with phone acceptance pending.
 The later owner-selected waiting-block reorder/long-press Info follow-up passed 1037 host tests/
-full gates and lint; [APK 1.2.0 (1248)](QUEUE_MANUAL_REORDER.md#final-verification-and-apk) is now
-the unmerged phone candidate. The older code-1245 handoff remains historical evidence.
+full gates and lint; [APK 1.2.0 (1248)](QUEUE_MANUAL_REORDER.md#final-verification-and-apk) records
+that handoff. Subsequent user feedback selected animated departures, explicit Info haptics and
+on-demand Help. [Presentation source 6043902](QUEUE_PRESENTATION_POLISH.md) passed 1043 host
+tests/full gates and lint; **APK 1.2.0 (1250)** is the current unmerged phone candidate. Older
+code-1248/1245 handoffs remain historical evidence.
 AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.

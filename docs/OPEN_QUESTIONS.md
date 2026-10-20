@@ -113,7 +113,9 @@ passed 1028 host tests/full gates and lint; APK 1.2.0 (1245) is ready. Phone beh
 remain pending; no merge is authorized. C112's cramped dock count remains deferred.
 The owner subsequently selected long-press Info and reorder only inside waiting manual requests,
 not across source/current rows. [Follow-up](QUEUE_MANUAL_REORDER.md): source `0082064` passed 1037
-tests/full gates and lint; APK 1.2.0 (1248) is the new unmerged candidate, with phone checks pending.
+tests/full gates and lint; APK 1.2.0 (1248) records that unmerged handoff. Its subsequent
+[presentation polish](QUEUE_PRESENTATION_POLISH.md) passed 1043 tests/full gates and lint at
+source **6043902**; APK **1.2.0 (1250)** is the current unmerged candidate, phone checks pending.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

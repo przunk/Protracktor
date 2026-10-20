@@ -2,8 +2,9 @@
 
 ## Queue presentation polish — phone checks pending
 
-The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Its new APK/gate verification
-is in progress; APK 1248 is the previous handoff, not proof of the following changes.
+The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Use release APK **1.2.0
+(1250), source 6043902**, identified in [Status](STATUS.md). It passed 1043 host tests/full gates
+and lint; APK 1248 is the previous handoff, not proof of the following changes.
 
 1. Open Queue with several manual requests, including duplicates. Next and natural completion
    should fade the departing row and smoothly close the gap, including when the current row is

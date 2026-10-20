@@ -29,7 +29,8 @@ playback, generation and request origin remain unchanged by reorder.
 The presentation follow-up uses stable-key lazy-item fades/placement, not delayed scheduler
 consumption; placement yields to active grip movement. Info requests shared View haptics and the
 source header offers a labelled Help dialog instead of permanent instructions.
-[Current verification](QUEUE_PRESENTATION_POLISH.md) is in progress; phone behaviour is unchecked.
+[Presentation verification](QUEUE_PRESENTATION_POLISH.md) passed full host gates/lint; phone
+behaviour is unchecked.
 Source actions carry their generation to reject stale UI events. All other track lists share the
 right-enqueue gesture, disabled during selection/reorder. Only the actual occurrence is highlighted.
 The animated panel occupies Scaffold content above the same operable dock, rather than a separate
@@ -47,6 +48,10 @@ establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#f
 Those counts/artifact precede the reorder/long-press follow-up. Its clean source `0082064` passed
 1037 tests/full gates and lint (0 errors/72 unchanged warnings); APK 1.2.0 (1248) is ready,
 unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.md).
+The current presentation candidate is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
+tests / 136 suites**, full gates and lint (0 errors/72 unchanged warnings). Its predecessor counts
+above remain historical. [Current handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
+phone checks and acceptance remain pending, with no merge.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

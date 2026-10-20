@@ -1,8 +1,9 @@
 # Manual block reordering and long-press Info
 
 Follow-up owner feedback: [queue presentation polish](QUEUE_PRESENTATION_POLISH.md) adds visual
-departures, explicit Info haptics and on-demand Help. Its verification is in progress; this
-document records the earlier APK-1248 handoff, not acceptance of the later changes.
+departures, explicit Info haptics and on-demand Help. Its APK **1250** passed 1043 tests/full gates
+and lint and is ready for phone testing, unmerged. This document records the earlier APK-1248
+handoff, not acceptance of the later changes.
 
 Owner decision, 2026-10-20. Continue on `feature/manual-playback-queue` in separate commits;
 no merge is authorized. This extends [the unified-list contract](QUEUE_UNIFIED_LIST.md).
