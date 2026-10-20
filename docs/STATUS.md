@@ -1,11 +1,20 @@
 # Status
 
-Updated: 2026-10-20 — unified-list third iteration ready for phone testing, unmerged; release APK 1.2.0 (1245), source 613b154; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — manual-block reorder/long-press Info follow-up in progress, unmerged; last release APK 1.2.0 (1245), source 613b154; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Manual-block reorder and long-press Info — in progress, 2026-10-20
+
+Owner selected Info on row long-press and a drag grip only for waiting manual requests inside
+their indented block. Current/source rows remain fixed; saved source data and transport stay
+unchanged. Continue on the same feature branch in separate commits, without merging.
+[Contract/evidence](QUEUE_MANUAL_REORDER.md). Scheduler/controller stage passed 43 focused tests;
+new UI/host gestures, full gates/lint and release APK are pending. All new phone behaviour is
+unchecked; APK 1245 below is the previous handoff, not verification of this extension.
 
 ## Unified queue — third iteration ready for phone testing, unmerged, 2026-10-20
 

@@ -2873,6 +2873,12 @@ class PlaybackController private constructor(private val context: Context) {
         now.schedule.playRequest(id, now.activePlayback)?.let { applyScheduledStep(it) }
     }
 
+    fun movePendingRequest(id: Long, targetId: Long) {
+        val before = _state.value.schedule
+        _state.update { it.copy(schedule = it.schedule.moveRequest(id, targetId)) }
+        if (_state.value.schedule.pending != before.pending) prefetchUpcoming()
+    }
+
     fun removePendingRequest(id: Long) {
         val current = _state.value.schedule.current?.request?.takeIf { it.id == id && !_state.value.schedule.consumed }
         if (current != null) {

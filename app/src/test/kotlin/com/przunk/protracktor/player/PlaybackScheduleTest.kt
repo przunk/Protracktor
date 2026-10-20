@@ -14,6 +14,46 @@ class PlaybackScheduleTest {
     private fun start(source: ActiveQueue) = PlaybackSchedule().contextSelected(source, SchedulePlacement.REPLACE)
     private fun names(state: PlaybackSchedule, source: ActiveQueue) = state.rows(source).map { it.track.id }
 
+    @Test fun `pending reorder moves occurrences in both directions without deduplicating or changing origin`() {
+        val state = start(context()).enqueue(track("X"), true).enqueue(track("X")).enqueue(track("Y"))
+        val pending = state.pending
+        val moved = state.moveRequest(pending[2].id, pending[0].id)
+        assertEquals(listOf(pending[2], pending[0], pending[1]), moved.pending)
+        assertEquals(state, moved.moveRequest(pending[2].id, pending[1].id))
+        assertEquals(state.current, moved.current)
+        assertEquals(state.nextId, moved.nextId)
+        assertEquals(state.generation, moved.generation)
+        assertEquals(pending[2], selected(moved.next(context())).occurrence.request)
+    }
+
+    @Test fun `pending reorder cannot move current or consumed occurrences or stale targets`() {
+        val queued = start(context()).enqueue(track("X")).enqueue(track("Y")).enqueue(track("Z"))
+        val state = selected(queued.next(context())).schedule
+        assertSame(state, state.moveRequest(state.current!!.id, state.pending.last().id))
+        assertSame(state, state.moveRequest(state.pending.first().id, state.current.id))
+        assertSame(state, state.moveRequest(-1, state.pending.first().id))
+        assertSame(state, state.moveRequest(state.pending.first().id, -1))
+        assertSame(state, state.moveRequest(state.pending.first().id, state.pending.first().id))
+        val moved = state.moveRequest(state.pending.last().id, state.pending.first().id)
+        assertEquals(state.current, moved.current)
+        assertEquals("Z", selected(moved.next(context())).occurrence.track.id)
+        assertEquals(context(), ((moved.previous(context()) as ScheduledStep.Context).step as QueueStep.Play).queue)
+    }
+
+    @Test fun `reordered requests remain within the block across shuffle replacement and Undo`() {
+        val source = context().copy(order = context().order.withShuffle(true, 47))
+        val state = start(source).enqueue(track("X")).enqueue(track("Y")).enqueue(track("Z"))
+        val removed = state.remove(state.pending[1].id)
+        val moved = removed.moveRequest(state.pending[2].id, state.pending[0].id)
+        val restored = moved.undo(removed.removal!!.id)
+        assertEquals(listOf("Y", "Z", "X"), restored.pending.map { it.track.id })
+        assertEquals(source.visibleIndices, restored.rows(source).filterIsInstance<PlaybackRow.Source>().map { it.index })
+        val manualIndices = restored.rows(source).withIndex().filter { it.value is PlaybackRow.Manual }.map { it.index }
+        assertEquals((manualIndices.first()..manualIndices.last()).toList(), manualIndices)
+        val changed = restored.contextSelected(context(2), SchedulePlacement.REPLACE)
+        assertEquals(restored.pending, changed.pending)
+    }
+
     @Test fun `manual FIFO is inserted after parked source and consumed rows disappear`() {
         val source = context()
         val state = start(source).enqueue(track("X")).enqueue(track("Y"))

@@ -84,6 +84,24 @@ class ManualQueueControllerTest {
         assertNotEquals(state.value.schedule.pending[0].id, state.value.schedule.pending[1].id)
     }
 
+    @Test fun `reordering pending duplicates preserves source transport and next uses the new first occurrence`() {
+        controller.enqueueTrack(track("X"), true)
+        controller.enqueueTrack(track("X"))
+        controller.enqueueTrack(track("Y"))
+        val before = state.value
+        val pending = before.schedule.pending
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        controller.movePendingRequest(pending[2].id, pending[0].id)
+        assertEquals(listOf(pending[2], pending[0], pending[1]), state.value.schedule.pending)
+        assertEquals(before.copy(schedule = state.value.schedule), state.value)
+        assertEquals(epoch, ReflectionHelpers.getField<Long>(controller, "playbackEpoch"))
+        controller.nextFile()
+        assertEquals(pending[2], state.value.schedule.current!!.request)
+        val actual = state.value
+        controller.movePendingRequest(pending[2].id, pending[0].id)
+        assertEquals(actual, state.value)
+    }
+
     @Test fun `real file Next drains requests and Previous never resurrects consumed manual rows`() {
         controller.enqueueTrack(track("X"))
         controller.enqueueTrack(track("Y"))

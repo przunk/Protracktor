@@ -1,5 +1,9 @@
 # Unified playback list — third iteration
 
+2026-10-20 follow-up: the owner selected long-press Info and drag reordering **only inside the
+waiting manual block**. [Follow-up contract/evidence](QUEUE_MANUAL_REORDER.md) supersedes the
+trailing Info control and manual-reorder exclusion below. APK 1245 remains the earlier handoff.
+
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.
 This supersedes the two-tab/mixed-manual-history rules in [the previous contract](QUEUE_CONTEXT_ANALYSIS.md).

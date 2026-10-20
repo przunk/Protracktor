@@ -45,6 +45,14 @@ data class PlaybackSchedule(
     fun enqueue(track: TrackRef, fromHistory: Boolean = false) =
         copy(pending = pending + ManualRequest(nextId, track, fromHistory), nextId = nextId + 1)
 
+    /** Only waiting occurrences move; neither source positions nor the actual file participate. */
+    fun moveRequest(id: Long, targetId: Long): PlaybackSchedule {
+        val from = pending.indexOfFirst { it.id == id }
+        val target = pending.indexOfFirst { it.id == targetId }
+        if (from < 0 || target < 0 || from == target) return this
+        return copy(pending = pending.toMutableList().apply { add(target, removeAt(from)) })
+    }
+
     fun resetTraversal() = copy(current = null, consumed = false, generation = generation + 1)
 
     fun contextSelected(context: ActiveQueue, placement: SchedulePlacement): PlaybackSchedule = copy(
