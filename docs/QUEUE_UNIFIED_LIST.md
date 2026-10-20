@@ -118,3 +118,16 @@ Disconnecting only the physical right callback failed its test while semantic ac
 wired (`/tmp/protracktor-unified-swipe-mutation.log`, 27 s); the callback was restored. A small
 movement below touch slop may still count as a normal tap; it never commits a queue gesture.
 The two-tab panel replacement/real-shell checks and final full verification remain pending.
+
+Stage 4 replaces the tabs with one occurrence-keyed list, compact Info, source/manual swipes and
+one actual-playback highlight. The animated panel uses the Scaffold content bounds above the same
+dock; underlying screen semantics are hidden while it is open. Snackbars stay physically reachable.
+Source actions carry the context generation as well as the occurrence ID, rejecting stale rows.
+
+Checked partially: **31 tests / 4 suites passed**, zero failures/errors/skips, in 70 s
+(`/tmp/protracktor-unified-panel.log`). These include real App/VM/controller host gestures,
+duplicate/origin preservation, source omissions without playlist edits, Info/title learning,
+initial scroll, dock interaction and C110 navigation. Removing the bottom inset failed the dock
+geometry regression (`/tmp/protracktor-unified-dock-mutation.log`, 28 s); the restored positive
+test passed in 14 s (`/tmp/protracktor-unified-dock-final.log`). These are host checks, not phone
+acceptance. Full gates/lint, final boundary review and the new release APK remain pending.

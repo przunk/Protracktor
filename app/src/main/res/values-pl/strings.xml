@@ -2,6 +2,8 @@
 <resources>
     <string name="random_list_empty">Ta lista Random jest jeszcze pusta.</string>
     <string name="queue_title">Kolejka</string>
+    <string name="queue_swipe_hint">W lewo: usuń · w prawo: dodaj do kolejki</string>
+    <string name="queue_info_request">Informacje o %1$s</string>
     <string name="queue_empty">Odtwórz utwór, aby ustalić kontekst.</string>
     <string name="queue_panel_title">Odtwarzanie</string>
     <string name="queue_context">Kontekst</string>

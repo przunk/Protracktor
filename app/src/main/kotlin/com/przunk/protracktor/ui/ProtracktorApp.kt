@@ -5,6 +5,10 @@ package com.przunk.protracktor.ui
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -57,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -171,6 +176,7 @@ fun ProtracktorApp(
     // Generic Browse starts at root, independently of playback. Explicit jumps already have a
     // destination and open through showBrowse instead, without this reset.
     val openBrowse = {
+        showQueue = false
         viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
@@ -182,7 +188,7 @@ fun ProtracktorApp(
         showRandom = false
         showBrowse = true
     }
-    LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
+    LaunchedEffect(Unit) { viewModel.showBrowse.collect { showQueue = false; showBrowse = true } }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
     // the second and hands the first over here.
@@ -250,7 +256,7 @@ fun ProtracktorApp(
                         // The playlist screen's own header, because it is the one that can hold more than fits:
                         // the chip and five actions come to more than a phone is wide once Save and Discard
                         // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
-                        if (!showSettings && !showBrowse && !showRandom) {
+                        if (!showQueue && !showSettings && !showBrowse && !showRandom) {
                             PlaylistTopBar(
                                 state = state,
                                 paired = browse.pairedBrowser,
@@ -264,7 +270,11 @@ fun ProtracktorApp(
                             )
                         } else TopAppBar(
                             navigationIcon = {
-                                if (showSettings) {
+                                if (showQueue) {
+                                    IconButton(onClick = { showQueue = false }) {
+                                        Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                                    }
+                                } else if (showSettings) {
                                     IconButton(onClick = { showSettings = false }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
@@ -280,7 +290,8 @@ fun ProtracktorApp(
                                 }
                             },
                             title = {
-                                if (showSettings) {
+                                if (showQueue) Text(stringResource(R.string.queue_title))
+                                else if (showSettings) {
                                     Text(stringResource(R.string.settings_title))
                                 } else if (showBrowse) {
                                     // The screen names itself; whose folder a digression is in is said by the
@@ -298,7 +309,7 @@ fun ProtracktorApp(
                                 // selection, then up a level, then out -- and from four levels deep that is
                                 // four presses even when it is behaving correctly. This is one, from anywhere.
                                 // Labelled as well as drawn, because an icon alone does not say where it goes.
-                                if (showBrowse) {
+                                if (showBrowse && !showQueue) {
                                     LabelledAction(
                                         icon = PlayerIcons.Playlist,
                                         label = stringResource(R.string.action_to_playlist),
@@ -317,7 +328,7 @@ fun ProtracktorApp(
                                     )
                                 }
                                 // Return to the selected playlist view without stopping audio.
-                                if (showRandom && !showBrowse) {
+                                if (showRandom && !showBrowse && !showQueue) {
                                     LabelledAction(
                                         icon = PlayerIcons.Playlist,
                                         label = stringResource(R.string.action_to_playlist),
@@ -340,8 +351,8 @@ fun ProtracktorApp(
                         state = state,
                         onSeek = viewModel::seekTo,
                         onKeep = viewModel::keepTransient,
-                        onExpand = { showNowPlaying = true },
-                        onQueue = { showQueue = true },
+                        onExpand = { showQueue = false; showNowPlaying = true },
+                        onQueue = { showQueue = !showQueue },
                         onBrowse = openBrowse,
                         onPlayPause = viewModel::togglePlayPause,
                         onPrevious = viewModel::previous,
@@ -353,9 +364,11 @@ fun ProtracktorApp(
                     )
                 },
                 snackbarHost = {
-                    if (!showQueue) SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) }
+                    SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) }
                 },
             ) { insets ->
+                Box(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize().then(if (showQueue) Modifier.clearAndSetSemantics { } else Modifier)) {
                 if (scanning) {
                     ScannerScreen(
                         contentPadding = insets,
@@ -530,6 +543,20 @@ fun ProtracktorApp(
                         contentPadding = insets,
                     )
                 }
+                }
+                AnimatedVisibility(visible = showQueue,
+                    enter = slideInVertically(tween(220)) { it }, exit = slideOutVertically(tween(220)) { it },
+                    modifier = Modifier.fillMaxSize().padding(insets)) {
+                    Surface(Modifier.fillMaxSize().testTag("playback-panel"), color = MaterialTheme.colorScheme.surface) {
+                        QueueScreen(state = state,
+                            onPlay = { viewModel.playContextEntry(it, state.schedule.generation) },
+                            onEnqueue = viewModel::enqueueTrack,
+                            onPlayPending = viewModel::playPendingRequest,
+                            onRemovePending = viewModel::removePendingRequest,
+                            onRemoveContext = { viewModel.removeContextEntry(it, state.schedule.generation) })
+                    }
+                }
+                }
             }
             MenuFocusDimming(menuFocus)
         }
@@ -566,27 +593,7 @@ fun ProtracktorApp(
         )
     }
 
-    if (showQueue) {
-        ModalBottomSheet(
-            onDismissRequest = { showQueue = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
-            // Render the shared notice above the modal, not underneath its scrim: Undo must be reachable.
-            Box(Modifier.fillMaxHeight().testTag("playback-panel")) {
-                QueueScreen(
-                    state = state, onPlay = viewModel::playQueueAt,
-                    onShowNeighbours = { showQueue = false; viewModel.showNeighboursOf(it) },
-                    onShareFile = viewModel::shareFile, onShareAudio = viewModel::shareAsAudio,
-                    onShareLink = viewModel::shareLink, onSendToWeb = viewModel::sendToWeb,
-                    onAddToPlaylist = { showQueue = false; pendingAddToPlaylist = listOf(it) },
-                    onEnqueue = { viewModel.enqueueTrack(it, state.activePlayback.fromHistory) },
-                    onPlayPending = viewModel::playPendingRequest,
-                    onRemovePending = viewModel::removePendingRequest,
-                )
-                SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter)) { data -> SwipeableSnackbar(data) }
-            }
-        }
-    }
+    BackHandler(enabled = showQueue) { showQueue = false }
 
     if (showNowPlaying) {
         // Back closes the overlay before it closes the app. Without this the user's escape from a

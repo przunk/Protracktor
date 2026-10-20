@@ -23,11 +23,9 @@ class ManualQueueShellTest : PlaybackShellTest() {
         frame()
     }
 
-    private fun pendingTab() {
-        compose.onNodeWithText("Queue").performClick()
+    private fun openPanel() {
+        compose.onNodeWithTag("queue-toggle").performClick()
         frame(600)
-        compose.onNodeWithTag("playback-pending-tab").performClick()
-        frame(200)
     }
 
     @Test fun `playlist Add to queue uses the real row menu without starting audio or changing source`() {
@@ -44,8 +42,8 @@ class ManualQueueShellTest : PlaybackShellTest() {
             assertEquals(tune, player.value.schedule.pending.single().track)
             assertFalse(player.value.schedule.pending.single().fromHistory)
         }
-        pendingTab()
-        compose.onNodeWithTag("manual-request-${player.value.schedule.pending.single().id}").assertIsDisplayed()
+        openPanel()
+        compose.onNodeWithTag("playback-row-manual:${player.value.schedule.pending.single().id}").assertIsDisplayed()
     }
 
     @Test fun `History row Add to queue captures its origin independently of parked playlist`() {
@@ -74,20 +72,20 @@ class ManualQueueShellTest : PlaybackShellTest() {
         frame()
         val pending = player.value.schedule.pending
         val source = player.value.queue
-        pendingTab()
-        compose.onNodeWithTag("manual-request-${pending[0].id}").performTouchInput { swipeLeft() }
+        openPanel()
+        compose.onNodeWithTag("playback-row-manual:${pending[0].id}").performTouchInput { swipeLeft() }
         frame(500)
         compose.runOnIdle {
             assertEquals(listOf(pending[1]), player.value.schedule.pending)
             assertEquals(source, player.value.queue)
         }
-        compose.onNodeWithText("Undo").assert(hasAnyAncestor(hasTestTag("playback-panel")))
+        compose.onNodeWithText("Undo").assertIsDisplayed()
             .performTouchInput { click() }
         frame(200)
         compose.runOnIdle { assertEquals(pending, player.value.schedule.pending) }
-        compose.onNodeWithTag("manual-request-${pending[0].id}").assertIsDisplayed()
-        compose.onNodeWithTag("play-request-${pending[0].id}").assertIsDisplayed()
-        compose.onNodeWithTag("remove-request-${pending[1].id}").performClick()
+        compose.onNodeWithTag("playback-row-manual:${pending[0].id}").assertIsDisplayed()
+        compose.onNodeWithTag("queue-info-manual:${pending[0].id}").assertIsDisplayed()
+        compose.onNodeWithTag("playback-row-manual:${pending[1].id}").performTouchInput { swipeLeft() }
         frame(200)
         compose.runOnIdle {
             assertEquals(listOf(pending[0]), player.value.schedule.pending)
@@ -104,8 +102,8 @@ class ManualQueueShellTest : PlaybackShellTest() {
         controller.enqueueTrack(second)
         frame()
         val pending = player.value.schedule.pending
-        pendingTab()
-        compose.onNodeWithTag("play-request-${pending[1].id}").performClick()
+        openPanel()
+        compose.onNodeWithTag("playback-row-manual:${pending[1].id}").performTouchInput { click() }
         frame(200)
         compose.runOnIdle {
             assertEquals(second.id, player.value.current!!.id)
@@ -113,7 +111,91 @@ class ManualQueueShellTest : PlaybackShellTest() {
             assertEquals(listOf(pending[0]), player.value.schedule.pending)
             assertEquals(listOf(tune), player.value.queue.tracks)
         }
-        compose.onNodeWithTag("queue-current-track").assertTextEquals("Current track: Second request")
-        compose.onNodeWithText("Manual request").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Now playing")
+            .assert(hasAnyAncestor(hasTestTag("playback-row-manual:${pending[1].id}")))
+        val epoch = org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        compose.onNodeWithTag("playback-row-manual:${pending[1].id}").performTouchInput { click() }
+        frame(200)
+        compose.runOnIdle {
+            assertTrue(org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "playbackEpoch") > epoch)
+            assertEquals(listOf(pending[0]), player.value.schedule.pending)
+        }
+    }
+
+    @Test fun `unified panel stops above the same operable dock and Back only closes the panel`() {
+        playlist()
+        openPanel()
+        val panel = compose.onNodeWithTag("playback-panel").fetchSemanticsNode().boundsInRoot
+        val dockAction = compose.onNodeWithTag("queue-toggle").assertIsDisplayed()
+        assertTrue(dockAction.fetchSemanticsNode().boundsInRoot.top >= panel.bottom)
+        compose.onNodeWithContentDescription("Play").assertIsDisplayed().performTouchInput { click() }
+        frame(200)
+        compose.runOnIdle { assertEquals(tune.id, player.value.current!!.id) }
+        val selected = player.value.current
+        compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
+        frame(600)
+        compose.onNodeWithTag("playback-panel").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(selected, player.value.current) }
+    }
+
+    @Test fun `physical right swipe in playlist and History uses real enqueue callback and origin`() {
+        playlist()
+        compose.onNodeWithTag("enqueue-row-0").performTouchInput { swipeRight() }
+        frame(200)
+        compose.onNodeWithTag("enqueue-row-0").performTouchInput { swipeRight() }
+        frame(200)
+        compose.runOnIdle { assertEquals(2, player.value.schedule.pending.size) }
+        compose.onNodeWithText("Browse").performClick()
+        frame()
+        compose.runOnIdle { browse.value = browse.value.copy(domain = BrowseDomain.HISTORY, tracks = listOf(tune), historyTotal = 1) }
+        frame()
+        compose.onNodeWithTag("enqueue-row-0").performTouchInput { swipeRight() }
+        frame(200)
+        compose.runOnIdle {
+            assertEquals(3, player.value.schedule.pending.size)
+            assertEquals(listOf(false, false, true), player.value.schedule.pending.map { it.fromHistory })
+            assertEquals(listOf(tune), player.value.queue.tracks)
+        }
+    }
+
+    @Test fun `source row swipe changes only session and Undo preserves source and pending copies`() {
+        val second = tune.copy(id = "content://navigation.test/second.mod", title = "Second")
+        compose.runOnIdle {
+            val queue = PlayQueue(listOf(tune, second)).startAt(0)
+            player.value = player.value.copy(queue = queue, playback = null)
+        }
+        frame()
+        openPanel()
+        compose.onNodeWithTag("playback-row-source:1").performTouchInput { swipeRight() }
+        frame(200)
+        val pending = player.value.schedule.pending
+        compose.onNodeWithTag("playback-row-source:1").performTouchInput { swipeLeft() }
+        frame(200)
+        compose.runOnIdle {
+            assertEquals(listOf(tune, second), player.value.queue.tracks)
+            assertEquals(pending, player.value.schedule.pending)
+            assertEquals(setOf(1L), player.value.activePlayback.omitted)
+        }
+        compose.onNodeWithText("Undo").performTouchInput { click() }
+        frame(200)
+        compose.onNodeWithTag("playback-row-source:1").assertIsDisplayed()
+        compose.runOnIdle { assertTrue(player.value.activePlayback.omitted.isEmpty()) }
+    }
+
+    @Test fun `copying current manual row retains its own origin over a History context`() {
+        compose.runOnIdle {
+            val context = ActiveQueue(QueueSource.Collection(SessionSource.History), PlayQueue(listOf(tune)).startAt(0))
+            val selected = PlaybackSchedule().enqueue(tune.copy(title = "Manual"), false).next(context) as ScheduledStep.Select
+            player.value = player.value.copy(playback = context, schedule = selected.schedule)
+        }
+        frame()
+        val id = player.value.schedule.current!!.id
+        openPanel()
+        compose.onNodeWithTag("playback-row-manual:$id").performTouchInput { swipeRight() }
+        frame(200)
+        compose.runOnIdle {
+            assertEquals(listOf(false), player.value.schedule.pending.map { it.fromHistory })
+            assertEquals(id, player.value.schedule.current!!.id)
+        }
     }
 }

@@ -166,7 +166,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun enqueueTrack(track: TrackRef, fromHistory: Boolean = false) = controller.enqueueTrack(track, fromHistory)
     fun removePendingRequest(id: Long) = controller.removePendingRequest(id)
-    fun removeContextEntry(id: Long) = controller.removeContextEntry(id)
+    fun removeContextEntry(id: Long, generation: Long) = controller.removeContextEntry(id, generation)
     fun playPendingRequest(id: Long) {
         ensureServiceRunning()
         controller.playPendingRequest(id)
@@ -191,9 +191,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) =
         controller.createPlaylistAndAdd(name, tracks)
 
-    fun playQueueAt(index: Int) {
+    fun playContextEntry(id: Long, generation: Long) {
         ensureServiceRunning()
-        controller.playQueueAt(index)
+        controller.playContextEntry(id, generation)
     }
 
     fun playAt(index: Int) {

@@ -2,6 +2,8 @@
 <resources>
     <string name="random_list_empty">No tracks in this Random list yet.</string>
     <string name="queue_title">Queue</string>
+    <string name="queue_swipe_hint">Swipe left to remove · right to queue</string>
+    <string name="queue_info_request">Information about %1$s</string>
     <string name="queue_empty">Play a track to establish a context.</string>
     <string name="queue_panel_title">Playback</string>
     <string name="queue_context">Context</string>

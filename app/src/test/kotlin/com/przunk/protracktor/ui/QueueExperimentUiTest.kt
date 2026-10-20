@@ -45,6 +45,11 @@ class QueueExperimentUiTest {
         measure()
     }
 
+    @androidx.compose.runtime.Composable
+    private fun panel(state: PlayerUiState, onPlay: (Long) -> Unit = {}) {
+        QueueScreen(state, onPlay, onEnqueue = { _, _ -> }, onPlayPending = {}, onRemovePending = {}, onRemoveContext = {})
+    }
+
     @Test fun `a physical single tap never rerolls`() {
         dice()
         compose.onNodeWithContentDescription("Start a new Random list").performTouchInput { click() }
@@ -97,20 +102,20 @@ class QueueExperimentUiTest {
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
     }
 
-    @Test fun `queue rows can be played and inspected but have no removal or selection editing`() {
+    @Test fun `unified rows play on tap and expose Info without visible Play Remove or selection controls`() {
         val rows = listOf(TrackRef("a", "First"), TrackRef("b", "Second"))
-        val chosen = mutableListOf<Int>()
+        val chosen = mutableListOf<Long>()
         val state = PlayerUiState(playback = collectionPlayback(PlayQueue(rows).startAt(0)))
         activity.get().setContent { MaterialTheme {
-            QueueScreen(state, onPlay = { chosen += it }, onShowNeighbours = {}, onShareFile = {},
-                onShareAudio = {}, onShareLink = {}, onSendToWeb = {}, onAddToPlaylist = {})
+            panel(state, onPlay = { chosen += it })
         } }
         measure()
         compose.onNodeWithText("Second").performClick()
-        compose.runOnIdle { assertEquals(listOf(1), chosen) }
-        compose.onNodeWithContentDescription("Actions for Second").performClick()
-        compose.onNodeWithText(activity.get().getString(R.string.action_info)).assertExists()
-        compose.onNodeWithText(activity.get().getString(R.string.action_delete)).assertDoesNotExist()
+        compose.runOnIdle { assertEquals(listOf(1L), chosen) }
+        compose.onNodeWithText("Play").assertDoesNotExist()
+        compose.onNodeWithText("Remove").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Information about Second").performClick()
+        compose.onNodeWithText(activity.get().getString(R.string.action_close)).assertExists()
         compose.onAllNodes(isToggleable()).assertCountEquals(0)
     }
 
@@ -120,10 +125,7 @@ class QueueExperimentUiTest {
         val shown = androidx.compose.runtime.mutableStateOf(true)
         val selected = androidx.compose.runtime.mutableStateOf(30)
         activity.get().setContent { MaterialTheme {
-            if (shown.value) QueueScreen(
-                PlayerUiState(playback = collectionPlayback(PlayQueue(rows).startAt(selected.value))),
-                onPlay = {}, onShowNeighbours = {}, onShareFile = {}, onShareAudio = {},
-                onShareLink = {}, onSendToWeb = {}, onAddToPlaylist = {})
+            if (shown.value) panel(PlayerUiState(playback = collectionPlayback(PlayQueue(rows).startAt(selected.value))))
         } }
         measure()
         compose.onNodeWithText("Tune 30").assertIsDisplayed()
@@ -180,20 +182,22 @@ class QueueExperimentUiTest {
         compose.runOnIdle { assertEquals(listOf("scanner", "settings", "browse", "random"), calls) }
     }
 
-    @Test fun `a manual copy of a source file shows a quiet context marker not a playing icon`() {
+    @Test fun `equal manual and source files coexist but only the manual occurrence is current`() {
         val track = TrackRef("a", "Source tune")
         val context = ActiveQueue(QueueSource.Playlist(1), PlayQueue(listOf(track)).startAt(0))
         val manual = PlaybackSchedule().enqueue(track).next(context) as ScheduledStep.Select
         activity.get().setContent { MaterialTheme {
-            QueueScreen(PlayerUiState(playback = context, schedule = manual.schedule),
-                onPlay = {}, onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
-                onSendToWeb = {}, onAddToPlaylist = {})
+            panel(PlayerUiState(playback = context, schedule = manual.schedule))
         } }
         measure()
-        compose.onNodeWithContentDescription("Now playing").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Context position").assertIsDisplayed()
-        compose.onNodeWithText("Manual request").assertIsDisplayed()
-        compose.onNodeWithText("Current track: Source tune").assertIsDisplayed()
+        compose.onNode(hasScrollAction()).performScrollToIndex(0)
+        compose.onNodeWithTag("playback-row-source:0").assertIsDisplayed()
+        compose.onNodeWithTag("playback-row-manual:${manual.occurrence.id}").assertIsDisplayed()
+        compose.onAllNodesWithContentDescription("Now playing").assertCountEquals(1)
+        compose.onNodeWithContentDescription("Now playing")
+            .assert(hasAnyAncestor(hasTestTag("playback-row-manual:${manual.occurrence.id}")))
+        compose.onNodeWithContentDescription("Manual request").assertIsDisplayed()
+        compose.onNodeWithText("Current track: Source tune").assertDoesNotExist()
     }
 
     @Test fun `manual loading over an empty Random context does not claim the dice is rolling`() {
@@ -216,18 +220,17 @@ class QueueExperimentUiTest {
         val shown = androidx.compose.runtime.mutableStateOf(PlayerUiState(
             playback = collectionPlayback(PlayQueue(rows).startAt(0))))
         activity.get().setContent { MaterialTheme {
-            QueueScreen(shown.value, onPlay = {}, onShowNeighbours = {}, onShareFile = {},
-                onShareAudio = {}, onShareLink = {}, onSendToWeb = {}, onAddToPlaylist = {})
+            panel(shown.value)
         } }
         measure()
-        val before = compose.onNodeWithContentDescription("Actions for b.mod").fetchSemanticsNode().boundsInRoot
+        val before = compose.onNodeWithContentDescription("Information about b.mod").fetchSemanticsNode().boundsInRoot
         compose.runOnIdle {
             shown.value = shown.value.copy(learnedTitles = mapOf("b" to "Learned title"), positionSeconds = 4.0)
             Snapshot.sendApplyNotifications()
         }
         compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithText("Learned title").assertIsDisplayed()
-        assertEquals(before, compose.onNodeWithContentDescription("Actions for Learned title").fetchSemanticsNode().boundsInRoot)
+        assertEquals(before, compose.onNodeWithContentDescription("Information about Learned title").fetchSemanticsNode().boundsInRoot)
         assertEquals("b.mod", shown.value.activePlayback.order.tracks[1].fileName)
     }
 }

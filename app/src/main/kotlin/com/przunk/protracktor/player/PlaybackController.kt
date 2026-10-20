@@ -2844,6 +2844,10 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun playPendingRequest(id: Long) {
         val now = _state.value
+        now.schedule.current?.request?.takeIf { it.id == id && !now.schedule.consumed }?.let {
+            startActualPlayback(it.track)
+            return
+        }
         now.schedule.playRequest(id, now.activePlayback)?.let(::applyScheduledStep)
     }
 
@@ -2866,8 +2870,10 @@ class PlaybackController private constructor(private val context: Context) {
         prefetchUpcoming()
     }
 
-    fun playQueueAt(index: Int) {
+    fun playContextEntry(id: Long, generation: Long) {
+        if (_state.value.schedule.generation != generation) return
         val active = _state.value.activePlayback
+        val index = active.entryIds.indexOf(id)
         if (index !in active.order.tracks.indices || active.entryIds[index] in active.omitted) return
         if (active.source is QueueSource.Random) {
             randomHistory.select(index) ?: return
@@ -2877,8 +2883,9 @@ class PlaybackController private constructor(private val context: Context) {
         if (active.source is QueueSource.Random) prepareRandomQueue()
     }
 
-    fun removeContextEntry(id: Long) {
+    fun removeContextEntry(id: Long, expectedGeneration: Long? = null) {
         val now = _state.value
+        if (expectedGeneration != null && expectedGeneration != now.schedule.generation) return
         val active = now.activePlayback
         val index = active.entryIds.indexOf(id)
         if (index < 0 || id in active.omitted) return

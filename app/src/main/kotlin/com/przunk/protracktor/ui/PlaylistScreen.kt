@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Checkbox
@@ -245,7 +247,7 @@ internal fun PlaylistBody(
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = keyOf) { index, track ->
             QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } },
-                enabled = enabled && !selecting && draggingId == null) {
+                enabled = enabled && !selecting && draggingId == null, modifier = Modifier.testTag("enqueue-row-$index")) {
             TrackRow(
                 index = index,
                 track = track,

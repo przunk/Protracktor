@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -1341,7 +1343,8 @@ private fun Selectable(
                 }
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, source ->
                     val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
-                    QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting) {
+                    QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting,
+                        modifier = Modifier.testTag("enqueue-row-$index")) {
                     BrowseTrackRow(
                         track = track,
                         showFileName = browse.learnedTitles[track.id]?.isNotBlank() == true,

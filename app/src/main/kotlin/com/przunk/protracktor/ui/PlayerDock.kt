@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.platform.testTag
+
 import android.provider.Settings
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -214,7 +216,7 @@ fun PlayerDock(
                     }
                 }
                 LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
-                    onClick = onQueue, slim = true)
+                    onClick = onQueue, slim = true, modifier = Modifier.testTag("queue-toggle"))
             }
 
             Row(
