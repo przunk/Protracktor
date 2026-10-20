@@ -30,7 +30,7 @@ phone acceptance is pending and AMP stays deferred.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Add manual FIFO and mixed transport traversal around the existing context | Implemented on unmerged `feature/manual-playback-queue`; second iteration complete, 1013 host tests/lint and final APK 1.2.0 (1239). Owner phone checks/acceptance pending. Provisional answers remain open to evaluation; unified view and AMP deferred. B25 supplies pending swipe removal. [Contract](QUEUE_CONTEXT_ANALYSIS.md), [audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md). |
+| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Owner feedback after testing selected the third iteration on the same unmerged branch. Domain/controller stage: 144 focused tests; gestures/panel/full gate/new APK pending. Prior two-tab APK 1239/evidence remain historical. AMP and compact dock-label C112 deferred. [Current contract](QUEUE_UNIFIED_LIST.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -69,6 +69,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C111 | Add music and Online catalogues content padding changes between views | Owner/user report, 2026-10-19; visible alignment/spacing mismatch. Measurements and cause not established; not fixed or included in queue work. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
+| C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Owner/user report, 2026-10-20; explicitly deferred from the unified-list iteration. Compact presentation needs later discussion. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |

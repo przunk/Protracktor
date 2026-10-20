@@ -1,11 +1,34 @@
 # Status
 
-Updated: 2026-10-20 — manual queue second iteration complete, APK 1.2.0 (1239), unmerged/phone checks pending; C110 merged, C111 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — user-tested queue requirements revised; unified-list iteration in progress; latest historical APK 1.2.0 (1239); C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Unified queue — third iteration in progress, 2026-10-20
+
+After testing/discussion with app users, the owner selected one combined list, one-shot manual
+inserts, context-only Previous, marked duplicate occurrences, session-only source removal,
+bidirectional gestures and the existing dock visible below the panel. Continue in separate stage
+commits on `feature/manual-playback-queue`; no merge is authorized. Source-switch precedence is
+provisionally selected-track-now, retained requests next, then the new source continuation.
+[Current contract and evidence](QUEUE_UNIFIED_LIST.md) supersedes the two-tab/mixed-history rules.
+
+Domain/controller stage passed 144 focused tests, including omission-aware repeat/Previous,
+duplicate identities, actual History origin, session-only removals and Undo. The Previous-anchor
+mutation failed as intended. Shared gesture/UI work is in progress; final full gates, lint and
+a new release APK are pending. Previous APK 1239/results below are historical only.
+All new phone behaviour is unchecked. AMP, C111 and C112 are outside the implementation scope.
+
+## C112 Dock subsong count crowds Now Playing text
+
+Owner/user feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
+beside the Queue action, reducing room for Now Playing. The latest supplied APK was 1.2.0 (1239);
+the installed build ID and exact layout measurements were not separately supplied. **Open and
+explicitly deferred** by the owner. Record a future compact presentation discussion; do not bundle
+it into the unified-list implementation. Phone report only, no agent-run visual confirmation.
 
 ## C111 Add music and Online catalogues have inconsistent padding
 

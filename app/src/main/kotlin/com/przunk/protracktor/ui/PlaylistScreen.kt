@@ -244,6 +244,8 @@ internal fun PlaylistBody(
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = keyOf) { index, track ->
+            QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } },
+                enabled = enabled && !selecting && draggingId == null) {
             TrackRow(
                 index = index,
                 track = track,
@@ -290,6 +292,7 @@ internal fun PlaylistBody(
                     haptics = haptics,
                 ),
             )
+            }
         }
     }
 

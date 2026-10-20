@@ -99,8 +99,22 @@ Pure projection inserts the marked manual block in actual finite source order or
 
 Checked partially: the Previous-anchor mutation failed as intended
 (`/tmp/protracktor-unified-previous-mutation.log`, 22 s). Restored focused domain/controller run
-passed in 35 s (`/tmp/protracktor-unified-domain-final.log`); exact suite counts are recorded at
-handoff. An earlier run stopped on an incorrectly updated intermediate assertion (expected B where
+passed **144 tests / 7 suites**, zero failures/errors/skips, in 35 s
+(`/tmp/protracktor-unified-domain-final.log`). An earlier run stopped on an incorrectly updated intermediate assertion (expected B where
 the second FIFO item Y should still play); the assertion was corrected, not the application rule.
 The old mixed-history expectations are deliberately replaced by the owner-selected one-shot rules.
 UI wiring, new real gestures, full gates/lint and a fresh APK are still pending. No phone claim.
+
+Stage 3 adds one shared horizontal gesture wrapper to playlist/Random and Browse/Search/History/
+local/online track rows. Enqueue is disabled during selection/reordering, while existing menus
+remain. Physical gesture end commits once beyond 30% of the row width (minimum 56dp); right returns
+to rest without dismissing the original. The coloured background includes icon/text and custom
+accessibility actions. The unified panel will use the same wrapper for left-side removal.
+
+Checked partially: **5 physical/semantic host gesture tests passed**, 14 s
+(`/tmp/protracktor-unified-swipes-final.log`), including duplicate additions, both reveal directions,
+partial/reversed/vertical motion, tap retention, selection disabling and accessible equivalents.
+Disconnecting only the physical right callback failed its test while semantic actions remained
+wired (`/tmp/protracktor-unified-swipe-mutation.log`, 27 s); the callback was restored. A small
+movement below touch slop may still count as a normal tap; it never commits a queue gesture.
+The two-tab panel replacement/real-shell checks and final full verification remain pending.

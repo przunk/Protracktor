@@ -1341,6 +1341,7 @@ private fun Selectable(
                 }
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, source ->
                     val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
+                    QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting) {
                     BrowseTrackRow(
                         track = track,
                         showFileName = browse.learnedTitles[track.id]?.isNotBlank() == true,
@@ -1372,6 +1373,7 @@ private fun Selectable(
                         // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
                         onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                     )
+                    }
                 }
             }
 
