@@ -1,5 +1,9 @@
 # Manual playback queue — implementation evidence
 
+Historical first/second-iteration evidence. User testing on 2026-10-20 selected a unified list and
+one-shot manual requests; [the third-iteration contract](QUEUE_UNIFIED_LIST.md) supersedes the
+two-tab/mixed-history rules here. Existing artifacts and measurements remain unchanged.
+
 Branch `feature/manual-playback-queue`, based on audited develop `d6d3297`, 2026-10-19.
 [Contract, audit findings, delegated choices and retained questions](QUEUE_CONTEXT_ANALYSIS.md).
 No merge or push authorized. AMP and C111 padding work are excluded; versionName/schema unchanged.

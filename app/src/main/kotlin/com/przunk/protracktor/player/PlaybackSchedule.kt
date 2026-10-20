@@ -79,12 +79,19 @@ data class PlaybackSchedule(
     fun hasNext(context: ActiveQueue): Boolean = pending.isNotEmpty() || context.hasNext
     fun hasPrevious(context: ActiveQueue): Boolean = current?.manual == true && context.currentAvailable || context.hasPrevious
 
+    /** A pruned sounding occurrence must not lend its highlight to the new parked cursor. */
+    fun sourcePlaybackIndex(context: ActiveQueue): Int? = context.order.currentIndex?.takeIf {
+        context.currentAvailable && (current == null || !current.manual && current.context.source == context.source &&
+            current.context.currentEntryId == context.currentEntryId)
+    }
+
     fun rows(context: ActiveQueue): List<PlaybackRow> {
+        val actualIndex = sourcePlaybackIndex(context)
         val order = context.playbackIndices
         val positions = order.withIndex().associate { it.value to it.index }
         val anchor = order.indexOf(context.order.currentIndex)
         val rows = context.visibleIndices.map { index -> PlaybackRow.Source(context.entryIds[index], index,
-            context.order.tracks[index], current?.manual != true && index == context.order.currentIndex) }
+            context.order.tracks[index], index == actualIndex) }
         val block = buildList {
             current?.request?.takeUnless { consumed }?.let { add(PlaybackRow.Manual(it, true)) }
             pending.forEach { add(PlaybackRow.Manual(it, false)) }
@@ -117,7 +124,7 @@ data class PlaybackSchedule(
                 tracks = it.context.order.tracks.map(::improve)))) }, removal = removal?.let { it.copy(request = request(it.request)) })
     }
 
-    fun contextForReplay(entry: PlaybackOccurrence, live: ActiveQueue): ActiveQueue =
+    fun contextForSelection(entry: PlaybackOccurrence, live: ActiveQueue): ActiveQueue =
         if (entry.context.source == QueueSource.None) entry.context.withOrder(entry.context.order
             .withRepeat(live.order.repeat).withShuffle(live.order.shuffle)) else live
 }

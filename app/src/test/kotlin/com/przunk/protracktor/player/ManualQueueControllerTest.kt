@@ -146,7 +146,7 @@ class ManualQueueControllerTest {
         assertEquals("B", state.value.current!!.title)
     }
 
-    @Test fun `source Play preserves pending but replaces mixed traversal`() {
+    @Test fun `source Play preserves pending but replaces the actual source occurrence`() {
         controller.enqueueTrack(track("X"))
         controller.enqueueTrack(track("Y"))
         controller.nextFile()
@@ -258,5 +258,100 @@ class ManualQueueControllerTest {
         assertEquals("C", state.value.current!!.title)
         controller.previousFile()
         assertEquals("A", state.value.current!!.title)
+    }
+
+    @Test fun `removing paused source selects next without opening audio until explicit Play`() {
+        controller.enqueueTrack(track("X"))
+        controller.removeContextEntry(state.value.activePlayback.currentEntryId!!)
+        assertEquals("X", state.value.current!!.title)
+        assertFalse(state.value.playing)
+        assertFalse(state.value.loadingTrack)
+        assertNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+        assertNull(ReflectionHelpers.getField<(() -> Unit)?>(controller, "pendingRetry"))
+        assertTrue(state.value.metadata.isEmpty())
+        assertEquals(0.0, state.value.positionSeconds, 0.0)
+        controller.togglePlayPause()
+        assertNotNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+    }
+
+    @Test fun `removing paused manual selects pending without retrying or opening its decoder`() {
+        controller.enqueueTrack(track("X"))
+        controller.enqueueTrack(track("Y"))
+        controller.nextFile()
+        await { !state.value.loadingTrack && state.value.message?.text?.startsWith("Added to queue") == false }
+        controller.removePendingRequest(state.value.schedule.current!!.id)
+        assertEquals("Y", state.value.current!!.title)
+        assertFalse(state.value.playing)
+        assertFalse(state.value.loadingTrack)
+        assertNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+        assertNull(ReflectionHelpers.getField<(() -> Unit)?>(controller, "pendingRetry"))
+    }
+
+    @Test fun `removing paused source without pending selects source successor without starting it`() {
+        controller.removeContextEntry(state.value.activePlayback.currentEntryId!!)
+        assertEquals("C", state.value.current!!.title)
+        assertFalse(state.value.playing)
+        assertFalse(state.value.loadingTrack)
+        assertNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+        assertEquals(tracks, state.value.queue.tracks)
+    }
+
+    @Test fun `removing a playing source continues its successor rather than pausing`() {
+        state.value = state.value.copy(playing = true)
+        controller.removeContextEntry(state.value.activePlayback.currentEntryId!!)
+        assertEquals("C", state.value.current!!.title)
+        assertNotNull(ReflectionHelpers.getField<Job?>(controller, "openJob"))
+    }
+
+    @Test fun `Random menu pruning preserves remaining occurrence identities including equal files`() {
+        val history = ReflectionHelpers.getField<RandomHistory>(controller, "randomHistory")
+        val r = track("R")
+        val s = track("S")
+        runBlocking {
+            history.fill(2, 1) { listOf(r, s) }
+            history.advance()
+            history.advance()
+            history.fill(1, 1) { listOf(r) }
+            history.advance()
+        }
+        ReflectionHelpers.setField(controller, "randomSession", 1L)
+        val source = ActiveQueue(QueueSource.Random(1), PlayQueue(history.playedPicks).startAt(2)).omit(2)
+        val draft = state.value.queue
+        state.value = state.value.copy(playback = source,
+            schedule = state.value.schedule.contextSelected(source, SchedulePlacement.REPLACE))
+        controller.removeRandomAt(0)
+        assertEquals(listOf(s, r), state.value.activePlayback.order.tracks)
+        assertEquals(listOf(1L, 2L), state.value.activePlayback.entryIds)
+        assertEquals(setOf(2L), state.value.activePlayback.omitted)
+        assertEquals(1, state.value.activePlayback.order.currentIndex)
+        assertEquals(r, state.value.current)
+        assertEquals(draft, state.value.queue)
+        controller.removeRandomAt(1)
+        assertEquals(r, state.value.current)
+        assertNull(state.value.sourcePlaybackIndex)
+        assertTrue(state.value.schedule.rows(state.value.activePlayback).none { it.playing })
+    }
+
+    @Test fun `editing the linked draft never recycles an occurrence ID for a different track`() {
+        controller.addToPlaylist(listOf(track("X")))
+        val id = state.value.activePlayback.entryIds.last()
+        val generation = state.value.schedule.generation
+        controller.removeTrack(state.value.queue.tracks.lastIndex)
+        controller.addToPlaylist(listOf(track("Y")))
+        assertNotEquals(id, state.value.activePlayback.entryIds.last())
+        controller.playContextEntry(id, generation)
+        assertEquals("B", state.value.current!!.title)
+    }
+
+    @Test fun `Next consumes the manual row even when Random has no new candidate`() {
+        ReflectionHelpers.setField(controller, "randomSession", 1L)
+        state.value = state.value.copy(playback = state.value.activePlayback.copy(source = QueueSource.Random(1)))
+        controller.enqueueTrack(track("X"))
+        controller.nextFile()
+        await { !state.value.loadingTrack && state.value.message?.text?.startsWith("Added to queue") == false }
+        controller.nextFile()
+        await { state.value.randomExhausted && !state.value.loadingTrack }
+        assertTrue(state.value.schedule.consumed)
+        assertTrue(state.value.schedule.rows(state.value.activePlayback).none { it is PlaybackRow.Manual })
     }
 }

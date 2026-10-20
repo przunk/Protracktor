@@ -1,6 +1,62 @@
 # What only a phone can prove
 
-## Manual queue — unmerged experiment, phone checks pending
+## Unified queue — third iteration, phone checks pending
+
+Use the new third-iteration APK identified in [Status](STATUS.md), not historical APK 1239.
+Branch `feature/manual-playback-queue` remains unmerged. Host UI/controller tests do not prove
+device sound, gestures, layout, notification/service behaviour or usability. Install without
+uninstalling/clearing data; older AMP APK cannot ordinarily replace a higher-code build.
+
+1. Play B from A/B/C/D. Right-swipe X, Y and X from other track lists. Nothing starts yet; Queue
+   shows A/B, the marked/indented X/Y/X block, then C/D. Next plays each manual occurrence FIFO,
+   removing each only when left/completed; after the last, play C. Previous goes to B, never to a
+   consumed manual row. While X plays, Previous returns to B and consumes X; Y/X remain pending.
+2. Add copies during another manual track; append after older requests. Tap a later pending row:
+   play only that occurrence, retain earlier requests next. Tapping the current row restarts it.
+   Equal file IDs must not produce two playing highlights or disappear together.
+3. One unified panel slides above the same operable dock. No duplicate Playback/current-song
+   block or Context/Queue tabs. Play/Pause, Next, Queue toggle and Now Playing must work physically.
+   Back closes only the panel; reopening starts with the current occurrence as high as possible.
+4. Left-swipe either source/manual row: red reveal with remove text/icon, one removal on release,
+   reachable Undo above dock. Right-swipe: green reveal with add text/icon, one manual copy at the
+   FIFO end; original row returns to rest. Partial/reversed/vertical drags must not enqueue/remove.
+   Tap plays, compact Info opens details, no visible Play/Remove row buttons. Try rapid gestures.
+5. Remove current while playing/loading: advance to pending before source, stop if exhausted.
+   Remove current while paused: select its successor but stay silent until Play; no decoder/History
+   write merely from editing. Undo restores content only, not the previous audio position.
+6. Remove source C; Next and source Repeat All skip it. Saved playlist/History/index/files remain
+   unchanged. Undo restores only C. A stale Undo/action after a new context must not affect it.
+   Select another editor playlist, edit/save/discard/empty and switch back while manual audio plays:
+   no manual rows or temporary omissions are persisted and no removed source content is resurrected.
+7. Test right enqueue on Playlist, Random, Search, History, author, local folder and online file
+   rows. Folder/header rows must not enqueue. Selection/drag reorder retain their existing gestures;
+   menus and TalkBack custom actions offer accessible equivalents. Test EN/PL, large text and RTL.
+8. Change source with pending X/Y: the newly tapped N3 plays now, then X/Y, then N4. Mere navigation
+   or selecting another playlist does not transfer playback. Evaluate this provisional precedence.
+9. Shuffle changes source order only, not manual FIFO; the panel reflects actual source order.
+   Repeat One retains actual manual tune and explains waiting requests; file Next escapes it.
+   Test short natural completion and multi-subsong files, Play all subsongs on/off and file transport.
+10. Random: heard rows only, manual block after cursor; Previous skips consumed requests and omitted
+    occurrences. Equal Random files retain separate IDs when pruning its old menu record. Change
+    filter while rewound: heard suffix remains, new draws use the new filter only past its boundary.
+    Exhausted Random must not keep a consumed manual row. Reopen remembered Random without stealing
+    author playback; only double-tap dice resets its record and source omissions.
+11. Unavailable manual file over Random stays retryable rather than auto-skipping. Skip it, rapidly
+    change sources/retry during slow reads, pause during loading, then test offline/revoked grants
+    and Bluetooth. Retired requests must never start later. History origin/learned titles/listened
+    marks, notification heart, Keep and sharing must use the actual manual track, not parked source.
+12. C110 regression: History → Browse → playlist → Browse opens root; repeat Search, Random,
+    online author/local folder, Settings and explicit author jumps. Process death loses this
+    temporary queue/omissions, restoring the selected playlist paused. Retained AMP data survives
+    and stays unavailable here. C111 padding and C112 cramped dock count are explicitly deferred.
+
+Report installed code/SHA, steps and expected/observed result. Product choices/questions are in
+[the current contract](QUEUE_UNIFIED_LIST.md); no merge before the owner's acceptance.
+
+## Manual queue — historical second-iteration phone checklist
+
+Superseded by the unified-list checklist above after owner/app-user feedback on 2026-10-20.
+The following preserves the old APK's expectations, not instructions for the new implementation.
 
 Branch `feature/manual-playback-queue`. Use the final **second-iteration** artifact identified in
 [the implementation report](MANUAL_QUEUE_IMPLEMENTATION.md), not the first checkpoint APK.

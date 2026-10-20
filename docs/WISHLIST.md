@@ -130,7 +130,11 @@ with questions retained for evaluation after implementation. The audited analysi
 contract. The extension is implemented on unmerged `feature/manual-playback-queue`; the first
 1011-test/lint-verified APK is intermediate. The requested second iteration is now complete:
 1013 host tests/lint and final APK 1.2.0 (1239), pending phone testing and acceptance;
-see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). AMP remains deferred.
+see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). On 2026-10-20 owner/app-user testing selected
+the [unified-list third iteration](QUEUE_UNIFIED_LIST.md): one-shot requests, context-only Previous,
+session-only source removal, marked duplicates and shared enqueue gestures. The prior two-tab APK
+is historical, not the current test candidate; third-iteration gates/APK and acceptance are pending.
+AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
@@ -764,7 +768,13 @@ that has just gone would draw nothing, and the chip that set it is disabled the 
 
 ## B25. A swipe on a track row — to discuss
 
-**Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the experimental
+**Updated owner/app-user request, 2026-10-20:** right swipe adds a manual copy from every track
+list; the unified context/queue also supports left swipe removal of either occurrence origin,
+without editing source storage. Red/green reveals include icon/text, Undo restores rows without
+rewinding audio, and accessibility equivalents remain. Reordering is excluded.
+[Third-iteration contract and evidence](QUEUE_UNIFIED_LIST.md); new phone acceptance is pending.
+
+**Historical request, 2026-10-19:** swipe to remove a pending occurrence from the experimental
 manual queue. This does not select a gesture for ordinary playlist, context, Browse or Search
 rows. The owner subsequently authorized implementation with agent-selected details: pending-only
 end-to-start swipe, Material threshold, short snackbar Undo and a labelled Remove equivalent.

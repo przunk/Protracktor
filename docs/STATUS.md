@@ -16,10 +16,11 @@ commits on `feature/manual-playback-queue`; no merge is authorized. Source-switc
 provisionally selected-track-now, retained requests next, then the new source continuation.
 [Current contract and evidence](QUEUE_UNIFIED_LIST.md) supersedes the two-tab/mixed-history rules.
 
-Domain/controller stage passed 144 focused tests, including omission-aware repeat/Previous,
-duplicate identities, actual History origin, session-only removals and Undo. The Previous-anchor
-mutation failed as intended. Shared gesture/UI work is in progress; final full gates, lint and
-a new release APK are pending. Previous APK 1239/results below are historical only.
+Domain/controller stage passed 144 focused tests. Shared gestures and the nonmodal unified panel
+are implemented; 31 UI/navigation tests passed, with negative gesture/dock probes. Final review
+corrected paused removal, equal Random prune identities, linked-draft ID recycling and manual
+consumption on empty Random. The restored final focused run passed 125 tests / 7 suites.
+Full forced gates/lint and a new release APK are pending. Previous APK 1239/results below are historical only.
 All new phone behaviour is unchecked. AMP, C111 and C112 are outside the implementation scope.
 
 ## C112 Dock subsong count crowds Now Playing text

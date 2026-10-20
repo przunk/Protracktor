@@ -101,7 +101,7 @@ fun RandomScreen(
             showFileName = true,
             listenedIds = state.listenedIds,
             listState = listState,
-            currentIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode && !state.manualCurrent },
+            currentIndex = state.sourcePlaybackIndex.takeIf { state.randomMode },
             contextIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode && state.manualCurrent },
             onEnqueue = onEnqueue,
             onPlayAt = onPlayAt,

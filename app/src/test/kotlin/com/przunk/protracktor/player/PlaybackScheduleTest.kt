@@ -92,7 +92,7 @@ class PlaybackScheduleTest {
     @Test fun `idle manual playback has no invented source and exhausted row is hidden`() {
         val draft = ActiveQueue(QueueSource.Playlist(1), PlayQueue(listOf(track("A"))))
         val selected = selected(PlaybackSchedule().enqueue(track("X")).next(draft))
-        val source = selected.schedule.contextForReplay(selected.occurrence, draft)
+        val source = selected.schedule.contextForSelection(selected.occurrence, draft)
         assertEquals(QueueSource.None, source.source)
         assertEquals(QueueStep.Stop, (selected.schedule.next(source, true) as ScheduledStep.Context).step)
         assertEquals(listOf("X"), names(selected.schedule, source))
@@ -114,7 +114,7 @@ class PlaybackScheduleTest {
         assertEquals(state.pending, removed.undo(removed.removal!!.id).pending)
         assertEquals(removed, removed.undo(-1))
         val another = removed.remove(removed.pending[0].id)
-        assertEquals(another, another.undo(removed.removal!!.id))
+        assertEquals(another, another.undo(removed.removal.id))
         assertEquals(state, state.remove(-1))
     }
 
@@ -131,8 +131,8 @@ class PlaybackScheduleTest {
         val x = selected(start(source).enqueue(track("R")).next(source)).schedule
         val improved = x.withLearnedTrack(track("R").copy(title = "Learned"))
         assertEquals(x.current!!.id, improved.current!!.id)
-        assertEquals(0, improved.current!!.context.order.currentIndex)
-        assertEquals(x.current!!.context.entryIds, improved.current!!.context.entryIds)
+        assertEquals(0, improved.current.context.order.currentIndex)
+        assertEquals(x.current.context.entryIds, improved.current.context.entryIds)
     }
 
     @Test fun `source omissions preserve raw source and remain skipped on repeat laps`() {
@@ -169,6 +169,16 @@ class PlaybackScheduleTest {
         val edited = omitted.withOrder(omitted.order.withTracks(omitted.order.tracks.drop(1)))
         assertEquals(source.entryIds.drop(1), edited.entryIds)
         assertEquals(listOf("B", "D"), edited.visibleIndices.map { edited.order.tracks[it].id })
+    }
+
+    @Test fun `pruning the sounding Random occurrence never highlights a different parked row`() {
+        val source = ActiveQueue(QueueSource.Random(1), PlayQueue(listOf(track("R"), track("S"), track("R"))).startAt(2))
+        val playing = start(source)
+        val pruned = source.copy(order = PlayQueue(source.order.tracks.take(2)).startAt(1),
+            entryIds = source.entryIds.take(2))
+        assertEquals("R", playing.current!!.track.id)
+        assertTrue(playing.rows(pruned).none { it.playing })
+        assertEquals("S", start(pruned).rows(pruned).single { it.playing }.track.id)
     }
 
     @Test fun `projection follows shuffle and in-list jump does not reshuffle or restore omissions`() {

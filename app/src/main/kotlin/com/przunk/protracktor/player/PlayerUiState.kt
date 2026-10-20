@@ -98,6 +98,7 @@ data class PlayerUiState(
             ?: ActiveQueue(QueueSource.Playlist(activePlaylistId, activePlaylistName.orEmpty()), queue)
     val transportQueue: PlayQueue get() = activePlayback.order
     val current: TrackRef? get() = schedule.current?.track ?: activePlayback.current
+    val sourcePlaybackIndex: Int? get() = schedule.sourcePlaybackIndex(activePlayback)
     val manualCurrent: Boolean get() = schedule.current?.manual == true
     val transient: TrackRef? get() = current.takeIf { randomMode || externalMode }
     val externalOpen: Boolean get() = externalMode
@@ -110,6 +111,12 @@ data class PlayerUiState(
         playback = next,
         queue = if (next.belongsTo(activePlaylistId)) next.order else queue,
     )
+
+    /** Capture allocated occurrence IDs at each edit, not lazily from a repeatedly reused snapshot. */
+    fun withEditorQueue(next: PlayQueue): PlayerUiState {
+        val active = activePlayback
+        return copy(queue = next, playback = if (active.belongsTo(activePlaylistId)) active.withOrder(next) else playback)
+    }
 
     fun preparingRandom(session: Long): PlayerUiState = withPlayback(ActiveQueue(
         QueueSource.Random(session),

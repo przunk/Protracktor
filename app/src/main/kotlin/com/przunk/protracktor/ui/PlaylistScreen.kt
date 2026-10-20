@@ -132,7 +132,7 @@ fun PlaylistScreen(
     PlaylistBody(
         tracks = state.queue.tracks,
         listState = listState,
-        currentIndex = state.queue.currentIndex.takeIf { !state.awayFromPlaylist },
+        currentIndex = state.sourcePlaybackIndex.takeIf { !state.awayFromPlaylist },
         contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) },
         onEnqueue = onEnqueue,
         onPlayAt = onPlayAt,

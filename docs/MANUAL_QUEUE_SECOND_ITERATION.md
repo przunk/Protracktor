@@ -1,5 +1,9 @@
 # Manual queue — second iteration
 
+Historical evidence for APK 1239, not verification of the revised implementation. After user
+testing on 2026-10-20, [the unified-list contract](QUEUE_UNIFIED_LIST.md) supersedes this report's
+two-tab and mixed-manual-history behaviour. Do not apply its old test checklist to the new APK.
+
 Audit/corrections: 2026-10-20. The first APK below was built on 2026-10-19.
 
 Branch `feature/manual-playback-queue`, base `d6d3297`. Requested by the owner after implementation:
@@ -136,5 +140,5 @@ lint and release artifact properties were executed/checked. Actual device behavi
 Develop remains `d6d3297`, AMP `8e92002`, master `794d8f9`; no merge, push or tag/release change.
 Later documentation commits increase HEAD's commit count, not the already-built APK's code/SHA.
 All device audio, notification/service layout, gesture feel, Bluetooth and usability remain
-**unchecked**. [Phone checklist](TESTING.md#manual-queue--unmerged-experiment-phone-checks-pending)
+**unchecked**. [Historical phone checklist](TESTING.md#manual-queue--historical-second-iteration-phone-checklist)
 and [provisional product questions](QUEUE_CONTEXT_ANALYSIS.md#questions-retained-for-post-implementation-evaluation).

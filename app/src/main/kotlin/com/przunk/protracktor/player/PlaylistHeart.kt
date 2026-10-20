@@ -44,9 +44,8 @@ internal class PlaylistHeartSave(
                 state
             } else {
                 accepted = heart
-                state.copy(
-                    queue = if (heart.member) state.queue
-                        else state.queue.withTracks(state.queue.tracks + heart.track),
+                state.withEditorQueue(if (heart.member) state.queue
+                    else state.queue.withTracks(state.queue.tracks + heart.track)).copy(
                     dirty = state.dirty || !heart.member,
                     notificationPlaylistSaving = true,
                 )

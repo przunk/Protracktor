@@ -4,30 +4,34 @@
 
 `feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
 identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
-`PlaybackSchedule` owns pending FIFO requests with stable occurrence IDs and a backward/forward
-transport record. `PlayerUiState.current` projects its actual occurrence, falling back to context
-when no mixed record exists. An explicit absent source prevents a never-started editor playlist
+`PlaybackSchedule` owns pending FIFO requests with stable occurrence IDs and one actual occurrence,
+not a second backward/forward history. `PlayerUiState.current` projects that occurrence, falling back
+to context when none is selected. An explicit absent source prevents a never-started editor playlist
 from silently becoming continuation for manual playback.
 
 Controller file transport and natural completion enter that scheduler after the existing subsong
-layer. It chooses pending, then retained forward traversal, then source continuation; Repeat One
-retains the actual tune. Replay anchors restore source position against live tracks/modes/shuffle,
-never restore editor contents. Explicit source Play resets traversal but preserves pending; mere
+layer. It chooses pending before source continuation; Repeat One retains the actual tune. Source
+PlayQueue/RandomHistory own Previous, which returns from a manual request to the parked source.
+Consumed manual rows never re-enter history. Explicit source Play replaces the context but preserves pending; mere
 navigation or playlist selection resets neither. Retry binds to playback epoch and occurrence.
 History recording uses actual origin through one pure policy, not whichever source is parked.
 
-The dock's Queue action opens Context and Queue tabs. Only pending requests are removable, with
-occurrence-specific Undo inside the modal. Context stays read-only apart from playback/info/row
-actions. A quiet marker distinguishes parked source position from actual playback even when file
-IDs match. Shared Now Playing subtitle logic describes the actual file; title projection is cached
-by source rows and learned-title map rather than recomputed on progress updates.
+The third iteration projects one list: actual source order with a marked manual block immediately
+after its parked position. Source occurrence IDs and an omission set support session-only removal
+without filtering the editor's persistence data, including equal Random files. Left removes either
+origin with Undo; right enqueues a copy, tap plays and the trailing compact control opens Info.
+Source actions carry their generation to reject stale UI events. All other track lists share the
+right-enqueue gesture, disabled during selection/reorder. Only the actual occurrence is highlighted.
+The animated panel occupies Scaffold content above the same operable dock, rather than a separate
+modal window; the shared snackbar remains reachable. Underlying screen semantics are hidden while
+the panel is open. Now Playing subtitle/actual-origin rules are shared with notification and History.
 
-No new service/player, dependency, schema or persistence is introduced. Pending and mixed traversal
-die with the process; existing paused selected-playlist restoration remains. AMP/C111/web queue
-work is excluded. The second-iteration APK passed 1013 host tests and lint, but owner phone
-acceptance remains pending; host verification does not establish device behaviour.
-[Contract](QUEUE_CONTEXT_ANALYSIS.md), [implementation evidence](MANUAL_QUEUE_IMPLEMENTATION.md),
-[second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md).
+No new service/player, dependency, schema or persistence is introduced. Pending/omissions die with
+the process; existing paused selected-playlist restoration remains. AMP/C111/C112/web queue work is
+excluded. [Current contract/evidence](QUEUE_UNIFIED_LIST.md) supersedes the earlier two-tab design;
+the [implementation report](MANUAL_QUEUE_IMPLEMENTATION.md) and
+[second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md) retain historical evidence only.
+Third-iteration full gates/APK are pending; host checks do not establish phone behaviour.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

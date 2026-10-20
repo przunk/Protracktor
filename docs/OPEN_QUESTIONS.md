@@ -103,8 +103,13 @@ FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owne
 Implementation is now on `feature/manual-playback-queue`; its first verified APK is intermediate.
 The owner requested a [second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) before phone testing;
 it is complete with corrected code, 1013 host tests/lint and final APK 1.2.0 (1239).
-Unsettled product answers remain provisional; phone checks and merge acceptance are pending.
-The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
+After testing/discussion with app users on 2026-10-20, the owner selected a third iteration:
+one combined list, one-shot manual rows, source-only Previous, marked duplicates, session-only
+source removal and bidirectional gestures above the existing dock. The combined view is no longer
+deferred. [Current contract/questions](QUEUE_UNIFIED_LIST.md) supersede the mixed-history/two-tab
+rules. Selected-source-now then pending-next precedence remains an explicit agent choice for
+evaluation, not an individually approved owner requirement. Third-iteration gates/APK and phone
+acceptance are pending; no merge is authorized. C112's cramped dock count remains deferred.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

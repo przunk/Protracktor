@@ -55,6 +55,8 @@ data class ActiveQueue(
 
     /** Match occurrences FIFO, not a last-index-by-file map; Random may repeat one file. */
     fun withOrder(next: PlayQueue): ActiveQueue {
+        if (order === next) return this
+        if (order.tracks === next.tracks) return copy(order = next)
         if (order.tracks.map { it.id } == next.tracks.map { it.id }) return copy(order = next)
         val oldIds = order.tracks.indices.groupBy { order.tracks[it].id }
             .mapValues { (_, indices) -> ArrayDeque(indices.map { entryIds[it] }) }

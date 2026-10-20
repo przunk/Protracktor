@@ -1870,7 +1870,18 @@ class PlaybackController private constructor(private val context: Context) {
      * surprise, and the dock still says what it is.
      */
     fun removeRandomAt(index: Int) {
+        if (index !in randomHistory.playedPicks.indices) return
+        val active = _state.value.activePlayback
         randomHistory.remove(index)
+        if (active.source == QueueSource.Random(randomSession)) {
+            val tracks = randomHistory.playedPicks
+            val order = PlayQueue(tracks, shuffle = active.order.shuffle, repeat = active.order.repeat)
+                .let { if (randomHistory.cursor >= 0) it.startAt(randomHistory.cursor) else it }
+            // A positional deletion must not rematch equal files to the wrong occurrence ID.
+            val removed = active.entryIds[index]
+            _state.update { it.withPlayback(active.copy(order = order,
+                entryIds = active.entryIds.filterIndexed { at, _ -> at != index }, omitted = active.omitted - removed)) }
+        }
         publishRandomPicks()
         prepareRandomQueue()
     }
@@ -1886,16 +1897,17 @@ class PlaybackController private constructor(private val context: Context) {
         launchRandomAdvance(epoch)
     }
 
-    private fun randomNext(placement: SchedulePlacement = SchedulePlacement.APPEND) {
+    private fun randomNext(placement: SchedulePlacement = SchedulePlacement.APPEND, autoPlay: Boolean = true) {
         val epoch = ++playbackEpoch
         stopPlayback()
-        _state.update { it.copy(playing = false, loadingTrack = true) }
-        launchRandomAdvance(epoch, placement)
+        _state.update { it.copy(playing = false, loadingTrack = true, schedule = it.schedule.finishCurrent()) }
+        launchRandomAdvance(epoch, placement, autoPlay)
     }
 
-    private fun launchRandomAdvance(epoch: Long, placement: SchedulePlacement = SchedulePlacement.REPLACE) {
+    private fun launchRandomAdvance(epoch: Long, placement: SchedulePlacement = SchedulePlacement.REPLACE,
+        autoPlay: Boolean = true) {
         scope.launch {
-            try { advanceRandom(epoch, placement) }
+            try { advanceRandom(epoch, placement, autoPlay) }
             finally {
                 if (epoch == playbackEpoch) _state.update { it.copy(loadingTrack = false) }
             }
@@ -1926,19 +1938,19 @@ class PlaybackController private constructor(private val context: Context) {
         nextFile()
     }
 
-    private fun randomPrevious(placement: SchedulePlacement) {
+    private fun randomPrevious(placement: SchedulePlacement, autoPlay: Boolean = true) {
         var pick = randomHistory.previous() ?: return
         val active = _state.value.activePlayback
         while (active.entryIds.getOrNull(randomHistory.cursor) in active.omitted) {
             pick = randomHistory.previous() ?: return
         }
-        playTransient(pick, placement = placement)
+        playTransient(pick, placement = placement, autoPlay = autoPlay)
         publishRandomPicks()
         prepareRandomQueue()
     }
 
     /** Next walks heard history before consuming a new, previously invisible pick. */
-    private suspend fun advanceRandom(epoch: Long, placement: SchedulePlacement) {
+    private suspend fun advanceRandom(epoch: Long, placement: SchedulePlacement, autoPlay: Boolean) {
         if (epoch != playbackEpoch) return
         val generation = randomHistory.generation
         // Replaying history or a prepared pick must not wait for another database query.
@@ -1947,8 +1959,9 @@ class PlaybackController private constructor(private val context: Context) {
         var pick = randomHistory.advance()
         val active = _state.value.activePlayback
         while (pick != null && active.entryIds.getOrNull(randomHistory.cursor) in active.omitted) {
+            val beforeFill = randomHistory.generation
             if (!randomHistory.hasNext) fillRandomQueue(1)
-            if (epoch != playbackEpoch) return
+            if (beforeFill != randomHistory.generation || epoch != playbackEpoch) return
             pick = randomHistory.advance()
         }
         if (pick == null) {
@@ -1968,7 +1981,7 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(randomExhausted = false) }
         publishRandomPicks()
         // No suspension between cursor publication and handing that same pick to playback.
-        playTransient(pick, placement = placement)
+        playTransient(pick, placement = placement, autoPlay = autoPlay)
         prepareRandomQueue()
     }
 
@@ -2276,8 +2289,7 @@ class PlaybackController private constructor(private val context: Context) {
                     added++
                 }
             }
-            current.copy(
-                queue = current.queue.withTracks(merged),
+            current.withEditorQueue(current.queue.withTracks(merged)).copy(
                 scanning = false,
                 // Left alone when the add is about to be written; raised only when it is joining
                 // an edit that was already unsaved.
@@ -2378,8 +2390,7 @@ class PlaybackController private constructor(private val context: Context) {
         lastRemoval = removed
 
         _state.update {
-            it.copy(
-                queue = it.queue.withTracks(kept),
+            it.withEditorQueue(it.queue.withTracks(kept)).copy(
                 schedule = if (wasPlaying) it.schedule.resetTraversal() else it.schedule,
                 playing = if (wasPlaying) false else it.playing,
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
@@ -2413,7 +2424,7 @@ class PlaybackController private constructor(private val context: Context) {
             val tracks = current.queue.tracks
             if (from !in tracks.indices || to !in tracks.indices) return@update current
             val reordered = tracks.toMutableList().apply { add(to, removeAt(from)) }
-            current.copy(queue = current.queue.withTracks(reordered), dirty = true)
+            current.withEditorQueue(current.queue.withTracks(reordered)).copy(dirty = true)
         }
     }
 
@@ -2423,8 +2434,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (removed.isEmpty()) return
         lastRemoval = emptyList()
         _state.update {
-            it.copy(
-                queue = it.queue.withTracks(TrackEditing.restore(it.queue.tracks, removed)),
+            it.withEditorQueue(it.queue.withTracks(TrackEditing.restore(it.queue.tracks, removed))).copy(
                 dirty = true,
                 message = null,
             )
@@ -2751,31 +2761,31 @@ class PlaybackController private constructor(private val context: Context) {
         applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback, completed = true))
     }
 
-    private fun applyScheduledStep(step: ScheduledStep) {
+    private fun applyScheduledStep(step: ScheduledStep, autoPlay: Boolean = true) {
         when (step) {
-            is ScheduledStep.Context -> applyQueueStep(step.step, step.placement)
+            is ScheduledStep.Context -> applyQueueStep(step.step, step.placement, autoPlay)
             is ScheduledStep.Select -> {
                 sampleListening()
-                val anchor = step.schedule.contextForReplay(step.occurrence, _state.value.activePlayback)
+                val anchor = step.schedule.contextForSelection(step.occurrence, _state.value.activePlayback)
                 if (anchor.source is QueueSource.Random && anchor.source.session == randomSession) {
                     anchor.order.currentIndex?.takeIf { it != randomHistory.cursor }?.let(randomHistory::select)
                     publishRandomPicks()
                 }
                 _state.update { it.withPlayback(anchor).copy(schedule = step.schedule) }
                 playlistSession.scheduleSave()
-                startActualPlayback(step.occurrence.track)
+                selectActualPlayback(step.occurrence.track, autoPlay)
             }
         }
     }
 
-    private fun applyQueueStep(step: QueueStep, placement: SchedulePlacement) {
+    private fun applyQueueStep(step: QueueStep, placement: SchedulePlacement, autoPlay: Boolean) {
         when (step) {
-            is QueueStep.Play -> activateQueue(step.queue, placement)
+            is QueueStep.Play -> activateQueue(step.queue, placement, autoPlay)
             QueueStep.RandomNext -> {
                 _state.update { it.copy(playing = false) }
-                randomNext(placement)
+                randomNext(placement, autoPlay)
             }
-            QueueStep.RandomPrevious -> randomPrevious(placement)
+            QueueStep.RandomPrevious -> randomPrevious(placement, autoPlay)
             QueueStep.Replay -> {
                 val playing = track?.restart() ?: false
                 beginListeningAgain(playing)
@@ -2793,7 +2803,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Plays something that is not in the playlist. */
     private fun playTransient(ref: TrackRef, external: Boolean = false,
-        placement: SchedulePlacement = SchedulePlacement.REPLACE) {
+        placement: SchedulePlacement = SchedulePlacement.REPLACE, autoPlay: Boolean = true) {
         val modes = _state.value.transportQueue
         val order = if (external) PlayQueue(listOf(ref), shuffle = modes.shuffle, repeat = modes.repeat).startAt(0)
             else PlayQueue(randomHistory.playedPicks, shuffle = modes.shuffle, repeat = modes.repeat)
@@ -2802,14 +2812,15 @@ class PlaybackController private constructor(private val context: Context) {
         val active = _state.value.activePlayback
         val next = if (placement != SchedulePlacement.REPLACE && active.source == source) active.withOrder(order)
             else ActiveQueue(source, order)
-        activateQueue(next, placement)
+        activateQueue(next, placement, autoPlay)
     }
 
     private fun openAndPlay(queue: PlayQueue) = activateQueue(ActiveQueue(
         QueueSource.Playlist(_state.value.activePlaylistId, _state.value.activePlaylistName.orEmpty()), queue,
     ))
 
-    private fun activateQueue(queue: ActiveQueue, placement: SchedulePlacement = SchedulePlacement.REPLACE) {
+    private fun activateQueue(queue: ActiveQueue, placement: SchedulePlacement = SchedulePlacement.REPLACE,
+        autoPlay: Boolean = true) {
         val ref = queue.current ?: return
         sampleListening()
         _state.update {
@@ -2817,7 +2828,18 @@ class PlaybackController private constructor(private val context: Context) {
             it.withPlayback(queue).copy(schedule = schedule)
         }
         playlistSession.scheduleSave()
-        startActualPlayback(ref)
+        selectActualPlayback(ref, autoPlay)
+    }
+
+    private fun selectActualPlayback(ref: TrackRef, autoPlay: Boolean) {
+        if (autoPlay) startActualPlayback(ref)
+        else {
+            // Editing a paused list selects its successor, but must not open/record/start audio.
+            ++playbackEpoch
+            stopPlayback()
+            _state.update { it.copy(playing = false, loadingTrack = false, seekingTo = null, seekSlow = false,
+                positionSeconds = 0.0, durationSeconds = 0.0, metadata = emptyMap(), subsong = 0, subsongCount = 1) }
+        }
     }
 
     private fun startActualPlayback(ref: TrackRef) {
@@ -2848,7 +2870,7 @@ class PlaybackController private constructor(private val context: Context) {
             startActualPlayback(it.track)
             return
         }
-        now.schedule.playRequest(id, now.activePlayback)?.let(::applyScheduledStep)
+        now.schedule.playRequest(id, now.activePlayback)?.let { applyScheduledStep(it) }
     }
 
     fun removePendingRequest(id: Long) {
@@ -2905,7 +2927,9 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun advanceAfterRemoval() {
-        if (_state.value.canGoNextFile) nextFile()
+        val now = _state.value
+        if (now.canGoNextFile) applyScheduledStep(now.schedule.next(now.activePlayback),
+            autoPlay = now.playing || now.loadingTrack)
         else {
             ++playbackEpoch
             stopPlayback()

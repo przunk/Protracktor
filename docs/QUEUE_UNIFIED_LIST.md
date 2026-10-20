@@ -32,6 +32,9 @@ The previous APK/reports remain historical evidence, not verification of these c
   and disappear on explicit context replacement. Each Random occurrence has its own identity;
   removal is not a permanent blacklist of that file from future draws.
 - Removing the current occurrence advances to pending/context next, or stops if exhausted.
+  During pause it selects the successor without opening/recording/starting audio; explicit Play
+  starts it. Playing/loading intent continues automatically. This is a conservative agent choice
+  for the previously unspecified paused-removal case, retained for evaluation.
   Undo restores a row without rewinding audio. Context Undo is generation-bound and must not
   revive an old source after replacement. Manual Undo remains request-specific.
 
@@ -87,7 +90,7 @@ C111 padding and the cramped dock subsong label (`1 of 2 Tracks`) remain separat
 - Existing Repeat One/subsong behaviour remains; consumed manual entries do not join source laps.
 
 All new device behaviour is **unchecked** until owner testing. The existing positive phone report
-motivated changed requirements; it is not acceptance of this unimplemented iteration.
+motivated changed requirements; it is not acceptance of the third-iteration implementation.
 
 ## Checkpoint evidence
 
@@ -131,3 +134,39 @@ initial scroll, dock interaction and C110 navigation. Removing the bottom inset 
 geometry regression (`/tmp/protracktor-unified-dock-mutation.log`, 28 s); the restored positive
 test passed in 14 s (`/tmp/protracktor-unified-dock-final.log`). These are host checks, not phone
 acceptance. Full gates/lint, final boundary review and the new release APK remain pending.
+
+## Final branch review
+
+Reviewed the original stages `bc426e5`, `91477f2`, `783d8fa`, `3d27868`, `0ce1f6f` against the
+changed contract, then third-iteration stages `8e35e05`, `3068f0c`, `ea01a2f`, `d7042b8` and the
+final hardening delta. Earlier mixed traversal/tabs are intentionally superseded, not retained
+as a hidden parallel implementation. No remaining product question authorizes deferred features.
+
+| Finding | Correction and evidence |
+| --- | --- |
+| Removing a paused current row started audio | Propagate playback intent through scheduling/source/Random selection. A paused edit selects without decoder/history activity until explicit Play. Regression failed before the correction (`protracktor-unified-paused-before.log`, 15 s); both source/manual paths and playing continuation are covered. |
+| Random's old menu prune left the source snapshot/IDs out of sync | Apply the positional deletion to source rows/IDs, not file-based matching; preserve remaining equal occurrences and omissions. Regression failed before correction (`protracktor-unified-boundary-before.log`, 30 s; fail-fast stopped later cases). |
+| Linked draft edits could recycle a lazy occurrence ID | Capture source ID allocation on every editor-track mutation, including notification heart, discard/empty/switch. Stale row actions must not act on a different new file. Controller regression failed before correction (`protracktor-unified-draft-id-before.log`, 23 s). |
+| Manual row survived Next when Random returned no candidate | Consume on the explicit Random advance, not only after a new file is found. Regression failed before correction (`protracktor-unified-random-consumption-before.log`, 16 s). |
+| Pruning the sounding Random row lent its playing highlight to the new parked cursor | Match actual source occurrence identity, not just the live cursor; share that pure projection across the unified, Random and playlist views. The new regression failed before correction (`protracktor-unified-highlight-before.log`, 19 s), including a retained equal file. Native playback remains untouched by the existing Random record-prune action. |
+| Progress reads rebuilt unchanged ID maps | Same-order/same-track-list fast paths retain the existing snapshot; changed rows still remap occurrences. |
+| Superseded labels/comments/docs obscured the new contract | Remove unused two-tab/header/button strings, rename obsolete replay terminology, mark old reports historical and update architecture, questions, roadmap and phone checklist. |
+
+The omission-skip Random loop also checks generation after a suspended refill, not only epoch.
+All probe logs above are under `/tmp/`; final artifact evidence will retain copies. Full verification
+and the new APK are not yet claimed by this review checkpoint.
+
+After hardening, **125 tests / 7 suites passed**, zero failures/errors/skips, in 56 s
+(`/tmp/protracktor-unified-review-restored.log`): scheduler/controller/state, playlist session/heart
+and the real shell/panel tests. The preceding review run failed an old whole-state expectation
+that required a stale backing playback snapshot after Discard; its expected backing order now
+matches the already-effective live source while retaining occurrence IDs. No audio/storage
+expectation was relaxed. An earlier boundary-focused run passed 62 tests / 5 suites in 53 s
+before the linked-draft/Random-exhaustion additions. Full forced gates/lint and release APK follow.
+
+The first forced gate passed **1027 tests / 134 suites**, zero failures/errors/skips, all companion
+stages and lint (0 errors) in 514 s. It preceded the final source-highlight guard; its log is
+`/tmp/protracktor-unified-full-gate-pre-highlight.log`, not final evidence for that guard.
+The final guard has its own failing regression and requires another full gate before APK handoff.
+Restored scheduler/controller/panel verification passed **58 tests / 4 suites**, zero failures,
+errors or skips, in 46 s (`/tmp/protracktor-unified-highlight-final.log`).
