@@ -1,10 +1,14 @@
 # What only a phone can prove
 
+Use the current APK in [Status](STATUS.md) for the active queue regression checklists. Older
+APK numbers identify the original handoff, not a recommendation to install an older build.
+
 ## Queue follow and branch audit — phone checks pending
 
 [C116](QUEUE_AUTO_FOLLOW.md) and [the complete branch review](QUEUE_BRANCH_REVIEW.md) extend the
-unmerged candidate. Use the final APK in [Status](STATUS.md) once available; APK 1258 predates
-these corrections. The focused host run passed 218 tests / 14 suites; phone behaviour is unchecked.
+unmerged candidate. Use release APK **1.2.0 (1261), source 1a1503f**, identified in [Status](STATUS.md);
+APK 1258 predates these corrections. The focused run passed 218 tests / 14 suites, followed by
+1096 tests / 142 suites and all forced gates/lint. Phone behaviour is unchecked.
 
 1. With a long Queue open, repeatedly press Next until it scrolls at the lower edge. Surviving
    rows must remain visible throughout, without a whole-list flash/fade. Try several rapid Next
@@ -23,10 +27,9 @@ No merge acceptance is inferred from host results or installation alone.
 
 ## Queue row and playlist drag corrections — phone checks pending
 
-[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Use release APK **1.2.0 (1258),
-source aca3cd6**, identified in [Status](STATUS.md). It passed 1090 host tests/full gates and
-lint; APK 1255 is the reported predecessor, not a verified fix. Subsequent sections name their
-historical handoffs; rerun those regression scenarios on APK 1258 as well.
+[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Their historical handoff was
+**1.2.0 (1258), source aca3cd6**, with 1090 host tests/full gates/lint passed. Rerun these
+regressions on the current APK 1261 above; APK 1255 is the originally reported predecessor.
 
 1. Clear while a source or manual track is current. With no source rows, the retained current
    and newly queued tracks align normally, without a group inset. Undo restores the source and
@@ -51,7 +54,7 @@ remain unchecked until owner confirmation. No merge is authorized.
 
 The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Its historical handoff was release APK
 **1.2.0 (1255), source 1aec1aa**, with 1080 host tests/full gates and lint passed. Use the current
-APK 1258 identified above for these checks; real audio/device behaviour is unchecked.
+APK 1261 identified above for these checks; real audio/device behaviour is unchecked.
 
 1. Play a playlist, Search, Browse, History, Random or external file, with several pending manual
    requests. Open Queue and press Clear queue: only the actual current track remains, with no
@@ -76,7 +79,7 @@ Host tests and compilation are partial evidence, not real audio or device accept
 
 ## Scroll-first row gestures — phone checks pending
 
-The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md) is unmerged. Use release APK **1.2.0 (1252),
+The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md) is unmerged. Its original APK was **1.2.0 (1252),
 source f6a5ee4**, identified in [Status](STATUS.md). It passed 1056 host tests/full gates and lint;
 APK 1250 is the previous handoff, not proof of this change.
 
@@ -99,7 +102,7 @@ Clear queue is not part of APK 1252; the later owner-approved follow-up is descr
 
 ## Queue presentation polish — phone checks pending
 
-The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Use release APK **1.2.0
+The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Its original APK was **1.2.0
 (1250), source 6043902**, identified in [Status](STATUS.md). It passed 1043 host tests/full gates
 and lint; APK 1248 is the previous handoff, not proof of the following changes.
 

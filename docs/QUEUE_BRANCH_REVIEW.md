@@ -55,7 +55,7 @@ No additional actionable defect was identified in this code delta. This is code 
 host regression evidence, not proof of perfect code or phone acceptance. Large-list release
 comfort, actual vibration, accessibility, audio/service/notification/Bluetooth and long-term use
 remain device checks. The experiment stays session-only; no queue persistence or source editing
-is added. Final focused/full-gate results and the APK are pending.
+is added. Final verification and the APK are recorded below.
 
 ## Verification checkpoints
 
@@ -70,4 +70,36 @@ in **82.5 s**. Every selected class produced results: source/playlist/schedule/p
 real controller/SQLite, state/heart/save semantics, Queue following/presentation/Clear, saved
 playlist grips, manual grips and shared swipe gestures. The test task executed, rather than
 returning cached results. Both omission regressions and the progress-recomposition Info guard
-passed. Fault injections are absent from the final diff. Full forced gates/lint and APK follow.
+passed. Fault injections are absent from the final diff.
+
+## Final verification and APK
+
+Clean source **1a1503f**, commit-count versionCode **1261**, passed the forced complete gate in
+**551 s**: **1096 tests / 142 suites**, zero failures/errors/skips. The unit task actually
+executed (375.0 s), all companion checks passed and lint completed in 89.3 s with **0 errors /
+72 unchanged warnings**. Warning ID/severity/message/file records exactly match APK 1258's
+archived report, ignoring line-number shifts.
+
+Minified test-signed release APK, built in **97.9 s**:
+[protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk](../dist/protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk),
+**11,915,043 bytes**. Checked package `com.przunk.protracktor`, versionName `1.2.0`, code `1261`,
+minSdk 29/targetSdk 36, absence of debuggable flag, executed R8/nonempty mapping and engine
+libraries for arm64-v8a, armeabi-v7a and x86_64. APK Signature Scheme v2 verified with public
+test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is an installable release-variant test APK, not a Play upload artifact. APK SHA-256:
+`0317cccb20526608a6c8f0cec324254a335ace4a0ad151b34ae1c99d7b5d6e5b`.
+
+Ignored `dist/queue-follow-verification/1a1503f/` retains JUnit/lint reports, full/companion/build
+logs, restored focused/negative probes, R8 mapping, badging/manifest, signature and ZIP contents.
+Earlier checkpoints are under the adjacent `checkpoint`, `audit-first-run` and `audit-restored`
+directories; they do not identify the final APK. The incomplete first focused run is not a pass.
+
+**Checked partially:** host domain/controller/SQLite/Compose behaviour, full gates/lint and
+artifact properties. **Unchecked:** phone animation/drag feel, actual vibration, accessibility,
+audio continuity, notifications, Bluetooth and long-term use. [Current phone checklist](TESTING.md#queue-follow-and-branch-audit--phone-checks-pending).
+Merge acceptance remains pending. No push/tag, versionName, dependency, schema, native, web or
+AMP change. Develop `d6d3297`, AMP `8e92002` and master `794d8f9` remain unchanged. A final
+documentation-only closeout does not relabel or rebuild this APK.
+Closeout checked 257 existing local link destinations across fourteen related documents,
+current handoff/checklist headings and the artifact hash/signature/identity. Only documentation
+differs from the APK source; no further application build is needed for this closeout.

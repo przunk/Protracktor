@@ -147,9 +147,12 @@ source **1aec1aa** passed 1080 tests/full gates and lint, with release **APK 1.2
 on the same unmerged branch. [Historical Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk).
 The next owner report selected C113–C115: standalone Clear alignment, full-width manual highlight
 and saved-playlist drag ownership/layering/viewport corrections. Source **aca3cd6** passed
-**1090 tests / 141 suites**, full gates and lint; release **APK 1.2.0 (1258)** is the current
-unmerged candidate. [Current handoff](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
-phone behaviour and acceptance remain pending.
+**1090 tests / 141 suites**, full gates and lint; **APK 1.2.0 (1258)** records that historical
+handoff. C116 then corrects auto-follow flashing; the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+also corrects C117's omitted-history traversal bound and Help wording. Current unmerged source
+**1a1503f**, **APK 1.2.0 (1261)**, passed **1096 tests / 142 suites**, all forced gates/lint.
+[Current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk); phone behaviour and acceptance
+remain pending.
 AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.

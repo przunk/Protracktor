@@ -1,11 +1,33 @@
 # Status
 
-Updated: 2026-10-21 — C116 auto-follow and C117 omitted-history corrections implemented; full branch review complete, final gates/APK pending; previous APK 1.2.0 (1258), source aca3cd6, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — C116/C117 corrections and complete branch audit ready for phone testing; APK 1.2.0 (1261), source 1a1503f, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Audited queue candidate — ready for phone testing, unmerged, 2026-10-21
+
+C116 corrects whole-list appearance flashes after automatic following. The [complete branch
+audit](QUEUE_BRANCH_REVIEW.md) also corrected C117's omitted-history traversal bound and EN/PL
+Help wording, adding an Info-through-progress-recomposition guard. All 22 changed production
+Kotlin files and both resource files were inspected; no further actionable defect was identified.
+Restored focused verification passed **218 tests / 14 suites**, zero failures/errors/skips.
+Clean source **1a1503f** passed the forced complete gate in **551 s**: **1096 tests / 142 suites**,
+all companion checks and lint **0 errors / 72 unchanged warnings** (records match APK 1258).
+
+Minified test-signed release APK built in **97.9 s**:
+[protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk](../dist/protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk),
+**11,915,043 bytes**. Package/code, v2 test certificate, absence of debuggable flag, executed
+R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`0317cccb20526608a6c8f0cec324254a335ace4a0ad151b34ae1c99d7b5d6e5b`.
+[Evidence](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-follow-and-branch-audit--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** phone animation,
+gesture/accessibility comfort, audio, notifications, Bluetooth and long-term use. No merge/push/
+tag; develop, AMP and master unchanged. C111/C112 remain excluded. Older handoffs below retain
+their original evidence; documentation-only closeout does not change APK source SHA/code.
 
 ## C116 Queue flashes when Next follows below the viewport — open, 2026-10-21
 
@@ -16,8 +38,8 @@ reproduces a lazy-item animator reset at the final scroll snap. Queue appearance
 disabled; disappearance/placement remain animated. Restored verification passed 18 host tests /
 4 suites, zero failures/errors/skips. The later [complete branch audit](QUEUE_BRANCH_REVIEW.md)
 passed 218 focused tests / 14 suites, including rapid Next, Info during progress updates,
-departure/placement, Clear, playlist/manual grips and swipe regressions. Complete gates and the
-final APK remain pending. Device behaviour is unchecked; no merge. Previous handoffs remain below.
+departure/placement, Clear, playlist/manual grips and swipe regressions. Complete gates and
+APK 1261 passed as recorded above. Device behaviour is unchecked; no merge.
 
 ## C117 Omitted shuffle history can prematurely disable transport — open, 2026-10-21
 
@@ -25,8 +47,9 @@ Code-review finding, not a user-reported incident. Repeated in-list selections c
 history entries than source rows. The old omission walk stopped after one list length and
 could miss a surviving earlier/later destination. Both pure-model reproductions failed before
 correction. PlayQueue now supplies a bounded budget covering history plus a fresh lap;
-218-test focused verification passed. [Audit](QUEUE_BRANCH_REVIEW.md). Full gates/APK and phone
-checks pending. No source order, saved playlist, shuffle or manual FIFO policy change.
+218-test focused verification passed. [Audit](QUEUE_BRANCH_REVIEW.md). Full gates/APK 1261 passed
+as recorded above; phone checks pending. No source order, saved playlist, shuffle or manual FIFO
+policy change.
 
 ## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
 

@@ -14,6 +14,10 @@ and owner acceptance remain pending. The later [C113–C115 corrections](QUEUE_R
 cover standalone Clear alignment, full-width manual highlighting and saved-playlist dragging:
 source **aca3cd6**, 1090 tests/full gates/lint passed, release APK **1.2.0 (1258)** ready,
 unmerged. Phone acceptance remains pending; earlier artifacts above are historical.
+The later [C116 follow-up](QUEUE_AUTO_FOLLOW.md) and [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+produce the current unmerged candidate: source **1a1503f**, release APK **1.2.0 (1261)**,
+1096 tests/full gates/lint passed, phone testing pending. Only appearance fading is disabled;
+row departure/placement remain animated. The audit also corrects omitted-history traversal.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.

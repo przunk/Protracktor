@@ -119,3 +119,6 @@ The subsequent [C113–C115 row/playlist corrections](QUEUE_ROW_REGRESSIONS.md) 
 thresholds while keeping the playlist grip subtree mounted and gating competing swipes. Current
 candidate: source **aca3cd6**, release APK **1.2.0 (1258)**, 1090 tests/full gates/lint passed,
 unmerged with phone checks pending.
+The later [C116 and complete branch audit](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk)
+handoff is source **1a1503f**, APK **1.2.0 (1261)**, 1096 tests/full gates/lint passed, unmerged
+with phone checks pending. Swipe thresholds/ownership policy remain unchanged.

@@ -77,10 +77,20 @@ exist, with highlight and tap/hold outside that inset. C115 keeps the playlist s
 mounted during a grip, gates competing swipes and moves/raises the outer lazy item rather than
 its clipped child. A post-composition numeric viewport pin prevents keyed-item anchoring from
 following the first reordered row; gesture-local order handles moves before recomposition.
-No scheduler, transport or saved-data policy changes. Current unmerged handoff: source
+No scheduler, transport or saved-data policy changes in that correction. Historical handoff: source
 **aca3cd6**, APK **1.2.0 (1258)**, **1090 tests / 141 suites**, complete gates/lint (0 errors /
 72 unchanged warnings) and artifact inspection passed. [Row-regression handoff](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk).
-Device behaviour and merge acceptance remain unchecked; prior artifacts/counts are historical.
+Device behaviour and merge acceptance remain unchecked.
+
+The C116 follow-up disables Queue appearance fading: Compose's final scroll snap resets item
+animation keys and can otherwise fade surviving rows as new arrivals. Placement and departure
+remain animated; shared absolute-target following is unchanged. The complete branch audit also
+corrects C117: omission traversal uses PlayQueue's retained-history-plus-one-lap budget, not
+source length alone. EN/PL Help identifies manual requests independently of indentation.
+Current unmerged source **1a1503f**, APK **1.2.0 (1261)**, passed **1096 tests / 142 suites**,
+all forced gates/lint (0 errors/72 unchanged warnings) and artifact inspection.
+[Audit and current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk). Phone behaviour
+and merge acceptance remain pending; earlier source/count records are historical.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

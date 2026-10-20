@@ -1,5 +1,9 @@
 # Queue row presentation and playlist drag regressions
 
+Subsequent 2026-10-21 follow-up: [C116](QUEUE_AUTO_FOLLOW.md) and the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+produce current source **1a1503f**, APK **1.2.0 (1261)**, with 1096 tests/full gates/lint passed,
+unmerged and awaiting phone testing. The APK 1258 evidence below is historical.
+
 Owner phone feedback, 2026-10-20, following APK 1.2.0 (1255), source `1aec1aa`.
 Installed build ID was not separately reported. Continue on `feature/manual-playback-queue`;
 no merge authorized. C111/C112 and AMP remain outside scope.

@@ -12,7 +12,7 @@ ordinary source Next, so a panel reopen is not the apparent mechanism.
 
 Host verification will observe rendered pixels through production Queue/Dock and controlled
 frames, not only final positions. Establish a failing regression before changing application
-code, retain insertion/removal animations and manual grips, run full tests/lint, then supply
+code, retain placement/departure animations and manual grips, run full tests/lint, then supply
 a minified test-signed release APK. Phone appearance remains unchecked until retested.
 
 ## Mechanism and selected correction
@@ -35,3 +35,8 @@ zero failures/errors/skips, in **46.9 s**. Covers 40-frame opacity sampling, vis
 rapid-Next final visibility, manual departure/placement, row layout and bounded manual grips.
 No complete gate or new APK at this checkpoint: a full branch review was requested before
 final verification/build. Device behaviour remains unchecked; no merge authorized.
+
+The subsequent [complete branch audit and final handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk)
+passed **1096 tests / 142 suites**, all forced gates/lint at source **1a1503f**. Release APK
+**1.2.0 (1261)** includes C116 and the audit's C117 omission-history correction; earlier APKs
+are historical. Appearance/gesture comfort on the phone remains unchecked, with no merge.

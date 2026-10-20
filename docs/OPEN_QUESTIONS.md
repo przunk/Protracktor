@@ -131,8 +131,13 @@ queue entries are not selected; playlists remain durable.
 2026-10-21: C113–C115 correct presentation after Clear and playlist dragging without changing
 the selected queue semantics. Source **aca3cd6** passed **1090 tests / 141 suites**, full gates
 and lint; **APK 1.2.0 (1258)** supersedes the earlier handoffs for phone testing. No new product
-choices are required by these corrections. [Current evidence](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
+choices are required by these corrections. [Historical evidence](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
 device checks and owner acceptance remain pending, with no merge authorized.
+
+Later on 2026-10-21: C116's follow-up and the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+correct auto-follow appearance and C117's omitted-history walk without selecting new product
+rules. Current source **1a1503f**, release APK **1.2.0 (1261)**, passed 1096 tests/full gates/lint;
+phone acceptance remains pending. Earlier handoffs remain historical.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

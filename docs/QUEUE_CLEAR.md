@@ -4,9 +4,12 @@ Owner decision, 2026-10-20. Follow-up on `feature/manual-playback-queue`; no mer
 
 2026-10-21 presentation/playlist follow-up: [C113–C115](QUEUE_ROW_REGRESSIONS.md) keep standalone
 manual rows aligned, highlight their full width and correct saved-playlist dragging. Manual
-content is indented only when visible source rows distinguish it as an inserted block. Current
+content is indented only when visible source rows distinguish it as an inserted block. Historical
 candidate: source **aca3cd6**, release APK **1.2.0 (1258)**, 1090 tests/full gates/lint passed;
 phone checks pending. The APK 1255 evidence below is historical; Clear/Undo semantics are unchanged.
+The later [audited candidate](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk), source **1a1503f**,
+APK **1.2.0 (1261)**, includes C116/C117 and passed 1096 tests/full gates/lint. Use it for current
+phone testing; no merge is authorized.
 
 ## Contract
 
