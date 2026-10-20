@@ -1,13 +1,24 @@
 # Status
 
-Updated: 2026-10-20 — Clear queue ready for phone testing, unmerged; release APK 1.2.0 (1255), source 1aec1aa; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — C113–C115 queue presentation/playlist drag corrections in progress, unmerged; previous APK 1.2.0 (1255), source 1aec1aa; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Clear queue — ready for phone testing, 2026-10-20
+## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
+
+Owner phone report after the Clear handoff: clearing adds unwanted left indentation; manual
+playing-row highlighting omits that margin; playlist dragging can hide below neighbours, pin a
+moved first row to the top or lose pointer ownership. Installed build ID was not separately
+reported; latest supplied APK was 1255. [Reports, mechanisms and correction plan](QUEUE_ROW_REGRESSIONS.md).
+C113/C114 are implemented and passed 20 host tests / 4 suites; Clear alignment, full-width
+highlight and inset-hold regressions failed before correction. C115, complete gates and a new
+release APK remain pending. Device fixes are unchecked; no merge authorized. C111/C112 and AMP
+remain excluded.
+
+## Clear queue — previous handoff, 2026-10-20
 
 Owner approved clearing source continuation and waiting requests while retaining only the actual
 current track as a one-shot. Saved playlists remain untouched. [Contract](QUEUE_CLEAR.md).

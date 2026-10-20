@@ -5,6 +5,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,6 +58,7 @@ fun QueueScreen(
 ) {
     val active = state.activePlayback
     val rows = remember(active, state.schedule) { state.schedule.rows(active) }
+    val hasSourceRows = rows.any { it is PlaybackRow.Source }
     val playingIndex = rows.indexOfFirst { it.playing }
     val listState = key(state.schedule.generation) {
         rememberLazyListState(initialFirstVisibleItemIndex = playingIndex.coerceAtLeast(0))
@@ -83,6 +85,7 @@ fun QueueScreen(
                 val pendingIndex = manual?.request?.id?.let(pendingIds::indexOf) ?: -1
                 val dragging = manual != null && reorder.draggedId == manual.request.id
                 val infoLabel = stringResource(R.string.queue_info_request, track.title)
+                val rowColor = if (row.playing) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                 QueueSwipeRow(onAdd = { onEnqueue(track, fromHistory) },
                     canSwipe = { reorder.draggedId == null },
                     onRemove = { when (row) {
@@ -113,15 +116,14 @@ fun QueueScreen(
                                 onLater = pendingIds.getOrNull(pendingIndex + 1)?.let { target ->
                                     { onMovePending(pendingIds[pendingIndex], target) } })
                         }) else null,
-                        colors = ListItemDefaults.colors(containerColor = if (row.playing) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.surface),
-                        modifier = Modifier.padding(start = if (manual != null) 16.dp else 0.dp).combinedClickable(
+                        colors = ListItemDefaults.colors(containerColor = rowColor),
+                        modifier = Modifier.background(rowColor).combinedClickable(
                             onLongClick = { haptics.gestureStart(); info = track }, onLongClickLabel = infoLabel, onClick = {
                                 when (row) {
                                     is PlaybackRow.Manual -> onPlayPending(row.request.id)
                                     is PlaybackRow.Source -> onPlay(row.id)
                                 }
-                            }),
+                            }).padding(start = if (manual != null && hasSourceRows) 16.dp else 0.dp),
                     )
                 }
             }

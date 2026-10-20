@@ -3,10 +3,7 @@
 package com.przunk.protracktor.ui
 
 import android.app.Application
-import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.HardwareRenderer
-import android.graphics.RenderNode
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
@@ -150,23 +147,7 @@ class QueuePresentationTest : PlaybackShellTest() {
         }
     }
 
-    private fun pixel(point: Offset): Int {
-        val view = activity.get().window.decorView
-        // Lazy-list exit layers are RenderNodes; a software Canvas cannot draw them.
-        val node = RenderNode("queue-transition-test")
-        node.setPosition(0, 0, view.width, view.height)
-        view.draw(node.beginRecording())
-        node.endRecording()
-        val rendered = ReflectionHelpers.callStaticMethod<Bitmap>(HardwareRenderer::class.java, "createHardwareBitmap",
-            ReflectionHelpers.ClassParameter.from(RenderNode::class.java, node),
-            ReflectionHelpers.ClassParameter.from(Int::class.javaPrimitiveType!!, view.width),
-            ReflectionHelpers.ClassParameter.from(Int::class.javaPrimitiveType!!, view.height))
-        val bitmap = rendered.copy(Bitmap.Config.ARGB_8888, false)
-        rendered.recycle()
-        return try {
-            bitmap.getPixel(point.x.toInt(), point.y.toInt())
-        } finally { bitmap.recycle(); node.discardDisplayList() }
-    }
+    private fun pixel(point: Offset): Int = activity.get().window.decorView.renderedPixel(point)
 
     private fun distance(a: Int, b: Int): Int =
         abs(Color.red(a) - Color.red(b)) + abs(Color.green(a) - Color.green(b)) + abs(Color.blue(a) - Color.blue(b))
