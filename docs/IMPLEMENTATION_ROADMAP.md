@@ -30,7 +30,7 @@ phone acceptance is pending and AMP stays deferred.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Unified source 613b154 passed 1028 tests/full gates; APK 1245 is the prior handoff. Owner-approved waiting-block reorder/long-press Info is implemented with 79 focused tests; new full gates/APK and phone acceptance pending. [Follow-up](QUEUE_MANUAL_REORDER.md). AMP/C112 remain deferred. |
+| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Waiting-block reorder/long-press Info source 0082064 passed 1037 tests/full gates and lint; APK 1.2.0 (1248) ready, unmerged, phone acceptance pending. APK 1245 is historical. [Follow-up](QUEUE_MANUAL_REORDER.md). AMP/C112 remain deferred. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |

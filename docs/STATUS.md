@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-20 — manual-block reorder/long-press Info follow-up in progress, unmerged; last release APK 1.2.0 (1245), source 613b154; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — manual-block reorder/long-press Info ready for phone testing, unmerged; release APK 1.2.0 (1248), source 0082064; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Manual-block reorder and long-press Info — in progress, 2026-10-20
+## Manual-block reorder and long-press Info — ready for phone testing, 2026-10-20
 
 Owner selected Info on row long-press and a drag grip only for waiting manual requests inside
 their indented block. Current/source rows remain fixed; saved source data and transport stay
@@ -15,8 +15,19 @@ unchanged. Continue on the same feature branch in separate commits, without merg
 [Contract/evidence](QUEUE_MANUAL_REORDER.md). Scheduler/controller stage passed 43 focused tests;
 UI and bounded/edge-scrolling grips are implemented. The restored combined run passed 79 tests /
 7 suites, with failing negative probes for drag, edge scroll and Info. A grip/swipe collision and
-semantic grouping were corrected. Full gates/lint and release APK are pending. All new phone behaviour is
-unchecked; APK 1245 below is the previous handoff, not verification of this extension.
+semantic grouping were corrected. Clean source `0082064` passed the forced full gate in **507 s**:
+**1037 tests / 135 suites**, zero failures/errors/skips, all companion checks and lint
+(**0 errors / 72 unchanged warnings**, compared by issue/message/file).
+
+Minified test-signed release APK, built in **123.8 s**:
+[protracktor-release-1.2.0-1248-0082064-20261020-185705.apk](../dist/protracktor-release-1.2.0-1248-0082064-20261020-185705.apk),
+**11,887,299 bytes**. Package/code, v2 public test signature, absence of debuggable flag, R8 mapping,
+minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`f3bee93a044085672cb6da0718e16d837a281eb1a8daef5d9c5734fa911ddb72`.
+[Report/evidence](QUEUE_MANUAL_REORDER.md#final-verification-and-apk);
+[phone checklist](TESTING.md#manual-block-reorder-and-long-press-info--phone-checks-pending).
+Checked partially on host; all new phone behaviour is unchecked. APK 1245 below is the previous
+handoff, not verification of this extension. No merge/push/tag; develop, AMP and master unchanged.
 
 ## Unified queue — third iteration ready for phone testing, unmerged, 2026-10-20
 

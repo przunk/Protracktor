@@ -111,6 +111,9 @@ rules. Selected-source-now then pending-next precedence remains an explicit agen
 evaluation, not an individually approved owner requirement. Third-iteration source `613b154`
 passed 1028 host tests/full gates and lint; APK 1.2.0 (1245) is ready. Phone behaviour/acceptance
 remain pending; no merge is authorized. C112's cramped dock count remains deferred.
+The owner subsequently selected long-press Info and reorder only inside waiting manual requests,
+not across source/current rows. [Follow-up](QUEUE_MANUAL_REORDER.md): source `0082064` passed 1037
+tests/full gates and lint; APK 1.2.0 (1248) is the new unmerged candidate, with phone checks pending.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

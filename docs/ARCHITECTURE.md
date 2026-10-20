@@ -4,7 +4,7 @@
 
 `feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
 identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
-`PlaybackSchedule` owns pending FIFO requests with stable occurrence IDs and one actual occurrence,
+`PlaybackSchedule` owns pending requests (FIFO until explicitly reordered), stable occurrence IDs and one actual occurrence,
 not a second backward/forward history. `PlayerUiState.current` projects that occurrence, falling back
 to context when none is selected. An explicit absent source prevents a never-started editor playlist
 from silently becoming continuation for manual playback.
@@ -40,8 +40,9 @@ the [implementation report](MANUAL_QUEUE_IMPLEMENTATION.md) and
 Third-iteration clean source `613b154` passed 1028 host tests/full gates and lint (0 errors,
 72 unchanged warnings); minified test-signed APK 1.2.0 (1245) is ready. Host/artifact checks do not
 establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff).
-Those counts/artifact precede the reorder/long-press follow-up; its new verification is tracked
-separately in [the follow-up report](QUEUE_MANUAL_REORDER.md).
+Those counts/artifact precede the reorder/long-press follow-up. Its clean source `0082064` passed
+1037 tests/full gates and lint (0 errors/72 unchanged warnings); APK 1.2.0 (1248) is ready,
+unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.md).
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

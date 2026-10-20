@@ -2,7 +2,8 @@
 
 2026-10-20 follow-up: the owner selected long-press Info and drag reordering **only inside the
 waiting manual block**. [Follow-up contract/evidence](QUEUE_MANUAL_REORDER.md) supersedes the
-trailing Info control and manual-reorder exclusion below. APK 1245 remains the earlier handoff.
+earlier trailing Info control and manual-reorder exclusion. APK 1248 is the new candidate;
+code-1245 evidence below remains historical.
 
 2026-10-20, owner/user feedback after testing APK 1.2.0 (1239). Continue on
 `feature/manual-playback-queue` in separate stage commits; no merge is authorized.
@@ -91,7 +92,8 @@ C111 padding and the cramped dock subsong label (`1 of 2 Tracks`) remain separat
 - Current removal/exhaustion: advance or stop; Undo restores content only, never transport.
 - Same-source explicit restart resets omissions; tapping within the unified list does not.
 - No context available: drain manual requests and stop; Previous cannot invent a source.
-- Session-only queue/omissions, no persistence or reorder/Clear in this iteration.
+- Session-only queue/omissions, no persistence, source reorder or Clear. The follow-up allows
+  reordering only waiting manual requests.
 - Existing Repeat One/subsong behaviour remains; consumed manual entries do not join source laps.
 
 All new device behaviour is **unchecked** until owner testing. The existing positive phone report

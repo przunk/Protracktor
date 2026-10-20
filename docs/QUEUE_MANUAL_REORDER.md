@@ -33,7 +33,8 @@ web/AMP change or dock count redesign. C111/C112 remain excluded. Phone behaviou
 3. Review, force full tests/lint, build a clean minified test-signed APK into dist, verify artifact
    identity and record handoff. No merge before owner testing/acceptance.
 
-Implementation in progress. Host tests do not certify device gestures, TalkBack or audio.
+Implemented in separate commits on the same branch; final artifact/evidence below. Host tests
+do not certify device gestures, TalkBack or audio. No merge is authorized.
 
 ## Model checkpoint
 
@@ -72,4 +73,38 @@ Restored combined run: **79 tests / 7 suites**, zero failures/errors/skips, **57
 (`/tmp/protracktor-reorder-focused-final.log`). Includes both accessible directions, duplicates,
 clamping over multiple rows, held/immediate sideways grip motion, pending changes during drag,
 edge scrolling, tap/hold/swipe retention, actual Undo restoration and C110 navigation.
-Full forced gates/lint and a clean release APK remain pending; all phone behaviour is unchecked.
+At that checkpoint full gates/lint and a clean release APK were pending; final evidence follows.
+All phone behaviour is unchecked.
+
+## Final verification and APK
+
+Model commit `ce87d4a`, UI/review source **`0082064`**, versionName **1.2.0**, commit-count
+versionCode **1248**. The clean source passed `./scripts/test-protracktor.sh --really` in **507 s**:
+
+- **1037 tests / 135 suites**, zero failures/errors/skips; test task actually executed.
+- Store metadata, runner/release-flow fixtures, web page/engine/store upgrade, SAP, native audio,
+  icons, PWA and local server checks all passed.
+- Lint **0 errors / 72 warnings**. Issue ID/message/file records equal the archived code-1245
+  report; no new warning is hidden by the unchanged total.
+
+Minified release APK, built in **123.8 s** with the unchanged public test certificate:
+[protracktor-release-1.2.0-1248-0082064-20261020-185705.apk](../dist/protracktor-release-1.2.0-1248-0082064-20261020-185705.apk),
+**11,887,299 bytes**.
+SHA-256: `f3bee93a044085672cb6da0718e16d837a281eb1a8daef5d9c5734fa911ddb72`.
+
+Checked package `com.przunk.protracktor`, version/code, APK v2 signature with certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, absent debuggable flag,
+executed R8/nonempty mapping, minSdk **29**/targetSdk **36** and actual engine libraries for
+**arm64-v8a / armeabi-v7a / x86_64**. No AAB, publication-key or store operation.
+
+Retained evidence under ignored `dist/manual-reorder-verification/0082064/`: JUnit/lint reports,
+full gate/build/companion logs, R8 mapping, manifest/badging, public signature, APK contents and
+focused/negative probes. [Phone scenarios](TESTING.md#manual-block-reorder-and-long-press-info--phone-checks-pending).
+Final documentation check: 168 local destinations exist; application/native/web/script sources
+still equal the APK source after the documentation-only closeout.
+
+**Checked partially:** domain/controller/real-host gesture behaviour, full host gates/lint and
+release artifact properties. **Unchecked:** real device gesture feel/layout, TalkBack, audio,
+service/notification/Bluetooth and usability. Phone acceptance and merge remain pending.
+Develop `d6d3297`, AMP `8e92002` and master `794d8f9` are unchanged. No push/tag/release change,
+schema update or versionName bump. A later documentation-only commit does not relabel this APK.
