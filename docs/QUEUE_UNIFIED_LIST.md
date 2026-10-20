@@ -44,15 +44,16 @@ The previous APK/reports remain historical evidence, not verification of these c
 
 ## Gestures and presentation
 
-| Surface | Left swipe | Right swipe | Tap | Trailing control |
-| --- | --- | --- | --- | --- |
-| Unified playback list, either origin | Remove occurrence | Append a manual copy | Play occurrence | Info |
-| Playlist, Random, Browse/Search/History/local/online tracks | No new removal gesture | Append a manual copy | Existing action | Existing menu |
+| Surface | Left swipe | Right swipe | Tap | Long-press | Trailing control |
+| --- | --- | --- | --- | --- | --- |
+| Unified playback list, either origin | Remove occurrence | Append a manual copy | Play occurrence | Info | Grip only on waiting manual rows |
+| Playlist, Random, Browse/Search/History/local/online tracks | No new removal gesture | Append a manual copy | Existing action | Existing action | Existing menu |
 
 Right swipe returns the original row to rest and commits once per gesture. Partial/reversed drags
 must not enqueue. Left swipe reveals red with remove icon/text; right reveals green with queue-add
 icon/text. Colour is not the sole cue. Retain Undo and accessible custom actions/menu equivalents;
-the new compact Info control is an owner-selected exception to visible icon-plus-label controls.
+long-press Info has a labelled accessibility action; the owner-selected drag grip also exposes
+valid move-earlier/later actions. Reordering is confined to the waiting manual block.
 Do not add swipe gestures to folder/header rows or steal selection/reorder interactions.
 
 The panel occupies the Scaffold content area above the existing dock, not a full-screen modal

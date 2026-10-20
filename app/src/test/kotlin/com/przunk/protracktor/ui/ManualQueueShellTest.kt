@@ -84,7 +84,7 @@ class ManualQueueShellTest : PlaybackShellTest() {
         frame(200)
         compose.runOnIdle { assertEquals(pending, player.value.schedule.pending) }
         compose.onNodeWithTag("playback-row-manual:${pending[0].id}").assertIsDisplayed()
-        compose.onNodeWithTag("queue-info-manual:${pending[0].id}").assertIsDisplayed()
+        compose.onNodeWithTag("queue-grip-${pending[0].id}").assertIsDisplayed()
         compose.onNodeWithTag("playback-row-manual:${pending[1].id}").performTouchInput { swipeLeft() }
         frame(200)
         compose.runOnIdle {

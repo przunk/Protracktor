@@ -42,3 +42,34 @@ without playback/service activation. A no-op implementation failed the new order
 (`/tmp/protracktor-reorder-domain-before.log`, 23 s); the implemented scheduler/controller run
 passed **43 tests / 2 suites**, zero failures/errors/skips, in 37 s
 (`/tmp/protracktor-reorder-domain-final.log`). UI/full gates/new APK remain pending.
+
+## UI and boundary review
+
+Info uses the row's labelled long-click action, with a persistent bilingual hint. Grips are
+separate semantic groups, not swallowed into row playback semantics. They appear only when at
+least two pending occurrences can be reordered; current/source rows stay fixed. A queue-specific
+gesture coordinator uses stable request keys, local order between Flow frames, bounded offsets,
+and edge scrolling after actual movement. Membership/generation changes retire the drag.
+
+Host gestures found a real collision: a sideways grip movement could trigger parent swipe removal.
+The shared swipe wrapper now latches its permission before child cancellation; Queue supplies the
+live grip lock without changing row structure. Other lists retain the default behaviour/API.
+The failing reproduction is `/tmp/protracktor-reorder-gesture-second.log`, 30 s. Grip semantic
+grouping was also corrected after the restored handle was merged into parent row semantics.
+An initial test compilation error used the wrong custom-action key; corrected to the existing
+SemanticsActions API. No phone verification is implied by those host iterations.
+
+Verification probes (production code restored afterwards):
+
+- Disconnecting only physical drag movement failed its real-shell test, while accessible moves
+  stayed wired: `/tmp/protracktor-reorder-drag-mutation.log`, 28 s.
+- Disconnecting edge scroll failed the long-block test, which compares the final request position
+  with its position before scrolling: `/tmp/protracktor-reorder-scroll-mutation.log`, 25 s.
+- Disconnecting long-press Info failed the physical-hold test:
+  `/tmp/protracktor-reorder-info-mutation.log`, 26 s.
+
+Restored combined run: **79 tests / 7 suites**, zero failures/errors/skips, **57 s**
+(`/tmp/protracktor-reorder-focused-final.log`). Includes both accessible directions, duplicates,
+clamping over multiple rows, held/immediate sideways grip motion, pending changes during drag,
+edge scrolling, tap/hold/swipe retention, actual Undo restoration and C110 navigation.
+Full forced gates/lint and a clean release APK remain pending; all phone behaviour is unchecked.

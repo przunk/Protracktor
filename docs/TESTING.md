@@ -1,5 +1,34 @@
 # What only a phone can prove
 
+## Manual-block reorder and long-press Info — phone checks pending
+
+Use the follow-up APK identified in [Status](STATUS.md), not the earlier code-1245 artifact.
+The branch remains unmerged. [Contract and host evidence](QUEUE_MANUAL_REORDER.md).
+
+1. While a manual track is current, queue at least three requests, including duplicates. Drag the
+   last grip to first and back across several rows. Only waiting requests move inside the indented
+   block; source and current rows have no grip. Current music/position/metadata do not change.
+   Next follows the reordered requests, consuming each once, then resumes the original context.
+2. Drag well past both block boundaries and try sideways/diagonal motion from the grip. It must
+   not cross source/current rows, enqueue/remove a request, play it or open Info. Holding the grip
+   still must not reorder automatically. Hold a row away from the grip: Info opens, not playback.
+   Tap still plays; swipe on the row body and normal vertical scrolling retain their behaviour.
+3. With more pending rows than fit, drag toward either viewport edge and hold after moving. The
+   block should scroll to permit further ordering. Release/cancel leaves a settled row without a
+   stuck offset. Exercise rapid direction changes and both duplicate occurrences independently.
+4. Press Next or change source while holding a grip; also test enqueue/remove during dragging.
+   The drag cancels safely if membership/layout generation changes, never affecting another
+   request. Source replacement retains the resulting pending order; mere navigation changes none.
+5. Remove a pending row, reorder survivors, then Undo: restore only the removed occurrence near
+   surviving neighbours, without restarting audio. Saved playlists/History/index/files must not
+   acquire reorder edits. History-origin requests keep their playback-recording policy.
+6. TalkBack exposes labelled Info and valid Move earlier/Move later actions; boundary actions are
+   absent, and a lone waiting request has no grip. Check EN/PL, large text, portrait/landscape and
+   the dock/snackbar touch area. Recheck shuffle/repeat/subsongs and the unified-list scenarios below.
+
+Report installed version/code/SHA and expected/observed results. All real device behaviour remains
+unchecked until owner testing; host gestures and compilation do not establish phone usability.
+
 ## Unified queue — third iteration, phone checks pending
 
 Use the new third-iteration APK identified in [Status](STATUS.md), not historical APK 1239.
@@ -20,7 +49,8 @@ uninstalling/clearing data; older AMP APK cannot ordinarily replace a higher-cod
 4. Left-swipe either source/manual row: red reveal with remove text/icon, one removal on release,
    reachable Undo above dock. Right-swipe: green reveal with add text/icon, one manual copy at the
    FIFO end; original row returns to rest. Partial/reversed/vertical drags must not enqueue/remove.
-   Tap plays, compact Info opens details, no visible Play/Remove row buttons. Try rapid gestures.
+   Tap plays; follow-up long-press opens Info, with grips only on waiting manual rows. No visible
+   Play/Remove row buttons. Try rapid gestures.
 5. Remove current while playing/loading: advance to pending before source, stop if exhausted.
    Remove current while paused: select its successor but stay silent until Play; no decoder/History
    write merely from editing. Undo restores content only, not the previous audio position.

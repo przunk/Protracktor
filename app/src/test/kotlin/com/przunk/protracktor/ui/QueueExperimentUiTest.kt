@@ -47,7 +47,8 @@ class QueueExperimentUiTest {
 
     @androidx.compose.runtime.Composable
     private fun panel(state: PlayerUiState, onPlay: (Long) -> Unit = {}) {
-        QueueScreen(state, onPlay, onEnqueue = { _, _ -> }, onPlayPending = {}, onRemovePending = {}, onRemoveContext = {})
+        QueueScreen(state, onPlay, onEnqueue = { _, _ -> }, onPlayPending = {}, onRemovePending = {}, onRemoveContext = {},
+            onMovePending = { _, _ -> })
     }
 
     @Test fun `a physical single tap never rerolls`() {
@@ -102,7 +103,7 @@ class QueueExperimentUiTest {
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
     }
 
-    @Test fun `unified rows play on tap and expose Info without visible Play Remove or selection controls`() {
+    @Test fun `unified rows play on tap and open Info on physical hold without visible action buttons`() {
         val rows = listOf(TrackRef("a", "First"), TrackRef("b", "Second"))
         val chosen = mutableListOf<Long>()
         val state = PlayerUiState(playback = collectionPlayback(PlayQueue(rows).startAt(0)))
@@ -114,8 +115,9 @@ class QueueExperimentUiTest {
         compose.runOnIdle { assertEquals(listOf(1L), chosen) }
         compose.onNodeWithText("Play").assertDoesNotExist()
         compose.onNodeWithText("Remove").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Information about Second").performClick()
+        compose.onNodeWithText("Second").performTouchInput { longClick() }
         compose.onNodeWithText(activity.get().getString(R.string.action_close)).assertExists()
+        compose.runOnIdle { assertEquals(listOf(1L), chosen) }
         compose.onAllNodes(isToggleable()).assertCountEquals(0)
     }
 
@@ -223,14 +225,14 @@ class QueueExperimentUiTest {
             panel(shown.value)
         } }
         measure()
-        val before = compose.onNodeWithContentDescription("Information about b.mod").fetchSemanticsNode().boundsInRoot
+        val before = compose.onNodeWithTag("playback-row-source:1").fetchSemanticsNode().boundsInRoot
         compose.runOnIdle {
             shown.value = shown.value.copy(learnedTitles = mapOf("b" to "Learned title"), positionSeconds = 4.0)
             Snapshot.sendApplyNotifications()
         }
         compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithText("Learned title").assertIsDisplayed()
-        assertEquals(before, compose.onNodeWithContentDescription("Information about Learned title").fetchSemanticsNode().boundsInRoot)
+        assertEquals(before, compose.onNodeWithTag("playback-row-source:1").fetchSemanticsNode().boundsInRoot)
         assertEquals("b.mod", shown.value.activePlayback.order.tracks[1].fileName)
     }
 }

@@ -2,7 +2,9 @@
 <resources>
     <string name="random_list_empty">No tracks in this Random list yet.</string>
     <string name="queue_title">Queue</string>
-    <string name="queue_swipe_hint">Swipe left to remove · right to queue</string>
+    <string name="queue_swipe_hint">Swipe left: remove · right: queue\nHold for info · drag grips to reorder queued tracks</string>
+    <string name="queue_move_earlier">Move earlier</string>
+    <string name="queue_move_later">Move later</string>
     <string name="queue_info_request">Information about %1$s</string>
     <string name="queue_no_context">No context. Playback stops after the queued requests.</string>
     <string name="queue_manual_current">Manual request</string>

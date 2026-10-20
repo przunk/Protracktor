@@ -30,7 +30,7 @@ phone acceptance is pending and AMP stays deferred.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Implemented in separate stages on the same unmerged branch; source 613b154 passed 1028 tests/full gates and lint, APK 1.2.0 (1245) ready. Phone acceptance pending. Prior two-tab APK 1239/evidence remain historical. AMP and compact dock-label C112 deferred. [Contract/review/handoff](QUEUE_UNIFIED_LIST.md). |
+| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | Unified source 613b154 passed 1028 tests/full gates; APK 1245 is the prior handoff. Owner-approved waiting-block reorder/long-press Info is implemented with 79 focused tests; new full gates/APK and phone acceptance pending. [Follow-up](QUEUE_MANUAL_REORDER.md). AMP/C112 remain deferred. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -44,7 +44,7 @@ phone acceptance is pending and AMP stays deferred.
 | B30 | Read ASMA STIL titles, credits, comments and provenance | Not implemented; distinguish original composer from arranger. |
 | B29 | Readable overview of open work in the documentation | This roadmap supplies the requested inventory. Placement/navigation and a manually maintained versus generated summary are not separately selected. |
 | B28 | Supply artists for The Mod Archive tracks | Measure songdb coverage first; otherwise choose on-demand lookup or an explanation of missing data. |
-| B25 | Swipe actions on a track row | Third iteration selected: right enqueue on all track lists; unified list also left-removes either origin with Undo. [Contract/evidence](QUEUE_UNIFIED_LIST.md), phone acceptance pending. No reorder or source-storage deletion. |
+| B25 | Swipe actions on a track row | Right enqueue on all track lists; unified list left-removes either origin with Undo. Waiting-manual-only reorder and long-press Info selected in the [follow-up](QUEUE_MANUAL_REORDER.md); phone acceptance pending. No source reorder or storage deletion. |
 | B19 — indexes | Server-hosted periodically refreshed catalogue indexes | Infrastructure idea; no implementation selected. |
 | B17 | Avoid unnecessary downloads after an accidental online-row tap | Decide between delay, cancellation and accepting current behaviour. |
 | B19 — export | Export a playlist together with its music files | Discuss scope, size, import/storage and distribution terms. |

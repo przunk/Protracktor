@@ -772,7 +772,9 @@ that has just gone would draw nothing, and the chip that set it is disabled the 
 **Updated owner/app-user request, 2026-10-20:** right swipe adds a manual copy from every track
 list; the unified context/queue also supports left swipe removal of either occurrence origin,
 without editing source storage. Red/green reveals include icon/text, Undo restores rows without
-rewinding audio, and accessibility equivalents remain. Reordering is excluded.
+rewinding audio, and accessibility equivalents remain. Source-row reordering is excluded.
+The owner additionally selected drag reordering only within waiting manual rows and Info on
+long-press; [follow-up](QUEUE_MANUAL_REORDER.md).
 [Third-iteration contract and evidence](QUEUE_UNIFIED_LIST.md); new phone acceptance is pending.
 
 **Historical request, 2026-10-19:** swipe to remove a pending occurrence from the experimental

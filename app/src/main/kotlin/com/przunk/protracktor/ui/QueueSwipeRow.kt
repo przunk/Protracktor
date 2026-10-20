@@ -47,11 +47,14 @@ import kotlin.math.roundToInt
 @Composable
 internal fun QueueSwipeRow(
     onAdd: (() -> Unit)?, onRemove: (() -> Unit)? = null, enabled: Boolean = true,
-    modifier: Modifier = Modifier, content: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    canSwipe: () -> Boolean = { true },
+    content: @Composable () -> Unit,
 ) {
     if (!enabled || onAdd == null && onRemove == null) { Box(modifier) { content() }; return }
     val liveAdd by rememberUpdatedState(onAdd)
     val liveRemove by rememberUpdatedState(onRemove)
+    val liveCanSwipe by rememberUpdatedState(canSwipe)
     var offset by remember { mutableFloatStateOf(0f) }
     var width by remember { mutableFloatStateOf(0f) }
     var settling by remember { mutableStateOf<Job?>(null) }
@@ -74,16 +77,21 @@ internal fun QueueSwipeRow(
             }
         }
         .pointerInput(onAdd != null, onRemove != null, minimum) {
+            // Latch before a parent swipe cancels the child grip and releases its live lock.
+            var permitted = false
             detectHorizontalDragGestures(
-                onDragStart = { settling?.cancel(); offset = 0f },
+                onDragStart = { permitted = liveCanSwipe(); settling?.cancel(); offset = 0f },
                 onHorizontalDrag = { change, amount ->
-                    change.consume()
-                    offset = (offset + amount).coerceIn(if (liveRemove != null) -width else 0f, if (liveAdd != null) width else 0f)
+                    if (permitted) {
+                        change.consume()
+                        offset = (offset + amount).coerceIn(if (liveRemove != null) -width else 0f, if (liveAdd != null) width else 0f)
+                    }
                 },
                 onDragCancel = { reset() },
                 onDragEnd = {
                     val threshold = maxOf(minimum, width * 0.30f)
-                    val action = when { offset >= threshold -> liveAdd; offset <= -threshold -> liveRemove; else -> null }
+                    val action = if (!permitted || !liveCanSwipe()) null else
+                        when { offset >= threshold -> liveAdd; offset <= -threshold -> liveRemove; else -> null }
                     reset()
                     if (action != null) { haptics.press(); action() }
                 },

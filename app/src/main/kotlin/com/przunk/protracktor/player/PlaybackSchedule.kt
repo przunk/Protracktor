@@ -33,7 +33,7 @@ sealed interface PlaybackRow {
     }
 }
 
-/** One-shot manual FIFO; backward traversal belongs exclusively to the source context. */
+/** One-shot manual requests; backward traversal belongs exclusively to the source context. */
 data class PlaybackSchedule(
     val pending: List<ManualRequest> = emptyList(),
     val current: PlaybackOccurrence? = null,

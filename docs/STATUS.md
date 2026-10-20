@@ -13,7 +13,9 @@ Owner selected Info on row long-press and a drag grip only for waiting manual re
 their indented block. Current/source rows remain fixed; saved source data and transport stay
 unchanged. Continue on the same feature branch in separate commits, without merging.
 [Contract/evidence](QUEUE_MANUAL_REORDER.md). Scheduler/controller stage passed 43 focused tests;
-new UI/host gestures, full gates/lint and release APK are pending. All new phone behaviour is
+UI and bounded/edge-scrolling grips are implemented. The restored combined run passed 79 tests /
+7 suites, with failing negative probes for drag, edge scroll and Info. A grip/swipe collision and
+semantic grouping were corrected. Full gates/lint and release APK are pending. All new phone behaviour is
 unchecked; APK 1245 below is the previous handoff, not verification of this extension.
 
 ## Unified queue — third iteration ready for phone testing, unmerged, 2026-10-20

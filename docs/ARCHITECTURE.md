@@ -19,7 +19,13 @@ History recording uses actual origin through one pure policy, not whichever sour
 The third iteration projects one list: actual source order with a marked manual block immediately
 after its parked position. Source occurrence IDs and an omission set support session-only removal
 without filtering the editor's persistence data, including equal Random files. Left removes either
-origin with Undo; right enqueues a copy, tap plays and the trailing compact control opens Info.
+origin with Undo; right enqueues a copy, tap plays and row long-press opens Info.
+The owner-approved follow-up adds an ID-based move only inside the waiting manual block, with
+a trailing grip and accessible earlier/later actions. Current/source rows cannot move. A
+gesture-local ID order bridges input events before Flow recomposition; membership/generation
+changes cancel dragging. Edge scrolling stays within the manual block and begins only after
+movement. Grip gestures latch out parent horizontal swipe actions. Saved source data, actual
+playback, generation and request origin remain unchanged by reorder.
 Source actions carry their generation to reject stale UI events. All other track lists share the
 right-enqueue gesture, disabled during selection/reorder. Only the actual occurrence is highlighted.
 The animated panel occupies Scaffold content above the same operable dock, rather than a separate
@@ -34,6 +40,8 @@ the [implementation report](MANUAL_QUEUE_IMPLEMENTATION.md) and
 Third-iteration clean source `613b154` passed 1028 host tests/full gates and lint (0 errors,
 72 unchanged warnings); minified test-signed APK 1.2.0 (1245) is ready. Host/artifact checks do not
 establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff).
+Those counts/artifact precede the reorder/long-press follow-up; its new verification is tracked
+separately in [the follow-up report](QUEUE_MANUAL_REORDER.md).
 
 ## Active playback queue — accepted and merged, 2026-10-19
 
