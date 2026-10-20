@@ -1,13 +1,24 @@
 # Status
 
-Updated: 2026-10-20 — manual-block reorder/long-press Info ready for phone testing, unmerged; release APK 1.2.0 (1248), source 0082064; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — queue animation/haptic/header polish in progress, unmerged; latest supplied release APK 1.2.0 (1248), source 0082064; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Manual-block reorder and long-press Info — ready for phone testing, 2026-10-20
+## Queue presentation feedback — in progress, 2026-10-20
+
+The owner reports abrupt disappearance of consumed manual rows, missing Info-hold vibration and
+an inelegant persistent gesture hint. Installed build ID was not separately supplied; latest
+handoff was APK 1248. UI-only animations, explicit Info haptics and on-demand labelled Help are
+being implemented on the existing feature branch. [Scope and evidence](QUEUE_PRESENTATION_POLISH.md).
+Restored focused verification passed 78 tests/7 suites; placement/fade/Help negative probes
+failed as intended, and the missing-haptic regression failed before the change. Full gates/lint
+and a new release APK are pending. No phone verification or merge. C111/C112 and AMP remain
+outside this task.
+
+## Manual-block reorder and long-press Info — previous handoff, 2026-10-20
 
 Owner selected Info on row long-press and a drag grip only for waiting manual requests inside
 their indented block. Current/source rows remain fixed; saved source data and transport stay

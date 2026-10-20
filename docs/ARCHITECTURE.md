@@ -26,6 +26,10 @@ gesture-local ID order bridges input events before Flow recomposition; membershi
 changes cancel dragging. Edge scrolling stays within the manual block and begins only after
 movement. Grip gestures latch out parent horizontal swipe actions. Saved source data, actual
 playback, generation and request origin remain unchanged by reorder.
+The presentation follow-up uses stable-key lazy-item fades/placement, not delayed scheduler
+consumption; placement yields to active grip movement. Info requests shared View haptics and the
+source header offers a labelled Help dialog instead of permanent instructions.
+[Current verification](QUEUE_PRESENTATION_POLISH.md) is in progress; phone behaviour is unchecked.
 Source actions carry their generation to reject stale UI events. All other track lists share the
 right-enqueue gesture, disabled during selection/reorder. Only the actual occurrence is highlighted.
 The animated panel occupies Scaffold content above the same operable dock, rather than a separate

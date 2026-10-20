@@ -1,5 +1,28 @@
 # What only a phone can prove
 
+## Queue presentation polish — phone checks pending
+
+The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Its new APK/gate verification
+is in progress; APK 1248 is the previous handoff, not proof of the following changes.
+
+1. Open Queue with several manual requests, including duplicates. Next and natural completion
+   should fade the departing row and smoothly close the gap, including when the current row is
+   at the top. Playback must advance immediately, without waiting for the animation. Repeat on
+   the final manual request and with rapid Next presses; no ghost rows should accept gestures.
+2. Swipe-left removal/red reveal/Undo and right enqueue/green reveal must still work. Restoring
+   a request must not create another occurrence. Drag a grip across several waiting rows and
+   near the screen edge: stay inside the indented block, without competing movement or swipe.
+3. Hold a source, current manual and waiting manual row: one clear haptic response and Info, not
+   playback. A grip hold must not open Info. Disable system haptics: Info still opens without
+   forcing vibration. Real vibration and TalkBack behaviour have not been verified by the agent.
+4. The source header should show a compact labelled Help action, not permanent instructions.
+   Open/close it without changing audio or the scroll position. Check EN/PL, long source names,
+   large text and a small display; all four gesture sections must remain readable by scrolling.
+5. With Android animations disabled, list changes should settle immediately, without a stuck
+   gap, retained row or blocked input. Check dock transport, Back and reopening Queue as before.
+
+Host frame/pixel tests are partial evidence, not device acceptance.
+
 ## Manual-block reorder and long-press Info — phone checks pending
 
 Use the follow-up APK identified in [Status](STATUS.md), not the earlier code-1245 artifact.

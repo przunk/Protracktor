@@ -3,6 +3,7 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -61,16 +62,14 @@ fun QueueScreen(
     }
     val pendingIds = remember(state.schedule.pending) { state.schedule.pending.map { it.id } }
     val reorder = rememberManualQueueReorder(listState, pendingIds, state.schedule.generation, onMovePending)
+    val haptics = rememberHaptics()
     var info by remember { mutableStateOf<TrackRef?>(null) }
     info?.let { TrackInfoDialog(it, { info = null }, it.id in state.listenedIds) }
     Column(modifier.fillMaxSize()) {
         val source = (active.source as? QueueSource.Playlist)?.let { playlist ->
             playlist.copy(name = state.playlists.firstOrNull { it.id == playlist.id }?.name ?: playlist.name)
         } ?: active.source
-        Text(queueSourceLabel(source), style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-        Text(stringResource(R.string.queue_swipe_hint), style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+        QueueHeader(queueSourceLabel(source))
         if (state.schedule.pending.isNotEmpty() && active.order.repeat == RepeatMode.ONE)
             Text(stringResource(R.string.queue_repeat_one_wait), style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
@@ -88,7 +87,12 @@ fun QueueScreen(
                     onRemove = { when (row) {
                         is PlaybackRow.Manual -> onRemovePending(row.request.id)
                         is PlaybackRow.Source -> onRemoveContext(row.id)
-                    } }, modifier = Modifier.testTag("playback-row-${row.key}").then(
+                    } }, modifier = Modifier.animateItem(
+                        fadeInSpec = tween(160),
+                        // The grip already owns placement while a finger is moving the block.
+                        placementSpec = if (reorder.draggedId == null) tween(220) else null,
+                        fadeOutSpec = tween(160),
+                    ).testTag("playback-row-${row.key}").then(
                         if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = reorder.offset } else Modifier)) {
                     ListItem(
                         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -111,7 +115,7 @@ fun QueueScreen(
                         colors = ListItemDefaults.colors(containerColor = if (row.playing) MaterialTheme.colorScheme.secondaryContainer
                             else MaterialTheme.colorScheme.surface),
                         modifier = Modifier.padding(start = if (manual != null) 16.dp else 0.dp).combinedClickable(
-                            onLongClick = { info = track }, onLongClickLabel = infoLabel, onClick = {
+                            onLongClick = { haptics.gestureStart(); info = track }, onLongClickLabel = infoLabel, onClick = {
                                 when (row) {
                                     is PlaybackRow.Manual -> onPlayPending(row.request.id)
                                     is PlaybackRow.Source -> onPlay(row.id)

@@ -2,7 +2,16 @@
 <resources>
     <string name="random_list_empty">Ta lista Random jest jeszcze pusta.</string>
     <string name="queue_title">Kolejka</string>
-    <string name="queue_swipe_hint">W lewo: usuń · w prawo: dodaj do kolejki\nPrzytrzymaj: informacje · przeciągnij uchwyt: zmień kolejność</string>
+    <string name="queue_help">Pomoc</string>
+    <string name="queue_help_title">Obsługa kolejki</string>
+    <string name="queue_help_left">Przesuń w lewo</string>
+    <string name="queue_help_left_body">Usuń to wystąpienie z odtwarzania. Cofnij przywraca je; zapisane playlisty i pliki pozostają bez zmian.</string>
+    <string name="queue_help_right">Przesuń w prawo</string>
+    <string name="queue_help_right_body">Dodaj kolejną kopię na koniec kolejki ręcznej. Wcięte wiersze grają przed dalszą częścią kontekstu.</string>
+    <string name="queue_help_hold">Przytrzymaj wiersz</string>
+    <string name="queue_help_hold_body">Otwórz informacje o utworze. Dotknij wiersza, aby go odtworzyć.</string>
+    <string name="queue_help_drag">Przeciągnij uchwyt</string>
+    <string name="queue_help_drag_body">Zmień kolejność oczekujących utworów ręcznych w obrębie wcięcia. Bieżący utwór i wiersze kontekstu pozostają na miejscu.</string>
     <string name="queue_move_earlier">Przesuń wcześniej</string>
     <string name="queue_move_later">Przesuń później</string>
     <string name="queue_info_request">Informacje o %1$s</string>

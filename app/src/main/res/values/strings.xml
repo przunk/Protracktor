@@ -2,7 +2,16 @@
 <resources>
     <string name="random_list_empty">No tracks in this Random list yet.</string>
     <string name="queue_title">Queue</string>
-    <string name="queue_swipe_hint">Swipe left: remove · right: queue\nHold for info · drag grips to reorder queued tracks</string>
+    <string name="queue_help">Help</string>
+    <string name="queue_help_title">Queue controls</string>
+    <string name="queue_help_left">Swipe left</string>
+    <string name="queue_help_left_body">Remove this occurrence from playback. Undo restores it; saved playlists and files stay unchanged.</string>
+    <string name="queue_help_right">Swipe right</string>
+    <string name="queue_help_right_body">Add another copy to the end of the manual queue. Indented rows play before the context continues.</string>
+    <string name="queue_help_hold">Hold a row</string>
+    <string name="queue_help_hold_body">Open track information. Tap a row to play it.</string>
+    <string name="queue_help_drag">Drag a grip</string>
+    <string name="queue_help_drag_body">Reorder waiting manual tracks inside the indented block. The current track and context rows stay in place.</string>
     <string name="queue_move_earlier">Move earlier</string>
     <string name="queue_move_later">Move later</string>
     <string name="queue_info_request">Information about %1$s</string>
