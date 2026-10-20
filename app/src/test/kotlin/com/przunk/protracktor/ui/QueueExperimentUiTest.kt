@@ -47,7 +47,7 @@ class QueueExperimentUiTest {
 
     @androidx.compose.runtime.Composable
     private fun panel(state: PlayerUiState, onPlay: (Long) -> Unit = {}) {
-        QueueScreen(state, onPlay, onEnqueue = { _, _ -> }, onPlayPending = {}, onRemovePending = {}, onRemoveContext = {},
+        QueueScreen(state, onPlay, onEnqueue = { _, _ -> }, onPlayPending = {}, onRemovePending = {}, onRemoveContext = {}, onClear = {},
             onMovePending = { _, _ -> })
     }
 

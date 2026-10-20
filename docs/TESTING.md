@@ -14,6 +14,8 @@ Use the new release APK identified in [Status](STATUS.md) once available, not AP
 3. Clear during a slow Random draw or network open. No delayed callback may restore the source.
    Reopening Random or the playlist only changes navigation; explicit row Play can select it again.
    After failed loading, retry the retained current track; it must not retry an older occurrence.
+   Clear/Undo during the very first Random draw, before any pick: Undo stays idle, then explicit
+   Play must draw or explain the lack of indexed files, not silently do nothing.
 4. Press Undo before advancing: restore source/pending order without rewinding or unpausing audio.
    After an advance, completion, enqueue or linked playlist edit, old Undo must not replace new
    work. A visible expired action explains it; an already-clear action gives feedback.

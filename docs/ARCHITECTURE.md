@@ -63,7 +63,9 @@ source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all 
 [Clear queue](QUEUE_CLEAR.md) is in progress: a pure immutable `PlaybackPlan` detaches the source
 and pending requests while retaining actual current identity as a one-shot. The controller
 invalidates speculative intent without closing current audio; guarded Undo restores transport
-state directly, never through a playlist-editor write or audio restart.
+state directly, never through a snapshot replacing editor tracks/position or restarting audio.
+When Undo relinks the selected source playlist, its live editor mirrors only transport modes
+so the active-source getter cannot revive the pre-Clear Repeat/Shuffle settings.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

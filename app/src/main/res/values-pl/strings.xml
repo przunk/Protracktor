@@ -20,7 +20,7 @@
     <string name="queue_move_earlier">Przesuń wcześniej</string>
     <string name="queue_move_later">Przesuń później</string>
     <string name="queue_info_request">Informacje o %1$s</string>
-    <string name="queue_no_context">Brak kontekstu. Odtwarzanie zakończy się po utworach z kolejki.</string>
+    <string name="queue_no_context">Kolejka ręczna</string>
     <string name="queue_manual_current">Utwór z kolejki ręcznej</string>
     <string name="queue_context_position">Pozycja kontekstu</string>
     <string name="queue_pending_empty">Brak oczekujących utworów. Odtwarzanie wróci do kontekstu, jeśli jest dostępny.</string>

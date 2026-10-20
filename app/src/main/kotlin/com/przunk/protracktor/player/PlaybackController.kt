@@ -2652,6 +2652,11 @@ class PlaybackController private constructor(private val context: Context) {
                 nextFile()
                 return
             }
+            // Undo can restore Random before its first pick. There is no file to resume yet.
+            if (now.randomMode) {
+                nextFile()
+                return
+            }
             // Nothing loaded -- which is the normal state after a restart, where the queue already
             // knows which track it was on. Resume that one, not the top of the list.
             val queue = _state.value.activePlayback
@@ -2901,7 +2906,14 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
         invalidateQueueWork()
-        _state.update { it.copy(playback = restored.context, schedule = restored.schedule, message = null) }
+        _state.update {
+            // Relinking reads order from the live editor. Mirror only transport modes there,
+            // otherwise that getter silently restores the modes from before Clear as well.
+            val editor = if (restored.context.belongsTo(it.activePlaylistId))
+                it.queue.withRepeat(restored.context.order.repeat).withShuffle(restored.context.order.shuffle)
+            else it.queue
+            it.copy(playback = restored.context, queue = editor, schedule = restored.schedule, message = null)
+        }
         if (pendingRetry != null) _state.value.current?.let(::installPendingRetry)
         if (_state.value.randomMode) prepareRandomQueue() else prefetchUpcoming()
     }

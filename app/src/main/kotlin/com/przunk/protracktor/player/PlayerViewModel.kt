@@ -165,6 +165,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
 
     fun enqueueTrack(track: TrackRef, fromHistory: Boolean = false) = controller.enqueueTrack(track, fromHistory)
+    fun clearQueue() = controller.clearQueue()
     fun removePendingRequest(id: Long) = controller.removePendingRequest(id)
     fun movePendingRequest(id: Long, targetId: Long) = controller.movePendingRequest(id, targetId)
     fun removeContextEntry(id: Long, generation: Long) = controller.removeContextEntry(id, generation)

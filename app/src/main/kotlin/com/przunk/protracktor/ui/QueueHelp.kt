@@ -29,12 +29,14 @@ import com.przunk.protracktor.R
 
 /** Keep gesture discovery available without making instructions a permanent part of the list. */
 @Composable
-internal fun QueueHeader(source: String) {
+internal fun QueueHeader(source: String, onClear: () -> Unit) {
     var help by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(source, style = MaterialTheme.typography.bodyMedium, maxLines = 2,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(end = 8.dp))
+        LabelledAction(PlayerIcons.Remove, stringResource(R.string.queue_clear), onClear,
+            modifier = Modifier.testTag("queue-clear"), slim = true)
         LabelledAction(PlayerIcons.Info, stringResource(R.string.queue_help), { help = true },
             modifier = Modifier.testTag("queue-help"), slim = true)
     }
@@ -48,6 +50,7 @@ internal fun QueueHeader(source: String) {
                 QueueHelpLine(R.string.queue_help_right, R.string.queue_help_right_body)
                 QueueHelpLine(R.string.queue_help_hold, R.string.queue_help_hold_body)
                 QueueHelpLine(R.string.queue_help_drag, R.string.queue_help_drag_body)
+                QueueHelpLine(R.string.queue_clear, R.string.queue_clear_body)
             }
         },
         confirmButton = { TextButton(onClick = { help = false }) { Text(stringResource(R.string.action_close)) } },

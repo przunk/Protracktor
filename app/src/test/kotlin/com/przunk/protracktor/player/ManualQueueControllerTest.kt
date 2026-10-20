@@ -204,6 +204,25 @@ class ManualQueueControllerTest {
         assertNull(state.value.message!!.action)
     }
 
+    @Test fun `Undo Clear keeps newly selected repeat and shuffle when source relinks to the editor`() {
+        val before = state.value
+        controller.clearQueue()
+        val undo = state.value.message!!.action!!
+        controller.cycleRepeat()
+        controller.toggleShuffle()
+        assertEquals(RepeatMode.PLAYLIST, state.value.activePlayback.order.repeat)
+        assertTrue(state.value.activePlayback.order.shuffle)
+        undo()
+        assertEquals(before.activePlayback.source, state.value.activePlayback.source)
+        assertEquals(RepeatMode.PLAYLIST, state.value.activePlayback.order.repeat)
+        assertTrue(state.value.activePlayback.order.shuffle)
+        assertEquals(before.queue.tracks, state.value.queue.tracks)
+        assertEquals(before.queue.currentIndex, state.value.queue.currentIndex)
+        assertEquals(before.dirty, state.value.dirty)
+        assertEquals(before.metadata, state.value.metadata)
+        assertEquals(before.positionSeconds, state.value.positionSeconds, 0.0)
+    }
+
     @Test fun `Clear Undo cannot roll back linked playlist edits or replace a newer snackbar`() {
         controller.clearQueue()
         val undo = state.value.message!!.action!!
@@ -241,6 +260,23 @@ class ManualQueueControllerTest {
         assertEquals(before.copy(message = state.value.message), state.value)
         assertEquals(epoch, ReflectionHelpers.getField<Long>(controller, "playbackEpoch"))
         assertEquals("Queue is already clear.", state.value.message!!.text)
+    }
+
+    @Test fun `Play after Clear Undo of a first Random draw starts a new draw instead of doing nothing`() {
+        ReflectionHelpers.setField(controller, "randomSession", 1L)
+        state.value = state.value.preparingRandom(1)
+        controller.clearQueue()
+        assertFalse(state.value.loadingTrack)
+        assertNull(state.value.current)
+        state.value.message!!.action!!.invoke()
+        assertEquals(QueueSource.Random(1), state.value.activePlayback.source)
+        assertNull(state.value.current)
+        val epoch = ReflectionHelpers.getField<Long>(controller, "playbackEpoch")
+        controller.togglePlayPause()
+        assertTrue("Play must issue an intent for the restored empty Random source",
+            ReflectionHelpers.getField<Long>(controller, "playbackEpoch") > epoch)
+        await { !state.value.loadingTrack }
+        assertNotNull("An empty catalogue must explain why no track starts", state.value.message)
     }
 
     @Test fun `reordering pending duplicates preserves source transport and next uses the new first occurrence`() {

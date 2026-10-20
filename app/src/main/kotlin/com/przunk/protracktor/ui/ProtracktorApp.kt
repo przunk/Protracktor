@@ -554,6 +554,7 @@ fun ProtracktorApp(
                             onPlayPending = viewModel::playPendingRequest,
                             onRemovePending = viewModel::removePendingRequest,
                             onMovePending = viewModel::movePendingRequest,
+                            onClear = viewModel::clearQueue,
                             onRemoveContext = { viewModel.removeContextEntry(it, state.schedule.generation) })
                     }
                 }

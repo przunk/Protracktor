@@ -20,7 +20,7 @@
     <string name="queue_move_earlier">Move earlier</string>
     <string name="queue_move_later">Move later</string>
     <string name="queue_info_request">Information about %1$s</string>
-    <string name="queue_no_context">No context. Playback stops after the queued requests.</string>
+    <string name="queue_no_context">Manual queue</string>
     <string name="queue_manual_current">Manual request</string>
     <string name="queue_context_position">Context position</string>
     <string name="queue_pending_empty">No pending tracks. Context playback continues when available.</string>

@@ -11,7 +11,13 @@ Historical dated checks below describe their own builds; they are not current te
 
 Owner approved clearing source continuation and waiting requests while retaining only the actual
 current track as a one-shot. Saved playlists remain untouched. [Contract](QUEUE_CLEAR.md).
-Domain/controller, UI, tests/lint and a new release APK are pending. No merge authorized.
+Domain/controller and UI are implemented. Final combined verification passed 137 host tests / 12 suites;
+negative probes caught disconnected Clear, a stuck Random spinner and an actually clipped label.
+Review also corrected Undo overriding live Repeat/Shuffle on playlist relinking; its regression
+failed before the correction. Another failing regression covered explicit Play after Undo restores
+Random before its first pick; that path now draws or explains the lack of candidates. The two
+earlier full gates were deliberately interrupted for those additions, not passed.
+Full tests/lint and a new release APK are pending. Phone behaviour is unchecked. No merge authorized.
 
 ## Queue swipes steal vertical scrolling — previous handoff, 2026-10-20
 

@@ -52,6 +52,7 @@ fun QueueScreen(
     onRemovePending: (Long) -> Unit,
     onRemoveContext: (Long) -> Unit,
     onMovePending: (Long, Long) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val active = state.activePlayback
@@ -69,7 +70,7 @@ fun QueueScreen(
         val source = (active.source as? QueueSource.Playlist)?.let { playlist ->
             playlist.copy(name = state.playlists.firstOrNull { it.id == playlist.id }?.name ?: playlist.name)
         } ?: active.source
-        QueueHeader(queueSourceLabel(source))
+        QueueHeader(queueSourceLabel(source), onClear)
         if (state.schedule.pending.isNotEmpty() && active.order.repeat == RepeatMode.ONE)
             Text(stringResource(R.string.queue_repeat_one_wait), style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
