@@ -108,8 +108,9 @@ one combined list, one-shot manual rows, source-only Previous, marked duplicates
 source removal and bidirectional gestures above the existing dock. The combined view is no longer
 deferred. [Current contract/questions](QUEUE_UNIFIED_LIST.md) supersede the mixed-history/two-tab
 rules. Selected-source-now then pending-next precedence remains an explicit agent choice for
-evaluation, not an individually approved owner requirement. Third-iteration gates/APK and phone
-acceptance are pending; no merge is authorized. C112's cramped dock count remains deferred.
+evaluation, not an individually approved owner requirement. Third-iteration source `613b154`
+passed 1028 host tests/full gates and lint; APK 1.2.0 (1245) is ready. Phone behaviour/acceptance
+remain pending; no merge is authorized. C112's cramped dock count remains deferred.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

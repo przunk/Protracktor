@@ -31,7 +31,9 @@ the process; existing paused selected-playlist restoration remains. AMP/C111/C11
 excluded. [Current contract/evidence](QUEUE_UNIFIED_LIST.md) supersedes the earlier two-tab design;
 the [implementation report](MANUAL_QUEUE_IMPLEMENTATION.md) and
 [second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md) retain historical evidence only.
-Third-iteration full gates/APK are pending; host checks do not establish phone behaviour.
+Third-iteration clean source `613b154` passed 1028 host tests/full gates and lint (0 errors,
+72 unchanged warnings); minified test-signed APK 1.2.0 (1245) is ready. Host/artifact checks do not
+establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff).
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

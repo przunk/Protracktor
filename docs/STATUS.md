@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-20 — user-tested queue requirements revised; unified-list iteration in progress; latest historical APK 1.2.0 (1239); C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-20 — unified-list third iteration ready for phone testing, unmerged; release APK 1.2.0 (1245), source 613b154; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Unified queue — third iteration in progress, 2026-10-20
+## Unified queue — third iteration ready for phone testing, unmerged, 2026-10-20
 
 After testing/discussion with app users, the owner selected one combined list, one-shot manual
 inserts, context-only Previous, marked duplicate occurrences, session-only source removal,
@@ -20,7 +20,20 @@ Domain/controller stage passed 144 focused tests. Shared gestures and the nonmod
 are implemented; 31 UI/navigation tests passed, with negative gesture/dock probes. Final review
 corrected paused removal, equal Random prune identities, linked-draft ID recycling and manual
 consumption on empty Random. The restored final focused run passed 125 tests / 7 suites.
-Full forced gates/lint and a new release APK are pending. Previous APK 1239/results below are historical only.
+Final source `613b154` passed the forced full gate in **511 s**: **1028 tests / 134 suites**,
+zero failures/errors/skips, all companion stages and lint (**0 errors / 72 unchanged warnings**).
+The final review also corrected source highlights after pruning a sounding Random occurrence;
+its regression failed before correction and the restored focused run passed 58 tests / 4 suites.
+
+Minified test-signed release APK built in **142.8 s**:
+[protracktor-release-1.2.0-1245-613b154-20261020-182237.apk](../dist/protracktor-release-1.2.0-1245-613b154-20261020-182237.apk),
+**11,878,271 bytes**. Package/code, v2 public test certificate, absence of the debuggable flag,
+R8 mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. Not an AAB/store release.
+SHA-256: `08ae9164d7ec925944470f8da21ca1b50ccffba8c2c2711c3e5d2056cfb74b0c`.
+[Evidence/review](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff);
+[phone checklist](TESTING.md#unified-queue--third-iteration-phone-checks-pending).
+Previous APK 1239/results below are historical only. Later documentation commits do not relabel
+the source SHA/code of this artifact. Develop, AMP and master are unchanged; no merge/push/tag.
 All new phone behaviour is unchecked. AMP, C111 and C112 are outside the implementation scope.
 
 ## C112 Dock subsong count crowds Now Playing text

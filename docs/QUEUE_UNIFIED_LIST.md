@@ -170,3 +170,42 @@ stages and lint (0 errors) in 514 s. It preceded the final source-highlight guar
 The final guard has its own failing regression and requires another full gate before APK handoff.
 Restored scheduler/controller/panel verification passed **58 tests / 4 suites**, zero failures,
 errors or skips, in 46 s (`/tmp/protracktor-unified-highlight-final.log`).
+
+## Final verification and handoff
+
+Clean application source **`613b154`**, versionName **1.2.0**, commit-count versionCode **1245**.
+The final forced `./scripts/test-protracktor.sh --really` completed in **511 s**:
+
+- **1028 tests / 134 suites**, zero failures/errors/skips; test task actually executed.
+- Store metadata, runner/release-flow fixtures, **581 web-page checks**, **49 engine checks**,
+  **8 SAP checks**, real web-store upgrade, **30 native audio checks**, **141 icon paths**,
+  PWA and **11 server checks** all passed.
+- Lint **0 errors / 72 warnings**. Compared issue ID/message/file records with APK 1239's archived
+  report: all 72 warnings are unchanged (line positions are not part of that comparison).
+
+Minified release APK, automatically signed with the same public test certificate:
+[protracktor-release-1.2.0-1245-613b154-20261020-182237.apk](../dist/protracktor-release-1.2.0-1245-613b154-20261020-182237.apk).
+Built in **142.8 s** (bounded runner), **11,878,271 bytes**.
+SHA-256: `08ae9164d7ec925944470f8da21ca1b50ccffba8c2c2711c3e5d2056cfb74b0c`.
+
+Checked package `com.przunk.protracktor`, version/code, APK v2 signature with certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, absent debuggable flag,
+executed R8/nonempty mapping, minSdk **29**, targetSdk **36** and actual engine libraries for
+**arm64-v8a / armeabi-v7a / x86_64**. APK contents were listed using the JDK jar tool because
+unzip is unavailable on this host. No publication key/AAB/store operation was used.
+
+Retained evidence under ignored `dist/unified-queue-verification/613b154/`: JUnit XML, lint HTML/XML,
+full gate/build/companion logs, R8 mapping, manifest/badging, public signature and APK contents;
+`probes/` retains focused positive/negative runs and the pre-final-highlight gate separately.
+Final documentation destinations were checked: **161 existing local links, none missing**.
+Application/native/web/script sources still equal the clean APK source after this closeout.
+
+**Checked partially:** domain/controller/real-host UI behaviour, full host gates/lint and release
+artifact properties. **Unchecked:** real device audio, gesture feel/layout/TalkBack, service/
+notification, Bluetooth and usability. [New phone checklist](TESTING.md#unified-queue--third-iteration-phone-checks-pending).
+Source-switch precedence and paused-removal choices remain provisional questions for evaluation.
+
+Separate commits on `feature/manual-playback-queue`; no merge/push/tag/release change.
+Develop remains `d6d3297`, AMP `8e92002`, master `794d8f9`; schema 23 and versionName are unchanged.
+C111/C112, AMP integration/permission and web queue are excluded. A later documentation-only
+commit increases HEAD's count but does not change this APK's source SHA, versionCode or bytes.
