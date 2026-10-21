@@ -6,7 +6,9 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 ## C112 two-row dock — phone trial pending
 
 [Presentation decision and verification](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text).
-Use the new candidate once its release APK is recorded; the preceding APK 1273 has the old layout.
+Use minified release APK **1.3.0 (1279), source bb7a75b**, built 2026-10-22; the preceding APK 1273
+has the old layout. The forced full host gate passed 1111 tests / 145 suites, all companion checks
+and fresh lint (0 errors / 72 warnings). These establish partial host evidence, not phone acceptance.
 
 1. Compare one-subsong and multi-subsong files, including
    `Impulsetracker/Treks/battle of honour.it`. Title is top-left, metadata bottom-left,

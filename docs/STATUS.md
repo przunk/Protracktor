@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C112 dock layout trial in progress on fix/dock-identity-layout; C109/C111 accepted and merged in order as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); latest supplied test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — C112 dock layout trial ready on unmerged fix/dock-identity-layout; latest test APK 1.3.0 (1279), source bb7a75b; C109/C111 accepted and merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -346,8 +346,9 @@ minimum height is 76 dp (previously 60 dp). If large text leaves less than 64 dp
 the footer flows onto another line, with the complete counter still end-aligned; normal text
 keeps the selected two-row layout. This accessibility fallback does not add another action row.
 
-**Implemented, unmerged:** `fix/dock-identity-layout` starts at **da7b26b**. The agent's original
-layout regression failed before the change when the tune count altered the title bounds. The
+**Implemented, unmerged:** `fix/dock-identity-layout` starts at **da7b26b**; application source is
+**bb7a75b**. The agent's original layout regression failed before the change when the tune count
+altered the title bounds. The
 corrected focused run passed **10 tests / 3 suites**, including physical taps, count changes,
 selected-playlist transitions and a 320 dp Polish viewport at 200% text size. A deliberate
 fixed-height mutation made the accessibility regression fail; the adaptive height was restored.
@@ -357,10 +358,27 @@ The restored host capture passed and was visually inspected at 360 dp with the s
 metadata: the full title and author/platform/year fit, Keep is above the counter and Queue is
 separate. Both collapsed and expanded views are retained in the ignored evidence directory;
 these are host renders with preset playback, not live Android audio or phone screenshots.
-The restored full tests/lint and a minified test APK are pending. Phone
-appearance, tapping, TalkBack and acceptance are **unchecked**. C119 is deliberately postponed
-until this trial is ready; it is not included in the dock change. VersionName stays 1.3.0 and
-schema 23. No merge, push or release is authorized by host verification.
+
+**Final host verification, 2026-10-22:** the restored forced full gate passed in **561 s**,
+**1111 tests / 145 suites**, zero failures/errors/skips; all companion checks passed. Fresh lint
+analysis completed in **88.2 s**, **0 errors / 72 warnings**, matching the preceding warning count.
+The unit stage took **387.3 s** and executed all 31 Gradle tasks rather than reusing cached tests.
+
+Minified, test-signed release APK built from clean source **bb7a75b** in **120 s**:
+[protracktor-release-1.3.0-1279-bb7a75b-20261022-000750.apk](../dist/protracktor-release-1.3.0-1279-bb7a75b-20261022-000750.apk),
+**11,917,043 bytes**, SHA-256
+`90d6a3a8c5d76a3456d239510b6c4f453894c1fbe45fdf08f3c78a6bc8b084df`.
+The agent independently checked package/name/code, embedded full source revision, non-debuggable
+flag, APK v2 signature and the same public test-certificate SHA-256 as APK 1273
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`), ZIP CRCs/alignment,
+minSdk 29/targetSdk 36 and three engine/UADE ABIs. R8 executed and its mapping was retained.
+The expanded Now Playing capture is byte-identical to the pre-change capture; only the dock
+presentation changes in this trial. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+
+**Checked:** host gates, rendered geometry, physical host-test taps and artifact properties.
+**Unchecked:** actual phone appearance/touch feel, TalkBack and acceptance. C119 remains open and
+is not corrected in this APK. VersionName stays 1.3.0 and schema 23. No merge, push, tag or store
+release. Later documentation commits do not relabel this artifact's source SHA or versionCode.
 
 ## ~~C111 Add music and Online catalogues have inconsistent padding~~
 
