@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.3.0 — versionCode 1269
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.3.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-1.3.0-1269.aab` |
+| Size | 22154124 bytes |
+| SHA-256 | `3f63164fb1256160696fd374615e7bb21d6be41f029997177c2860eccafec8db` |
+| versionCode | 1269 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 1.3.0 |
+| Commit | `d456fa7` |
+| Tag | `v1.3.0` |
+| Built | 2026-10-21 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v1.2.0**: `git log --oneline v1.2.0..v1.3.0`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 1.2.0 — versionCode 1207
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.2.0`.
