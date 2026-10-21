@@ -2,65 +2,140 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.LearnedTitles
+import com.przunk.protracktor.player.PlaybackRow
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.QueueSource
+import com.przunk.protracktor.player.RepeatMode
 import com.przunk.protracktor.player.SessionSource
 import com.przunk.protracktor.player.TrackRef
 
-/** An inspection surface for the active source, never an editor of its collection. */
+/** A projection of source continuation and one-shot inserts, not the saved playlist's editor. */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun QueueScreen(
     state: PlayerUiState,
-    onPlay: (Int) -> Unit,
-    onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
-    onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (List<TrackRef>) -> Unit,
-    onAddToPlaylist: (TrackRef) -> Unit,
+    onPlay: (Long) -> Unit,
+    onEnqueue: (TrackRef, Boolean) -> Unit,
+    onPlayPending: (Long) -> Unit,
+    onRemovePending: (Long) -> Unit,
+    onRemoveContext: (Long) -> Unit,
+    onMovePending: (Long, Long) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val active = state.activePlayback
-    val tracks = active.order.tracks.map { LearnedTitles.display(it, state.learnedTitles) }
-    Column(modifier.fillMaxHeight()) {
-        Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+    val rows = remember(active, state.schedule) { state.schedule.rows(active) }
+    val hasSourceRows = rows.any { it is PlaybackRow.Source }
+    val playingIndex = rows.indexOfFirst { it.playing }
+    val listState = key(state.schedule.generation) {
+        rememberLazyListState(initialFirstVisibleItemIndex = playingIndex.coerceAtLeast(0))
+    }
+    val pendingIds = remember(state.schedule.pending) { state.schedule.pending.map { it.id } }
+    val reorder = rememberManualQueueReorder(listState, pendingIds, state.schedule.generation, onMovePending)
+    val haptics = rememberHaptics()
+    var info by remember { mutableStateOf<TrackRef?>(null) }
+    info?.let { TrackInfoDialog(it, { info = null }, it.id in state.listenedIds) }
+    Column(modifier.fillMaxSize()) {
         val source = (active.source as? QueueSource.Playlist)?.let { playlist ->
             playlist.copy(name = state.playlists.firstOrNull { it.id == playlist.id }?.name ?: playlist.name)
         } ?: active.source
-        Text(queueSourceLabel(source), style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-        if (tracks.isEmpty()) Text(stringResource(if (state.loadingTrack) R.string.random_rolling else R.string.queue_empty), modifier = Modifier.padding(20.dp))
-        else PlaylistBody(
-            tracks = tracks,
-            // Arrival is intentional here; shared following only reacts to later cursor changes.
-            listState = rememberLazyListState(initialFirstVisibleItemIndex = active.order.currentIndex ?: 0),
-            currentIndex = active.order.currentIndex,
-            onPlayAt = onPlay, onRemoveAt = {}, onMove = { _, _ -> },
-            onShowNeighbours = onShowNeighbours, onShareFile = onShareFile, onShareAudio = onShareAudio,
-            onShareLink = onShareLink, onSendToWeb = onSendToWeb,
-            onAddToOtherPlaylist = onAddToPlaylist, onAddSelectedToPlaylist = {}, onRemoveMany = {},
-            loadingCurrent = state.loadingTrack, contentPadding = PaddingValues(bottom = 24.dp),
-            enabled = true, reorderable = false, readOnly = true, keyOf = { index, track -> "$index:${track.id}" },
-        )
+        QueueHeader(queueSourceLabel(source), onClear)
+        if (state.schedule.pending.isNotEmpty() && active.order.repeat == RepeatMode.ONE)
+            Text(stringResource(R.string.queue_repeat_one_wait), style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+        if (rows.isEmpty()) Text(stringResource(R.string.queue_pending_empty), Modifier.padding(20.dp))
+        LazyColumn(state = listState, modifier = Modifier.weight(1f).testTag("playback-list"), contentPadding = PaddingValues(bottom = 24.dp)) {
+            items(rows, key = { row -> if (row is PlaybackRow.Source) "${state.schedule.generation}:${row.key}" else row.key }) { row ->
+                val manual = row as? PlaybackRow.Manual
+                val track = LearnedTitles.display(row.track, state.learnedTitles)
+                val fromHistory = manual?.request?.fromHistory ?: active.fromHistory
+                val pendingIndex = manual?.request?.id?.let(pendingIds::indexOf) ?: -1
+                val dragging = manual != null && reorder.draggedId == manual.request.id
+                val infoLabel = stringResource(R.string.queue_info_request, track.title)
+                val rowColor = if (row.playing) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                QueueSwipeRow(onAdd = { onEnqueue(track, fromHistory) },
+                    canSwipe = { reorder.draggedId == null },
+                    onRemove = { when (row) {
+                        is PlaybackRow.Manual -> onRemovePending(row.request.id)
+                        is PlaybackRow.Source -> onRemoveContext(row.id)
+                    } }, modifier = Modifier.animateItem(
+                        // Scroll-to-item resets the animator; appearance fades would blink every visible row.
+                        fadeInSpec = null,
+                        // The grip already owns placement while a finger is moving the block.
+                        placementSpec = if (reorder.draggedId == null) tween(220) else null,
+                        fadeOutSpec = tween(160),
+                    ).testTag("playback-row-${row.key}").then(
+                        if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = reorder.offset } else Modifier)) {
+                    ListItem(
+                        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            fontWeight = if (row.playing) FontWeight.Bold else FontWeight.Normal) },
+                        supportingContent = { Text(listOf(track.displayAuthor, LearnedTitles.sourceLine(track))
+                            .filter { it.isNotBlank() }.joinToString(" · "), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        leadingContent = { Column {
+                            if (row.playing) Icon(PlayerIcons.Play, stringResource(R.string.a11y_now_playing_row), Modifier.size(24.dp))
+                            if (manual != null) Icon(PlayerIcons.QueueAdd, stringResource(R.string.queue_manual_current),
+                                Modifier.size(if (row.playing) 16.dp else 24.dp))
+                            else if (!row.playing) Icon(PlayerIcons.Playlist, null, Modifier.size(24.dp))
+                        } },
+                        trailingContent = if (pendingIndex >= 0 && pendingIds.size > 1) ({
+                            ManualQueueGrip(pendingIds[pendingIndex], track.title, reorder,
+                                onEarlier = pendingIds.getOrNull(pendingIndex - 1)?.let { target ->
+                                    { onMovePending(pendingIds[pendingIndex], target) } },
+                                onLater = pendingIds.getOrNull(pendingIndex + 1)?.let { target ->
+                                    { onMovePending(pendingIds[pendingIndex], target) } })
+                        }) else null,
+                        colors = ListItemDefaults.colors(containerColor = rowColor),
+                        modifier = Modifier.background(rowColor).combinedClickable(
+                            onLongClick = { haptics.gestureStart(); info = track }, onLongClickLabel = infoLabel, onClick = {
+                                when (row) {
+                                    is PlaybackRow.Manual -> onPlayPending(row.request.id)
+                                    is PlaybackRow.Source -> onPlay(row.id)
+                                }
+                            }).padding(start = if (manual != null && hasSourceRows) 16.dp else 0.dp),
+                    )
+                }
+            }
+        }
     }
+    KeepRowInView(listState, playingIndex.takeIf { it >= 0 }, rows.getOrNull(playingIndex)?.key)
 }
 
 @Composable
 private fun queueSourceLabel(source: QueueSource): String = when (source) {
+    QueueSource.None -> stringResource(R.string.queue_no_context)
     is QueueSource.Playlist -> stringResource(R.string.queue_playlist, source.name)
     is QueueSource.Random -> stringResource(R.string.domain_random_title)
     QueueSource.External -> stringResource(R.string.queue_external)

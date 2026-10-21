@@ -3,12 +3,15 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Checkbox
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +44,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Composable
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
@@ -101,6 +105,7 @@ fun PlaylistScreen(
     stateKnown: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    onEnqueue: ((TrackRef) -> Unit)? = null,
 ) {
     if (state.queue.tracks.isEmpty()) {
         if (stateKnown) {
@@ -129,7 +134,9 @@ fun PlaylistScreen(
     PlaylistBody(
         tracks = state.queue.tracks,
         listState = listState,
-        currentIndex = state.queue.currentIndex.takeIf { !state.awayFromPlaylist },
+        currentIndex = state.sourcePlaybackIndex.takeIf { !state.awayFromPlaylist },
+        contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) },
+        onEnqueue = onEnqueue,
         onPlayAt = onPlayAt,
         onRemoveAt = onRemoveAt,
         onMove = onMove,
@@ -207,22 +214,21 @@ internal fun PlaylistBody(
      * cursor, because its record can hold the same tune twice.
      */
     followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
+    onEnqueue: ((TrackRef) -> Unit)? = null,
+    contextIndex: Int? = null,
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
     // the offset applied to whichever row had inherited that index, which is what made rows overlap.
     var draggingId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
+    var dragViewport by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
 
-    // The pointer handler is created once and never restarted, so anything it reads must be read
-    // through a holder that is kept current. Capturing the track list directly is what broke the
-    // drag after two rows: the handler kept answering with the position the row had when the
-    // gesture began, so the third step was computed from a stale origin and threw the row back.
-    val liveTracks by rememberUpdatedState(tracks)
+    // Stable pointer handlers read current membership, not a captured playlist snapshot.
+    val liveIds by rememberUpdatedState(remember(tracks) { tracks.map { it.id } })
     val move by rememberUpdatedState(onMove)
-    val indexOfTrack = remember { { id: String -> liveTracks.indexOfFirst { it.id == id } } }
-    val trackCount = remember { { liveTracks.size } }
+    val trackIds = remember { { liveIds } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
     // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
@@ -235,20 +241,32 @@ internal fun PlaylistBody(
     // Takes back before the screen's own handler: leave the selection first, ticking nothing.
     BackHandler(enabled = selecting) { selected = emptySet() }
     val haptics = rememberHaptics()
+    LaunchedEffect(draggingId, listState) {
+        if (draggingId != null) listState.stopScroll()
+    }
+    SideEffect {
+        // Before recomposition a synchronous request can remeasure the old data and lose its pin.
+        // Apply the viewport after the new item provider exists, not inside the move callback.
+        dragViewport?.let { (index, offset) -> listState.requestScrollToItem(index, offset) }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = keyOf) { index, track ->
+            QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } },
+                enabled = enabled && !selecting, canSwipe = { draggingId == null },
+                // Raise and move the swipe clip itself, not a child underneath neighbouring rows.
+                modifier = Modifier.testTag("enqueue-row-$index").then(if (track.id == draggingId)
+                    Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset } else Modifier)) {
             TrackRow(
                 index = index,
                 track = track,
                 showFileName = showFileName,
                 playedBefore = listenedIds?.contains(track.id),
                 playing = index == currentIndex,
+                contextPosition = index == contextIndex,
                 loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
-                dragging = track.id == draggingId,
-                dragOffset = if (track.id == draggingId) dragOffset else 0f,
                 selecting = selecting,
                 ticked = track.id in selected,
                 onToggle = {
@@ -260,6 +278,7 @@ internal fun PlaylistBody(
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
                 onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
+                onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
                 // Absent for a local file, which has no catalogue folder to open, and for a
                 // live-search catalogue, which publishes no index and no author to open one by.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
@@ -274,15 +293,19 @@ internal fun PlaylistBody(
                 dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
-                    indexOf = indexOfTrack,
-                    trackCount = trackCount,
-                    setDragging = { draggingId = it },
+                    trackIds = trackIds,
+                    setDragging = { id ->
+                        draggingId = id
+                        dragViewport = if (id == null) null else
+                            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                    },
                     offset = { dragOffset },
                     setOffset = { dragOffset = it },
                     onMove = moveTrack,
                     haptics = haptics,
                 ),
             )
+            }
         }
     }
 
@@ -379,49 +402,68 @@ internal fun PlaylistBody(
  * "this moves", and gesturing on the row itself would fight the list's own scrolling. The row moves
  * as you drag rather than at the end, so the list you are looking at is the list you will get.
  *
- * **Keyed on the track id, never on its index.** `pointerInput` restarts when its key changes, and
- * the index of the row being dragged changes the instant it moves — so an index key cancelled the
- * gesture after every single step, and left the drag offset attached to whichever row had inherited
- * that number.
- *
- * **And nothing it reads may be captured.** The handler is created once and then never re-created,
- * which is the point — but it means a captured list is frozen at the moment the gesture started.
- * That was the second bug: after two rows the origin it was measuring from no longer existed, and
- * the row snapped back mid-drag. Everything comes in as a function that reads current state.
+ * Track identity keeps the pointer handler alive. Gesture-local order bridges move events arriving
+ * before Flow recomposition; live membership changes cancel it. Pin the numeric viewport because
+ * LazyColumn otherwise follows the first visible item's key when that item itself is reordered.
  */
 private fun Modifier.dragToReorder(
     trackId: String,
     listState: LazyListState,
-    indexOf: (String) -> Int,
-    trackCount: () -> Int,
+    trackIds: () -> List<String>,
     setDragging: (String?) -> Unit,
     offset: () -> Float,
     setOffset: (Float) -> Unit,
     onMove: (Int, Int) -> Unit,
     haptics: Haptics,
 ): Modifier = pointerInput(trackId) {
+    var order = emptyList<String>()
+    var observedIds = emptyList<String>()
+    var members = emptySet<String>()
+    var index = -1
+    var height = 0f
+    fun finish() {
+        if (index < 0) return
+        index = -1
+        order = emptyList()
+        observedIds = emptyList()
+        members = emptySet()
+        setDragging(null)
+        setOffset(0f)
+        haptics.gestureEnd()
+    }
     detectDragGestures(
-        onDragStart = { setDragging(trackId); setOffset(0f); haptics.gestureStart() },
-        onDragEnd = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
-        onDragCancel = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
+        onDragStart = {
+            order = trackIds()
+            observedIds = order
+            members = order.toSet()
+            index = order.indexOf(trackId)
+            height = 0f
+            if (index >= 0) { setDragging(trackId); setOffset(0f); haptics.gestureStart() }
+        },
+        onDragEnd = ::finish,
+        onDragCancel = ::finish,
         onDrag = { change, delta ->
+            if (index < 0) return@detectDragGestures
             change.consume()
+            val currentIds = trackIds()
+            if (currentIds !== observedIds) {
+                if (currentIds.size != members.size || currentIds.any { it !in members }) {
+                    finish()
+                    return@detectDragGestures
+                }
+                observedIds = currentIds
+            }
             setOffset(offset() + delta.y)
-
-            // Looked up every time rather than captured: this row's position is exactly the thing
-            // that changes while the gesture runs.
-            val from = indexOf(trackId)
-            if (from < 0) return@detectDragGestures
-
-            val height = listState.layoutInfo.visibleItemsInfo
-                .firstOrNull { it.index == from }?.size?.takeIf { it > 0 }
-                ?: return@detectDragGestures
-
+            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == trackId }
+                ?.size?.takeIf { it > 0 }?.let { height = it.toFloat() }
+            if (height <= 0f) return@detectDragGestures
+            val from = index
             val steps = (offset() / height).toInt()
             if (steps == 0) return@detectDragGestures
-
-            val target = (from + steps).coerceIn(0, trackCount() - 1)
+            val target = (from + steps).coerceIn(order.indices)
             if (target != from) {
+                order = order.toMutableList().apply { add(target, removeAt(from)) }
+                index = target
                 onMove(from, target)
                 haptics.tick()
                 setOffset(offset() - (target - from) * height)
@@ -437,10 +479,9 @@ private fun TrackRow(
     track: TrackRef,
     playedBefore: Boolean?,
     playing: Boolean,
+    contextPosition: Boolean,
     loading: Boolean,
     enabled: Boolean,
-    dragging: Boolean,
-    dragOffset: Float,
     selecting: Boolean,
     ticked: Boolean,
     onToggle: () -> Unit,
@@ -449,6 +490,7 @@ private fun TrackRow(
     onRemove: () -> Unit,
     onInfo: () -> Unit,
     onAddToOtherPlaylist: () -> Unit,
+    onEnqueue: (() -> Unit)?,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareAudio: () -> Unit,
@@ -480,7 +522,8 @@ private fun TrackRow(
         ""
     }
     val fileName = track.fileNameOrTitle.takeIf { showFileName && it != track.title }.orEmpty()
-    val subtitle = listOf(track.displayAuthor, label, tunes, fileName)
+    val subtitle = listOf(track.displayAuthor, label, tunes, fileName,
+        if (contextPosition) stringResource(R.string.queue_context_position) else "")
         .filter { it.isNotBlank() }
         .joinToString(" · ")
 
@@ -501,7 +544,10 @@ private fun TrackRow(
                         onCheckedChange = { on -> haptics.toggle(on); onToggle() },
                     )
                 } else TrackLeadingStatus(playedBefore) {
-                    if (playing) {
+                    if (contextPosition) {
+                        Icon(PlayerIcons.Playlist, stringResource(R.string.queue_context_position),
+                            modifier = Modifier.size(20.dp))
+                    } else if (playing) {
                         Icon(
                             imageVector = PlayerIcons.Play,
                             contentDescription = stringResource(R.string.a11y_now_playing_row),
@@ -541,6 +587,7 @@ private fun TrackRow(
                                 leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
                                 onClick = { menuOpen = false; onAddToOtherPlaylist() },
                             )
+                            EnqueueMenuItem(onEnqueue) { menuOpen = false }
                             onShowNeighbours?.let { show ->
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_show_neighbours)) },
@@ -576,14 +623,7 @@ private fun TrackRow(
         },
         modifier = Modifier
             .fillMaxWidth()
-            // **Only while this row is being dragged.** `graphicsLayer` allocates a render node,
-            // and applied unconditionally that is one per row -- allocated and thrown away again
-            // for every row a fling brings past. Browse's rows have no such modifier, which is why
-            // three hundred of them scroll smoothly while twenty-two of these did not. At most one
-            // row is ever dragged, so at most one layer is ever needed.
-            // **A row being fetched breathes.** It is already marked as the one
-            // that was chosen; what a download has to add is "still working". Guarded like the drag
-            // layer above, and for the same reason: at most one row is ever being fetched.
+            // Only the fetching row breathes; normal rows must not allocate layers during a fling.
             .then(
                 if (!loading) {
                     Modifier
@@ -600,13 +640,6 @@ private fun TrackRow(
                         label = "breath",
                     )
                     Modifier.graphicsLayer { alpha = breath.value }
-                }
-            )
-            .then(
-                if (dragging) {
-                    Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset }
-                } else {
-                    Modifier
                 }
             )
             .menuFocus(menuOpen)

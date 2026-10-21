@@ -17,7 +17,8 @@ internal class PlaylistSessionState(
     enum class Notice { CHANGES_DISCARDED, PLAYLIST_EMPTIED }
 
     val tracks: List<TrackRef> get() = player.value.queue.tracks
-    val ownsPlayback: Boolean get() = player.value.activePlayback.belongsTo(player.value.activePlaylistId)
+    val ownsPlayback: Boolean get() = !player.value.manualCurrent &&
+        player.value.activePlayback.belongsTo(player.value.activePlaylistId)
 
     data class WriteSnapshot(val playlistId: Long, val tracks: List<TrackRef>)
 
@@ -97,17 +98,16 @@ internal class PlaylistSessionState(
     fun discard(playlistId: Long, stored: List<TrackRef>) {
         player.update {
             if (it.activePlaylistId == playlistId) {
-                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = message(Notice.CHANGES_DISCARDED))
+                it.withEditorQueue(it.queue.withTracks(stored)).copy(dirty = false, message = message(Notice.CHANGES_DISCARDED))
             } else it
         }
     }
 
     suspend fun emptyPlaylist(read: suspend () -> List<SavedPlaylist>) {
         player.update {
-            val owns = it.activePlayback.belongsTo(it.activePlaylistId)
-            it.copy(
-                queue = PlayQueue(emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
-                playback = it.activePlayback,
+            val owns = !it.manualCurrent && it.activePlayback.belongsTo(it.activePlaylistId)
+            it.withEditorQueue(PlayQueue(emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat)).copy(
+                schedule = if (owns) it.schedule.resetTraversal() else it.schedule,
                 playlists = read(),
                 playing = if (owns) false else it.playing,
                 dirty = false,
@@ -121,10 +121,12 @@ internal class PlaylistSessionState(
 
     fun switchPlaylist(id: Long, tracks: List<TrackRef>, playlists: List<SavedPlaylist>) {
         player.update {
+            val active = it.activePlayback
+            val next = if (active.belongsTo(id)) active.order.withTracks(tracks)
+                else PlayQueue(tracks = tracks, shuffle = it.transportQueue.shuffle, repeat = it.transportQueue.repeat)
             it.copy(
-                playback = it.activePlayback,
-                queue = if (it.activePlayback.belongsTo(id)) it.activePlayback.order.withTracks(tracks)
-                    else PlayQueue(tracks = tracks, shuffle = it.transportQueue.shuffle, repeat = it.transportQueue.repeat),
+                playback = if (active.belongsTo(id)) active.withOrder(next) else active,
+                queue = next,
                 playlists = playlists,
                 activePlaylistId = id,
                 dirty = false,

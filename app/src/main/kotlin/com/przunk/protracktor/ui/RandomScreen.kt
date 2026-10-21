@@ -65,9 +65,11 @@ fun RandomScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onReroll: () -> Unit = {},
+    onEnqueue: ((TrackRef) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding, onReroll = onReroll, active = state.randomMode)
+        RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding, onReroll = onReroll,
+            active = state.randomMode && !state.manualCurrent)
         Text(stringResource(R.string.random_double_tap_hint), style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(horizontal = SESSION_HEADER_EDGE, vertical = 4.dp))
 
@@ -79,7 +81,7 @@ fun RandomScreen(
             Text(
                 text = stringResource(
                     when {
-                        state.randomMode && state.loadingTrack -> R.string.random_rolling
+                        state.randomMode && state.loadingTrack && !state.manualCurrent -> R.string.random_rolling
                         state.randomExhausted -> R.string.random_nothing_to_pick
                         else -> R.string.random_list_empty
                     }
@@ -99,7 +101,9 @@ fun RandomScreen(
             showFileName = true,
             listenedIds = state.listenedIds,
             listState = listState,
-            currentIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode },
+            currentIndex = state.sourcePlaybackIndex.takeIf { state.randomMode },
+            contextIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode && state.manualCurrent },
+            onEnqueue = onEnqueue,
             onPlayAt = onPlayAt,
             onRemoveAt = onRemoveAt,
             // Nothing to reorder: the order is the dice's, and a handle that answers nothing is

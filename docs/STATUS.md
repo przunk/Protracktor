@@ -1,11 +1,216 @@
 # Status
 
-Updated: 2026-10-19 — C110 accepted and merged; C111 Browse padding mismatch reported; APK 1.2.0 (1231), prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — C116/C117 corrections and complete branch audit ready for phone testing; APK 1.2.0 (1261), source 1a1503f, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Audited queue candidate — ready for phone testing, unmerged, 2026-10-21
+
+C116 corrects whole-list appearance flashes after automatic following. The [complete branch
+audit](QUEUE_BRANCH_REVIEW.md) also corrected C117's omitted-history traversal bound and EN/PL
+Help wording, adding an Info-through-progress-recomposition guard. All 22 changed production
+Kotlin files and both resource files were inspected; no further actionable defect was identified.
+Restored focused verification passed **218 tests / 14 suites**, zero failures/errors/skips.
+Clean source **1a1503f** passed the forced complete gate in **551 s**: **1096 tests / 142 suites**,
+all companion checks and lint **0 errors / 72 unchanged warnings** (records match APK 1258).
+
+Minified test-signed release APK built in **97.9 s**:
+[protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk](../dist/protracktor-release-1.2.0-1261-1a1503f-20261021-005631.apk),
+**11,915,043 bytes**. Package/code, v2 test certificate, absence of debuggable flag, executed
+R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`0317cccb20526608a6c8f0cec324254a335ace4a0ad151b34ae1c99d7b5d6e5b`.
+[Evidence](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-follow-and-branch-audit--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** phone animation,
+gesture/accessibility comfort, audio, notifications, Bluetooth and long-term use. No merge/push/
+tag; develop, AMP and master unchanged. C111/C112 remain excluded. Older handoffs below retain
+their original evidence; documentation-only closeout does not change APK source SHA/code.
+
+## C116 Queue flashes when Next follows below the viewport — open, 2026-10-21
+
+Phone report after the APK 1258 handoff: Next near the bottom triggers automatic downward
+scrolling and a brief whole-list flash. Installed build ID was not separately supplied.
+[Investigation and verification](QUEUE_AUTO_FOLLOW.md). The corrected real-Dock pixel test
+reproduces a lazy-item animator reset at the final scroll snap. Queue appearance fading is
+disabled; disappearance/placement remain animated. Restored verification passed 18 host tests /
+4 suites, zero failures/errors/skips. The later [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+passed 218 focused tests / 14 suites, including rapid Next, Info during progress updates,
+departure/placement, Clear, playlist/manual grips and swipe regressions. Complete gates and
+APK 1261 passed as recorded above. Device behaviour is unchecked; no merge.
+
+## C117 Omitted shuffle history can prematurely disable transport — open, 2026-10-21
+
+Code-review finding, not a user-reported incident. Repeated in-list selections create more
+history entries than source rows. The old omission walk stopped after one list length and
+could miss a surviving earlier/later destination. Both pure-model reproductions failed before
+correction. PlayQueue now supplies a bounded budget covering history plus a fresh lap;
+218-test focused verification passed. [Audit](QUEUE_BRANCH_REVIEW.md). Full gates/APK 1261 passed
+as recorded above; phone checks pending. No source order, saved playlist, shuffle or manual FIFO
+policy change.
+
+## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
+
+Owner phone report after the Clear handoff: clearing adds unwanted left indentation; manual
+playing-row highlighting omits that margin; playlist dragging can hide below neighbours, pin a
+moved first row to the top or lose pointer ownership. Installed build ID was not separately
+reported; latest supplied APK was 1255. [Reports, mechanisms and correction plan](QUEUE_ROW_REGRESSIONS.md).
+C113/C114 are implemented and passed 20 host tests / 4 suites; Clear alignment, full-width
+highlight and inset-hold regressions failed before correction. C115 is implemented; grip,
+viewport, drawing-layer and same-frame stale-index negative probes failed as intended. Final
+restored combined verification passed 147 host tests / 14 suites, zero failures/errors/skips.
+Clean source **aca3cd6** passed the forced complete gate in **545 s**: **1090 tests / 141 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(ID/severity/message/file records match APK 1255).
+
+Minified test-signed release APK built in **104.1 s**:
+[protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk](../dist/protracktor-release-1.2.0-1258-aca3cd6-20261021-001730.apk),
+**11,915,735 bytes**. Package/code, v2 public test certificate, absence of debuggable flag,
+executed R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`f7d0396c6080b908900a536b081a9d5d13b34dd48b2e444bf4fab5ed2777904f`.
+[Evidence](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-row-and-playlist-drag-corrections--phone-checks-pending).
+**Checked partially:** host gestures/layout/rendering and artifact properties. **Unchecked:**
+device dragging/viewport, visual comfort, audio, notifications, Bluetooth, accessibility and
+long-term use. No merge/push/tag; develop, AMP and master unchanged. C111/C112 remain excluded.
+APK 1255 below is historical; documentation-only closeout does not change APK source SHA/code.
+
+## Clear queue — previous handoff, 2026-10-20
+
+Owner approved clearing source continuation and waiting requests while retaining only the actual
+current track as a one-shot. Saved playlists remain untouched. [Contract](QUEUE_CLEAR.md).
+Domain/controller and UI are implemented. Final combined verification passed 137 host tests / 12 suites;
+negative probes caught disconnected Clear, a stuck Random spinner and an actually clipped label.
+Review also corrected Undo overriding live Repeat/Shuffle on playlist relinking; its regression
+failed before the correction. Another failing regression covered explicit Play after Undo restores
+Random before its first pick; that path now draws or explains the lack of candidates. The two
+earlier full gates were deliberately interrupted for those additions, not passed.
+Clean source **1aec1aa** passed the forced complete gate in **521 s**: **1080 tests / 139 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(ID/severity/message/file records compared with APK 1252).
+
+Minified test-signed release APK built in **107.9 s**:
+[protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk](../dist/protracktor-release-1.2.0-1255-1aec1aa-20261020-232555.apk),
+**11,913,319 bytes**. Package/code, v2 public test certificate, absence of debuggable flag,
+executed R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`6fb98c1bfbcaa1df0de966b2299e45a11970b2d388e2068ef7e27f04a97e2606`.
+[Evidence](QUEUE_CLEAR.md#final-verification-and-apk);
+[phone checklist](TESTING.md#clear-queue--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** device audio,
+loading/Random timing, UI/accessibility, notifications, Bluetooth and long-term use. No merge/push/
+tag; develop, AMP and master unchanged. C111/C112 remain excluded. APK 1252 below is historical;
+documentation-only closeout does not change this APK's source SHA/code.
+
+## Queue swipes steal vertical scrolling — previous handoff, 2026-10-20
+
+Owner report: attempting up/down scrolling can accidentally move the row sideways. Latest
+supplied APK was 1250; installed ID not separately reported. The horizontal detector claims
+small sideways motion before the scrolling parent. [Scroll-first intent fix](QUEUE_SWIPE_INTENT.md)
+is implemented on the same feature branch. Original wobble and abandoned-click regressions
+failed before correction; lowering dominance to 1:1 failed the real-list diagonal test.
+Restored combined verification passed **98 tests / 9 suites**, zero failures/errors/skips.
+Clean source **f6a5ee4** passed the forced full gate in **531 s**: **1056 tests / 137 suites**,
+zero failures/errors/skips, all companion checks and lint **0 errors / 72 unchanged warnings**
+(issue ID/message/file records compared with APK 1250).
+
+Minified test-signed release APK built in **96.3 s**:
+[protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk](../dist/protracktor-release-1.2.0-1252-f6a5ee4-20261020-223105.apk),
+**11,907,283 bytes**. Package/code, v2 public test certificate, absence of debuggable flag, executed
+R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`c228e109f54247ffb2957bd44d0da0a307149c561bc4f8e5dc095b4235795024`.
+[Evidence](QUEUE_SWIPE_INTENT.md#final-verification-and-apk);
+[phone checklist](TESTING.md#scroll-first-row-gestures--phone-checks-pending).
+**Checked partially:** host gestures/regression and artifact properties. **Unchecked:** device
+gesture comfort, flick/diagonal behaviour, accessibility and playback/service/Bluetooth scenarios.
+No merge/push/tag. Develop, AMP and master are unchanged; C111/C112 remain excluded. APK 1250 below
+is historical; documentation-only closeout does not change this APK's source SHA/code.
+Clear queue was discussion-only at this handoff; the later owner approval is recorded above.
+
+## Queue presentation feedback — previous handoff, 2026-10-20
+
+The owner reports abrupt disappearance of consumed manual rows, missing Info-hold vibration and
+an inelegant persistent gesture hint. Installed build ID was not separately supplied; latest
+handoff was APK 1248. UI-only animations, explicit Info haptics and on-demand labelled Help are
+implemented on the existing feature branch. [Scope and evidence](QUEUE_PRESENTATION_POLISH.md).
+Restored focused verification passed 78 tests/7 suites; placement/fade/Help negative probes
+failed as intended, and the missing-haptic regression failed before the change. An initial full
+gate stopped on an inconsistent single-frame pixel test; the refined sequence test passed its
+negative probe and a forced presentation run. Final clean source **6043902** passed the complete
+forced gate in **521 s**: **1043 tests / 136 suites**, zero failures/errors/skips, all companion
+checks and lint **0 errors / 72 unchanged warnings**, compared by issue/message/file.
+
+Minified test-signed release APK built in **86.6 s**:
+[protracktor-release-1.2.0-1250-6043902-20261020-194651.apk](../dist/protracktor-release-1.2.0-1250-6043902-20261020-194651.apk),
+**11,907,759 bytes**. Package/code, v2 public test signature, absence of debuggable flag, R8 mapping,
+minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`809da54fa82bd4d57aae4be5aecfe6d63b269b9061ea49373509cfebb62a999d`.
+[Artifact/evidence](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
+[phone checklist](TESTING.md#queue-presentation-polish--phone-checks-pending).
+**Checked partially:** host behaviour and artifact properties. **Unchecked:** device animation
+feel/layout, actual vibration, TalkBack and playback/service/Bluetooth behaviour. No merge/push/tag;
+develop, AMP and master are unchanged. C111/C112 and AMP remain outside this task. APK 1248 below
+is historical; a later documentation-only commit does not relabel this APK.
+
+## Manual-block reorder and long-press Info — previous handoff, 2026-10-20
+
+Owner selected Info on row long-press and a drag grip only for waiting manual requests inside
+their indented block. Current/source rows remain fixed; saved source data and transport stay
+unchanged. Continue on the same feature branch in separate commits, without merging.
+[Contract/evidence](QUEUE_MANUAL_REORDER.md). Scheduler/controller stage passed 43 focused tests;
+UI and bounded/edge-scrolling grips are implemented. The restored combined run passed 79 tests /
+7 suites, with failing negative probes for drag, edge scroll and Info. A grip/swipe collision and
+semantic grouping were corrected. Clean source `0082064` passed the forced full gate in **507 s**:
+**1037 tests / 135 suites**, zero failures/errors/skips, all companion checks and lint
+(**0 errors / 72 unchanged warnings**, compared by issue/message/file).
+
+Minified test-signed release APK, built in **123.8 s**:
+[protracktor-release-1.2.0-1248-0082064-20261020-185705.apk](../dist/protracktor-release-1.2.0-1248-0082064-20261020-185705.apk),
+**11,887,299 bytes**. Package/code, v2 public test signature, absence of debuggable flag, R8 mapping,
+minSdk 29/targetSdk 36 and all three engine ABIs checked. SHA-256:
+`f3bee93a044085672cb6da0718e16d837a281eb1a8daef5d9c5734fa911ddb72`.
+[Report/evidence](QUEUE_MANUAL_REORDER.md#final-verification-and-apk);
+[phone checklist](TESTING.md#manual-block-reorder-and-long-press-info--phone-checks-pending).
+Checked partially on host; all new phone behaviour is unchecked. APK 1245 below is the previous
+handoff, not verification of this extension. No merge/push/tag; develop, AMP and master unchanged.
+
+## Unified queue — third iteration ready for phone testing, unmerged, 2026-10-20
+
+After testing/discussion with app users, the owner selected one combined list, one-shot manual
+inserts, context-only Previous, marked duplicate occurrences, session-only source removal,
+bidirectional gestures and the existing dock visible below the panel. Continue in separate stage
+commits on `feature/manual-playback-queue`; no merge is authorized. Source-switch precedence is
+provisionally selected-track-now, retained requests next, then the new source continuation.
+[Current contract and evidence](QUEUE_UNIFIED_LIST.md) supersedes the two-tab/mixed-history rules.
+
+Domain/controller stage passed 144 focused tests. Shared gestures and the nonmodal unified panel
+are implemented; 31 UI/navigation tests passed, with negative gesture/dock probes. Final review
+corrected paused removal, equal Random prune identities, linked-draft ID recycling and manual
+consumption on empty Random. The restored final focused run passed 125 tests / 7 suites.
+Final source `613b154` passed the forced full gate in **511 s**: **1028 tests / 134 suites**,
+zero failures/errors/skips, all companion stages and lint (**0 errors / 72 unchanged warnings**).
+The final review also corrected source highlights after pruning a sounding Random occurrence;
+its regression failed before correction and the restored focused run passed 58 tests / 4 suites.
+
+Minified test-signed release APK built in **142.8 s**:
+[protracktor-release-1.2.0-1245-613b154-20261020-182237.apk](../dist/protracktor-release-1.2.0-1245-613b154-20261020-182237.apk),
+**11,878,271 bytes**. Package/code, v2 public test certificate, absence of the debuggable flag,
+R8 mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. Not an AAB/store release.
+SHA-256: `08ae9164d7ec925944470f8da21ca1b50ccffba8c2c2711c3e5d2056cfb74b0c`.
+[Evidence/review](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff);
+[phone checklist](TESTING.md#unified-queue--third-iteration-phone-checks-pending).
+Previous APK 1239/results below are historical only. Later documentation commits do not relabel
+the source SHA/code of this artifact. Develop, AMP and master are unchanged; no merge/push/tag.
+All new phone behaviour is unchecked. AMP, C111 and C112 are outside the implementation scope.
+
+## C112 Dock subsong count crowds Now Playing text
+
+Owner/user feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
+beside the Queue action, reducing room for Now Playing. The latest supplied APK was 1.2.0 (1239);
+the installed build ID and exact layout measurements were not separately supplied. **Open and
+explicitly deferred** by the owner. Record a future compact presentation discussion; do not bundle
+it into the unified-list implementation. Phone report only, no agent-run visual confirmation.
 
 ## C111 Add music and Online catalogues have inconsistent padding
 
@@ -57,6 +262,32 @@ failure/retry, source edits, lifetime, two tabs and pending swipe/Remove/Undo ar
 Unified view, reordering/Clear, persistence, web queue and AMP remain excluded. This checkpoint
 changes documentation only; implementation starts separately from accepted develop. No new
 application verification, feature APK or feature merge is claimed by this audit.
+
+Implementation has started on `feature/manual-playback-queue` from `d6d3297`. The first checkpoint
+adds a pure scheduler with a failing FIFO mutation probe. The next checkpoint integrates the
+controller/actual-file projection and passes 93 focused tests, including real-controller failure
+and stale-retry cases; negative Random-anchor and manual-failure probes detect broken rules.
+UI wiring now includes two tabs, shared row actions, quiet context markers and pending swipe/Remove/
+Undo inside the modal. The final focused run passed 63 tests / 6 suites, zero failures/errors/skips,
+after correcting an existing reactive Random test's snapshot/clock synchronization. Idle/no-source and
+paused-resume boundaries are explicit. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
+The first clean-source forced gate passed **1011 tests / 133 suites**, zero failures/errors/skips,
+all companion stages and lint (**0 errors / 72 warnings**) in 525 s. Minified test-signed APK
+**1.2.0 (1238)** from `783d8fa` built and verified; it is an **intermediate artifact**, not the test
+candidate. The owner requested a requirements/all-commits audit after it and a corrected,
+reverified APK. [Second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) records five corrected findings:
+one production History policy, visible Undo restoration checks, cached title projection with full
+keys, accurate ownership documentation and awaited test-fixture teardown.
+
+**Second iteration completed:** clean source `3d27868` passed the **forced** full gate in **481 s**:
+**1013 tests / 133 suites**, zero failures/errors/skips, all companion stages; lint **0 errors /
+72 warnings** (81.9 s). Two negative probes fail under old History policy/incomplete title keys;
+the restored corrective focused run passed 89 tests. Minified release APK built in **98.8 s**:
+`dist/protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk`, **11,881,447 bytes**.
+Package/code, v2 public test signature, absent debuggable flag, R8 mapping and all three engine
+ABIs checked. Exact hashes/evidence in the second-iteration report. This, not the first APK, is
+the candidate for owner testing. App behaviour is checked partially on the host; all phone
+behaviour is **unchecked**. Unmerged; develop, AMP and master unchanged. No push/tag/store release.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 

@@ -212,6 +212,19 @@ data class PlayQueue(
 
     fun withRepeat(mode: RepeatMode): PlayQueue = copy(repeat = mode)
 
+    /** A jump within the displayed playback order must not deal a new shuffle. */
+    fun jumpTo(index: Int): PlayQueue {
+        require(index in tracks.indices)
+        return appended(index)
+    }
+
+    fun withoutPosition(): PlayQueue = copy(history = emptyList(), historyCursor = -1)
+
+    val playbackIndices: List<Int> get() = order
+
+    /** A filtered move may cross retained history before at most one fresh source lap. */
+    internal val maxTraversalSteps: Int get() = history.size + tracks.size + 1
+
     /**
      * Turns shuffle on or off.
      *

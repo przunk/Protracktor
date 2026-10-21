@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="queue_clear">Clear queue</string>
+    <string name="queue_clear_body">Keep only the current track, without interrupting it. Remove the context and waiting requests; saved playlists stay unchanged. Undo restores the plan until playback advances or you build a new queue.</string>
+    <string name="notice_queue_cleared">Playback queue cleared.</string>
+    <string name="notice_queue_already_clear">Queue is already clear.</string>
+    <string name="notice_queue_undo_expired">Cannot undo: the playback plan has changed.</string>
     <string name="random_list_empty">No tracks in this Random list yet.</string>
     <string name="queue_title">Queue</string>
-    <string name="queue_empty">Play a track to start a queue.</string>
+    <string name="queue_help">Help</string>
+    <string name="queue_help_title">Queue controls</string>
+    <string name="queue_help_left">Swipe left</string>
+    <string name="queue_help_left_body">Remove this occurrence from playback. Undo restores it; saved playlists and files stay unchanged.</string>
+    <string name="queue_help_right">Swipe right</string>
+    <string name="queue_help_right_body">Add another copy to the end of the manual queue. Manual requests play before the context continues.</string>
+    <string name="queue_help_hold">Hold a row</string>
+    <string name="queue_help_hold_body">Open track information. Tap a row to play it.</string>
+    <string name="queue_help_drag">Drag a grip</string>
+    <string name="queue_help_drag_body">Use the grips to reorder waiting manual tracks among themselves. The current track and context rows stay in place.</string>
+    <string name="queue_move_earlier">Move earlier</string>
+    <string name="queue_move_later">Move later</string>
+    <string name="queue_info_request">Information about %1$s</string>
+    <string name="queue_no_context">Manual queue</string>
+    <string name="queue_manual_current">Manual request</string>
+    <string name="queue_context_position">Context position</string>
+    <string name="queue_pending_empty">No pending tracks. Context playback continues when available.</string>
+    <string name="queue_repeat_one_wait">Repeat one is active; queued requests wait until you advance or turn it off.</string>
+    <string name="queue_remove">Remove</string>
+    <string name="action_add_to_queue">Add to queue</string>
     <string name="queue_playlist">Playlist: %1$s</string>
     <string name="queue_search">Search: %1$s</string>
     <string name="queue_external">File opened from another app</string>
@@ -53,6 +77,7 @@
 
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="notice_queued_track">Added to queue: %1$s</string>
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>

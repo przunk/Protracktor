@@ -52,8 +52,10 @@ data class PlayerUiState(
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
-    /** The only playback owner; queue remains the selected playlist's editable draft. */
+    /** Source continuation; schedule may temporarily supply actual playback instead. */
     val playback: ActiveQueue? = null,
+    /** One-shot manual requests; source history remains owned by playback. */
+    val schedule: PlaybackSchedule = PlaybackSchedule(),
     /**
      * What the dice has actually given this session, oldest first.
      *
@@ -92,14 +94,16 @@ data class PlayerUiState(
 ) {
     /** A selected source playlist stays live; leaving its view captures its current order. */
     val activePlayback: ActiveQueue
-        get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.copy(order = queue) else it }
+        get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.withOrder(queue) else it }
             ?: ActiveQueue(QueueSource.Playlist(activePlaylistId, activePlaylistName.orEmpty()), queue)
     val transportQueue: PlayQueue get() = activePlayback.order
-    val current: TrackRef? get() = activePlayback.current
+    val current: TrackRef? get() = schedule.current?.track ?: activePlayback.current
+    val sourcePlaybackIndex: Int? get() = schedule.sourcePlaybackIndex(activePlayback)
+    val manualCurrent: Boolean get() = schedule.current?.manual == true
     val transient: TrackRef? get() = current.takeIf { randomMode || externalMode }
     val externalOpen: Boolean get() = externalMode
     val resultsQueue: PlayQueue? get() = transportQueue.takeIf { searchMode }
-    val resultsFromHistory: Boolean get() = activePlayback.fromHistory
+    val resultsFromHistory: Boolean get() = schedule.current?.fromHistory ?: activePlayback.fromHistory
     val sessionSource: SessionSource? get() = (activePlayback.source as? QueueSource.Collection)?.origin
     val randomHasPrevious: Boolean get() = randomMode && activePlayback.hasPrevious
 
@@ -108,20 +112,28 @@ data class PlayerUiState(
         queue = if (next.belongsTo(activePlaylistId)) next.order else queue,
     )
 
+    /** Capture allocated occurrence IDs at each edit, not lazily from a repeatedly reused snapshot. */
+    fun withEditorQueue(next: PlayQueue): PlayerUiState {
+        val active = activePlayback
+        return copy(queue = next, playback = if (active.belongsTo(activePlaylistId)) active.withOrder(next) else playback)
+    }
+
     fun preparingRandom(session: Long): PlayerUiState = withPlayback(ActiveQueue(
         QueueSource.Random(session),
         PlayQueue(emptyList(), shuffle = transportQueue.shuffle, repeat = transportQueue.repeat),
     )).copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false,
         playing = false, loadingTrack = true, positionSeconds = 0.0, durationSeconds = 0.0,
-        metadata = emptyMap())
+        metadata = emptyMap(), schedule = schedule.resetTraversal())
 
     /** Labels may improve without changing playback identity, order or the selected source. */
     fun withLearnedTrack(improved: TrackRef): PlayerUiState {
         fun enrich(rows: List<TrackRef>) = rows.map { if (it.id == improved.id) improved else it }
         val active = activePlayback
         return copy(
-            queue = queue.withTracks(enrich(queue.tracks)),
-            playback = active.copy(order = active.order.withTracks(enrich(active.order.tracks))),
+            // Metadata keeps positions: Random can have several occurrences of the same file.
+            queue = queue.copy(tracks = enrich(queue.tracks)),
+            playback = active.copy(order = active.order.copy(tracks = enrich(active.order.tracks))),
+            schedule = schedule.withLearnedTrack(improved),
         )
     }
 
@@ -178,8 +190,8 @@ data class PlayerUiState(
         get() = (playAllSubsongs && subsong > 0) || canGoPreviousFile
 
     /** Whether there is another **file** — what a long press on next asks for. */
-    val canGoNextFile: Boolean get() = activePlayback.hasNext
-    val canGoPreviousFile: Boolean get() = activePlayback.hasPrevious
+    val canGoNextFile: Boolean get() = schedule.hasNext(activePlayback)
+    val canGoPreviousFile: Boolean get() = schedule.hasPrevious(activePlayback)
 
     val activePlaylistName: String?
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
@@ -187,6 +199,6 @@ data class PlayerUiState(
     val randomMode: Boolean get() = activePlayback.source is QueueSource.Random
     val externalMode: Boolean get() = activePlayback.source == QueueSource.External
     val searchMode: Boolean get() = activePlayback.source is QueueSource.Collection
-    val awayFromPlaylist: Boolean get() = !activePlayback.belongsTo(activePlaylistId)
+    val awayFromPlaylist: Boolean get() = manualCurrent || !activePlayback.belongsTo(activePlaylistId)
 
 }

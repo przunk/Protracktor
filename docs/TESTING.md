@@ -1,5 +1,260 @@
 # What only a phone can prove
 
+Use the current APK in [Status](STATUS.md) for the active queue regression checklists. Older
+APK numbers identify the original handoff, not a recommendation to install an older build.
+
+## Queue follow and branch audit — phone checks pending
+
+[C116](QUEUE_AUTO_FOLLOW.md) and [the complete branch review](QUEUE_BRANCH_REVIEW.md) extend the
+unmerged candidate. Use release APK **1.2.0 (1261), source 1a1503f**, identified in [Status](STATUS.md);
+APK 1258 predates these corrections. The focused run passed 218 tests / 14 suites, followed by
+1096 tests / 142 suites and all forced gates/lint. Phone behaviour is unchecked.
+
+1. With a long Queue open, repeatedly press Next until it scrolls at the lower edge. Surviving
+   rows must remain visible throughout, without a whole-list flash/fade. Try several rapid Next
+   presses, natural completion and Previous near the upper edge. The actual current row should
+   end fully visible above the dock. Repeat with Random and manual inserts.
+2. Consumed/removed manual rows should still fade and close the gap smoothly. New rows appear
+   immediately, without fading the rest of the list. Retest Clear/Undo, full-width highlighting,
+   saved-playlist drag, bounded manual grips and vertical-versus-horizontal intent below.
+3. With shuffle enabled on a three-track source, choose C, choose B repeatedly inside Queue,
+   then choose A. Swipe-left B from this session. Previous must still reach C; Next must cross
+   the omitted B history and return to A. The saved playlist must retain all three tracks.
+4. Hold a Queue row for Info while progress is updating. Check haptic feedback, no accidental
+   Play and EN/PL Help wording for manual requests both inside a context and after Clear.
+
+No merge acceptance is inferred from host results or installation alone.
+
+## Queue row and playlist drag corrections — phone checks pending
+
+[C113–C115](QUEUE_ROW_REGRESSIONS.md) extend the unmerged branch. Their historical handoff was
+**1.2.0 (1258), source aca3cd6**, with 1090 host tests/full gates/lint passed. Rerun these
+regressions on the current APK 1261 above; APK 1255 is the originally reported predecessor.
+
+1. Clear while a source or manual track is current. With no source rows, the retained current
+   and newly queued tracks align normally, without a group inset. Undo restores the source and
+   its indented manual block, without a playback/seek change.
+2. A current manual row inside a context highlights its whole width, including the inset. Tap
+   and hold that margin: it belongs to the row (Play/Info respectively), not a dead gutter.
+3. On the saved playlist, grab the first row and move it down across several rows. It stays
+   under the finger and above neighbours; the viewport must not follow its key back to the top.
+   Repeat upward, from the middle, with a partially scrolled list and with music playing.
+4. Begin with a small grip movement, pause, continue across a cell, pause and continue again.
+   Try a fast burst across several cells. The same row must remain held, with no offset left
+   behind after release/cancel. Cancel a partial move, then grab again and try a row right-swipe.
+5. Reordering changes only the playlist draft: no unexpected Play, queue addition or file edit.
+   Check Save/Revert, current-track identity, selection, row menus/Info, normal vertical scrolling
+   and right-add gestures. Rerun bounded manual-queue grip/edge-scroll checks below.
+6. Check release performance, long lists, EN/PL, large text and TalkBack on the actual phone.
+
+Host gesture/render tests are partial evidence; device timing, feel and regression acceptance
+remain unchecked until owner confirmation. No merge is authorized.
+
+## Clear queue — phone checks pending
+
+The [Clear queue follow-up](QUEUE_CLEAR.md) is unmerged. Its historical handoff was release APK
+**1.2.0 (1255), source 1aec1aa**, with 1080 host tests/full gates and lint passed. Use the current
+APK 1261 identified above for these checks; real audio/device behaviour is unchecked.
+
+1. Play a playlist, Search, Browse, History, Random or external file, with several pending manual
+   requests. Open Queue and press Clear queue: only the actual current track remains, with no
+   audible break, seek/reset, metadata loss or position jump. Repeat while paused and loading.
+2. Add B, C, B after Clear on A. Next/completion plays B, C, B, consuming the preceding one-shot
+   each time, then stops. Previous must not revive A or the old context. Repeat All cannot revive
+   them; Repeat One still holds the current track until explicit Next.
+3. Clear during a slow Random draw or network open. No delayed callback may restore the source.
+   Reopening Random or the playlist only changes navigation; explicit row Play can select it again.
+   After failed loading, retry the retained current track; it must not retry an older occurrence.
+   Clear/Undo during the very first Random draw, before any pick: Undo stays idle, then explicit
+   Play must draw or explain the lack of indexed files, not silently do nothing.
+4. Press Undo before advancing: restore source/pending order without rewinding or unpausing audio.
+   After an advance, completion, enqueue or linked playlist edit, old Undo must not replace new
+   work. A visible expired action explains it; an already-clear action gives feedback.
+5. Exhaust the manual-only list, add new requests and press Play: start the new first request,
+   not the finished previous track. Try duplicates, swipe/remove/Undo and bounded grip reorder.
+6. Saved playlists, dirty draft, History and files must remain intact. Check EN/PL header labels,
+   small screens, large fonts, TalkBack, dock, notifications and Bluetooth transport.
+
+Host tests and compilation are partial evidence, not real audio or device acceptance.
+
+## Scroll-first row gestures — phone checks pending
+
+The [scroll-first follow-up](QUEUE_SWIPE_INTENT.md) is unmerged. Its original APK was **1.2.0 (1252),
+source f6a5ee4**, identified in [Status](STATUS.md). It passed 1056 host tests/full gates and lint;
+APK 1250 is the previous handoff, not proof of this change.
+
+1. In a long Queue, scroll up/down with slight sideways wobble and diagonal starts. Rows should
+   stay still horizontally; no green/red reveal, manual addition, removal, playback or Info.
+   Repeat on Playlist, Random and Browse/Search/History track rows.
+2. Move a little horizontally then continue vertically; vertical scrolling should take priority.
+   Start vertically then drift sideways farther: the same gesture must not turn into a swipe.
+3. Perform clear horizontal swipes in both queue directions, including a small vertical drift.
+   After a deliberate start, reveal the action, commit once on release and retain Undo. Partial,
+   reversed or cancelled gestures must not enqueue/remove or accidentally play. A second finger
+   on the same row should cancel its swipe.
+4. Outside Queue, unsupported left swipes must not play a track. Normal taps and holds must still
+   work afterwards; test Info haptics and the bounded manual grip drag/edge scroll as before.
+5. Try quick flicks, slow scrolling and one-handed use on the phone. The proposed start distance
+   is max(24 dp, twice platform touch slop), with more than 2:1 horizontal dominance. Real-world
+   comfort needs owner testing; host gesture checks do not prove it.
+
+Clear queue is not part of APK 1252; the later owner-approved follow-up is described above.
+
+## Queue presentation polish — phone checks pending
+
+The [presentation follow-up](QUEUE_PRESENTATION_POLISH.md) is unmerged. Its original APK was **1.2.0
+(1250), source 6043902**, identified in [Status](STATUS.md). It passed 1043 host tests/full gates
+and lint; APK 1248 is the previous handoff, not proof of the following changes.
+
+1. Open Queue with several manual requests, including duplicates. Next and natural completion
+   should fade the departing row and smoothly close the gap, including when the current row is
+   at the top. Playback must advance immediately, without waiting for the animation. Repeat on
+   the final manual request and with rapid Next presses; no ghost rows should accept gestures.
+2. Swipe-left removal/red reveal/Undo and right enqueue/green reveal must still work. Restoring
+   a request must not create another occurrence. Drag a grip across several waiting rows and
+   near the screen edge: stay inside the indented block, without competing movement or swipe.
+3. Hold a source, current manual and waiting manual row: one clear haptic response and Info, not
+   playback. A grip hold must not open Info. Disable system haptics: Info still opens without
+   forcing vibration. Real vibration and TalkBack behaviour have not been verified by the agent.
+4. The source header should show a compact labelled Help action, not permanent instructions.
+   Open/close it without changing audio or the scroll position. Check EN/PL, long source names,
+   large text and a small display; all four gesture sections must remain readable by scrolling.
+5. With Android animations disabled, list changes should settle immediately, without a stuck
+   gap, retained row or blocked input. Check dock transport, Back and reopening Queue as before.
+
+Host frame/pixel tests are partial evidence, not device acceptance.
+
+## Manual-block reorder and long-press Info — phone checks pending
+
+Use the follow-up APK identified in [Status](STATUS.md), not the earlier code-1245 artifact.
+The branch remains unmerged. [Contract and host evidence](QUEUE_MANUAL_REORDER.md).
+
+1. While a manual track is current, queue at least three requests, including duplicates. Drag the
+   last grip to first and back across several rows. Only waiting requests move inside the indented
+   block; source and current rows have no grip. Current music/position/metadata do not change.
+   Next follows the reordered requests, consuming each once, then resumes the original context.
+2. Drag well past both block boundaries and try sideways/diagonal motion from the grip. It must
+   not cross source/current rows, enqueue/remove a request, play it or open Info. Holding the grip
+   still must not reorder automatically. Hold a row away from the grip: Info opens, not playback.
+   Tap still plays; swipe on the row body and normal vertical scrolling retain their behaviour.
+3. With more pending rows than fit, drag toward either viewport edge and hold after moving. The
+   block should scroll to permit further ordering. Release/cancel leaves a settled row without a
+   stuck offset. Exercise rapid direction changes and both duplicate occurrences independently.
+4. Press Next or change source while holding a grip; also test enqueue/remove during dragging.
+   The drag cancels safely if membership/layout generation changes, never affecting another
+   request. Source replacement retains the resulting pending order; mere navigation changes none.
+5. Remove a pending row, reorder survivors, then Undo: restore only the removed occurrence near
+   surviving neighbours, without restarting audio. Saved playlists/History/index/files must not
+   acquire reorder edits. History-origin requests keep their playback-recording policy.
+6. TalkBack exposes labelled Info and valid Move earlier/Move later actions; boundary actions are
+   absent, and a lone waiting request has no grip. Check EN/PL, large text, portrait/landscape and
+   the dock/snackbar touch area. Recheck shuffle/repeat/subsongs and the unified-list scenarios below.
+
+Report installed version/code/SHA and expected/observed results. All real device behaviour remains
+unchecked until owner testing; host gestures and compilation do not establish phone usability.
+
+## Unified queue — third iteration, phone checks pending
+
+Use the new third-iteration APK identified in [Status](STATUS.md), not historical APK 1239.
+Branch `feature/manual-playback-queue` remains unmerged. Host UI/controller tests do not prove
+device sound, gestures, layout, notification/service behaviour or usability. Install without
+uninstalling/clearing data; older AMP APK cannot ordinarily replace a higher-code build.
+
+1. Play B from A/B/C/D. Right-swipe X, Y and X from other track lists. Nothing starts yet; Queue
+   shows A/B, the marked/indented X/Y/X block, then C/D. Next plays each manual occurrence FIFO,
+   removing each only when left/completed; after the last, play C. Previous goes to B, never to a
+   consumed manual row. While X plays, Previous returns to B and consumes X; Y/X remain pending.
+2. Add copies during another manual track; append after older requests. Tap a later pending row:
+   play only that occurrence, retain earlier requests next. Tapping the current row restarts it.
+   Equal file IDs must not produce two playing highlights or disappear together.
+3. One unified panel slides above the same operable dock. No duplicate Playback/current-song
+   block or Context/Queue tabs. Play/Pause, Next, Queue toggle and Now Playing must work physically.
+   Back closes only the panel; reopening starts with the current occurrence as high as possible.
+4. Left-swipe either source/manual row: red reveal with remove text/icon, one removal on release,
+   reachable Undo above dock. Right-swipe: green reveal with add text/icon, one manual copy at the
+   FIFO end; original row returns to rest. Partial/reversed/vertical drags must not enqueue/remove.
+   Tap plays; follow-up long-press opens Info, with grips only on waiting manual rows. No visible
+   Play/Remove row buttons. Try rapid gestures.
+5. Remove current while playing/loading: advance to pending before source, stop if exhausted.
+   Remove current while paused: select its successor but stay silent until Play; no decoder/History
+   write merely from editing. Undo restores content only, not the previous audio position.
+6. Remove source C; Next and source Repeat All skip it. Saved playlist/History/index/files remain
+   unchanged. Undo restores only C. A stale Undo/action after a new context must not affect it.
+   Select another editor playlist, edit/save/discard/empty and switch back while manual audio plays:
+   no manual rows or temporary omissions are persisted and no removed source content is resurrected.
+7. Test right enqueue on Playlist, Random, Search, History, author, local folder and online file
+   rows. Folder/header rows must not enqueue. Selection/drag reorder retain their existing gestures;
+   menus and TalkBack custom actions offer accessible equivalents. Test EN/PL, large text and RTL.
+8. Change source with pending X/Y: the newly tapped N3 plays now, then X/Y, then N4. Mere navigation
+   or selecting another playlist does not transfer playback. Evaluate this provisional precedence.
+9. Shuffle changes source order only, not manual FIFO; the panel reflects actual source order.
+   Repeat One retains actual manual tune and explains waiting requests; file Next escapes it.
+   Test short natural completion and multi-subsong files, Play all subsongs on/off and file transport.
+10. Random: heard rows only, manual block after cursor; Previous skips consumed requests and omitted
+    occurrences. Equal Random files retain separate IDs when pruning its old menu record. Change
+    filter while rewound: heard suffix remains, new draws use the new filter only past its boundary.
+    Exhausted Random must not keep a consumed manual row. Reopen remembered Random without stealing
+    author playback; only double-tap dice resets its record and source omissions.
+11. Unavailable manual file over Random stays retryable rather than auto-skipping. Skip it, rapidly
+    change sources/retry during slow reads, pause during loading, then test offline/revoked grants
+    and Bluetooth. Retired requests must never start later. History origin/learned titles/listened
+    marks, notification heart, Keep and sharing must use the actual manual track, not parked source.
+12. C110 regression: History → Browse → playlist → Browse opens root; repeat Search, Random,
+    online author/local folder, Settings and explicit author jumps. Process death loses this
+    temporary queue/omissions, restoring the selected playlist paused. Retained AMP data survives
+    and stays unavailable here. C111 padding and C112 cramped dock count are explicitly deferred.
+
+Report installed code/SHA, steps and expected/observed result. Product choices/questions are in
+[the current contract](QUEUE_UNIFIED_LIST.md); no merge before the owner's acceptance.
+
+## Manual queue — historical second-iteration phone checklist
+
+Superseded by the unified-list checklist above after owner/app-user feedback on 2026-10-20.
+The following preserves the old APK's expectations, not instructions for the new implementation.
+
+Branch `feature/manual-playback-queue`. Use the final **second-iteration** artifact identified in
+[the implementation report](MANUAL_QUEUE_IMPLEMENTATION.md), not the first checkpoint APK.
+All scenarios below are **unchecked on a phone**. Install over the existing test-signed build;
+do not uninstall or clear storage. VersionName/schema are unchanged; commit-derived versionCode
+does not permit ordinary replacement by the older AMP APK.
+Final second-iteration candidate: **1.2.0 (1239)**, source `3d27868`,
+`dist/protracktor-release-1.2.0-1239-3d27868-20261020-001402.apk` (1013 host tests; lint 0 errors).
+
+1. Play source A/B/C/D at B. Add X, Y and Z from different views: B continues uninterrupted,
+   then file Next/completion gives X/Y/Z/C/D. Merely browsing or selecting another editor playlist
+   must not change this. Test screen, notification and headset transport.
+2. Add the same file twice. Queue shows two occurrences. Play the second pending row explicitly:
+   only that occurrence becomes current; earlier pending remains. Header/dock/notification refer
+   to the actual manual file, while Context keeps a quiet source position, even for equal file IDs.
+3. During Y, Previous returns to X/B; without new requests Next replays the forward record.
+   Add P/Q while back at X: Next plays P/Q before the retained Y/C suffix. No source rows disappear.
+4. Enqueue while paused: remain paused. Ordinary Play resumes that track; file Next selects a
+   request. From idle with a never-started selected playlist, enqueue then Play: drain requests
+   and stop, without automatically starting that playlist.
+5. Swipe a pending row end-to-start; only it disappears and Undo is reachable **inside** the panel.
+   Undo restores its position among surviving neighbours, not a duplicate. Check labelled Remove,
+   rapid repeated actions, vertical scrolling, large text, TalkBack, EN/PL and unrelated playlist Undo.
+6. Shuffle affects source continuation only. Repeat All repeats source, not consumed requests.
+   Repeat One keeps actual tune repeating with a waiting explanation; file Next escapes to FIFO.
+   Test multi-subsong files with Play all subsongs both on/off and long-press file transport.
+7. Explicitly play a different source row or reroll Random: pending survives, but old mixed
+   traversal is reset. Reopening remembered Random must not resume or steal author playback.
+   Change Random filter while rewound: retain the heard boundary and new-filter speculation rules.
+8. Edit/delete/empty/rename the parked source while a manual file plays: do not interrupt it or
+   resurrect old editor content during Previous/Next. Learning titles must not move duplicate rows.
+9. Enqueue an unavailable file over Random. Failure stays visible for retry/Next, not silently
+   skipped as a failed random pick. Test rapid source changes/retries during slow loading, revoked
+   local grants, offline catalogue downloads, pause during loading and Bluetooth transitions.
+10. History-origin requests must not move their History row to the top; requests from other views
+    should. Short-completion/five-second listened marks, notification heart, Keep and sharing must
+    use the actual manual file, not the parked source. Retained AMP entries stay protected.
+11. Process death loses this session-only pending/traversal; normal paused selected-playlist
+    restoration remains. Recheck C110 generic Browse-root entry and normal playlist Save/Undo.
+
+Report installed code/SHA, steps and expected/observed result. Host tests do not certify audio,
+service/notification layout, gestures or usability. Product questions remain in
+[the contract](QUEUE_CONTEXT_ANALYSIS.md#questions-retained-for-post-implementation-evaluation).
+
 ## C110 — Browse root navigation
 
 Branch `fix/browse-root-navigation`; APK **1.2.0 (1231)**, source `fa09e7a`. Artifact and host evidence are in

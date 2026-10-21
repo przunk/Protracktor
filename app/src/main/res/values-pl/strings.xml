@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="queue_clear">Wyczyść kolejkę</string>
+    <string name="queue_clear_body">Zachowaj tylko bieżący utwór, bez przerywania odtwarzania. Usuń kontekst i oczekujące utwory; zapisane playlisty pozostają bez zmian. Cofnij przywraca plan, dopóki odtwarzanie nie przejdzie dalej lub nie ułożysz nowej kolejki.</string>
+    <string name="notice_queue_cleared">Kolejka odtwarzania wyczyszczona.</string>
+    <string name="notice_queue_already_clear">Kolejka jest już pusta.</string>
+    <string name="notice_queue_undo_expired">Nie można cofnąć: plan odtwarzania się zmienił.</string>
     <string name="random_list_empty">Ta lista Random jest jeszcze pusta.</string>
     <string name="queue_title">Kolejka</string>
-    <string name="queue_empty">Odtwórz utwór, aby rozpocząć kolejkę.</string>
+    <string name="queue_help">Pomoc</string>
+    <string name="queue_help_title">Obsługa kolejki</string>
+    <string name="queue_help_left">Przesuń w lewo</string>
+    <string name="queue_help_left_body">Usuń to wystąpienie z odtwarzania. Cofnij przywraca je; zapisane playlisty i pliki pozostają bez zmian.</string>
+    <string name="queue_help_right">Przesuń w prawo</string>
+    <string name="queue_help_right_body">Dodaj kolejną kopię na koniec kolejki ręcznej. Utwory ręczne grają przed dalszą częścią kontekstu.</string>
+    <string name="queue_help_hold">Przytrzymaj wiersz</string>
+    <string name="queue_help_hold_body">Otwórz informacje o utworze. Dotknij wiersza, aby go odtworzyć.</string>
+    <string name="queue_help_drag">Przeciągnij uchwyt</string>
+    <string name="queue_help_drag_body">Uchwytami zmieniaj kolejność oczekujących utworów ręcznych między sobą. Bieżący utwór i wiersze kontekstu pozostają na miejscu.</string>
+    <string name="queue_move_earlier">Przesuń wcześniej</string>
+    <string name="queue_move_later">Przesuń później</string>
+    <string name="queue_info_request">Informacje o %1$s</string>
+    <string name="queue_no_context">Kolejka ręczna</string>
+    <string name="queue_manual_current">Utwór z kolejki ręcznej</string>
+    <string name="queue_context_position">Pozycja kontekstu</string>
+    <string name="queue_pending_empty">Brak oczekujących utworów. Odtwarzanie wróci do kontekstu, jeśli jest dostępny.</string>
+    <string name="queue_repeat_one_wait">Powtarzanie jednego utworu jest aktywne. Kolejka czeka na przejście dalej lub wyłączenie powtarzania.</string>
+    <string name="queue_remove">Usuń</string>
+    <string name="action_add_to_queue">Dodaj do kolejki</string>
     <string name="queue_playlist">Playlista: %1$s</string>
     <string name="queue_search">Wyszukiwanie: %1$s</string>
     <string name="queue_external">Plik otwarty z innej aplikacji</string>
@@ -55,6 +79,7 @@
 
     <string name="action_show_in_playlist">Pokaż na playliście</string>
     <string name="action_browse">Przeglądaj</string>
+    <string name="notice_queued_track">Dodano do kolejki: %1$s</string>
     <string name="action_add_folder">Dodaj katalog</string>
     <string name="action_add_files">Dodaj pliki</string>
 

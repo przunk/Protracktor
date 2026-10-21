@@ -1,5 +1,97 @@
 # Architecture
 
+## Manual playback queue — implemented on an unmerged branch, 2026-10-21
+
+`feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
+identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
+`PlaybackSchedule` owns pending requests (FIFO until explicitly reordered), stable occurrence IDs and one actual occurrence,
+not a second backward/forward history. `PlayerUiState.current` projects that occurrence, falling back
+to context when none is selected. An explicit absent source prevents a never-started editor playlist
+from silently becoming continuation for manual playback.
+
+Controller file transport and natural completion enter that scheduler after the existing subsong
+layer. It chooses pending before source continuation; Repeat One retains the actual tune. Source
+PlayQueue/RandomHistory own Previous, which returns from a manual request to the parked source.
+Consumed manual rows never re-enter history. Explicit source Play replaces the context but preserves pending; mere
+navigation or playlist selection resets neither. Retry binds to playback epoch and occurrence.
+History recording uses actual origin through one pure policy, not whichever source is parked.
+
+The third iteration projects one list: actual source order with a marked manual block immediately
+after its parked position. Source occurrence IDs and an omission set support session-only removal
+without filtering the editor's persistence data, including equal Random files. Left removes either
+origin with Undo; right enqueues a copy, tap plays and row long-press opens Info.
+The owner-approved follow-up adds an ID-based move only inside the waiting manual block, with
+a trailing grip and accessible earlier/later actions. Current/source rows cannot move. A
+gesture-local ID order bridges input events before Flow recomposition; membership/generation
+changes cancel dragging. Edge scrolling stays within the manual block and begins only after
+movement. Grip gestures latch out parent horizontal swipe actions. Saved source data, actual
+playback, generation and request origin remain unchanged by reorder.
+The presentation follow-up uses stable-key lazy-item fades/placement, not delayed scheduler
+consumption; placement yields to active grip movement. Info requests shared View haptics and the
+source header offers a labelled Help dialog instead of permanent instructions.
+The scroll-first correction separates pure direction/distance intent from pointer consumption.
+Movement stays available to the vertical parent until deliberate horizontal intent wins; a
+latched vertical rejection cannot become a later swipe. Initial-pass abandoned-release handling
+prevents an under-threshold drag from playing the row. [Host verification passed](QUEUE_SWIPE_INTENT.md);
+device touch comfort is unchecked.
+[Presentation verification](QUEUE_PRESENTATION_POLISH.md) passed full host gates/lint; phone
+behaviour is unchecked.
+Source actions carry their generation to reject stale UI events. All other track lists share the
+right-enqueue gesture, disabled during selection/reorder. Only the actual occurrence is highlighted.
+The animated panel occupies Scaffold content above the same operable dock, rather than a separate
+modal window; the shared snackbar remains reachable. Underlying screen semantics are hidden while
+the panel is open. Now Playing subtitle/actual-origin rules are shared with notification and History.
+
+No new service/player, dependency, schema or persistence is introduced. Pending/omissions die with
+the process; existing paused selected-playlist restoration remains. AMP/C111/C112/web queue work is
+excluded. [Current contract/evidence](QUEUE_UNIFIED_LIST.md) supersedes the earlier two-tab design;
+the [implementation report](MANUAL_QUEUE_IMPLEMENTATION.md) and
+[second-iteration audit](MANUAL_QUEUE_SECOND_ITERATION.md) retain historical evidence only.
+Third-iteration clean source `613b154` passed 1028 host tests/full gates and lint (0 errors,
+72 unchanged warnings); minified test-signed APK 1.2.0 (1245) is ready. Host/artifact checks do not
+establish phone behaviour or merge acceptance; [handoff](QUEUE_UNIFIED_LIST.md#final-verification-and-handoff).
+Those counts/artifact precede the reorder/long-press follow-up. Its clean source `0082064` passed
+1037 tests/full gates and lint (0 errors/72 unchanged warnings); APK 1.2.0 (1248) is ready,
+unmerged and without phone acceptance. [Follow-up report](QUEUE_MANUAL_REORDER.md).
+The presentation handoff is clean source **6043902**, APK **1.2.0 (1250)**, with **1043
+tests / 136 suites**, full gates and lint (0 errors/72 unchanged warnings). Its predecessor counts
+above remain historical. [Presentation handoff](QUEUE_PRESENTATION_POLISH.md#final-verification-and-apk);
+phone checks and acceptance remain pending, with no merge. The scroll-first handoff is
+source **f6a5ee4**, APK **1.2.0 (1252)**, with **1056 tests / 137 suites**, all host gates/lint
+(0 errors/72 unchanged warnings) and artifact inspection passed.
+[Swipe handoff](QUEUE_SWIPE_INTENT.md#final-verification-and-apk). The subsequently approved
+[Clear queue](QUEUE_CLEAR.md) is implemented: a pure immutable `PlaybackPlan` detaches the source
+and pending requests while retaining actual current identity as a one-shot. The controller
+invalidates speculative intent without closing current audio; guarded Undo restores transport
+state directly, never through a snapshot replacing editor tracks/position or restarting audio.
+When Undo relinks the selected source playlist, its live editor mirrors only transport modes
+so the active-source getter cannot revive the pre-Clear Repeat/Shuffle settings.
+Explicit Play can draw after Undo restores Random before its first pick; Undo itself stays idle.
+Historical Clear handoff: source **1aec1aa**, APK **1.2.0 (1255)**, **1080 tests / 139 suites**,
+complete gates/lint (0 errors/72 unchanged warnings) and artifact checks passed.
+[Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk). Device behaviour and merge acceptance
+remain unchecked.
+
+C113/C114 keep standalone manual lists aligned: indent manual content only while source rows
+exist, with highlight and tap/hold outside that inset. C115 keeps the playlist swipe subtree
+mounted during a grip, gates competing swipes and moves/raises the outer lazy item rather than
+its clipped child. A post-composition numeric viewport pin prevents keyed-item anchoring from
+following the first reordered row; gesture-local order handles moves before recomposition.
+No scheduler, transport or saved-data policy changes in that correction. Historical handoff: source
+**aca3cd6**, APK **1.2.0 (1258)**, **1090 tests / 141 suites**, complete gates/lint (0 errors /
+72 unchanged warnings) and artifact inspection passed. [Row-regression handoff](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk).
+Device behaviour and merge acceptance remain unchecked.
+
+The C116 follow-up disables Queue appearance fading: Compose's final scroll snap resets item
+animation keys and can otherwise fade surviving rows as new arrivals. Placement and departure
+remain animated; shared absolute-target following is unchanged. The complete branch audit also
+corrects C117: omission traversal uses PlayQueue's retained-history-plus-one-lap budget, not
+source length alone. EN/PL Help identifies manual requests independently of indentation.
+Current unmerged source **1a1503f**, APK **1.2.0 (1261)**, passed **1096 tests / 142 suites**,
+all forced gates/lint (0 errors/72 unchanged warnings) and artifact inspection.
+[Audit and current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk). Phone behaviour
+and merge acceptance remain pending; earlier source/count records are historical.
+
 ## Active playback queue — accepted and merged, 2026-10-19
 
 Implemented on `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`

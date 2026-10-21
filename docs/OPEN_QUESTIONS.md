@@ -100,12 +100,49 @@ and open decisions. C110 was accepted and merged as `7e7f242`
 implementation and delegated unresolved choices to the agent, asking to retain questions for
 post-implementation evaluation. The analysis now supplies a transition table and provisional
 FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owner approvals.
-The combined view is explicitly deferred; proposed indentation/icon marking is retained for later.
+Implementation is now on `feature/manual-playback-queue`; its first verified APK is intermediate.
+The owner requested a [second iteration](MANUAL_QUEUE_SECOND_ITERATION.md) before phone testing;
+it is complete with corrected code, 1013 host tests/lint and final APK 1.2.0 (1239).
+After testing/discussion with app users on 2026-10-20, the owner selected a third iteration:
+one combined list, one-shot manual rows, source-only Previous, marked duplicates, session-only
+source removal and bidirectional gestures above the existing dock. The combined view is no longer
+deferred. [Current contract/questions](QUEUE_UNIFIED_LIST.md) supersede the mixed-history/two-tab
+rules. Selected-source-now then pending-next precedence remains an explicit agent choice for
+evaluation, not an individually approved owner requirement. Third-iteration source `613b154`
+passed 1028 host tests/full gates and lint; APK 1.2.0 (1245) is ready. Phone behaviour/acceptance
+remain pending; no merge is authorized. C112's cramped dock count remains deferred.
+The owner subsequently selected long-press Info and reorder only inside waiting manual requests,
+not across source/current rows. [Follow-up](QUEUE_MANUAL_REORDER.md): source `0082064` passed 1037
+tests/full gates and lint; APK 1.2.0 (1248) records that unmerged handoff. Its subsequent
+[presentation polish](QUEUE_PRESENTATION_POLISH.md) passed 1043 tests/full gates and lint at
+source **6043902**; APK **1.2.0 (1250)** records that handoff. The subsequent
+[scroll-first correction](QUEUE_SWIPE_INTENT.md) passed 1056 tests/full gates and lint at source
+**f6a5ee4**; APK **1.2.0 (1252)** records that unmerged handoff, phone checks pending.
 
-The owner selected one active playback queue independent of navigation and the selected playlist.
+2026-10-20 follow-up: the owner approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting
+point, superseding the earlier no-Clear restriction. Keep the actual current occurrence as a
+one-shot without interrupting audio; remove the source and waiting requests, not saved playlists.
+New requests drain once without returning to the cleared source. Implementation adds guarded
+snackbar Undo and a labelled header control; host verification and phone acceptance are tracked
+in the follow-up. Source **1aec1aa** passed 1080 tests/full gates and lint; release APK **1.2.0
+(1255)** is ready, unmerged, with device checks and owner acceptance pending. Pinned/permanent
+queue entries are not selected; playlists remain durable.
+
+2026-10-21: C113–C115 correct presentation after Clear and playlist dragging without changing
+the selected queue semantics. Source **aca3cd6** passed **1090 tests / 141 suites**, full gates
+and lint; **APK 1.2.0 (1258)** supersedes the earlier handoffs for phone testing. No new product
+choices are required by these corrections. [Historical evidence](QUEUE_ROW_REGRESSIONS.md#final-verification-and-apk);
+device checks and owner acceptance remain pending, with no merge authorized.
+
+Later on 2026-10-21: C116's follow-up and the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+correct auto-follow appearance and C117's omitted-history walk without selecting new product
+rules. Current source **1a1503f**, release APK **1.2.0 (1261)**, passed 1096 tests/full gates/lint;
+phone acceptance remains pending. Earlier handoffs remain historical.
+
+In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning
 from Browse/Search/Random leaves music and transport ownership unchanged, without a playlist cover.
-The queue is a read-only, full-height Now Playing-like sheet with row playback and information,
+That baseline's queue sheet is read-only and full-height, with row playback and information,
 not removal/reordering. Reopening Random preserves its record and does not steal transport from
 an author collection. Next supplies ordinary new draws; double-tapping the dice starts a new
 Random record with the same filter. A single dice tap does nothing; provide help and accessibility.

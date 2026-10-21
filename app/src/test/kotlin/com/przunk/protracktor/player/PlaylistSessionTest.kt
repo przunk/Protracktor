@@ -846,7 +846,9 @@ class PlaylistSessionTest {
         val before = f.player.value
         gate.complete(Unit)
         drain()
-        assertEquals(before.copy(queue = before.queue.withTracks(listOf(a, b)), dirty = false, message = f.player.value.message), f.player.value)
+        val expected = before.queue.withTracks(listOf(a, b))
+        assertEquals(before.copy(queue = expected, playback = before.activePlayback.copy(order = expected),
+            dirty = false, message = f.player.value.message), f.player.value)
         assertEquals("pl:CHANGES_DISCARDED", f.player.value.message?.text)
         assertEquals(listOf(PlaylistSessionState.Notice.CHANGES_DISCARDED), f.notices)
         assertEquals(listOf("tracks:1"), f.events)

@@ -127,9 +127,35 @@ colleague/owner feedback distinguishes this context from a manual FIFO, raises c
 visibility and requests swipe removal. [Complete follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md).
 On 2026-10-19 the owner authorized a new task branch and delegated unsettled choices to the agent,
 with questions retained for evaluation after implementation. The audited analysis is the provisional
-contract; this documentation checkpoint does not claim a completed extension. AMP remains deferred.
+contract. The extension is implemented on unmerged `feature/manual-playback-queue`; the first
+1011-test/lint-verified APK is intermediate. The requested second iteration is now complete:
+1013 host tests/lint and final APK 1.2.0 (1239), pending phone testing and acceptance;
+see [the audit](MANUAL_QUEUE_SECOND_ITERATION.md). On 2026-10-20 owner/app-user testing selected
+the [unified-list third iteration](QUEUE_UNIFIED_LIST.md): one-shot requests, context-only Previous,
+session-only source removal, marked duplicates and shared enqueue gestures. The prior two-tab APK
+is historical, not the current test candidate. Third-iteration source `613b154` passed 1028 host
+tests/full gates and lint; minified APK 1.2.0 (1245) is ready, with phone acceptance pending.
+The later owner-selected waiting-block reorder/long-press Info follow-up passed 1037 host tests/
+full gates and lint; [APK 1.2.0 (1248)](QUEUE_MANUAL_REORDER.md#final-verification-and-apk) records
+that handoff. Subsequent user feedback selected animated departures, explicit Info haptics and
+on-demand Help. [Presentation source 6043902](QUEUE_PRESENTATION_POLISH.md) passed 1043 host
+tests/full gates and lint; **APK 1.2.0 (1250)** records that handoff. Further user feedback selected
+[scroll-first swipes](QUEUE_SWIPE_INTENT.md): source **f6a5ee4**, 1056 tests/full gates/lint passed,
+**APK 1.2.0 (1252)** records that unmerged handoff. Earlier handoffs remain historical.
+The owner subsequently approved [Clear queue](QUEUE_CLEAR.md) as a manual-only starting point;
+source **1aec1aa** passed 1080 tests/full gates and lint, with release **APK 1.2.0 (1255)** ready
+on the same unmerged branch. [Historical Clear handoff](QUEUE_CLEAR.md#final-verification-and-apk).
+The next owner report selected C113–C115: standalone Clear alignment, full-width manual highlight
+and saved-playlist drag ownership/layering/viewport corrections. Source **aca3cd6** passed
+**1090 tests / 141 suites**, full gates and lint; **APK 1.2.0 (1258)** records that historical
+handoff. C116 then corrects auto-follow flashing; the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
+also corrects C117's omitted-history traversal bound and Help wording. Current unmerged source
+**1a1503f**, **APK 1.2.0 (1261)**, passed **1096 tests / 142 suites**, all forced gates/lint.
+[Current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk); phone behaviour and acceptance
+remain pending.
+AMP remains deferred.
 
-One active queue owns transport; navigation and playlist selection only change what is shown.
+In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from
 playback selection and information. Random preserves its remembered record; only a dice double
 tap resets the list, with help/animation and an equivalent accessibility action. First entry starts
@@ -761,16 +787,27 @@ that has just gone would draw nothing, and the chip that set it is disabled the 
 
 ## B25. A swipe on a track row — to discuss
 
-**Renewed owner request, 2026-10-19:** swipe to remove a pending occurrence from the proposed
+**Updated owner/app-user request, 2026-10-20:** right swipe adds a manual copy from every track
+list; the unified context/queue also supports left swipe removal of either occurrence origin,
+without editing source storage. Red/green reveals include icon/text, Undo restores rows without
+rewinding audio, and accessibility equivalents remain. Source-row reordering is excluded.
+The owner additionally selected drag reordering only within waiting manual rows and Info on
+long-press; [follow-up](QUEUE_MANUAL_REORDER.md).
+[Third-iteration contract and evidence](QUEUE_UNIFIED_LIST.md); new phone acceptance is pending.
+
+**Historical request, 2026-10-19:** swipe to remove a pending occurrence from the experimental
 manual queue. This does not select a gesture for ordinary playlist, context, Browse or Search
 rows. The owner subsequently authorized implementation with agent-selected details: pending-only
 end-to-start swipe, Material threshold, short snackbar Undo and a labelled Remove equivalent.
 These are provisional choices for later evaluation, not broader source-list gestures. Reordering
-remains excluded; this documentation checkpoint is not a completed implementation.
+remains excluded. Pending-only swipe and visible Undo restoration are implemented on the unmerged
+manual-queue branch, with second-iteration host evidence; phone usability/acceptance remain pending.
+[Final audit/evidence](MANUAL_QUEUE_SECOND_ITERATION.md).
 [Queue/context analysis and gesture scope](QUEUE_CONTEXT_ANALYSIS.md).
 
 **Original rationale before B45, retained as history:** the following description predates the
-independent playback context. There is still no implemented manual FIFO, but the current context
+independent playback context. The accepted develop baseline has no manual FIFO (the extension is
+implemented separately on an unmerged branch), but the current context
 is no longer necessarily the selected playlist.
 
 **Two things make this a conversation rather than a task.**
