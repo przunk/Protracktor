@@ -57,7 +57,7 @@ build or individual retest result. Acceptance records and regression evidence re
   for the current occurrence. No separate, hidden listened log survives clearing.
 - Initially implemented as a reversible experiment at the owner's request. On 2026-10-11 the
   owner accepted the combined trial and authorised merging; retained with C100 as part of B43.
-  See [B43](PR_B43_PLAYED_BEFORE.md) and [C100](PR_C100_SHORT_TRACK_LISTENED.md).
+  See [B43](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B43_PLAYED_BEFORE.md) and [C100](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C100_SHORT_TRACK_LISTENED.md).
 
 ### B42 — saved author/game folders
 
@@ -68,7 +68,7 @@ build or individual retest result. Acceptance records and regression evidence re
   at the right; both controls have equal dimensions.
 - Removing a bookmark in Saved places offers Undo in a snackbar, restoring its original order.
 - Missing indexes or unavailable locations remain explained and manageable rather than silently
-  discarding bookmarks or downloading data. See [B42](PR_B42_SAVED_PLACES.md).
+  discarding bookmarks or downloading data. See [B42](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B42_SAVED_PLACES.md).
 
 ### C101 — known titles in Random and Browse
 
@@ -77,7 +77,7 @@ build or individual retest result. Acceptance records and regression evidence re
   catalogue sorting, identity, selection or Random history.
 - Learn during ordinary playback, not by opening every cached file. Titles survive restart and
   cache eviction; Clear History removes them until learned again, as explicitly agreed with the
-  owner. Blank metadata keeps the catalogue name. See [C101](PR_C101_LEARNED_TRACK_TITLES.md).
+  owner. Blank metadata keeps the catalogue name. See [C101](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C101_LEARNED_TRACK_TITLES.md).
 
 ## Archive-maintainer feedback
 

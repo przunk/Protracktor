@@ -160,6 +160,6 @@ position when the cache phone is absent. Selection replaces the status column wi
 No Random selection or navigation rules were changed. Exported schemas 1–22 are checked against
 real SQLite; the new migration additionally checks populated user data.
 
-The local [PR/handoff](PR_B43_PLAYED_BEFORE.md) records verification and the phone checklist.
+The local [PR/handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B43_PLAYED_BEFORE.md) records verification and the phone checklist.
 Host tests and render inspection cannot settle phone behaviour or usefulness. Both trial outcomes
 remain pending; no retention decision, merge approval or publication is implied.

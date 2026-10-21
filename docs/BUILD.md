@@ -251,7 +251,7 @@ not deleted or committed, so normal compilation does not dirty a release checkou
 `bash scripts/check-release.sh` verifies Git-flow transitions with real working scripts, fixed
 fixture versions, stub builds and a throwaway signer; neither touches release refs or owner keys
 in this checkout. Both are part of the full gate. Failure, timeout and Ctrl+C must stop before the
-release-version commit, master movement and tag. [Analysis and actual verification](PR_RELEASE_TEST_RUNNER.md).
+release-version commit, master movement and tag. [Analysis and actual verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_RELEASE_TEST_RUNNER.md).
 
 ### Releasing from `master` — decided 2026-10-01, from the first release after the public launch
 

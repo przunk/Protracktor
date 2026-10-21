@@ -20,7 +20,7 @@ including corrections to this contract where implementation exposes a gap.
 The playback context was accepted and merged as `7cab210`. C110 generic Browse entry was accepted
 and merged as `7e7f242`, whose tree equals accepted branch `57a9d65` and whose code equals tested
 `fa09e7a`. Its 963 tests/lint/APK are historical evidence, not verification of this new feature.
-[Existing artifact and acceptance](PR_C110_BROWSE_ROOT_NAVIGATION.md): APK 1.2.0 (1231).
+[Existing artifact and acceptance](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md): APK 1.2.0 (1231).
 
 C111 inconsistent Add music/Online catalogues padding is recorded separately in
 [Status](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding); do not fix it

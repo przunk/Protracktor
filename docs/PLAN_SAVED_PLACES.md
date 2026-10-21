@@ -128,7 +128,7 @@ publishes the ordinary Online author view, with a one-step return to Saved place
 Browse has a Saved places entry; supported author/game views have a **Bookmark** toggle.
 Unavailable entries retain their label and removal action, explain the cause, and offer Online
 catalogues for missing indexes/groups. Save/list/remove have no playback or download dependency.
-See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for verification and the combined APK trial.
+See [the local PR/handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B42_SAVED_PLACES.md) for verification and the combined APK trial.
 
 Presentation refinement requested by the owner on 2026-10-07: replace Save for later / Remove
 with one stable Bookmark label (PL: Zakładka), using an outlined or filled bookmark for state.

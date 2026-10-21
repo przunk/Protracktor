@@ -74,7 +74,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | ~~C114~~ | ~~Current manual row highlight/hit area excludes its inset~~ | Accepted and merged **3bc5a98**, 2026-10-21; full-width paint/hit area, failing pixel/hold probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | ~~C115~~ | ~~Playlist grip loses ownership, row layering and viewport tracking~~ | Accepted and merged **3bc5a98**, 2026-10-21; stable subtree, outer layer, viewport pin and batched moves with negative probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | C111 | Add music and Online catalogues content padding changes between views | Owner/user report, 2026-10-19; visible alignment/spacing mismatch. Measurements and cause not established; not fixed or included in queue work. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
-| ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
+| ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |
 | C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Owner/user report, 2026-10-20; explicitly deferred from the unified-list iteration. Compact presentation needs later discussion. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
@@ -83,16 +83,16 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | Visit/route ownership merged at `e9a7a98`, 2026-10-18; full gate passed (929 tests, lint zero errors), APK 1.2.0 (1214) ready. Owner authorized integration before phone acceptance, which remains pending. Search ownership was already fixed by C106. [Stability report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
+| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | Visit/route ownership merged at `e9a7a98`, 2026-10-18; full gate passed (929 tests, lint zero errors), APK 1.2.0 (1214) ready. Owner authorized integration before phone acceptance, which remains pending. Search ownership was already fixed by C106. [Stability report](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md). |
 | Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Parent-first publication merged at `e9a7a98`; full gate passed, phone acceptance pending. |
 | Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Retirement and late-completion guards merged at `e9a7a98`; full gate passed, phone acceptance pending. |
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |
-| Review round 5 R7 | Historical shared `.part` filename finding | Current SharedFetches already joins one-URL transfers. Unique staging files and failure cleanup merged at `e9a7a98`; not a newly reproduced duplicate transfer. [Reassessment](review.md). |
-| Review round 5 R8 | An old eviction snapshot can remove a concurrent replacement | Controlled disk reproduction fails on the old algorithm; transactional cache correction passed the full gate and merged at `e9a7a98`, phone acceptance pending. [Report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
+| Review round 5 R7 | Historical shared `.part` filename finding | Current SharedFetches already joins one-URL transfers. Unique staging files and failure cleanup merged at `e9a7a98`; not a newly reproduced duplicate transfer. [Reassessment](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review.md). |
+| Review round 5 R8 | An old eviction snapshot can remove a concurrent replacement | Controlled disk reproduction fails on the old algorithm; transactional cache correction passed the full gate and merged at `e9a7a98`, phone acceptance pending. [Report](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md). |
 
 C108 protection was approved for integration and merged at `8f3ef56`, 2026-10-15, and is no longer
 open. Schema remains 23; older destructive binaries are not repaired by this merge.
-[Verification and remaining phone evidence limits](PR_C108_PRESERVE_NEWER_DATABASE.md).
+[Verification and remaining phone evidence limits](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 Completed C105/C106/C107 left the open inventory after owner acceptance on 2026-10-15: C105 merged
 at `557acbb`, then C106/C107 at `d74d339`. Their defect history and verification remain in
@@ -114,7 +114,23 @@ host race demonstrations do not establish how often the sequence occurs on a pho
 - **A26:** reduce copying of large files over JNI when justified, and consider replacing the
   single-element error array. Neither is a demonstrated defect or selected priority.
 - **Random query performance:** measure `ORDER BY RANDOM()` against a large index before choosing
-  a different sampling strategy. [Review round 8 R7](review-round-8.md).
+  a different sampling strategy. [Review round 8 R7](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-round-8.md).
+- **Retained review observations, 2026-10-14:** reassess against current code before selecting
+  implementation. These are not newly reported phone defects:
+
+  - Measure repeated notification/heart projection on progress ticks with a large playlist before
+    introducing caches or changing update policy.
+  - Check the composite author/platform/year `ARTIST` value on a real MediaSession receiver;
+    do not silently reverse the accepted notification presentation.
+  - The audio-host harness checks ordered recovery but does not establish concurrent Oboe
+    callback/shutdown lifetime safety. Additional synchronized tests and phone stress are options,
+    not evidence of an existing memory fault.
+  - The APK wrapper's signature check can warn and continue after verification failure. The
+    warning-only path is still present on 2026-10-21; invalid/unsigned/wrong-certificate artifact
+    tests and enforcement remain separate work. Previously handed-off APKs were independently
+    verified; their signatures are not invalidated by this tooling observation.
+
+  [Original R3–R6 analysis and evidence limits](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-2026-10-14.md).
 - **Architecture:** remaining controller responsibilities, Compose screens, web modules and native
   adapters are deferred, not an automatically resumed project. The bounded refactor was accepted;
   [closeout](ARCHITECTURE_CLOSEOUT.md) records what stayed in place.

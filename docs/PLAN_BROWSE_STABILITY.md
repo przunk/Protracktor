@@ -47,4 +47,4 @@ Use one task branch from develop; do not merge, push, move release tags or advan
 - Technical handoff complete. Owner explicitly authorized integration on 2026-10-18 before phone
   acceptance; merged into develop at `e9a7a98`, with the complete branch tree preserved.
   Phone checks remain pending; nothing pushed/released and no new APK built for the merge.
-- [Mechanisms, intermediate failures and evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).
+- [Mechanisms, intermediate failures and evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md).

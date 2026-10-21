@@ -263,7 +263,7 @@ Two more things fall out of it rather than being designed:
 - **Browsing is three reads, not three queries.** One record for the format list, one per format for
   its authors, one per bucket for its tracks — computed once while writing.
 - **Random gets better than the phone's.** Pick a bucket weighted by its count, then a track inside
-  it. `docs/review-round-8.md` R7 says the phone's `ORDER BY RANDOM()` over half a million rows is
+  it. [docs/review-round-8.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-round-8.md) R7 says the phone's `ORDER BY RANDOM()` over half a million rows is
   unmeasured and probably wasteful; this is the shape it may want to borrow.
 
 **What it costs is search**, and S4 has to answer for it: matching an author or a format reads
@@ -504,7 +504,7 @@ the APK and the browser together, because the two should be as alike as they can
 follows here is the web-specific half: what the dice picks from, and the measurements behind
 it.
 
-The phone asks SQLite for `ORDER BY RANDOM() LIMIT n`, which `docs/review-round-8.md` R7 already
+The phone asks SQLite for `ORDER BY RANDOM() LIMIT n`, which [docs/review-round-8.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-round-8.md) R7 already
 records as unmeasured and probably wasteful. IndexedDB cannot do it at all.
 
 #### What the measurement changed

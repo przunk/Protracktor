@@ -267,7 +267,7 @@ service/notification layout, gestures or usability. Product questions remain in
 ## C110 — Browse root navigation
 
 Branch `fix/browse-root-navigation`; APK **1.2.0 (1231)**, source `fa09e7a`. Artifact and host evidence are in
-[the handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md). The owner accepted the correction on 2026-10-19;
+[the handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md). The owner accepted the correction on 2026-10-19;
 merged as `7e7f242`. Individual results for every scenario below were not separately supplied;
 retain this as a regression checklist, not a claim that all items were independently certified.
 Install over the existing test-signed build without uninstalling or clearing data.
@@ -364,7 +364,7 @@ is written down so it is the same list every time rather than whatever anybody r
 Branch `fix/browse-download-stability`; APK **1.2.0 (1214)**, source `f32e6cc`.
 Merged into develop on 2026-10-18 at the owner's request; this is not phone acceptance.
 Exact identity and successful 929-test/lint host results are recorded in
-[the handoff](PR_BROWSE_DOWNLOAD_STABILITY.md). **All scenarios below are unchecked on a phone.**
+[the handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md). **All scenarios below are unchecked on a phone.**
 Use existing disposable/saved test playlists; do not uninstall or clear app data.
 
 1. In an indexed catalogue, quickly open different formats/authors, press Back during loading,
@@ -578,7 +578,7 @@ Minified release artifact and test signature checked, not phone behaviour.
 Code finding selected by the owner, not independent tester feedback. Host-only native SQLite
 fixtures cover newer schema refusal/preservation and later compatible reopen; real Activity,
 Retry/Close and service entry checks also run on the host, not a phone.
-[Analysis and evidence](PR_C108_PRESERVE_NEWER_DATABASE.md).
+[Analysis and evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 For the release-APK phone trial, retain existing data and use the normal schema-23 installation:
 check startup, playlist contents, History search, bookmarks, external file opening and playback/
@@ -631,7 +631,7 @@ Owner feedback, not an independently identified tester. Exact installed build/de
 separately supplied. Test a new History entry after scrolling, via Browse root/another domain and
 after closing Browse. Each visit should start at the newest row with zero offset. Page changes
 within one visit should retain their positions; the next visit resets all History page positions.
-[Evidence and complete checklist](PR_C107_HISTORY_ENTRY_SCROLL.md). The trial includes pending
+[Evidence and complete checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C107_HISTORY_ENTRY_SCROLL.md). The trial includes pending
 C105 and C106; no acceptance of any branch is inferred from the new host tests.
 The forced gate passed 876 tests/116 suites with lint 0 errors/72 warnings. Offered combined
 release: **1.3.3 (1178)**, clean source `ffdbd87`,
@@ -647,8 +647,8 @@ contains C105, whose acceptance is still pending. Host regressions demonstrate o
 navigation, loading and failure ownership; they do not demonstrate phone frequency or screen behaviour.
 The forced gate passed 872 tests with lint 0 errors/72 warnings. Offered combined APK: **1.3.2 (1174)**,
 clean source `a4b0a6f`; phone checks below remain pending, not inferred from compilation or host tests.
-See [C106 evidence and phone checklist](PR_C106_SEARCH_REQUEST_OWNERSHIP.md) and the
-[C105 playlist checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist).
+See [C106 evidence and phone checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C106_SEARCH_REQUEST_OWNERSHIP.md) and the
+[C105 playlist checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist).
 
 ## B48 and B46 — overall owner acceptance, 2026-10-14
 
@@ -656,7 +656,7 @@ C105 subsequently received a separately selected activation fix on `fix/latest-p
 Its code-review source must not be presented as independent user feedback. Full gate passed 859
 tests with lint 0 errors/72 warnings. Offered APK: **1.3.1 (1170)**, clean source `07300b1`,
 `dist/protracktor-release-1.3.1-1170-07300b1-20261014-005316.apk`; device results still pending.
-Use the [C105 checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist) for
+Use the [C105 checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist) for
 rapid A/B/C switching, final-playlist Save/Discard/restart and notification-heart destination checks.
 No C105 phone result or merge is established by the earlier B48/B46 acceptance below.
 
@@ -796,7 +796,7 @@ Play-test participation from general acceptance or the merge.
 
 Origin branch: `fix/bluetooth-output-recovery`, stacked on C103; merged with owner approval at
 `69c42a2` on 2026-10-13. Release APK details are in the
-[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). The owner confirmed these phone scenarios:
+[C102 handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). The owner confirmed these phone scenarios:
 
 | Starting state | Bluetooth transition | Reported result |
 | --- | --- | --- |

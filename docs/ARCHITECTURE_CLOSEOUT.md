@@ -62,7 +62,7 @@ read-ahead retirement for a separate bounded stability pass. They are implemente
 Merged at `e9a7a98` on 2026-10-18 with explicit owner authorization before phone acceptance.
 Phone acceptance remains pending.
 The retained list below records the original extraction boundary, not a claim that the later
-trial is absent. [Plan and implementation evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).
+trial is absent. [Plan and implementation evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 Detailed reproductions are in `STATUS.md`; controlled tests establish the sequences, not their
 frequency on a phone. In particular:
@@ -85,7 +85,7 @@ lifecycle guards now have passing focused regressions and mutation evidence. Ful
 768 unit tests and lint (0 errors, 68 warnings). C103 subsequently merged with owner approval at
 `f4c9bf1`; individual playlist phone checks remain unreported in
 [Status](STATUS.md) and the
-[C103 handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md). The other risks above remain open; this follow-up
+[C103 handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C103_PLAYLIST_WRITE_SAFETY.md). The other risks above remain open; this follow-up
 does not rewrite what the refactor itself preserved.
 
 ## Technical verification and candidate

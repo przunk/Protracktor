@@ -240,7 +240,7 @@ implementation stages and test criteria. Selected on 2026-10-07 for implementati
 Schema 23 implements the bookmarks; the two features remain separately reviewable.
 Implementation and full host verification are complete. On 2026-10-11 the owner accepted the
 combined phone trial and approved merging; B42 is now on local `develop` with B43/C100 and C101.
-See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for evidence and the trial checklist.
+See [the local PR/handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B42_SAVED_PLACES.md) for evidence and the trial checklist.
 
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 

@@ -262,7 +262,7 @@ and one-level Back remain separate. Clean source `fa09e7a` passed the forced ful
 `dist/protracktor-release-1.2.0-1231-fa09e7a-20261019-231016.apk`, **11,831,347 bytes**.
 Package/code, v2 test signature, absence of the debuggable flag, R8 and three engine ABIs verified.
 Phone behaviour remains **unchecked**; no merge/push. Develop, AMP and master are untouched.
-[Implementation, hashes and evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md);
+[Implementation, hashes and evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md);
 [complete queue discussion](QUEUE_CONTEXT_ANALYSIS.md). No manual queue or AMP change is included.
 
 ## Manual queue contract audited — implementation authorized, 2026-10-19
@@ -421,7 +421,7 @@ Phone behaviour remains **unchecked**. Subsequent handoff documentation does not
 fixed versionCode/source. **Checked integration:** the merge tree equals branch `1af5a72`; app,
 native, web and scripts match verified source `f32e6cc`. This is a Git comparison, not a fresh
 929-test run or a phone check. No new APK, push, master/tag movement, store release or migration.
-[Plan](PLAN_BROWSE_STABILITY.md), [analysis and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
+[Plan](PLAN_BROWSE_STABILITY.md), [analysis and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ## Release 1.2.0 — AAB prepared 2026-10-15, verified 2026-10-16
 
@@ -468,7 +468,7 @@ application test/lint run or APK is claimed for this output-only tooling change;
 has the same complete tracked tree as checked branch `6d1311b`; verified by Git tree comparison,
 not another test run. The following closeout changes documentation only. No release, APK or push;
 master, tags and remote refs are unchanged.
-[Report](PR_RELEASE_TEST_RUNNER.md).
+[Report](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_RELEASE_TEST_RUNNER.md).
 
 ## Release test runner — owner approved and merged, 2026-10-15
 
@@ -497,7 +497,7 @@ This is a Git tree/checksum verification, not a fresh execution of the 547-secon
 following closeout is documentation-only. No application APK/AAB, phone test, release or push was
 performed; tooling verification does not establish app/device behaviour. Master remains at
 `v1.1.0` (`da4569b`); all tags and remote refs are unchanged, and `v1.2.0` is absent.
-[Analysis and verification](PR_RELEASE_TEST_RUNNER.md).
+[Analysis and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_RELEASE_TEST_RUNNER.md).
 
 ## Release-version history reconciliation — completed, 2026-10-15
 
@@ -625,7 +625,7 @@ All five compatibility resources remain. App/native/scripts/web/build sources ma
 **Not checked:** normal operation and refusal UI/timing on a phone; owner acceptance remains pending.
 Native SQLite/Activity/service checks are host evidence only. Branch unmerged; develop remains at
 the accepted B49 closeout `f41a5fa`. Master/tags/store untouched, no push/AAB. Schema stays 23;
-no reset or migration. Previous APKs preserved. [Analysis and verification](PR_C108_PRESERVE_NEWER_DATABASE.md).
+no reset or migration. Previous APKs preserved. [Analysis and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 ## C105–C107 — owner accepted and merged, 2026-10-15
 
@@ -673,7 +673,7 @@ Independent APK v2 verification confirms the unchanged test certificate SHA-256
 Build/artifact evidence: ignored `dist/c107-release*` / `dist/c107-apk-*`. App/native/scripts match
 the full-gate source `ccf85a0`; later handoff is docs-only. This combined trial includes C105/C106
 and supersedes 1.3.2 for current testing without deleting or altering previous APKs/branches.
-No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
+No phone retest, merge or push is claimed. [Analysis](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 ## ~~C106 search request ownership~~ — pre-acceptance handoff, 2026-10-15
 
@@ -711,7 +711,7 @@ Independent APK v2 verification confirms the unchanged test certificate SHA-256:
 Build/artifact evidence: ignored `dist/c106-release*` and `dist/c106-apk-*`. Application/native/script
 sources match the full-gate commit `cd387d7`; later handoff changes documentation only.
 Phone behaviour is **not checked**; nothing merged or pushed.
-[Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
+[Analysis](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
 separate; this is not a general Browse rewrite.
 
 ## ~~C105 latest playlist activation~~ — pre-acceptance handoff, 2026-10-14
@@ -745,11 +745,11 @@ APK v2 signature verified independently; expected test certificate SHA-256:
 Build/artifact evidence: ignored `dist/c105-release*` and `dist/c105-apk-*`.
 Application/native/script sources match the full-gate source `6c89157`; later handoff is docs-only.
 Phone behaviour is **not checked**; no merge/push or master/tag/store change.
-[Analysis and phone checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+[Analysis and phone checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 ## Earlier session code review — pre-fix checkpoint, 2026-10-14
 
-[Review and evidence](review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
+[Review and evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
 B6, B48 and B46. One additional pre-existing playlist activation defect is recorded as C105 below;
 the known stale-search/navigation race also remains. Performance, external ARTIST metadata,
 concurrent native-test coverage and fail-open APK verification are observations, not invented
@@ -771,7 +771,7 @@ claimed. **Owner selected correction, 2026-10-14:** implementation on
 `fix/latest-playlist-activation`, based on develop `ad18da6`. Before correction, all six new
 controlled-store regressions fail by assertion (47 session checks, six failures, zero errors/skips).
 This is the pre-fix checkpoint; the current branch implementation is recorded above. No phone
-result or merge is claimed. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+result or merge is claimed. [Analysis](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 ## B48 and B46 — owner accepted and merged, 2026-10-14
 
@@ -1049,7 +1049,7 @@ authorized merging the combined work. Installed build/device details were not se
 seek, a Pause racing with connection, focus/EOF/error cases and long-term behaviour. No individual
 C103 phone-check results were supplied. The merge tree exactly matched the approved branch;
 application sources still match tested APK source `d1d8964`. Tests/lint and APK were not rerun for
-the merges and documentation-only closeout. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+the merges and documentation-only closeout. [Analysis and handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
 
 ## Playlist-write safety — C103, merged with owner approval, 2026-10-13
 
@@ -1074,7 +1074,7 @@ Logs/XML and lint report: ignored `dist/playlist-write-safety/`.
 No standalone APK was built: C103 is included in the minified combined trial recorded above.
 Merged at `f4c9bf1` with the owner's approval of the combined work. The Bluetooth checklist results
 do not independently confirm playlist behaviour; no per-scenario C103 phone result was supplied.
-[Analysis and handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+[Analysis and handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ## Implementation roadmap and Bluetooth report — recorded 2026-10-13
 
@@ -1154,7 +1154,7 @@ clean source `cbb6f3e`, built in 195 s; 11,745,002 bytes. SHA-256:
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs. APK v2 signature verified with the
 same test certificate as 1120; schema 23 unchanged. Full gate: 749 tests and lint passed.
 Owner phone acceptance and local merge are recorded above; no push, tag, AAB or publication.
-The handoff commit changes documentation only. [Evidence and test checklist](PR_C101_LEARNED_TRACK_TITLES.md).
+The handoff commit changes documentation only. [Evidence and test checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C101_LEARNED_TRACK_TITLES.md).
 
 **Branch organisation, owner decision 2026-10-11:** C100 is part of B43 on
 `feature/played-before` (`3cde2ec`). `feature/saved-places` (`cb79b1b`) is rebased on it;
@@ -1187,7 +1187,7 @@ previously checked accumulated time without a completion input. At the owner's r
 B42 is stacked above B43. C100 changes no schema. On the original combined
 B42/B43 trial at `0f70540`, the forced full gate passed in 270 s: **741 tests**, zero failures/errors/skips,
 lint without errors and all companion checks. The old rule failed four new tests; an isolated
-seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
+seek-guard mutation failed its intended test. [Evidence and phone checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C100_SHORT_TRACK_LISTENED.md).
 The owner subsequently accepted the combined trial and authorised the merge (see above).
 The combined 1123 release above includes the separately authorised C101.
 
@@ -1207,7 +1207,7 @@ One batched History read supplies markers and titles; only rendered copies chang
 sort fields or the Random record. Two UI tests failed before wiring and passed afterwards.
 The forced full gate passed in **309 s: 749 tests**, zero failures/errors/skips, lint without
 errors and all companion checks. The owner subsequently accepted the combined trial and authorised the merge.
-See [the handoff](PR_C101_LEARNED_TRACK_TITLES.md) and
+See [the handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C101_LEARNED_TRACK_TITLES.md) and
 [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
 ## B42 Saved places — accepted and merged, 2026-10-11
@@ -1238,7 +1238,7 @@ Schema 23 and B43 are unchanged. Full gate: **724 tests**, zero failures/errors/
 errors, all companion checks passed (137 icon paths); 211 s. Tests executed, not served from cache.
 Four updated UI tests failed against the old presentation; all eight interaction tests now pass.
 Native previews cover EN/PL and both themes. UI fixture lifecycle/shared-SDK failures and the
-successful API-29 isolation are recorded in [the PR handoff](PR_B42_SAVED_PLACES.md).
+successful API-29 isolation are recorded in [the PR handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B42_SAVED_PLACES.md).
 The revised UI is not yet verified on the phone.
 
 **Previous presentation APK:** `dist/protracktor-release-1.0.0-1118-84fa8a8-20261007-222557.apk`,
@@ -1258,7 +1258,7 @@ failures/errors/skips; lint without errors; 581 page, 49 existing-WASM (not rebu
 8 server checks, web database upgrade, 135 icon paths and store metadata validation. Two deliberate
 mutations failed the intended identity/navigation tests; they were restored before this gate.
 Two render tests produced eight previews. Device behaviour and usefulness remain unverified;
-the release APK is ready. [Evidence and trial checklist](PR_B42_SAVED_PLACES.md).
+the release APK is ready. [Evidence and trial checklist](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B42_SAVED_PLACES.md).
 B43's five-second rule and
 status-column placement are unchanged. Never reinstall a schema-22 (or older) APK after upgrading
 to this candidate: those older binaries retain a destructive downgrade path. A rejected feature
@@ -1326,7 +1326,7 @@ Two additional native-render tests passed; four EN/PL light/dark previews were i
 **Partly checked:** host Compose tests cover Browse/Random marks, playlist hiding, reactive
 updates, PL accessibility and the Info action. **Not checked:** actual phone playback/UI,
 background behaviour, upgrade on the owner's data and usefulness. See
-[the local PR/handoff](PR_B43_PLAYED_BEFORE.md) for evidence and the trial checklist.
+[the local PR/handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B43_PLAYED_BEFORE.md) for evidence and the trial checklist.
 Verification logs/previews are retained in `dist/b43-verification/`. No merge, push, master/tag
 change, AAB or publication occurred. Version name remains 1.0.0 under the owner's publication freeze.
 
@@ -2180,7 +2180,7 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after a 
 - modules play (2026-08-31), SAP plays (2026-09-01)
 - round 3's five features — Random rolling on, history, "more from this author", both shares
   (2026-09-02)
-- **2026-09-03, round 5**: **SNDH plays** — which also means `docs/review.md` R1 is genuinely fixed,
+- **2026-09-03, round 5**: **SNDH plays** — which also means [docs/review.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review.md) R1 is genuinely fixed,
   not merely fixed as far as a probe can tell; the **local index survives a restart** and is read
   instead of rescanned; **Browse comes back to where you were**; **C6** looks right; **C7**
   confirmed — adding from a row's menu no longer closes Browse.
@@ -2537,7 +2537,7 @@ This does not claim global serialization of every `LibraryStore` caller.
 **State:** merged at `f4c9bf1` following owner approval of the combined C103/C102 work. Focused host
 checks and the passed full gate are recorded above. Individual playlist device scenarios remain
 **not checked**; the supplied phone results concern Bluetooth. The combined candidate is tracked
-in C102. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+in C102. [Handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ### C102. ~~Bluetooth connection interrupts sound and stalls the in-app progress~~ — FIXED, owner-accepted and merged, 2026-10-13
 
@@ -2577,7 +2577,7 @@ This explains the reported symptom sequence but is **not** a confirmed device er
 `fix/bluetooth-output-recovery` adds per-stream error state, control-thread output-only recovery,
 and a typed JNI result. It preserves the decoder and does not restart finished or paused tracks.
 Unrecoverable errors pause and show `notice_audio_device_failed`. Host evidence and remaining
-checks are recorded at the top and in the [C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+checks are recorded at the top and in the [C102 handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
 **Owner acceptance, 2026-10-13:** Bluetooth connection and disconnection while paused both leave
 playback silent. Connecting during playback transfers sound to headphones; disconnecting pauses.
 The owner authorized merging the combined work; C103 merged at `f4c9bf1`, then C102 at `69c42a2`.
@@ -3817,7 +3817,7 @@ Every detail of the report follows from that:
   sees one;
 - **five, then two, then none** — the count is the query's duration divided by 200 ms;
 - **worse under a platform filter** — `format IN (…)` cannot use an index, so the scope is scanned
-  and sorted whole (`docs/review-round-8.md` R7 predicted the cost, not this consequence);
+  and sorted whole ([docs/review-round-8.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-round-8.md) R7 predicted the cost, not this consequence);
 - **gone on the second try** — SQLite's page cache was warm by then.
 
 **Fixed by clearing `playing` before the advance, not after.** The poll's own comment already stated

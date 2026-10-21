@@ -102,7 +102,7 @@ Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and 
 report, a context-position visibility concern and swipe-removal request. The full
 [follow-up analysis](QUEUE_CONTEXT_ANALYSIS.md) separates owner proposals from agent recommendations
 and open decisions. C110 was accepted and merged as `7e7f242`
-([handoff](PR_C110_BROWSE_ROOT_NAVIGATION.md)). On 2026-10-19 the owner authorized the manual queue
+([handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md)). On 2026-10-19 the owner authorized the manual queue
 implementation and delegated unresolved choices to the agent, asking to retain questions for
 post-implementation evaluation. The analysis now supplies a transition table and provisional
 FIFO/transport/repeat/UI/failure decisions, not falsely attributed per-rule owner approvals.

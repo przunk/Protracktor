@@ -1854,7 +1854,7 @@ off by one.** That is rounding, not decoding.
 
 *The first run of that comparison showed two vectors "wrong" with an RMS of 6,000. The comparison was
 wrong, not the decoder — it read a stereo reference as if it were mono. The same lesson as the
-worklet stub in `docs/review-round-8.md` R1, twice in one day: a measurement that reads the wrong
+worklet stub in [docs/review-round-8.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review-round-8.md) R1, twice in one day: a measurement that reads the wrong
 thing is evidence of the wrong conclusion.*
 
 ### The two decisions, answered

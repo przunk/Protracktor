@@ -205,7 +205,7 @@ reads happen before a non-suspending state update; persistence identity and queu
 together. Newly requested track writes remain gated during activation, while already captured
 C103 snapshots keep their owners. Settings writes are serialized separately and sampled inside
 their lock. Superseded failures do not affect the current request; cancellation and current
-failure propagation remain explicit. [Contract and verification](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+failure propagation remain explicit. [Contract and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 **C102 output recovery, 2026-10-13, merged at `69c42a2`:** each Oboe stream holds
 its own shared `OutputError` callback, which atomically records an error and delegates stop/close
@@ -333,7 +333,7 @@ Typing/filter edits do not submit a new search. Completed results retain the exi
 contract: changing scope clears stale-result fields; catalogue/platform toggles do not. Current
 exceptions end owned loading and require an error callback, localized by the controller; cancellation
 and obsolete failures do not report errors. `LibrarySearch` still owns matching, ordering, caps and
-source aggregation without changes. [Contract and evidence](PR_C106_SEARCH_REQUEST_OWNERSHIP.md).
+source aggregation without changes. [Contract and evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C106_SEARCH_REQUEST_OWNERSHIP.md).
 
 ### Original refactoring inventory — remaining extractions deferred on 2026-10-05
 
@@ -554,7 +554,7 @@ hidden and not silently skipped: a press that does nothing and says nothing is a
 > **One helper per process, since 2026-09-03.** Every store used to construct its own
 > `SQLiteOpenHelper` on the same file. That class synchronises within an instance and not between
 > them, so five of them meant five things that could independently run `onUpgrade` — and the
-> migration statements are plain `CREATE TABLE`, which fail on a second run. `docs/review.md` R3.
+> migration statements are plain `CREATE TABLE`, which fail on a second run. [docs/review.md](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/review.md) R3.
 
 
 Decided 2026-09-01.
@@ -821,7 +821,7 @@ the visit. No intermediate loading frame is required. Other domains keep their e
 restoration. Keying only the cache is insufficient: the playing-row observer must treat the current
 track as arrival, not a change that can immediately scroll the fresh list. This is UI navigation
 state, not persisted history or a schema change.
-[Report and verification](PR_C107_HISTORY_ENTRY_SCROLL.md).
+[Report and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 **B49 live History search, pending `feature/history-live-search`, 2026-10-15:** `HistoryBrowser`
 owns only the Browse flow's input/loading/result transitions. `HistoryReads` debounces edits by
@@ -1202,7 +1202,7 @@ Read-ahead separately retires its generation before cancelling work or accepting
 selection; late cancelled or obsolete completions cannot repopulate memory.
 Merged into develop on 2026-10-18 with explicit owner authorization ahead of phone acceptance.
 Device behaviour remains unchecked; merging does not close the phone trial.
-[Contract and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
+[Contract and verification](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ### And what the user can throw away themselves
 

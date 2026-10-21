@@ -60,7 +60,7 @@ The [status](STATUS.md) and [testing record](TESTING.md) preserve the actual acc
 - Filtering does not modify History order or the playback queue. Each new visit starts at the
   top; page positions within the same visit remain usable.
 - The entry-position correction follows the owner's report; live search is a recorded user wish.
-- [Search plan](PLAN_HISTORY_SEARCH.md), [entry-position correction](PR_C107_HISTORY_ENTRY_SCROLL.md).
+- [Search plan](PLAN_HISTORY_SEARCH.md), [entry-position correction](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 ### C102 — Bluetooth output recovery
 
@@ -69,27 +69,27 @@ The [status](STATUS.md) and [testing record](TESTING.md) preserve the actual acc
 - The owner confirmed headphones: connecting while playing transfers sound; disconnecting pauses;
   connecting/disconnecting while paused stays silent. Car-specific and long-term scenarios were
   not independently confirmed. Reopen failure gives feedback instead of pretending to keep playing.
-- [Analysis and trial evidence](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+- [Analysis and trial evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
 
 ## Code-review safeguards, not independent user reports
 
 - **C103 — playlist writes:** bind a write to a detached playlist snapshot, serialize writes,
   and prevent late save/revert/delete completions from clearing newer work or restoring stale data.
-  [Evidence](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+  [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C103_PLAYLIST_WRITE_SAFETY.md).
 - **C105 — playlist activation:** only the latest requested activation may publish the destination
-  and persistence state. [Evidence](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+  and persistence state. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 - **C106 — search ownership:** obsolete searches cannot publish into a new context or clear another
-  request's loading state. [Evidence](PR_C106_SEARCH_REQUEST_OWNERSHIP.md).
+  request's loading state. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C106_SEARCH_REQUEST_OWNERSHIP.md).
 - **C108 — newer database:** refuse an incompatible schema without deleting user data, with startup/
   service checks and retry/close feedback. Schema stays 23. Host SQLite fixtures are not proof of
-  exercising a future-schema refusal on a phone. [Evidence](PR_C108_PRESERVE_NEWER_DATABASE.md).
+  exercising a future-schema refusal on a phone. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 ## Release tooling and version identity
 
 The ordinary gate tracks per-class test isolation, stage deadlines, elapsed notices and scoped
 process cleanup. Successful details remain in complete log files; failures show a bounded tail.
 The shared-worker Compose idle failure is contained by isolation, not fully diagnosed.
-[Runner analysis](PR_RELEASE_TEST_RUNNER.md), [build/release procedure](BUILD.md).
+[Runner analysis](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_RELEASE_TEST_RUNNER.md), [build/release procedure](BUILD.md).
 
 `versionName` advances only in the release procedure. Earlier 1.1.1–1.4.1 APK names are historical
 trial identifiers, not separate prepared/published releases. The approved unpublished-history

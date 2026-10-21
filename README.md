@@ -44,6 +44,11 @@ Start with Status for the current state and the implementation roadmap for open 
 plans and reviews retain earlier decisions and verification evidence; they are not automatically
 an up-to-date list of missing features or permission to implement them.
 
+Historical implementation handoffs and review reports are available in
+[Git history](https://github.com/przunk/protracktor/tree/2c35319cfa8b665398a36141248b45544bd68ebe/docs),
+rather than the current documentation tree. Links to those records use a fixed revision; older
+source comments may refer to their historical paths.
+
 | File | Contents |
 | --- | --- |
 | [`docs/STATUS.md`](docs/STATUS.md) | what is done, known defects numbered **C1…Cn**, branch state |
@@ -76,7 +81,6 @@ an up-to-date list of missing features or permission to implement them.
 | [`store/play-console/releases.md`](store/play-console/releases.md) | prepared store-bundle evidence: hash, versionCode, commit, tag and signer; preparation alone does not confirm publication |
 | [`docs/rules/`](docs/rules) | the rules the phone and the browser share, as data both of them are tested against |
 | [`docs/TESTING.md`](docs/TESTING.md) | what only a phone can prove, and what to check on a build before trusting it |
-| `docs/review.md`, `docs/review-round-*.md` | what a pass over a finished round's own diff found, and what it checked and cleared |
 
 ## Licence
 
