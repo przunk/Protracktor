@@ -89,6 +89,12 @@ opposite-phase material, level changes and transitions; Mono can cancel opposite
 
 ## Q13 — Playback queue and navigation
 
+2026-10-21: the complete manual-queue trial is accepted after phone testing and merged as
+**3bc5a98**. [Current integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Earlier provisional choices describe the implementation now accepted; they do not authorize
+queue persistence, source reordering or other deferred features. Granular device checks remain
+unreported. The dated implementation/acceptance progression below is historical.
+
 **Experiment selected, 2026-10-18; owner accepted Queue and authorized integration, 2026-10-19.**
 Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and a fresh full gate
 (956 tests, lint without errors), `feature/playback-queue-experiment` was merged into develop as
@@ -137,7 +143,7 @@ device checks and owner acceptance remain pending, with no merge authorized.
 Later on 2026-10-21: C116's follow-up and the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
 correct auto-follow appearance and C117's omitted-history walk without selecting new product
 rules. Current source **1a1503f**, release APK **1.2.0 (1261)**, passed 1096 tests/full gates/lint;
-phone acceptance remains pending. Earlier handoffs remain historical.
+overall phone acceptance and merge **3bc5a98** are now recorded above. Earlier handoffs remain historical.
 
 In the accepted baseline, the owner selected one playback context independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

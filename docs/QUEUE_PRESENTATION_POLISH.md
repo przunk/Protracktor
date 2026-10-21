@@ -1,5 +1,9 @@
 # Queue presentation polish
 
+Integration update, 2026-10-21: the full trial is accepted after phone testing and merged as
+**3bc5a98**. [Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Stage-specific pending/unmerged statements below retain their original handoff context.
+
 Historical handoff: **APK 1.2.0 (1250), source 6043902**, unmerged. Original evidence below.
 
 Subsequent [scroll-first swipes](QUEUE_SWIPE_INTENT.md), Clear and row corrections have later

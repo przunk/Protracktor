@@ -1,5 +1,10 @@
 # Unified playback list — third iteration
 
+Integration update, 2026-10-21: the full trial is accepted after phone testing and merged as
+**3bc5a98**, including the later Clear/reorder/presentation corrections.
+[Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Stage-specific pending/unmerged statements below are historical, not the current merge state.
+
 2026-10-20 follow-up: the owner selected long-press Info and drag reordering **only inside the
 waiting manual block**. [Follow-up contract/evidence](QUEUE_MANUAL_REORDER.md) supersedes the
 earlier trailing Info control and manual-reorder exclusion. APKs 1248/1245 record earlier

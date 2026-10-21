@@ -1,13 +1,20 @@
 # Status
 
-Updated: 2026-10-21 — C116/C117 corrections and complete branch audit ready for phone testing; APK 1.2.0 (1261), source 1a1503f, unmerged; C110 merged, C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — manual playback queue and C113–C117 accepted after phone testing and merged as 3bc5a98; latest APK 1.2.0 (1261), source 1a1503f; C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Audited queue candidate — ready for phone testing, unmerged, 2026-10-21
+## Audited queue — accepted and merged, 2026-10-21
+
+The trial is accepted after positive phone testing and integration is approved. Merged
+`feature/manual-playback-queue` (`9287df5`) into develop as **3bc5a98**, without conflicts;
+the merge tree exactly equals the accepted branch. Application/build sources still equal
+the verified APK source **1a1503f**; subsequent changes are documentation only. No new APK or
+test rerun for this merge. [Acceptance and integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Overall phone acceptance does not supply individual outcomes for every retained checklist.
 
 C116 corrects whole-list appearance flashes after automatic following. The [complete branch
 audit](QUEUE_BRANCH_REVIEW.md) also corrected C117's omitted-history traversal bound and EN/PL
@@ -24,12 +31,13 @@ R8/nonempty mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked. S
 `0317cccb20526608a6c8f0cec324254a335ace4a0ad151b34ae1c99d7b5d6e5b`.
 [Evidence](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk);
 [phone checklist](TESTING.md#queue-follow-and-branch-audit--phone-checks-pending).
-**Checked partially:** host behaviour and artifact properties. **Unchecked:** phone animation,
-gesture/accessibility comfort, audio, notifications, Bluetooth and long-term use. No merge/push/
-tag; develop, AMP and master unchanged. C111/C112 remain excluded. Older handoffs below retain
-their original evidence; documentation-only closeout does not change APK source SHA/code.
+**Checked:** forced host gates/artifact properties and overall phone trial acceptance (feedback
+reported, not run by the agent). **Unchecked individually:** detailed accessibility, notification,
+Bluetooth, gesture/timing measurements and long-term scenarios without separate results.
+No push/tag; AMP and master unchanged. C111/C112 remain excluded. Older handoffs below retain
+their original evidence; neither integration nor documentation relabels the APK source SHA/code.
 
-## C116 Queue flashes when Next follows below the viewport — open, 2026-10-21
+## ~~C116 Queue flashes when Next follows below the viewport~~ — merged, 2026-10-21
 
 Phone report after the APK 1258 handoff: Next near the bottom triggers automatic downward
 scrolling and a brief whole-list flash. Installed build ID was not separately supplied.
@@ -39,19 +47,24 @@ disabled; disappearance/placement remain animated. Restored verification passed 
 4 suites, zero failures/errors/skips. The later [complete branch audit](QUEUE_BRANCH_REVIEW.md)
 passed 218 focused tests / 14 suites, including rapid Next, Info during progress updates,
 departure/placement, Clear, playlist/manual grips and swipe regressions. Complete gates and
-APK 1261 passed as recorded above. Device behaviour is unchecked; no merge.
+APK 1261 passed as recorded above. Included in the overall accepted integration as **3bc5a98**;
+individual checklist outcomes were not separately reported.
 
-## C117 Omitted shuffle history can prematurely disable transport — open, 2026-10-21
+## ~~C117 Omitted shuffle history can prematurely disable transport~~ — merged, 2026-10-21
 
 Code-review finding, not a user-reported incident. Repeated in-list selections create more
 history entries than source rows. The old omission walk stopped after one list length and
 could miss a surviving earlier/later destination. Both pure-model reproductions failed before
 correction. PlayQueue now supplies a bounded budget covering history plus a fresh lap;
 218-test focused verification passed. [Audit](QUEUE_BRANCH_REVIEW.md). Full gates/APK 1261 passed
-as recorded above; phone checks pending. No source order, saved playlist, shuffle or manual FIFO
-policy change.
+as recorded above; included in the overall accepted integration **3bc5a98**. This specific
+code-review reproduction has host proof, not a separately reported phone result. No source
+order, saved playlist, shuffle or manual FIFO policy change.
 
-## C113–C115 Queue presentation and playlist dragging — open, 2026-10-20
+## ~~C113–C115 Queue presentation and playlist dragging~~ — merged, 2026-10-21
+
+Included in the accepted candidate merged as **3bc5a98**. The report and pre-acceptance handoff
+evidence below retain their original dates/counts; individual phone checks were not enumerated.
 
 Owner phone report after the Clear handoff: clearing adds unwanted left indentation; manual
 playing-row highlighting omits that margin; playlist dragging can hide below neighbours, pin a

@@ -114,7 +114,13 @@ gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK 
 clean source `f289863`, is ready. Phone retest is pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
-## B45. Active playback queue independent of the visible playlist — accepted and merged, 2026-10-19
+## B45. Active playback queue independent of the visible playlist — accepted and merged, 2026-10-21
+
+The complete manual-queue follow-up is accepted after phone testing and merged as **3bc5a98**,
+2026-10-21, including shared swipes, pending-only reorder, Info, Clear and C113–C117. Latest
+supplied APK remains **1.2.0 (1261), source 1a1503f**, with 1096 tests/full gates/lint passed.
+[Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Earlier pending/unmerged records below describe their own stages, not the current merge state.
 
 Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after playing
 from search or an author should not interrupt playback. The owner selected an isolated, reversible
@@ -149,10 +155,10 @@ The next owner report selected C113–C115: standalone Clear alignment, full-wid
 and saved-playlist drag ownership/layering/viewport corrections. Source **aca3cd6** passed
 **1090 tests / 141 suites**, full gates and lint; **APK 1.2.0 (1258)** records that historical
 handoff. C116 then corrects auto-follow flashing; the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
-also corrects C117's omitted-history traversal bound and Help wording. Current unmerged source
+also corrects C117's omitted-history traversal bound and Help wording. Accepted artifact source
 **1a1503f**, **APK 1.2.0 (1261)**, passed **1096 tests / 142 suites**, all forced gates/lint.
-[Current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk); phone behaviour and acceptance
-remain pending.
+[Artifact handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk); overall phone acceptance
+and merge are recorded above, while detailed device outcomes remain unreported.
 AMP remains deferred.
 
 In the accepted baseline, one context owns transport; navigation and playlist selection only change what is shown.
@@ -785,7 +791,12 @@ the nearest existing hook rather than given its own. Three separate clears now, 
 removed, and deleting the favourites puts Random back to `Everything` — a scope pointing at a list
 that has just gone would draw nothing, and the chip that set it is disabled the moment it goes.
 
-## B25. A swipe on a track row — to discuss
+## B25. A swipe on a track row — accepted and merged, 2026-10-21
+
+Right enqueue on track lists and left session-removal/Undo in the unified list are accepted
+and merged as **3bc5a98**, together with pending-only grips and long-press Info. No source
+reordering, storage deletion or new folder/header gesture is selected. Earlier proposals below
+retain historical context; [integration](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
 
 **Updated owner/app-user request, 2026-10-20:** right swipe adds a manual copy from every track
 list; the unified context/queue also supports left swipe removal of either occurrence origin,

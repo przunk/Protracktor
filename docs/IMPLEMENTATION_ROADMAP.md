@@ -24,13 +24,15 @@ it is no longer open. [Verification and acceptance](PLAN_HISTORY_SEARCH.md).
 B45 active playback queue was accepted and merged on 2026-10-19 (`7cab210`), after normal-version
 cleanup and a fresh 956-test full gate/lint. It is no longer open inventory work. Further colleague
 feedback is now captured in the [context and manual queue analysis](QUEUE_CONTEXT_ANALYSIS.md).
-The extension is implemented on an unmerged trial branch, separate from the accepted baseline;
-phone acceptance is pending and AMP stays deferred.
+The manual-queue extension was subsequently accepted after phone testing and merged on
+2026-10-21 as **3bc5a98**, including C113–C117 and Clear/reorder/Info/gesture work. Its source
+1a1503f passed 1096 tests/full gates/lint; APK 1.2.0 (1261) remains the artifact. B45 follow-up
+is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Granular device checks remain recorded separately; AMP/C111/C112 stay deferred.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B45 follow-up / Q13 | Unified list with one-shot manual inserts and editable session context | [Complete branch audit](QUEUE_BRANCH_REVIEW.md) includes C116 auto-follow and C117 omitted-history corrections. Source 1a1503f passed 1096 tests/full gates and lint; release APK 1.2.0 (1261) ready on the same unmerged branch, phone acceptance pending. Earlier handoffs are historical. AMP/C111/C112 remain deferred. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -44,7 +46,6 @@ phone acceptance is pending and AMP stays deferred.
 | B30 | Read ASMA STIL titles, credits, comments and provenance | Not implemented; distinguish original composer from arranger. |
 | B29 | Readable overview of open work in the documentation | This roadmap supplies the requested inventory. Placement/navigation and a manually maintained versus generated summary are not separately selected. |
 | B28 | Supply artists for The Mod Archive tracks | Measure songdb coverage first; otherwise choose on-demand lookup or an explanation of missing data. |
-| B25 | Swipe actions on a track row | Right enqueue on all track lists; unified list left-removes either origin with Undo. Waiting-manual-only reorder and long-press Info selected in the [follow-up](QUEUE_MANUAL_REORDER.md); phone acceptance pending. No source reorder or storage deletion. |
 | B19 — indexes | Server-hosted periodically refreshed catalogue indexes | Infrastructure idea; no implementation selected. |
 | B17 | Avoid unnecessary downloads after an accidental online-row tap | Decide between delay, cancellation and accepting current behaviour. |
 | B19 — export | Export a playlist together with its music files | Discuss scope, size, import/storage and distribution terms. |
@@ -66,11 +67,11 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C116 | Queue briefly flashes after Next scrolls below the viewport | Phone report, 2026-10-21. Surviving-row opacity regression failed before correction; appearance fading disabled, departure/placement retained. APK 1261/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_AUTO_FOLLOW.md). |
-| C117 | Omitted repeated shuffle history can prematurely disable Next/Previous | Code-review finding, 2026-10-21, not a user report. Both direction regressions failed before correction; bounded walk now includes retained history. APK 1261/full gates ready, unmerged; phone acceptance pending. [Audit](QUEUE_BRANCH_REVIEW.md). |
-| C113 | Clear leaves the standalone manual list indented | Owner phone report, 2026-10-20. Conditional content inset implemented; negative layout probe failed as intended. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
-| C114 | Current manual row highlight/hit area excludes its inset | Owner phone report, 2026-10-20. Full-width paint and tap/hold implemented; pixel/hold negative probes failed. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
-| C115 | Playlist grip loses ownership, row layering and viewport tracking | Owner phone report, 2026-10-20. Stable subtree, outer drag layer, numeric viewport pin and batched-move correction implemented; negative probes failed. APK 1258/full gates ready, unmerged; phone acceptance pending. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
+| ~~C116~~ | ~~Queue briefly flashes after Next scrolls below the viewport~~ | Accepted and merged **3bc5a98**, 2026-10-21. Surviving-row opacity regression failed before correction; disappearance/placement retained. Overall trial accepted; granular phone results not enumerated. [Evidence](QUEUE_AUTO_FOLLOW.md). |
+| ~~C117~~ | ~~Omitted repeated shuffle history can prematurely disable Next/Previous~~ | Accepted and merged **3bc5a98**, 2026-10-21. Code-review finding with both direction regressions failing before correction; no separate phone reproduction claimed. [Audit](QUEUE_BRANCH_REVIEW.md). |
+| ~~C113~~ | ~~Clear leaves the standalone manual list indented~~ | Accepted and merged **3bc5a98**, 2026-10-21; conditional content inset, failing layout probe. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
+| ~~C114~~ | ~~Current manual row highlight/hit area excludes its inset~~ | Accepted and merged **3bc5a98**, 2026-10-21; full-width paint/hit area, failing pixel/hold probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
+| ~~C115~~ | ~~Playlist grip loses ownership, row layering and viewport tracking~~ | Accepted and merged **3bc5a98**, 2026-10-21; stable subtree, outer layer, viewport pin and batched moves with negative probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | C111 | Add music and Online catalogues content padding changes between views | Owner/user report, 2026-10-19; visible alignment/spacing mismatch. Measurements and cause not established; not fixed or included in queue work. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | C109 | Modland Same Game SPC entry reports a download/connection failure; other tracks also affected | Owner report, 2026-10-18; exact file path, other entries and build need confirmation. Code inspection confirms generic reporting also covers HTTP failures; actual cause not established. Separate from C26 and B45. |

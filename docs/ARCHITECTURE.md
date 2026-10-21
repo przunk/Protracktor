@@ -1,6 +1,11 @@
 # Architecture
 
-## Manual playback queue — implemented on an unmerged branch, 2026-10-21
+## Manual playback queue — accepted and merged, 2026-10-21
+
+Merged as **3bc5a98** after overall phone trial acceptance. Application sources equal the
+verified APK source **1a1503f** (1096 tests/full gates/lint); only documentation differs.
+[Integration and evidence](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Earlier handoff-specific pending statements below remain historical, not the current merge state.
 
 `feature/manual-playback-queue` extends the accepted context below. `ActiveQueue` now means source
 identity/order/cursor; it is not always the file actually loading or sounding. Pure immutable
@@ -87,10 +92,10 @@ animation keys and can otherwise fade surviving rows as new arrivals. Placement 
 remain animated; shared absolute-target following is unchanged. The complete branch audit also
 corrects C117: omission traversal uses PlayQueue's retained-history-plus-one-lap budget, not
 source length alone. EN/PL Help identifies manual requests independently of indentation.
-Current unmerged source **1a1503f**, APK **1.2.0 (1261)**, passed **1096 tests / 142 suites**,
+Accepted APK source **1a1503f**, APK **1.2.0 (1261)**, passed **1096 tests / 142 suites**,
 all forced gates/lint (0 errors/72 unchanged warnings) and artifact inspection.
-[Audit and current handoff](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk). Phone behaviour
-and merge acceptance remain pending; earlier source/count records are historical.
+[Audit and artifact](QUEUE_BRANCH_REVIEW.md#final-verification-and-apk). Overall phone trial
+acceptance and integration are recorded above; granular device results remain unreported.
 
 ## Active playback queue — accepted and merged, 2026-10-19
 

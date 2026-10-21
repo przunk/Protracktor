@@ -1,5 +1,9 @@
 # Clear queue
 
+Integration update, 2026-10-21: the full trial is accepted after phone testing and merged as
+**3bc5a98**. [Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+The pre-acceptance evidence and APK identities below remain historical, unchanged.
+
 Owner decision, 2026-10-20. Follow-up on `feature/manual-playback-queue`; no merge authorized.
 
 2026-10-21 presentation/playlist follow-up: [C113–C115](QUEUE_ROW_REGRESSIONS.md) keep standalone

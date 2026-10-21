@@ -1,5 +1,9 @@
 # Queue automatic-follow flicker
 
+Integration update, 2026-10-21: accepted after phone testing and merged as **3bc5a98**.
+[Current acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Stage-specific pending/unmerged statements below retain the earlier handoff history.
+
 Phone report, 2026-10-21, after the APK 1.2.0 (1258) handoff; installed build ID was not
 separately supplied. With Queue open, advance near the bottom of its visible rows. When Next
 scrolls the newly playing row into view, the whole list briefly flashes. It should scroll

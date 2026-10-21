@@ -1,5 +1,9 @@
 # Scroll-first queue gestures
 
+Integration update, 2026-10-21: the full trial is accepted after phone testing and merged as
+**3bc5a98**. [Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+The stage-specific pending/unmerged records below are historical.
+
 Ready for phone testing: **APK 1.2.0 (1252), source f6a5ee4**, unmerged. Final evidence below.
 
 Owner feedback, 2026-10-20, after the [presentation handoff](QUEUE_PRESENTATION_POLISH.md).

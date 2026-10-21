@@ -1,5 +1,9 @@
 # Queue row presentation and playlist drag regressions
 
+Integration update, 2026-10-21: included in the full trial accepted after phone testing and
+merged as **3bc5a98**. [Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+Earlier pending/unmerged statements below are historical; granular phone results were not listed.
+
 Subsequent 2026-10-21 follow-up: [C116](QUEUE_AUTO_FOLLOW.md) and the [complete branch audit](QUEUE_BRANCH_REVIEW.md)
 produce current source **1a1503f**, APK **1.2.0 (1261)**, with 1096 tests/full gates/lint passed,
 unmerged and awaiting phone testing. The APK 1258 evidence below is historical.

@@ -1,5 +1,9 @@
 # Manual block reordering and long-press Info
 
+Integration update, 2026-10-21: the full trial is accepted after phone testing and merged as
+**3bc5a98**. [Acceptance record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+The stage-specific pending/unmerged records below are historical.
+
 Follow-up owner feedback: [queue presentation polish](QUEUE_PRESENTATION_POLISH.md) adds visual
 departures, explicit Info haptics and on-demand Help. Its APK **1250** passed 1043 tests/full gates
 and lint and is ready for phone testing, unmerged. This document records the earlier APK-1248

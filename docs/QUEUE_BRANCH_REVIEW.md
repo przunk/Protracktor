@@ -1,5 +1,22 @@
 # Manual playback queue branch audit
 
+## Acceptance and integration — 2026-10-21
+
+The trial is accepted after phone testing and integration is approved. Merged
+`feature/manual-playback-queue` (`9287df5`) into develop as **3bc5a98**, without conflicts.
+The merge tree exactly matches the accepted branch. The latest supplied APK remains
+**1.2.0 (1261), source 1a1503f**; only documentation differs from that source tree.
+Overall positive phone feedback is recorded, not individual results for every checklist item
+or a separate installed build-ID confirmation. Detailed accessibility, Bluetooth and long-term
+measurements remain unreported. C113–C117 are included in the accepted integration.
+
+No new test run or APK was needed for the unchanged application sources: the prior forced
+1096-test/lint evidence remains tied to 1a1503f. Documentation and tree/link consistency are
+checked for this integration. AMP `8e92002` and master `794d8f9` are unchanged; no push/tag or
+store release. Stage-specific pending/unmerged statements below describe the earlier handoff.
+Integration closeout checked 270 existing local link destinations in fourteen updated documents,
+the acceptance heading, unchanged APK hash and unchanged AMP/master references.
+
 Requested 2026-10-21 after C116: review all code changed on `feature/manual-playback-queue`
 against `develop`, correct worthwhile findings and build one final release APK. No merge,
 push, schema, dependency or release-version change. C111/C112 and AMP remain deferred.

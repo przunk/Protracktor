@@ -3,12 +3,21 @@
 Use the current APK in [Status](STATUS.md) for the active queue regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## Manual queue — overall trial accepted and merged, 2026-10-21
+
+Positive phone testing was reported and integration approved; merged as **3bc5a98**.
+Latest supplied APK: **1.2.0 (1261), source 1a1503f**, unchanged. This is overall acceptance,
+not individual confirmation of every scenario below or a separate installed build-ID report.
+Keep unreported accessibility, notification/Bluetooth, timing and long-term checks as regression
+scenarios. Earlier handoff states below are historical. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
+
 ## Queue follow and branch audit — phone checks pending
 
-[C116](QUEUE_AUTO_FOLLOW.md) and [the complete branch review](QUEUE_BRANCH_REVIEW.md) extend the
-unmerged candidate. Use release APK **1.2.0 (1261), source 1a1503f**, identified in [Status](STATUS.md);
+[C116](QUEUE_AUTO_FOLLOW.md) and [the complete branch review](QUEUE_BRANCH_REVIEW.md) are included
+in the accepted integration. Use release APK **1.2.0 (1261), source 1a1503f**, identified in [Status](STATUS.md);
 APK 1258 predates these corrections. The focused run passed 218 tests / 14 suites, followed by
-1096 tests / 142 suites and all forced gates/lint. Phone behaviour is unchecked.
+1096 tests / 142 suites and all forced gates/lint. Overall phone acceptance is recorded above;
+individual checklist results were not separately supplied.
 
 1. With a long Queue open, repeatedly press Next until it scrolls at the lower edge. Surviving
    rows must remain visible throughout, without a whole-list flash/fade. Try several rapid Next
