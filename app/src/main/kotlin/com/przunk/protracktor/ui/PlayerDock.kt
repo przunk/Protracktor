@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -34,10 +35,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -156,11 +159,11 @@ fun PlayerDock(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = DOCK_CARD_HEIGHT)
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                            .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.Bottom,
                         ) {
                             Text(
                                 text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
@@ -175,18 +178,28 @@ fun PlayerDock(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            // Reserve the same space even over the selected playlist, where Keep
-                            // is absent. Its 48dp target must not extend over the counter below.
-                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            // The compact slot preserves the original two text baselines and
+                            // card height, including over a playlist where Keep is absent.
+                            Box(Modifier.size(width = 48.dp, height = 32.dp)) {
                                 if (state.awayFromPlaylist) {
-                                    IconButton(onClick = onKeep, modifier = Modifier.size(48.dp)) {
-                                        Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 32.dp) {
+                                        IconButton(onClick = onKeep, modifier = Modifier.fillMaxSize()) {
+                                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                                                Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                         FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
+                            // A real footer hit wins over Keep's expanded minimum touch area,
+                            // so the tune label cannot accidentally save the track.
+                            modifier = Modifier.fillMaxWidth().clickable(
+                                onClickLabel = expandLabel,
+                                role = Role.Button,
+                                onClick = if (loaded != null) onExpand else onBrowse,
+                            ),
                             horizontalArrangement = Arrangement.End,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
@@ -434,10 +447,10 @@ internal fun fitsBarLabel(text: String): Boolean =
  * did nothing visible for a moment would read as a press that missed (`AGENTS.md` §8).
  */
 /**
- * Minimum room for Keep's 48dp target above the metadata row, including vertical padding.
+ * Original card height: a 32dp compact Keep slot, 20dp metadata line and 8dp bottom inset.
  * Content may grow for accessibility text sizes, independently of Keep's visibility (C54/C112).
  */
-private val DOCK_CARD_HEIGHT = 76.dp
+private val DOCK_CARD_HEIGHT = 60.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

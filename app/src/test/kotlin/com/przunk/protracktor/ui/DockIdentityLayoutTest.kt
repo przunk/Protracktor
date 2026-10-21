@@ -106,8 +106,32 @@ class DockIdentityLayoutTest {
         assertEquals("Right-hand content shares an end alignment", keep.right, count.right, 0.5f)
         val density = activity.get().resources.displayMetrics.density
         assertTrue("Keep target is at least 48dp wide", keep.width >= 48f * density)
-        assertTrue("Keep target is at least 48dp high", keep.height >= 48f * density)
+        assertTrue("Compact Keep target is at least 32dp high", keep.height >= 32f * density)
         assertTrue("Queue stays outside the card", queueBounds().left >= cardBounds().right)
+    }
+
+    @Test fun `normal dock retains original card height and balanced identity margins`() {
+        show()
+        val card = cardBounds()
+        val title = textBounds(track.title)
+        val subtitle = textBounds("Treks · PC · 1998")
+        val density = activity.get().resources.displayMetrics.density
+        assertEquals("Original identity-card height", 60f * density, card.height, 0.5f)
+        assertEquals("Original title top inset", 8f * density, title.top - card.top, 0.5f)
+        assertEquals("Original metadata bottom inset", 8f * density, card.bottom - subtitle.bottom, 0.5f)
+        assertEquals("Original consecutive text lines", title.bottom, subtitle.top, 0.5f)
+    }
+
+    @Test fun `tapping just below keep opens the player rather than saving through an expanded target`() {
+        show()
+        val card = cardBounds()
+        val keep = keepBounds()
+        val density = activity.get().resources.displayMetrics.density
+        compose.onNodeWithContentDescription(expandLabel).performTouchInput {
+            click(Offset(keep.center.x - card.left, keep.bottom - card.top + density))
+        }
+        assertEquals("A footer tap must never save the track", 0, kept)
+        assertEquals(1, expanded)
     }
 
     @Test fun `subsong count changes neither title width nor keep and Queue positions`() {
