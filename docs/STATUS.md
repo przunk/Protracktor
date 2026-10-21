@@ -1,17 +1,24 @@
 # Status
 
-Updated: 2026-10-21 — C109/C111 candidates on separate stacked branches; shared test APK 1.3.0 (1273), source d370ea2, phone checks pending; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; C112 deferred; schema 23.
+Updated: 2026-10-21 — C109/C111 accepted and merged in order as 122368f/03dfc1d; C109 provisionally resolved, C111 residual slight movement accepted; C118 open (History does not refresh while visible); latest test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; C112 deferred; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C109/C111 — shared candidate ready for phone checks
+## C109/C111 — accepted and merged, 2026-10-21
 
-`fix/modland-download-failures` contains C109 at **91ba854**. The agreed separate C111 branch
-`fix/browse-padding` starts there; clean combined application source is **d370ea2**. Neither is
-merged. Develop **44a9992**, master/tag **d456fa7** and the AMP branch remain unchanged.
+After the shared APK handoff, playback was reported satisfactory and C109 is considered resolved
+for now, subject to further use. Browse alignment was also accepted: slight movement remains,
+but the previously distracting mismatch is no longer apparent. Integration is approved for both;
+this is practical trial acceptance, not a claim of pixel-identical layouts or exhaustive testing.
+
+C109 `fix/modland-download-failures` (**91ba854**) merged first as **122368f**, followed by C111
+`fix/browse-padding` (**a34878e**) as **03dfc1d**, without conflicts. The agent checked that the
+second merge tree equals the accepted stacked branch and application/native/web/script sources
+equal tested **d370ea2**. No tests/lint or APK build were rerun for these unchanged sources.
+Master/tag **d456fa7** and the AMP branch remain unchanged.
 
 **Checked on the host:** the forced full gate passed in **631 s**, **1106 tests / 144 suites**,
 zero failures/errors/skips, all companion checks passed. Lint executed a fresh analysis:
@@ -30,11 +37,29 @@ engine ABIs. R8 executed and its mapping was retained. Public test-certificate S
 This is a device-test artifact, not a Play upload. Logs, reports, mapping and artifact inspection
 are retained in ignored `user/c109-c111-verification/`.
 
-**Checked partially:** host HTTP/decoder/layout behaviour and artifact properties.
-**Unchecked:** phone playback, visual alignment, accessibility and regression acceptance.
-[Phone checklist](TESTING.md#c109c111-download-and-browse-alignment--phone-checks-pending).
-VersionName stays 1.3.0 and schema 23; no push, merge, tag movement or store release. Later
+**Checked:** host verification above, Git integration comparisons, and reported practical phone
+acceptance. **Unchecked individually:** detailed checklist outcomes, accessibility and long-term
+coverage without separate results. [Retained checks](TESTING.md#c109c111-download-and-browse-alignment--accepted-trial).
+VersionName stays 1.3.0 and schema 23; no push, new APK, tag movement or store release. Later
 documentation commits do not relabel the source SHA or versionCode of this APK.
+
+## C118 History does not show newly recorded plays while the view remains open
+
+User report, 2026-10-21, after the C109/C111 trial handoff. Latest supplied APK was **1.3.0
+(1273), source d370ea2**; the installed build ID, playback source, filter/page and exact recording
+sequence were not separately supplied.
+
+Reported sequence: keep History visible during playback; newly recorded tracks do not appear.
+Leaving History and opening it again reveals the updates. Expected: entries that qualify for
+History recording become visible without a navigation round trip. The report suggests reading
+only on entry, without observing subsequent changes; no new code inspection, host reproduction
+or phone test was performed by the agent for this record. **Open; not implemented.**
+
+Related prior decision: [A56](BACKLOG.md) deliberately froze the open History view to avoid rows
+moving under a tap; playback originating from History does not record/reorder its own entries.
+Reconcile live updates with that policy before implementation, rather than silently changing
+recording semantics. Filtering, paging, scroll stability and the captured playback context need
+regression coverage. This is a user-reported freshness issue, not another History-search request.
 
 ## 1.3.0 — AAB prepared, upload/publication unconfirmed
 
@@ -60,6 +85,9 @@ the merge tree exactly equals the accepted branch. Application/build sources sti
 the verified APK source **1a1503f**; subsequent changes are documentation only. No new APK or
 test rerun for this merge. [Acceptance and integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
 Overall phone acceptance does not supply individual outcomes for every retained checklist.
+Further usage feedback, 2026-10-21: the queue has been useful dozens of times in normal use and
+enabled practical listening workflows that were not possible before. This is reported sustained
+usefulness, not agent-run device testing or a detailed timing/accessibility matrix.
 
 C116 corrects whole-list appearance flashes after automatic following. The [complete branch
 audit](QUEUE_BRANCH_REVIEW.md) also corrected C117's omitted-history traversal bound and EN/PL
@@ -270,7 +298,11 @@ the installed build ID and exact layout measurements were not separately supplie
 explicitly deferred** by the owner. Record a future compact presentation discussion; do not bundle
 it into the unified-list implementation. Phone report only, no agent-run visual confirmation.
 
-## C111 Add music and Online catalogues have inconsistent padding
+## ~~C111 Add music and Online catalogues have inconsistent padding~~
+
+**Accepted and merged, 2026-10-21, as 03dfc1d.** The distracting mismatch is no longer apparent
+in the phone trial. Slight residual movement was reported and accepted; no pixel-identical or
+complete accessibility result is claimed.
 
 User report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
 views visibly changes content padding. Expected: consistent alignment and spacing through that
@@ -286,10 +318,10 @@ missing, indexed and online-only catalogues, Song metadata and Replay routines. 
 passed after correction, including 1.3x text and downloaded-state changes with nonzero outer insets.
 Root's fixed 78 dp rows and online rows' adaptive heights, wrapping and actions are retained.
 
-**Checked partially:** host-rendered geometry, not phone appearance or full visual acceptance.
+**Verification:** rendered host geometry and reported practical phone acceptance.
 The combined source passed the 1106-test full gate and lint; shared release APK **1.3.0 (1273)**
-is recorded above. Device checks and merge approval remain pending.
-[Phone checklist](TESTING.md#c109c111-download-and-browse-alignment--phone-checks-pending).
+is recorded above. Individual device checklist outcomes remain unreported.
+[Retained checklist](TESTING.md#c109c111-download-and-browse-alignment--accepted-trial).
 
 ## ~~C110 Browse restores the playing collection instead of its root~~ — accepted and merged, 2026-10-19
 
@@ -439,7 +471,11 @@ push, tag change or store release occurred. Later documentation does not relabel
 Remove the temporary version override and unused legacy heading before an accepted merge.
 [Full contract, decisions and evidence](QUEUE_EXPERIMENT.md); [device checklist](TESTING.md).
 
-## C109 — Same Game SPC cannot be played — owner report, 2026-10-18
+## ~~C109 — Same Game SPC cannot be played — owner report, 2026-10-18~~
+
+**Provisionally resolved and merged, 2026-10-21, as 122368f.** Playback is satisfactory in the
+phone trial after the shared APK handoff; retain the diagnosis and checks for further use.
+Individual results for every old/new URL, cache and archive scenario were not separately supplied.
 
 The owner could not play the Modland entry shown as
 `/modland/nintendo SPC/- unknown/Same Game (same game (22).spc)` during listening tests.
@@ -464,7 +500,7 @@ were not measured. No format-wide or connection-wide failure is established.
 Modland legacy-author 404, retaining saved IDs and cache keys. Before-fix regressions failed
 for both examples; **36 focused checks passed** after correction. The separate stacked C111
 candidate passed the **1106-test full gate and lint**; shared APK **1.3.0 (1273)** is recorded
-above. Phone behaviour and merge approval are pending.
+above. Practical phone acceptance and integration are recorded at the start of this section.
 [Mechanism, bounded scope and verification](MODLAND_LEGACY_DOWNLOADS.md).
 This is separate from the B45 queue discussion and from the deferred SPC tempo report C26.
 

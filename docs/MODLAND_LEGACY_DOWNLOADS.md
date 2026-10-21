@@ -1,7 +1,8 @@
 # C109 — Legacy Modland unknown-author downloads
 
-Recorded 2026-10-21. User-reported playback failure; candidate correction on
-`fix/modland-download-failures`. Phone acceptance and integration remain pending.
+Recorded 2026-10-21. User-reported playback failure; correction from
+`fix/modland-download-failures` merged as **122368f** after satisfactory phone playback was
+reported. Considered resolved for now, subject to further use and retained regression checks.
 
 ## Report and observed mechanism
 
@@ -61,8 +62,9 @@ That is decoder/host evidence, not listening or Android device verification.
 The separate stacked C111 padding candidate, source **d370ea2**, passed the forced full gate:
 **1106 tests / 144 suites**, no failures/errors/skips, all companion checks and fresh lint
 **0 errors / 72 warnings**, **631 s** overall. Its minified test-signed shared release APK is
-**1.3.0 (1273)**; [artifact and verification](STATUS.md#c109c111--shared-candidate-ready-for-phone-checks).
-Neither branch is approved for integration; phone behaviour remains unchecked.
+**1.3.0 (1273)**; [artifact, acceptance and integration](STATUS.md#c109c111--accepted-and-merged-2026-10-21).
+C109 and C111 are accepted and merged in order. Their application sources match the tested
+candidate; no additional gate or APK build is claimed for the integration.
 
 ## Phone checks
 
@@ -75,4 +77,5 @@ Neither branch is approved for integration; phone behaviour remains unchecked.
    HTTP/User-Agent/cookie path. A genuinely unavailable file must still report failure.
 5. After an intentional index refresh, current `_unknown` selections should work directly.
 
-All of these device scenarios remain **unchecked** until reported from a phone.
+Practical phone playback is accepted, but individual outcomes for every scenario above were not
+separately supplied. Keep them for regression and longer-term verification.

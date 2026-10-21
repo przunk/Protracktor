@@ -10,6 +10,20 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B51. Save an individual subsong in a playlist — TODO, recorded 2026-10-21
+
+Request recorded 2026-10-21: allow adding a selected subsong to a playlist rather than only the
+whole music file, which may contain hundreds of subsongs, including files reporting 256.
+The saved entry should identify the wanted subsong so it can be replayed directly. This is
+explicit selection, not a request to expand every multi-subsong file into hundreds of rows.
+
+No equivalent playlist request was found. B40 concerns measured lengths and B12 gapless transitions;
+[A2](BACKLOG.md) describes the existing file-level subsong model. Before implementation, discuss
+entry identity/duplicates, presentation, transport and queue semantics, persistence/export and
+compatibility with existing whole-file playlist entries. Preserve existing saved data if a future
+migration is needed; A2's historical disposable-test-data assumption no longer applies. No UI,
+schema migration or implementation schedule is selected by this wishlist entry.
+
 ## B50. Animated first-run tutorial — TODO, recorded 2026-10-21
 
 An app user requested a short multi-page introduction with animated pointers demonstrating
@@ -132,6 +146,9 @@ The complete manual-queue follow-up is accepted after phone testing and merged a
 supplied APK remains **1.2.0 (1261), source 1a1503f**, with 1096 tests/full gates/lint passed.
 [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
 Earlier pending/unmerged records below describe their own stages, not the current merge state.
+Further usage feedback, 2026-10-21: the queue has proved useful dozens of times during normal
+listening, enabling practical workflows unavailable before the implementation. This is reported
+real-use value, not a separately executed checklist or an agent-run phone test.
 
 Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after playing
 from search or an author should not interrupt playback. The owner selected an isolated, reversible

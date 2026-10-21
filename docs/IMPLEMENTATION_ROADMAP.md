@@ -29,12 +29,13 @@ The manual-queue extension was subsequently accepted after phone testing and mer
 2026-10-21 as **3bc5a98**, including C113–C117 and Clear/reorder/Info/gesture work. Its source
 1a1503f passed 1096 tests/full gates/lint; APK 1.2.0 (1261) remains the artifact. B45 follow-up
 is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
-Granular device checks remain recorded separately; AMP/C112 stay deferred. C109/C111 now have
-unmerged candidates listed below.
+Granular device checks remain recorded separately; AMP/C112 stay deferred. C109/C111 were
+accepted and merged on 2026-10-21; C118 records the new History-refresh report below.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
@@ -70,14 +71,15 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
+| C118 | Open History does not reflect newly recorded playback until leaving and reopening it | User report, 2026-10-21. Open, not implemented or independently reproduced. Reconcile live updates with A56's stable History ordering and no self-recording policy. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open). |
 | ~~C116~~ | ~~Queue briefly flashes after Next scrolls below the viewport~~ | Accepted and merged **3bc5a98**, 2026-10-21. Surviving-row opacity regression failed before correction; disappearance/placement retained. Overall trial accepted; granular phone results not enumerated. [Evidence](QUEUE_AUTO_FOLLOW.md). |
 | ~~C117~~ | ~~Omitted repeated shuffle history can prematurely disable Next/Previous~~ | Accepted and merged **3bc5a98**, 2026-10-21. Code-review finding with both direction regressions failing before correction; no separate phone reproduction claimed. [Audit](QUEUE_BRANCH_REVIEW.md). |
 | ~~C113~~ | ~~Clear leaves the standalone manual list indented~~ | Accepted and merged **3bc5a98**, 2026-10-21; conditional content inset, failing layout probe. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | ~~C114~~ | ~~Current manual row highlight/hit area excludes its inset~~ | Accepted and merged **3bc5a98**, 2026-10-21; full-width paint/hit area, failing pixel/hold probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | ~~C115~~ | ~~Playlist grip loses ownership, row layering and viewport tracking~~ | Accepted and merged **3bc5a98**, 2026-10-21; stable subtree, outer layer, viewport pin and batched moves with negative probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
-| C111 | Add music and Online catalogues content padding changes between views | User report, 2026-10-19; rendered regression confirms a 4 dp text-start mismatch. Candidate `fix/browse-padding` follows C109; both alignment tests and the combined 1106-test full gate/lint pass. Shared APK 1.3.0 (1273) ready; phone acceptance/merge pending. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
+| ~~C111~~ | ~~Add music and Online catalogues content padding changes between views~~ | Accepted and merged **03dfc1d**, 2026-10-21, after the 1106-test full gate/lint and shared APK trial. Slight residual movement is accepted; not a pixel-identical layout claim. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md). |
-| C109 | Legacy Modland unknown-author paths fail to download (YM and Same Game SPC) | User reports, 2026-10-18/21. Legacy paths return 404; current `_unknown` paths return 200. Candidate recovery retains saved identities; 36 focused checks and the combined 1106-test full gate/lint pass. Shared C111 APK 1.3.0 (1273) ready; phone acceptance/merge pending. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
+| ~~C109~~ | ~~Legacy Modland unknown-author paths fail to download (YM and Same Game SPC)~~ | Provisionally resolved after satisfactory phone playback; merged **122368f**, 2026-10-21. Saved identities are retained; 36 focused checks and the combined 1106-test full gate/lint passed. Longer-term coverage remains open. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
 | C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Owner/user report, 2026-10-20; explicitly deferred from the unified-list iteration. Compact presentation needs later discussion. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |

@@ -271,9 +271,8 @@ Built as decided below: `HistoryRecording.records` keeps a play History started 
 walked after it -- out of History; the open History is no longer re-read on every play. Where a
 results list came from is set once, where the list is made, so next and previous keep it.
 
-*The owner: "history should have a fixed form in its view; clicking a track in history should not
-move it to the top; playing it outside history should update when it was last played (move it to
-the top)."*
+The selected policy keeps History playback in place; playback started elsewhere updates recency
+and moves that entry to the top.
 
 Today a play from the history view records a play like any other, so the row jumps to the top
 under the finger that tapped it and the list reorders while it is being read.
@@ -286,6 +285,12 @@ under the finger that tapped it and the list reorders while it is being read.
   **no `play_count`**. History then says what was played elsewhere, and does not drift under the
   person reading it. And while History is open, it is not refreshed at all: it shows what it
   showed when it was opened.
+
+**Follow-up report, 2026-10-21:** [C118](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open)
+reports that new recorded plays remain invisible until History is reopened. This asks to revisit
+the open-view freeze, not to silently discard the separate no-self-recording policy above.
+No live-refresh correction or final refresh/scroll policy has been implemented.
+
 ## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype; BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone after the permission fix**
 
 **Built to the plan.** Opening a Modland author's folder -- by walking to it or by "more from this

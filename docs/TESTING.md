@@ -3,12 +3,13 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## C109/C111 download and Browse alignment — phone checks pending
+## C109/C111 download and Browse alignment — accepted trial
 
-The two fixes stay on separate stacked branches: C109 `fix/modland-download-failures`, then C111
-`fix/browse-padding`. Shared minified release APK **1.3.0 (1273), source d370ea2** covers both;
-its [artifact and checks](STATUS.md#c109c111--shared-candidate-ready-for-phone-checks) are recorded.
-No integration is approved.
+The two fixes were accepted and merged in order on 2026-10-21: C109 **122368f**, then C111
+**03dfc1d**. Shared minified release APK **1.3.0 (1273), source d370ea2** covers both;
+its [artifact and checks](STATUS.md#c109c111--accepted-and-merged-2026-10-21) are recorded.
+Playback is satisfactory so far; the remaining slight layout movement is accepted. Individual
+checklist outcomes below were not separately supplied. No new APK or gate was run for merging.
 [C109 mechanism and detailed checks](MODLAND_LEGACY_DOWNLOADS.md);
 [C111 measurements](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding).
 
@@ -24,8 +25,17 @@ No integration is approved.
    must remain readable with their existing download/refresh actions. Root row heights and
    Random scope changes should behave as before.
 
-HTTP/decoder probes and rendered host geometry are partial evidence. Playback, perceived alignment
-and device accessibility remain unchecked until phone results are reported.
+HTTP/decoder probes and rendered host geometry remain host evidence; the practical phone trial is
+accepted. Detailed accessibility, archive/cache permutations and long-term coverage stay unverified.
+
+## C118 History freshness — new report, not corrected
+
+Keep History open while playback creates an entry eligible for recording. The reported behaviour
+is that it appears only after leaving History and opening it again. Exact playback origin, query,
+page and installed build were not supplied; no agent-run reproduction is claimed. Before a fix,
+reconcile live updates with A56's rule that plays originating from History do not record/reorder
+themselves. A future regression check must also preserve filtering, paging, scroll stability and
+the current playback context. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open).
 
 ## Prepared release 1.3.0 — Play-generated install not yet confirmed
 
