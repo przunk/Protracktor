@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C109/C111 accepted and merged in order as 122368f/03dfc1d; C109 provisionally resolved, C111 residual slight movement accepted; C118 open (History does not refresh while visible); latest test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; C112 deferred; schema 23.
+Updated: 2026-10-21 — C109/C111 accepted and merged in order as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); latest test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; C112 deferred; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -42,6 +42,37 @@ acceptance. **Unchecked individually:** detailed checklist outcomes, accessibili
 coverage without separate results. [Retained checks](TESTING.md#c109c111-download-and-browse-alignment--accepted-trial).
 VersionName stays 1.3.0 and schema 23; no push, new APK, tag movement or store release. Later
 documentation commits do not relabel the source SHA or versionCode of this APK.
+
+## C119 Nested Modland legacy unknown-author paths still fail to download
+
+User reports, 2026-10-21, after C109's provisional acceptance. Latest supplied APK is **1.3.0
+(1273), source d370ea2**; installed build/device and Android logs were not separately supplied.
+Selecting these tracks failed to play:
+
+- `Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m`.
+- `Video Game Music/Sega Megadrive/- unknown/World Championship Soccer/06 ending theme.vgz`.
+
+The first filename was confirmed as `.s3m`; the initial `.s2m` report was a typing error, not an
+established application renaming or format-support defect.
+
+**Checked by the agent:** the current official index lists both with `_unknown` instead of
+`- unknown`. The legacy addresses return **HTTP 404**; the indexed current addresses return
+**200**, respectively **9,236** and **2,524 bytes**. Both actual downloads open and render
+non-silent PCM in the existing host engine: **2 played / 0 silent / 0 refused**. HTTP responses,
+files and probe logs are retained in ignored `user/modland-followup-20261021/`.
+
+**Mechanism:** `Modland.legacyUnknownAuthorUrl` handles `- unknown` only at path segment 1
+(zero-based), immediately after the first format directory. These examples have a format
+subdirectory, so that segment contains `Screamtracker 3 AdLib` or `Sega Megadrive` and the unknown
+folder is at segment 2. The function returns null; the shared downloader therefore has no
+replacement to try after 404. The reported download failure is consistent with that code path,
+before decoding. This is an uncovered C109 path shape, not evidence of an internet-wide failure.
+
+**Open, diagnosis only:** no recovery change, migration, full test/lint run, new APK, merge or
+phone reproduction was performed for this follow-up. A correction needs to recognize nested
+archive layouts while retaining the original ID/cache key, original-success priority, 404-only
+guard, bounded retry and cookie handling. Do not introduce extension guessing. C109's original
+YM/SPC acceptance remains recorded; it is not a claim that every legacy path is recovered.
 
 ## C118 History does not show newly recorded plays while the view remains open
 

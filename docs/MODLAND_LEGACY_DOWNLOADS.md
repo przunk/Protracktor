@@ -4,6 +4,14 @@ Recorded 2026-10-21. User-reported playback failure; correction from
 `fix/modland-download-failures` merged as **122368f** after satisfactory phone playback was
 reported. Considered resolved for now, subject to further use and retained regression checks.
 
+**Later follow-up, 2026-10-21:** [C119](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download)
+identifies two deeper layouts not covered by the correction below: AdLib/Screamtracker and
+Video Game Music/Sega Megadrive. Their legacy URLs return 404, current `_unknown` URLs return
+200 and the downloaded files decode non-silent audio on the host. The existing segment-1 guard
+does not match their segment-2 unknown folder. This is diagnosis only; no further implementation
+or phone verification is claimed. Acceptance of the original YM/SPC examples is not withdrawn
+or generalized to every legacy Modland path.
+
 ## Report and observed mechanism
 
 Listening reports identified Same Game SPC on 2026-10-18 and
