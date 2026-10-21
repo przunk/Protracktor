@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C109/C111 accepted and merged in order as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); latest test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; C112 deferred; schema 23.
+Updated: 2026-10-21 — C112 dock layout trial in progress on fix/dock-identity-layout; C109/C111 accepted and merged in order as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); latest supplied test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -323,11 +323,44 @@ All new phone behaviour is unchecked. AMP, C111 and C112 are outside the impleme
 
 ## C112 Dock subsong count crowds Now Playing text
 
-Owner/user feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
+User feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
 beside the Queue action, reducing room for Now Playing. The latest supplied APK was 1.2.0 (1239);
-the installed build ID and exact layout measurements were not separately supplied. **Open and
-explicitly deferred** by the owner. Record a future compact presentation discussion; do not bundle
-it into the unified-list implementation. Phone report only, no agent-run visual confirmation.
+the installed build ID and exact layout measurements were not separately supplied. This was
+explicitly deferred from the unified-list implementation.
+
+**Presentation decision, 2026-10-21:** trial a two-row identity card. Keep the title top-left and
+the shared metadata bottom-left; put Keep top-right and the complete translated tune-position
+label bottom-right. Remove the expansion chevron, retain the clickable card and accessibility
+description, and leave Queue outside it on the right. Keep the existing seek/transport controls
+and First-only/All-subsongs policies. Shortening the counter to a fraction, moving shuffle/repeat
+out of the dock and adding a separate action row were not selected.
+
+The agent's host capture of `Impulsetracker/Treks/battle of honour.it` showed the crowding with
+five subsongs on a 360 dp viewport; the supplied feedback also describes the issue on a wider
+phone. The existing horizontal row gives variable-width counter text and the chevron space
+beside Keep and both identity lines. This moves Keep and narrows the title as counts change.
+The new rows must reserve the upper Keep slot even when that action is absent, constrain the
+counter only against metadata, and prevent its text from overlapping the 48 dp Keep touch area.
+Allow the card to grow with system text size rather than clipping it at a fixed height. Its
+minimum height is 76 dp (previously 60 dp). If large text leaves less than 64 dp for metadata,
+the footer flows onto another line, with the complete counter still end-aligned; normal text
+keeps the selected two-row layout. This accessibility fallback does not add another action row.
+
+**Implemented, unmerged:** `fix/dock-identity-layout` starts at **da7b26b**. The agent's original
+layout regression failed before the change when the tune count altered the title bounds. The
+corrected focused run passed **10 tests / 3 suites**, including physical taps, count changes,
+selected-playlist transitions and a 320 dp Polish viewport at 200% text size. A deliberate
+fixed-height mutation made the accessibility regression fail; the adaptive height was restored.
+Logs and retained evidence live in ignored `user/c112-verification/`.
+
+The restored host capture passed and was visually inspected at 360 dp with the same real track
+metadata: the full title and author/platform/year fit, Keep is above the counter and Queue is
+separate. Both collapsed and expanded views are retained in the ignored evidence directory;
+these are host renders with preset playback, not live Android audio or phone screenshots.
+The restored full tests/lint and a minified test APK are pending. Phone
+appearance, tapping, TalkBack and acceptance are **unchecked**. C119 is deliberately postponed
+until this trial is ready; it is not included in the dock change. VersionName stays 1.3.0 and
+schema 23. No merge, push or release is authorized by host verification.
 
 ## ~~C111 Add music and Online catalogues have inconsistent padding~~
 

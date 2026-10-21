@@ -20,13 +20,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +72,7 @@ private fun Modifier.dockLine(scrolls: Boolean): Modifier =
         velocity = DockMarquee.VELOCITY_DP.dp,
     )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlayerDock(
     state: PlayerUiState,
@@ -131,9 +136,7 @@ fun PlayerDock(
             // lands on nothing instead of opening Now Playing, which is what it did in the car.
             Spacer(Modifier.height(6.dp))
 
-            // **It has to look like a control.** This row opens the player, which is also how the
-            // tunes inside a file are reached, and nothing else on it says so. Same remedy as the
-            // playlist name in the top bar: a surface you can see, and a chevron.
+            // The card opens Now Playing; Queue remains a separate action outside it.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -147,23 +150,24 @@ fun PlayerDock(
                         .weight(1f)
                         .semantics { contentDescription = expandLabel },
                 ) {
-                    // **A height of its own, not its tallest child's** (`docs/STATUS.md` C54). The keep
-                    // button is an `IconButton` and carries Material's 48dp touch target; the chevron beside
-                    // it is a bare icon. Without a fixed height the card grows by four pixels wherever
-                    // keeping is offered, and the dock is visibly taller in Random than over the playlist.
-                    Row(
+                    // Keep and the counter occupy separate rows so subsong counts cannot move
+                    // the save target or narrow the title (C112). Large text may grow the card.
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(DOCK_CARD_HEIGHT)
-                            .padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                            .heightIn(min = DOCK_CARD_HEIGHT)
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(
                                 text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
                                 // A title that does not fit scrolls rather than losing its end (A54); one
                                 // that fits stands still, which the marquee decides by measuring.
-                                modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
+                                modifier = Modifier.weight(1f)
+                                    .dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
                                 // A size up from titleSmall: this is read at a glance, in a car among
                                 // other places, so the dock grows to fit rather than the text being
                                 // squeezed to keep the dock's old height.
@@ -171,48 +175,48 @@ fun PlayerDock(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            // Reserve the same space even over the selected playlist, where Keep
+                            // is absent. Its 48dp target must not extend over the counter below.
+                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                if (state.awayFromPlaylist) {
+                                    IconButton(onClick = onKeep, modifier = Modifier.size(48.dp)) {
+                                        Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                                    }
+                                }
+                            }
+                        }
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Text(
                                 text = NowPlayingText.subtitle(state,
                                     loading = stringResource(R.string.dock_loading),
                                     idle = stringResource(R.string.dock_idle_subtitle)),
-                                modifier = Modifier.dockLine(
-                                    DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)
-                                ),
+                                // At large text sizes the counter may wrap below the metadata,
+                                // rather than consuming its entire width.
+                                modifier = Modifier.weight(1f).widthIn(min = 64.dp)
+                                    .align(Alignment.CenterVertically).dockLine(
+                                        DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                        }
-                        // For anything playing that is not the playlist: a random pick, a search result, a
-                        // track tapped while browsing. Keeping it is a decision made after hearing it,
-                        // which is the only order that makes sense for something you did not choose.
-                        if (state.awayFromPlaylist) {
-                            IconButton(onClick = onKeep) {
-                                Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                            // Show the complete label in both subsong modes: otherwise a file's
+                            // extra tunes would be undiscoverable until Play all was selected.
+                            if (state.subsongCount > 1) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.subsongs_position, state.subsong + 1, state.subsongCount
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterVertically).padding(start = 8.dp),
+                                )
                             }
                         }
-                        // Says there is more inside without adding a control: the tunes are chosen in
-                        // the player this row opens. Shown in **both** modes: gating it on "play all"
-                        // closes a door on itself, since you would have to already know a file held
-                        // fifteen tunes in order to switch to the mode that would tell you. "1 of 15" is
-                        // true either way.
-                        if (state.subsongCount > 1) {
-                            Text(
-                                text = stringResource(
-                                    R.string.subsongs_position, state.subsong + 1, state.subsongCount
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                        Icon(
-                            imageVector = PlayerIcons.Expand,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
                     }
                 }
                 LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
@@ -430,12 +434,10 @@ internal fun fitsBarLabel(text: String): Boolean =
  * did nothing visible for a moment would read as a press that missed (`AGENTS.md` §8).
  */
 /**
- * How tall the now-playing card stands, whatever is in it.
- *
- * Room for two lines of text and for the 48dp touch target a keep button brings with it, so the dock
- * is the same height over every screen.
+ * Minimum room for Keep's 48dp target above the metadata row, including vertical padding.
+ * Content may grow for accessibility text sizes, independently of Keep's visibility (C54/C112).
  */
-private val DOCK_CARD_HEIGHT = 60.dp
+private val DOCK_CARD_HEIGHT = 76.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

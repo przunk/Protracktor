@@ -3,6 +3,29 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## C112 two-row dock — phone trial pending
+
+[Presentation decision and verification](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text).
+Use the new candidate once its release APK is recorded; the preceding APK 1273 has the old layout.
+
+1. Compare one-subsong and multi-subsong files, including
+   `Impulsetracker/Treks/battle of honour.it`. Title is top-left, metadata bottom-left,
+   Keep top-right and the full tune-position text bottom-right. Keep and Queue do not move
+   horizontally as the tune count changes. Queue remains outside the card, at the right.
+2. Tap Keep: retain the previous save-to-playlist behaviour without opening Now Playing. Tap
+   title, metadata or tune count: open Now Playing and its existing subsong selector. Tap Queue:
+   open Queue only. Check that tapping close to the bottom of Keep cannot hit the counter.
+3. Return to playback from the selected playlist, where Keep is absent. Title width, card height
+   and Queue placement should stay stable. Recheck idle/loading and a long title/subtitle.
+4. Check EN/PL, a narrow viewport and enlarged system text. The card may grow vertically; at
+   accessibility sizes the footer may wrap, keeping the counter end-aligned instead of hiding
+   metadata. Text, tune label and Keep's touch target must not overlap or clip. Keep retains a 48 dp
+   target. Verify TalkBack can distinguish opening the player, keeping a track and opening Queue.
+5. Seek, play/pause, previous/next (including file-skip holds), shuffle and repeat remain in their
+   current places. Recheck Queue's usable space above the dock and real scrolling/tap behaviour.
+
+Host geometry and screenshots do not establish phone appearance, touch feel or acceptance.
+
 ## C109/C111 download and Browse alignment — accepted trial
 
 The two fixes were accepted and merged in order on 2026-10-21: C109 **122368f**, then C111
