@@ -7,47 +7,58 @@
 An Android player for the music formats of retro platforms — Amiga, Atari ST, Atari 8-bit,
 Commodore 64, ZX Spectrum and the 8/16-bit consoles.
 
-Players for these formats exist. This one is written because the existing ones lose your place when
-you leave the app, shuffle without a history, hold everything in a single playlist, and take
-seconds to start a track that is measured in kilobytes.
+The design centres on keeping your place, multiple saved playlists, shuffle with a history, and
+browsing without replacing what is playing. The active playback context and manual queue are
+independent of the list currently on screen.
 
-**Protracktor is in closed testing on Google Play.** Every release -- its version, the tag of the
-exact source it was built from (which is what the GPL below obliges), and the hash of what was
-uploaded -- is in [`store/play-console/releases.md`](store/play-console/releases.md), which
-`scripts/release.sh` writes, so this page never has to name one.
+**Protracktor is in closed testing on Google Play.** This README describes the current development
+code; a tagged release can have fewer features. Prepared store bundles, their versions, exact
+source commits/tags and hashes are recorded in
+[`store/play-console/releases.md`](store/play-console/releases.md) by `scripts/release.sh`.
+Preparing a bundle or creating a tag does not establish upload or publication. Current release
+and verification status is tracked in [`docs/STATUS.md`](docs/STATUS.md).
 
 It plays tracker modules, Atari ST, Atari 8-bit, Commodore 64, the ZX Spectrum AY trackers, the
 Amiga synth trackers, the Amiga custom replayers through UADE (TFMX, Hippel, Future Composer and
 the rest — their replay routines downloaded on request) and seven console families, with playlists,
 background playback and a media session. Local folders are scanned by opening every file rather than by trusting its name. Four
 online archives: Modland and ASMA browse offline from a downloaded index, The Mod Archive searches
-live, and UnExoticA is behind a switch until its maintainers answer a question
-(`docs/PLAN_UNEXOTICA.md`). HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` the one an Amiga
+live, and UnExoticA provides indexed Amiga game soundtracks. Jools Wills (BuZz) approved the
+proposed UnExoticA use; that permission and the agreed stable User-Agent are recorded on
+2026-10-07 in [`docs/PLAN_UNEXOTICA.md`](docs/PLAN_UNEXOTICA.md). Its build-time switch remains
+available for operational reversibility, not because permission is pending.
+HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` the one an Amiga
 tune cannot; what neither knows is measured while the tune plays.
 
 There is also a **player for the browser** in `web/`, which plays the same archives and takes a
 playlist handed to it by the phone. It is a second player rather than a second screen; see
 `docs/WEB_SERVER.md` to run one.
 
-See `docs/STATUS.md` for what is finished, what is known broken, and — the shortest list — what has
-actually been confirmed on a device.
+See [`docs/STATUS.md`](docs/STATUS.md) for completed work, known defects and the evidence behind
+verification claims. Host checks and reported phone results are recorded separately; neither a
+successful build nor an overall trial acceptance proves every device scenario.
 
 ## Documentation
+
+Start with Status for the current state and the implementation roadmap for open work. Dated
+plans and reviews retain earlier decisions and verification evidence; they are not automatically
+an up-to-date list of missing features or permission to implement them.
 
 | File | Contents |
 | --- | --- |
 | [`docs/STATUS.md`](docs/STATUS.md) | what is done, known defects numbered **C1…Cn**, branch state |
+| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | current inventory of unfinished work, deferred ideas and open decisions |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how it is built and **why that way** |
 | [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | decisions deliberately left open, with options |
-| [`docs/PLAN_FORMATS.md`](docs/PLAN_FORMATS.md) | plan for the decoders we do not have yet |
-| [`docs/PLAN_CATALOGUES.md`](docs/PLAN_CATALOGUES.md) | plan for the online archives we do not have yet |
-| [`docs/PLAN_UNEXOTICA.md`](docs/PLAN_UNEXOTICA.md) | the one catalogue built before its archive answered, and exactly how to remove it |
+| [`docs/PLAN_FORMATS.md`](docs/PLAN_FORMATS.md) | decoder integration plans, decisions and historical implementation records |
+| [`docs/PLAN_CATALOGUES.md`](docs/PLAN_CATALOGUES.md) | archive integration plans and decisions |
+| [`docs/PLAN_UNEXOTICA.md`](docs/PLAN_UNEXOTICA.md) | UnExoticA integration, maintainer permission, client identity and operational switch |
 | [`docs/PLAN_RANDOM.md`](docs/PLAN_RANDOM.md), [`docs/SPEC_RANDOM.md`](docs/SPEC_RANDOM.md) | the dice: what it does, and the rules both players follow |
 | [`docs/PLAN_WEB.md`](docs/PLAN_WEB.md) | what a version in a browser would cost, and what it cannot carry |
 | [`docs/PLAN_WEB_LIBRARY.md`](docs/PLAN_WEB_LIBRARY.md) | making the browser a second player rather than a second screen — and what that reverses |
 | [`docs/PLAN_HANDOFF.md`](docs/PLAN_HANDOFF.md) | sending a playlist from the phone to that browser, without an account |
-| [`docs/BACKLOG.md`](docs/BACKLOG.md) | agreed work not yet started, numbered **A1…An** |
-| [`docs/WISHLIST.md`](docs/WISHLIST.md) | ideas, numbered **B1…Bn**, with who raised them and when |
+| [`docs/BACKLOG.md`](docs/BACKLOG.md) | implementation tasks numbered **A1…An**, including retained completion history |
+| [`docs/WISHLIST.md`](docs/WISHLIST.md) | feature ideas and requests numbered **B1…Bn**, with their source, date and status |
 | [`docs/WEB_SERVER.md`](docs/WEB_SERVER.md) | running the browser player, on a machine or a Raspberry Pi |
 | [`docs/BUILD.md`](docs/BUILD.md) | how to build debug, release and a store bundle |
 | [`store/privacy-policy.md`](store/privacy-policy.md) | the privacy policy, in both languages — the one published, and the one shown in the app |
@@ -62,7 +73,7 @@ actually been confirmed on a device.
 | [`docs/ROADMAP_FORMATS.md`](docs/ROADMAP_FORMATS.md) | what we cannot play yet, in the order worth doing it, with what each costs |
 | [`docs/PLAY_STORE.md`](docs/PLAY_STORE.md) | what Google Play asks for, answered |
 | [`store/README.md`](store/README.md) | the Play listing in both languages, the console declarations, and the release gates still open |
-| [`store/play-console/releases.md`](store/play-console/releases.md) | every artifact handed to Play: hash, versionCode, commit, tag, signer |
+| [`store/play-console/releases.md`](store/play-console/releases.md) | prepared store-bundle evidence: hash, versionCode, commit, tag and signer; preparation alone does not confirm publication |
 | [`docs/rules/`](docs/rules) | the rules the phone and the browser share, as data both of them are tested against |
 | [`docs/TESTING.md`](docs/TESTING.md) | what only a phone can prove, and what to check on a build before trusting it |
 | `docs/review.md`, `docs/review-round-*.md` | what a pass over a finished round's own diff found, and what it checked and cleared |
@@ -78,11 +89,13 @@ Version 3 rather than 2 because `sc68` alone requires it, and because the Androi
 with GPL-3. Every component, its licence and what it obliges us to do is in
 [`docs/LICENSES.md`](docs/LICENSES.md); the reasoning is in `docs/ARCHITECTURE.md`.
 
-UADE is in the app since 0.7.0, and its licence needed reading rather than assuming: the emulator
-states "GPL" with no version, libuade "LGPL" with none. `uadecore` runs as a separate program the
-app starts and talks to over a socket; libuade is linked in. Why that is compatible with GPL-3, as
-accepted by the owner on 2026-09-21, is in [`docs/LICENSES.md`](docs/LICENSES.md). UADE's replay
-routines are not in the APK; they are downloaded when the user asks for them.
+UADE has been in the app since 0.7.0. Its upstream licence statements do not specify versions:
+the emulator states GPL and libuade LGPL. `uadecore` runs as a separate program the app starts
+and talks to over a socket; libuade is linked in. The decision to use this integration was made
+on 2026-09-21; its licensing rationale and limitations are recorded in
+[`docs/LICENSES.md`](docs/LICENSES.md). This records the project's integration decision, not a
+new permission granted by upstream. UADE's replay routines are not in the APK; they are
+downloaded when the user asks for them.
 
 The app shows every component's licence text itself, under **Settings → Open-source licences**, and
 a test fails when something compiled into the build has no entry there.
