@@ -29,7 +29,8 @@ The manual-queue extension was subsequently accepted after phone testing and mer
 2026-10-21 as **3bc5a98**, including C113–C117 and Clear/reorder/Info/gesture work. Its source
 1a1503f passed 1096 tests/full gates/lint; APK 1.2.0 (1261) remains the artifact. B45 follow-up
 is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
-Granular device checks remain recorded separately; AMP/C111/C112 stay deferred.
+Granular device checks remain recorded separately; AMP/C112 stay deferred. C109/C111 now have
+unmerged candidates listed below.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
@@ -74,9 +75,9 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | ~~C113~~ | ~~Clear leaves the standalone manual list indented~~ | Accepted and merged **3bc5a98**, 2026-10-21; conditional content inset, failing layout probe. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | ~~C114~~ | ~~Current manual row highlight/hit area excludes its inset~~ | Accepted and merged **3bc5a98**, 2026-10-21; full-width paint/hit area, failing pixel/hold probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
 | ~~C115~~ | ~~Playlist grip loses ownership, row layering and viewport tracking~~ | Accepted and merged **3bc5a98**, 2026-10-21; stable subtree, outer layer, viewport pin and batched moves with negative probes. [Evidence](QUEUE_ROW_REGRESSIONS.md). |
-| C111 | Add music and Online catalogues content padding changes between views | User report, 2026-10-19; rendered regression confirms a 4 dp text-start mismatch. Candidate `fix/browse-padding` follows C109; both alignment tests pass, full gate/shared APK and phone acceptance pending. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
+| C111 | Add music and Online catalogues content padding changes between views | User report, 2026-10-19; rendered regression confirms a 4 dp text-start mismatch. Candidate `fix/browse-padding` follows C109; both alignment tests and the combined 1106-test full gate/lint pass. Shared APK 1.3.0 (1273) ready; phone acceptance/merge pending. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md). |
-| C109 | Legacy Modland unknown-author paths fail to download (YM and Same Game SPC) | User reports, 2026-10-18/21. Legacy paths return 404; current `_unknown` paths return 200. Candidate recovery retains saved identities; 36 focused checks passed, full gate/shared C111 APK and phone acceptance pending. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
+| C109 | Legacy Modland unknown-author paths fail to download (YM and Same Game SPC) | User reports, 2026-10-18/21. Legacy paths return 404; current `_unknown` paths return 200. Candidate recovery retains saved identities; 36 focused checks and the combined 1106-test full gate/lint pass. Shared C111 APK 1.3.0 (1273) ready; phone acceptance/merge pending. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
 | C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Owner/user report, 2026-10-20; explicitly deferred from the unified-list iteration. Compact presentation needs later discussion. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |

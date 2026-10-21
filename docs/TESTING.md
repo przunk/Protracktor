@@ -6,7 +6,9 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 ## C109/C111 download and Browse alignment — phone checks pending
 
 The two fixes stay on separate stacked branches: C109 `fix/modland-download-failures`, then C111
-`fix/browse-padding`. A shared minified release APK will cover both; no integration is approved.
+`fix/browse-padding`. Shared minified release APK **1.3.0 (1273), source d370ea2** covers both;
+its [artifact and checks](STATUS.md#c109c111--shared-candidate-ready-for-phone-checks) are recorded.
+No integration is approved.
 [C109 mechanism and detailed checks](MODLAND_LEGACY_DOWNLOADS.md);
 [C111 measurements](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding).
 

@@ -58,8 +58,11 @@ The actual downloaded files also opened and produced non-silent PCM using the ex
 engine probe: YM via ZXTune and SPC via the console backend; **2 played / 0 refused / 0 silent**.
 That is decoder/host evidence, not listening or Android device verification.
 
-Full application tests, lint and a shared APK are planned after the separate C111 padding
-correction on a branch based on this one. Neither branch is approved for integration yet.
+The separate stacked C111 padding candidate, source **d370ea2**, passed the forced full gate:
+**1106 tests / 144 suites**, no failures/errors/skips, all companion checks and fresh lint
+**0 errors / 72 warnings**, **631 s** overall. Its minified test-signed shared release APK is
+**1.3.0 (1273)**; [artifact and verification](STATUS.md#c109c111--shared-candidate-ready-for-phone-checks).
+Neither branch is approved for integration; phone behaviour remains unchecked.
 
 ## Phone checks
 
