@@ -1,7 +1,6 @@
-New features and fixes, including user feedback:
-- Settings: Original, Narrow and Mono stereo mix.
-- A notification heart adds the track to the selected playlist and saves it immediately.
-- Up to 3 recent search suggestions matching what you start typing.
-- Live History search; each visit starts at the top.
-- Fixes for audio when connecting Bluetooth, playlist saving and switching, and search.
-- Preserve data instead of resetting a database with a newer schema.
+A new playback queue, refined through user testing and feedback:
+
+- Browse catalogues and playlists without interrupting playback.
+- Swipe to queue tracks; reorder manual entries, remove entries or clear the queue.
+- Return to your remembered Random list; double-tap the dice to reroll it.
+- Fixes for Browse navigation, downloads, cache handling and list interactions.

@@ -1,7 +1,6 @@
-Nowości i poprawki, także po uwagach użytkowników:
-- Miks stereo w ustawieniach: Oryginał, Zwężone i Mono.
-- Serduszko w powiadomieniu dodaje utwór do wybranej playlisty i od razu ją zapisuje.
-- Do 3 podpowiedzi ostatnich wyszukiwań, dopasowanych do wpisywanego początku.
-- Wyszukiwanie w historii podczas pisania; każde wejście otwiera ją od góry.
-- Poprawki dźwięku przy łączeniu Bluetooth, zapisu i przełączania playlist oraz wyszukiwania.
-- Ochrona przed resetem bazy z nowszym schematem.
+Nowa kolejka, dopracowana po testach i uwagach użytkowników:
+
+- Przeglądaj katalogi i playlisty bez przerywania muzyki.
+- Dodawaj utwory gestem do kolejki; zmieniaj kolejność ręcznych pozycji, usuwaj lub czyść kolejkę.
+- Wróć do zapamiętanej listy Random; dwuklik kostki losuje nową.
+- Poprawki nawigacji Browse, pobierania, cache i płynności list.
