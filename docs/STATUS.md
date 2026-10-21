@@ -405,16 +405,25 @@ The owner could not play the Modland entry shown as
 Keep this as the reported display path, not a confirmed archive URL or filename.
 Expected: selecting the entry starts playback. The owner clarified that the app reported a
 download failure with a connection suggestion, and that other tracks have shown this behaviour
-too; their identities were not supplied. Exact installed build and device remain unspecified.
+too; those additional identities were initially unspecified. Exact installed build and device remain unspecified.
 SPC is already handled by the existing console decoder; this report does not establish a
 format-wide failure, an AMP regression or a queue bug.
 
-**Partially checked by code inspection:** `RemoteFiles.attempt` returns null for non-2xx HTTP
-responses, and `fetch` also maps download exceptions to null. `load` reports the same
-`open_failed_not_fetched` connection suggestion when no bytes arrive, before opening the decoder.
-Thus the message does not distinguish network failure from a missing/blocked server file.
-No HTTP status or cause has been established for this entry. No reproduction, file fetch, decode
-or fix has been performed. Confirm the archive path and response before diagnosing the failure.
+**Initial inspection, 2026-10-18:** non-2xx responses and connection exceptions both reached
+`open_failed_not_fetched`, before decoder opening. No HTTP response had yet been measured.
+
+**2026-10-21 user follow-up:** `YM/- unknown/conflict europe.ym` has the same phone symptom.
+The agent confirmed both legacy paths return **HTTP 404**, while the current official index
+and server use `_unknown`: YM returns **200 / 5,333 bytes**, SPC **200 / 66,048 bytes**.
+Both downloaded files opened and rendered non-silent PCM in the host WASM probe. The mismatch
+explains the supplied examples; the dates of the archive change and the phone's stored index
+were not measured. No format-wide or connection-wide failure is established.
+
+**Candidate on `fix/modland-download-failures`:** one request-only recovery after an exact
+Modland legacy-author 404, retaining saved IDs and cache keys. Before-fix regressions failed
+for both examples; **36 focused checks passed** after correction. Full tests/lint/shared APK
+will follow C111 on a separate stacked branch. Phone behaviour and merge approval are pending.
+[Mechanism, bounded scope and verification](MODLAND_LEGACY_DOWNLOADS.md).
 This is separate from the B45 queue discussion and from the deferred SPC tempo report C26.
 
 ## Browse/download stability — merged 2026-10-18; phone testing pending

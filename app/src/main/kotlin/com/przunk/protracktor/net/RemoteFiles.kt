@@ -22,7 +22,10 @@ import kotlinx.coroutines.withContext
  * library on an SMB share is a network round trip too, so "read the file" costs either way. R9 —
  * playback that starts immediately — is a caching problem before it is anything else.
  */
-class RemoteFiles(private val context: Context) {
+class RemoteFiles(
+    private val context: Context,
+    private val connect: (String) -> HttpURLConnection = { URL(it).openConnection() as HttpURLConnection },
+) {
 
     private val cacheDir = File(context.cacheDir, "remote").apply { mkdirs() }
     private val cache = RemoteFileCache(cacheDir)
@@ -187,20 +190,32 @@ class RemoteFiles(private val context: Context) {
      * on a real answer -- and a host that fails this way twice is a host that is down, so there is
      * one retry rather than a loop.
      */
-    private fun download(url: String): ByteArray? {
-        val first = attempt(url, cookie = null) ?: return null
+    private fun download(url: String): ByteArray = try {
+        downloadAt(url)
+    } catch (failure: HttpFailure) {
+        // Old Modland indexes retain "- unknown" where the live tree uses "_unknown".
+        // Recover only after a missing file, retaining the original cache/playlist identity.
+        val replacement = if (failure.status == 404) Modland.legacyUnknownAuthorUrl(url) else null
+        if (replacement == null) throw failure
+        downloadAt(replacement)
+    }
+
+    private fun downloadAt(url: String): ByteArray {
+        val first = attempt(url, cookie = null)
         if (!first.looksLikeAGate()) return first.body
         val cookie = first.cookie ?: return first.body
-        return attempt(url, cookie)?.body
+        return attempt(url, cookie).body
     }
+
+    private class HttpFailure(val status: Int) : java.io.IOException("HTTP $status")
 
     private class Attempt(val body: ByteArray, val contentType: String?, val cookie: String?) {
         fun looksLikeAGate(): Boolean =
             cookie != null && body.size < 2048 && contentType.orEmpty().startsWith("text/html")
     }
 
-    private fun attempt(url: String, cookie: String?): Attempt? {
-        val connection = URL(url).openConnection() as HttpURLConnection
+    private fun attempt(url: String, cookie: String?): Attempt {
+        val connection = connect(url)
         return try {
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
@@ -209,7 +224,8 @@ class RemoteFiles(private val context: Context) {
             // The name and value only. A cookie's attributes are the browser's business and this is
             // not one; sending `path=/; HttpOnly` back would be sending the server its own notes.
             if (cookie != null) connection.setRequestProperty("Cookie", cookie)
-            if (connection.responseCode !in 200..299) return null
+            val status = connection.responseCode
+            if (status !in 200..299) throw HttpFailure(status)
             Attempt(
                 body = connection.inputStream.use { it.readBytes() },
                 contentType = connection.contentType,

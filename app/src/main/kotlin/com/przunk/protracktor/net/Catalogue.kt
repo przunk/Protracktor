@@ -140,6 +140,15 @@ object Modland : Catalogue(
 
     override fun urlFor(path: String): String = FILE_BASE + encodePath(path)
 
+    /** A request-only recovery for paths retained in older indexes and saved lists. */
+    internal fun legacyUnknownAuthorUrl(url: String): String? {
+        if ('?' in url || '#' in url) return null
+        val path = runCatching { pathFrom(url) }.getOrNull() ?: return null
+        val parts = path.split('/')
+        if (parts.size < 3 || parts[1] != "- unknown") return null
+        return urlFor(parts.mapIndexed { index, part -> if (index == 1) "_unknown" else part }.joinToString("/"))
+    }
+
     override fun pathFrom(id: String): String? {
         if (!id.startsWith(FILE_BASE)) return null
         // Decoded segment by segment rather than whole, so a literal "+" in a filename survives:
