@@ -1,11 +1,40 @@
 # Status
 
-Updated: 2026-10-21 — prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; latest test APK 1.2.0 (1261), source 1a1503f; C111/C112 open; schema 23.
+Updated: 2026-10-21 — C109/C111 candidates on separate stacked branches; shared test APK 1.3.0 (1273), source d370ea2, phone checks pending; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; C112 deferred; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C109/C111 — shared candidate ready for phone checks
+
+`fix/modland-download-failures` contains C109 at **91ba854**. The agreed separate C111 branch
+`fix/browse-padding` starts there; clean combined application source is **d370ea2**. Neither is
+merged. Develop **44a9992**, master/tag **d456fa7** and the AMP branch remain unchanged.
+
+**Checked on the host:** the forced full gate passed in **631 s**, **1106 tests / 144 suites**,
+zero failures/errors/skips, all companion checks passed. Lint executed a fresh analysis:
+**0 errors / 72 warnings**. The failing-before-fix HTTP/layout regressions and C109 status-guard
+mutation are recorded in the individual reports below. Both real downloaded examples produced
+non-silent PCM in the host engine; this does not establish Android playback.
+
+Minified, test-signed release APK built in **163 s**:
+[protracktor-release-1.3.0-1273-d370ea2-20261021-222612.apk](../dist/protracktor-release-1.3.0-1273-d370ea2-20261021-222612.apk),
+**11,915,667 bytes**, SHA-256
+`0934f1ed25bb81e2833f6555fdf67f015778eb4d39500cc00d0234398ca59125`.
+The agent independently checked APK v2 signature, package/name/code, embedded source revision,
+absence of the debuggable flag, ZIP integrity/alignment, minSdk 29/targetSdk 36 and all three
+engine ABIs. R8 executed and its mapping was retained. Public test-certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is a device-test artifact, not a Play upload. Logs, reports, mapping and artifact inspection
+are retained in ignored `user/c109-c111-verification/`.
+
+**Checked partially:** host HTTP/decoder/layout behaviour and artifact properties.
+**Unchecked:** phone playback, visual alignment, accessibility and regression acceptance.
+[Phone checklist](TESTING.md#c109c111-download-and-browse-alignment--phone-checks-pending).
+VersionName stays 1.3.0 and schema 23; no push, merge, tag movement or store release. Later
+documentation commits do not relabel the source SHA or versionCode of this APK.
 
 ## 1.3.0 — AAB prepared, upload/publication unconfirmed
 
@@ -243,12 +272,24 @@ it into the unified-list implementation. Phone report only, no agent-run visual 
 
 ## C111 Add music and Online catalogues have inconsistent padding
 
-Owner/user report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
+User report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
 views visibly changes content padding. Expected: consistent alignment and spacing through that
 transition. Exact edges/measurements and installed build ID were not independently supplied;
-the latest handoff was C110 APK 1.2.0 (1231). **Open, not fixed**; phone report only, no agent-run
-layout reproduction or cause established. Separate from manual queue work; do not silently bundle
-this UI fix into that experiment.
+the latest handoff was C110 APK 1.2.0 (1231). This was not included in the manual queue work.
+
+**Candidate, 2026-10-21:** `fix/browse-padding` starts at C109's `91ba854`, as agreed for one shared
+test APK. The common outer insets are unchanged. Root rows had 28 dp icons, while online Material
+rows used their 24 dp defaults: text began at 60 versus 56 dp from the content edge. The agent's
+rendered Compose regression measured the 4 dp difference and failed before correction (one
+failure; the other test was skipped by fail-fast). A shared 28 dp leading-icon size now aligns
+missing, indexed and online-only catalogues, Song metadata and Replay routines. Both layout tests
+passed after correction, including 1.3x text and downloaded-state changes with nonzero outer insets.
+Root's fixed 78 dp rows and online rows' adaptive heights, wrapping and actions are retained.
+
+**Checked partially:** host-rendered geometry, not phone appearance or full visual acceptance.
+The combined source passed the 1106-test full gate and lint; shared release APK **1.3.0 (1273)**
+is recorded above. Device checks and merge approval remain pending.
+[Phone checklist](TESTING.md#c109c111-download-and-browse-alignment--phone-checks-pending).
 
 ## ~~C110 Browse restores the playing collection instead of its root~~ — accepted and merged, 2026-10-19
 
@@ -421,8 +462,9 @@ were not measured. No format-wide or connection-wide failure is established.
 
 **Candidate on `fix/modland-download-failures`:** one request-only recovery after an exact
 Modland legacy-author 404, retaining saved IDs and cache keys. Before-fix regressions failed
-for both examples; **36 focused checks passed** after correction. Full tests/lint/shared APK
-will follow C111 on a separate stacked branch. Phone behaviour and merge approval are pending.
+for both examples; **36 focused checks passed** after correction. The separate stacked C111
+candidate passed the **1106-test full gate and lint**; shared APK **1.3.0 (1273)** is recorded
+above. Phone behaviour and merge approval are pending.
 [Mechanism, bounded scope and verification](MODLAND_LEGACY_DOWNLOADS.md).
 This is separate from the B45 queue discussion and from the deferred SPC tempo report C26.
 
