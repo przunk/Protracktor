@@ -10,6 +10,17 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B50. Animated first-run tutorial — TODO, recorded 2026-10-21
+
+An app user requested a short multi-page introduction with animated pointers demonstrating
+app usage, available on first launch and/or manually from Settings. Record it as future work;
+implementation and the final design have not been approved. A skippable introduction with
+Settings replay and safe animated previews is the initial recommendation, not a selected design.
+Cover sources/indexes, Search/Random, playlists, the unified queue, gestures and Now Playing
+without operating on real music or user data. Accessibility and EN/PL content are part of the
+scope to evaluate. Reuse A46's index explanation rather than duplicating that requirement.
+[Analysis, alternatives, risks and open choices](TUTORIAL_ANALYSIS.md).
+
 ## B49. Search in History — owner accepted and merged, 2026-10-15
 
 Requested by the owner on 2026-10-15: search previously played tracks from the History view.

@@ -33,6 +33,7 @@ Granular device checks remain recorded separately; AMP/C111/C112 stay deferred.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -106,7 +107,9 @@ host race demonstrations do not establish how often the sequence occurs on a pho
   probing on later scans. Name-based skipping is already implemented.
 - **A46 residuals:** recheck remaining onboarding/download proposals: a brief index explanation,
   clearer labelled download controls, metered-network information and measurable within-step
-  progress. The download picker and offer on an empty playlist already exist.
+  progress. The download picker and offer on an empty playlist already exist. B50's broader
+  [tutorial analysis](TUTORIAL_ANALYSIS.md) shares the index explanation, not the remaining
+  download implementation work.
 - **A39:** MP3 cover thumbnails; parked.
 - **A26:** reduce copying of large files over JNI when justified, and consider replacing the
   single-element error array. Neither is a demonstrated defect or selected priority.
