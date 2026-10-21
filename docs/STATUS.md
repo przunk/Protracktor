@@ -1,11 +1,27 @@
 # Status
 
-Updated: 2026-10-21 — manual playback queue and C113–C117 accepted after phone testing and merged as 3bc5a98; latest APK 1.2.0 (1261), source 1a1503f; C111/C112 open; prepared AAB 1.2.0 (1207), schema 23.
+Updated: 2026-10-21 — prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; latest test APK 1.2.0 (1261), source 1a1503f; C111/C112 open; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
-Google requires another 14 days of closed testing before reapplying for production access.
+The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## 1.3.0 — AAB prepared, upload/publication unconfirmed
+
+Release preparation completed on 2026-10-21. Signed bundle
+`dist/protracktor-1.3.0-1269.aab`, **22,154,124 bytes**, SHA-256
+`3f63164fb1256160696fd374615e7bb21d6be41f029997177c2860eccafec8db`.
+Tag `v1.3.0` and master identify `d456fa7`; the script recorded artifact evidence in `9ca624f`.
+[Release scope, verification and remaining steps](RELEASE_NOTES_1.3.0.md).
+
+The agent inspected existing release-run logs/XML: **1096 tests / 142 suites**, zero failures,
+errors or skips; unit stage **365.3 s**. Lint succeeded using its up-to-date report, with **0
+errors / 72 warnings**, not a newly executed analysis. Artifact hash, embedded revision, packaged
+engine ABIs and public upload-certificate identity match the release records. JAR verification
+reports the same warning categories retained for 1.2.0; neither this nor the tag establishes Play
+acceptance. No new build/signing, test run or push was performed by the agent. Queue acceptance
+below refers to the earlier APK trial, not installation of a Play-generated 1.3.0 package.
 
 ## Audited queue — accepted and merged, 2026-10-21
 

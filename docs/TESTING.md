@@ -3,6 +3,14 @@
 Use the current APK in [Status](STATUS.md) for the active queue regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## Prepared release 1.3.0 — Play-generated install not yet confirmed
+
+AAB **1.3.0 (1269)** is prepared from `v1.3.0` / `d456fa7`. Its app/native/web/script sources
+match the accepted Queue candidate below; the release Gradle change is versionName only.
+Overall Queue trial acceptance does not establish installation or testing of Google's generated
+APK, upload/rollout or production access. Keep the queue, navigation, output and data-preservation
+scenarios below for the store-delivered build. [Release evidence and limits](RELEASE_NOTES_1.3.0.md).
+
 ## Manual queue — overall trial accepted and merged, 2026-10-21
 
 Positive phone testing was reported and integration approved; merged as **3bc5a98**.
