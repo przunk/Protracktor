@@ -6,12 +6,16 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 ## C112 two-row dock — phone trial pending
 
 [Presentation decision and verification](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text).
+Use corrected minified release APK **1.3.0 (1281), source 0b9169b**. The forced full gate passed
+1113 tests / 145 suites, all companion checks and fresh lint (0 errors / 72 warnings).
 The first trial **1.3.0 (1279), source bb7a75b** was not accepted because it increased height and
-changed text margins. Its 1111-test host gate did not protect those proportions. A compact
-correction is in progress; use its newer APK once recorded. APK 1273 has the pre-change layout.
+changed text margins; its 1111-test host gate did not protect those proportions. The new render
+was inspected beside the original and unchanged dock regions compared pixel-by-pixel. Actual
+phone appearance, compact Keep touch comfort, TalkBack and acceptance remain unchecked.
 
-1. Compare the dock's overall height and title/metadata top/bottom spacing with APK 1273; the
-   normal-size card must remain 60 dp with the original 8 dp text edge insets, not 76 dp.
+1. Compare the dock's overall height and title/metadata spacing with the retained pre-change
+   screenshot, rather than downgrading the installed app or clearing its data. The normal-size
+   card must remain 60 dp with the original 8 dp text edge insets, not 76 dp.
    Compare one-subsong and multi-subsong files, including
    `Impulsetracker/Treks/battle of honour.it`. Title is top-left, metadata bottom-left,
    Keep top-right and the full tune-position text bottom-right. Keep and Queue do not move

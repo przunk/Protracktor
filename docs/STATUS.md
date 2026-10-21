@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — C112 spacing correction in progress on unmerged fix/dock-identity-layout; preceding trial APK 1.3.0 (1279), source bb7a75b, was not accepted; C109/C111 accepted and merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — C112 compact correction ready on unmerged fix/dock-identity-layout; latest APK 1.3.0 (1281), source 0b9169b; preceding trial 1279 was not accepted; C109/C111 accepted and merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -344,7 +344,7 @@ only against metadata. Large system text may grow the card; if it leaves less th
 metadata, the footer flows onto another line with its counter end-aligned. This accessibility
 fallback does not add another action row.
 
-**Spacing correction, 2026-10-22 — in progress:** the first trial was not accepted. Feedback
+**Spacing correction, 2026-10-22 — phone trial pending:** the first trial was not accepted. Feedback
 describes a taller dock, excess space above the text and reduced space below. The agent's prior
 visual check established text fit but missed the changed proportions visible in the render.
 The first row's 48 dp Keep slot, followed by a 20 dp footer and 4 dp padding on each side,
@@ -369,16 +369,32 @@ pixel-identical to the original render. Tests also assert the original 8 dp text
 and consecutive title/metadata lines. Expanded Now Playing remains byte-identical. Evidence
 is retained in ignored `user/c112-spacing-verification/`.
 
-The complete restored gate and release APK are pending; actual phone feel and acceptance remain
-unchecked. Retain the original 1279 artifact and its evidence below; they do not establish
-acceptance.
+**Ready for phone trial, unmerged:** clean application source **0b9169b** passed the forced full
+gate in **592 s**, **1113 tests / 145 suites**, zero failures/errors/skips; all companion checks
+passed. The unit stage took **410.0 s** with all 31 Gradle tasks executed. Fresh lint completed
+in **92.4 s**, **0 errors / 72 warnings**, matching the preceding warning count.
+
+Minified, test-signed release APK built in **129 s**:
+[protracktor-release-1.3.0-1281-0b9169b-20261022-003321.apk](../dist/protracktor-release-1.3.0-1281-0b9169b-20261022-003321.apk),
+**11,917,883 bytes**, SHA-256
+`171abc0b8680549472082e2c17b4245ee7b20bb50ca2af869f2cd43a67bf3461`.
+The agent checked package/name/code, embedded full source revision, non-debuggable flag, APK v2
+signature with the same public test certificate as APK 1279, ZIP CRCs/alignment, minSdk 29 /
+targetSdk 36 and the three engine/UADE ABIs. R8 executed and its mapping was retained alongside
+logs/reports in the ignored evidence directory. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+
+**Checked:** host geometry/physical taps, original-versus-compact image inspection and pixel
+comparison, full gates/lint and artifact properties. **Unchecked:** actual phone appearance,
+touch comfort (especially the compact Keep slot), TalkBack and acceptance. No merge/push/tag or
+store release; C119 remains outside the correction. VersionName 1.3.0 and schema 23 unchanged.
+Later documentation commits do not relabel this APK's source SHA or versionCode. Retain the
+original 1279 artifact/evidence below; they do not establish acceptance.
 
 ### First trial — APK 1279, superseded by spacing feedback
 
-**Implemented, unmerged:** `fix/dock-identity-layout` starts at **da7b26b**; application source is
+**First-trial source:** `fix/dock-identity-layout` starts at **da7b26b**; original application source
 **bb7a75b**. The agent's original layout regression failed before the change when the tune count
-altered the title bounds. The
-corrected focused run passed **10 tests / 3 suites**, including physical taps, count changes,
+altered the title bounds. The corrected focused run passed **10 tests / 3 suites**, including physical taps, count changes,
 selected-playlist transitions and a 320 dp Polish viewport at 200% text size. A deliberate
 fixed-height mutation made the accessibility regression fail; the adaptive height was restored.
 Logs and retained evidence live in ignored `user/c112-verification/`.
@@ -388,7 +404,7 @@ metadata: the full title and author/platform/year fit, Keep is above the counter
 separate. Both collapsed and expanded views are retained in the ignored evidence directory;
 these are host renders with preset playback, not live Android audio or phone screenshots.
 
-**Final host verification, 2026-10-22:** the restored forced full gate passed in **561 s**,
+**First-trial host verification, 2026-10-22:** the restored forced full gate passed in **561 s**,
 **1111 tests / 145 suites**, zero failures/errors/skips; all companion checks passed. Fresh lint
 analysis completed in **88.2 s**, **0 errors / 72 warnings**, matching the preceding warning count.
 The unit stage took **387.3 s** and executed all 31 Gradle tasks rather than reusing cached tests.
