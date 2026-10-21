@@ -443,7 +443,7 @@ private fun DomainRow(
             )
             .padding(horizontal = 16.dp),
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(BROWSE_LEADING_ICON_SIZE))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -470,6 +470,9 @@ private fun DomainRow(
  * sentence is a line longer for some scopes than for others.
  */
 private val DOMAIN_ROW_HEIGHT = 78.dp
+
+// Keep root and online text starts aligned despite their different row implementations (C111).
+private val BROWSE_LEADING_ICON_SIZE = 28.dp
 
 /**
  * Where the dice picks from.
@@ -865,7 +868,9 @@ private fun OnlineDomain(
                     // index is here.
                     leadingContent = {
                         if (catalogue.isOnlineOnly) {
-                            Icon(PlayerIcons.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(PlayerIcons.CloudDone, contentDescription = null,
+                                modifier = Modifier.size(BROWSE_LEADING_ICON_SIZE),
+                                tint = MaterialTheme.colorScheme.primary)
                         } else {
                             HeldIcon(held = !catalogue.requiresIndex)
                         }
@@ -1729,9 +1734,11 @@ private fun GroupRow(
 @Composable
 private fun HeldIcon(held: Boolean) {
     if (held) {
-        Icon(PlayerIcons.Downloaded, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Icon(PlayerIcons.Downloaded, contentDescription = null,
+            modifier = Modifier.size(BROWSE_LEADING_ICON_SIZE), tint = MaterialTheme.colorScheme.primary)
     } else {
-        Icon(PlayerIcons.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(PlayerIcons.Cloud, contentDescription = null,
+            modifier = Modifier.size(BROWSE_LEADING_ICON_SIZE), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

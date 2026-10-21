@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; latest test APK 1.2.0 (1261), source 1a1503f; C111/C112 open; schema 23.
+Updated: 2026-10-21 — C109/C111 candidates on separate stacked branches, shared test APK pending; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; manual queue and C113–C117 accepted and merged as 3bc5a98; latest test APK 1.2.0 (1261), source 1a1503f; C112 deferred; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -243,12 +243,23 @@ it into the unified-list implementation. Phone report only, no agent-run visual 
 
 ## C111 Add music and Online catalogues have inconsistent padding
 
-Owner/user report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
+User report, 2026-10-19: switching between the Add music (Browse root) and Online catalogues
 views visibly changes content padding. Expected: consistent alignment and spacing through that
 transition. Exact edges/measurements and installed build ID were not independently supplied;
-the latest handoff was C110 APK 1.2.0 (1231). **Open, not fixed**; phone report only, no agent-run
-layout reproduction or cause established. Separate from manual queue work; do not silently bundle
-this UI fix into that experiment.
+the latest handoff was C110 APK 1.2.0 (1231). This was not included in the manual queue work.
+
+**Candidate, 2026-10-21:** `fix/browse-padding` starts at C109's `91ba854`, as agreed for one shared
+test APK. The common outer insets are unchanged. Root rows had 28 dp icons, while online Material
+rows used their 24 dp defaults: text began at 60 versus 56 dp from the content edge. The agent's
+rendered Compose regression measured the 4 dp difference and failed before correction (one
+failure; the other test was skipped by fail-fast). A shared 28 dp leading-icon size now aligns
+missing, indexed and online-only catalogues, Song metadata and Replay routines. Both layout tests
+passed after correction, including 1.3x text and downloaded-state changes with nonzero outer insets.
+Root's fixed 78 dp rows and online rows' adaptive heights, wrapping and actions are retained.
+
+**Checked partially:** host-rendered geometry, not phone appearance or full visual acceptance.
+Full tests/lint and the combined release APK follow; device checks and merge approval remain
+pending. [Phone checklist](TESTING.md#c109c111-download-and-browse-alignment--phone-checks-pending).
 
 ## ~~C110 Browse restores the playing collection instead of its root~~ — accepted and merged, 2026-10-19
 

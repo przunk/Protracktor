@@ -1,7 +1,29 @@
 # What only a phone can prove
 
-Use the current APK in [Status](STATUS.md) for the active queue regression checklists. Older
+Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
+
+## C109/C111 download and Browse alignment — phone checks pending
+
+The two fixes stay on separate stacked branches: C109 `fix/modland-download-failures`, then C111
+`fix/browse-padding`. A shared minified release APK will cover both; no integration is approved.
+[C109 mechanism and detailed checks](MODLAND_LEGACY_DOWNLOADS.md);
+[C111 measurements](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding).
+
+1. Before refreshing Modland, play `YM/- unknown/conflict europe.ym` from the existing index,
+   saved playlist or History. It should download and play, without changing saved membership.
+   Replay it to exercise the cache. Try the reported Same Game SPC legacy reference too.
+2. Check an ordinary Modland entry and an UnExoticA download. A genuinely missing file must
+   still report failure; the recovery is not a general network or decoder workaround.
+3. Repeatedly move between Add music and Online catalogues. Compare the leading icons and
+   text starts, including missing/downloaded catalogues, an online-only catalogue, Song metadata
+   and Replay routines. Content should not shift sideways during navigation or state updates.
+4. Try EN/PL and enlarged system text. Online descriptions/warnings may make rows taller, but
+   must remain readable with their existing download/refresh actions. Root row heights and
+   Random scope changes should behave as before.
+
+HTTP/decoder probes and rendered host geometry are partial evidence. Playback, perceived alignment
+and device accessibility remain unchecked until phone results are reported.
 
 ## Prepared release 1.3.0 — Play-generated install not yet confirmed
 
