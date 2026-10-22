@@ -30,9 +30,9 @@ The manual-queue extension was subsequently accepted after phone testing and mer
 1a1503f passed 1096 tests/full gates/lint; APK 1.2.0 (1261) remains the artifact. B45 follow-up
 is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
 Granular device checks remain recorded separately; AMP stays deferred. C112's compact dock trial
-was accepted and merged as **e90c817**, 2026-10-22. C109/C111 were accepted and merged on 2026-10-21; C118 records History
-freshness and C119 the uncovered deeper
-Modland path shape below.
+was accepted and merged as **e90c817**, 2026-10-22. C109/C111 were accepted and merged on
+2026-10-21; C119's deeper Modland path correction was accepted and merged as **0a7bcc0**,
+2026-10-22. C118 still records the open History freshness issue below.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
@@ -73,7 +73,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C119 | Nested Modland legacy unknown-author folders are outside C109's recovery rule | User reports, 2026-10-21: AdLib S3M and World Championship Soccer VGZ. Candidate `657f4da` on `fix/modland-nested-legacy-paths`, 2026-10-22: exact-directory recovery at variable depth without ID/cache changes. Failing-before-fix regressions, real non-silent host decode, forced 1119-test full gate and fresh lint passed. Release APK **1.3.0 (1285)** ready; unmerged, phone playback unchecked. [Report](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download). |
+| ~~C119~~ | ~~Nested Modland legacy unknown-author folders are outside C109's recovery rule~~ | Accepted after satisfactory phone playback and merged **0a7bcc0**, 2026-10-22. Exact-directory recovery at variable depth without ID/cache changes; failing-before-fix regressions, real non-silent host decode, forced 1119-test full gate and fresh lint passed. APK **1.3.0 (1285)**, source **657f4da**, unchanged. Detailed phone scenarios not individually reported. [Report](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download). |
 | C118 | Open History does not reflect newly recorded playback until leaving and reopening it | User report, 2026-10-21. Open, not implemented or independently reproduced. Reconcile live updates with A56's stable History ordering and no self-recording policy. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open). |
 | ~~C116~~ | ~~Queue briefly flashes after Next scrolls below the viewport~~ | Accepted and merged **3bc5a98**, 2026-10-21. Surviving-row opacity regression failed before correction; disappearance/placement retained. Overall trial accepted; granular phone results not enumerated. [Evidence](QUEUE_AUTO_FOLLOW.md). |
 | ~~C117~~ | ~~Omitted repeated shuffle history can prematurely disable Next/Previous~~ | Accepted and merged **3bc5a98**, 2026-10-21. Code-review finding with both direction regressions failing before correction; no separate phone reproduction claimed. [Audit](QUEUE_BRANCH_REVIEW.md). |

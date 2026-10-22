@@ -3,14 +3,19 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## C119 nested Modland downloads — candidate
+## C119 nested Modland downloads — accepted trial
+
+Practical phone playback was reported satisfactory and integration approved on 2026-10-22.
+Merged as **0a7bcc0**; the agent checked the merge tree against the accepted branch and
+application sources against tested **657f4da**. No new APK or full gate for unchanged sources.
+Individual outcomes for every retained scenario below were not separately supplied.
 
 [Cause and bounded recovery](MODLAND_LEGACY_DOWNLOADS.md). Use minified release APK **1.3.0
 (1285), source 657f4da**, identified in [Status](STATUS.md), from
 `fix/modland-nested-legacy-paths`. The forced full gate passed **1119 tests / 146 suites**, all
-companion checks and fresh lint **0 errors / 72 warnings**. The branch is unmerged; original
-C109 acceptance does not establish Android playback for these deeper layouts. Host
-HTTP/decoder checks and APK inspection are not phone verification.
+companion checks and fresh lint **0 errors / 72 warnings**. C119 phone acceptance is recorded
+separately above; it is not inferred from original C109 acceptance, host HTTP/decoder checks
+or APK inspection.
 
 1. Without refreshing the existing Modland index, select both reported old references:
    `Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m` and
@@ -27,7 +32,8 @@ HTTP/decoder checks and APK inspection are not phone verification.
 4. Check that the accepted compact dock, next/previous and Queue behave as before; this change
    touches download recovery, not presentation or playback-context rules.
 
-Device playback and these detailed scenarios remain **unchecked** until results are supplied.
+Overall practical phone playback is accepted. Detailed scenario results remain **unchecked
+individually** unless supplied separately; keep this checklist for regression and longer-term use.
 
 ## C112 two-row dock — accepted trial
 

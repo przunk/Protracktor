@@ -9,8 +9,8 @@ identifies two deeper layouts not covered by the original C109 correction: AdLib
 Video Game Music/Sega Megadrive. Their legacy URLs return 404, current `_unknown` URLs return
 200 and the downloaded files decode non-silent audio on the host. C109's segment-1 guard does
 not match their segment-2 unknown folder. The separate C119 correction below extends that rule;
-phone verification is pending. Acceptance of the original YM/SPC examples is not withdrawn or
-generalized to every legacy Modland path.
+practical phone playback was accepted and the correction merged as **0a7bcc0**, 2026-10-22.
+Acceptance of the original YM/SPC examples is not withdrawn or generalized to every legacy path.
 
 ## Report and observed mechanism
 
@@ -54,7 +54,7 @@ old paths for fresh selections but does not rewrite existing saved playlist/Hist
 The generic unavailable-file message remains the existing fallback for other failures. This
 change does not claim to classify or repair every possible archive, network or decoder failure.
 
-## Nested layouts — C119 candidate, 2026-10-22
+## Nested layouts — C119 accepted correction, 2026-10-22
 
 Branch `fix/modland-nested-legacy-paths` starts at develop **6fc91b2**. AdLib and Video Game
 Music use format subdirectories, so the unknown-author folder need not follow the format root
@@ -82,8 +82,12 @@ Minified, test-signed release APK **1.3.0 (1285)** was built in **203 s** and in
 inspected for signature, source/package identity, non-debuggable status, ZIP integrity/alignment,
 SDK levels and all three engine/UADE ABIs. R8 executed; mapping retained.
 [Artifact and SHA-256](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download).
-The branch remains unmerged and phone playback/acceptance remain unchecked. No schema or
-versionName change, push or release is performed.
+Practical phone playback was reported satisfactory and integration approved after the handoff.
+Merged branch **8f2453b** into develop as **0a7bcc0**, without conflicts; the agent checked the
+merge tree against the accepted branch and application sources against tested **657f4da**.
+No additional full gate or APK build for these unchanged sources. Detailed checklist results
+were not separately supplied and remain retained for regression use. No schema or versionName
+change, push or new store release.
 
 Fresh actual downloads also rendered non-silent PCM with the existing host WASM engine:
 **2 played / 0 silent / 0 refused**. This is not an Android playback result. Raw HTTP, payloads,

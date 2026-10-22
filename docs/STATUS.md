@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — C119 candidate ready on fix/modland-nested-legacy-paths, unmerged and phone playback unchecked; latest APK 1.3.0 (1285), source 657f4da; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — C119 accepted after positive phone testing and merged as 0a7bcc0; latest APK 1.3.0 (1285), source 657f4da, unchanged; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -43,9 +43,9 @@ coverage without separate results. [Retained checks](TESTING.md#c109c111-downloa
 VersionName stays 1.3.0 and schema 23; no push, new APK, tag movement or store release. Later
 documentation commits do not relabel the source SHA or versionCode of this APK.
 
-## C119 Nested Modland legacy unknown-author paths still fail to download
+## ~~C119 Nested Modland legacy unknown-author paths still fail to download~~
 
-User reports, 2026-10-21, after C109's provisional acceptance. Latest supplied APK is **1.3.0
+User reports, 2026-10-21, after C109's provisional acceptance. Latest supplied APK at the report was **1.3.0
 (1273), source d370ea2**; installed build/device and Android logs were not separately supplied.
 Selecting these tracks failed to play:
 
@@ -68,12 +68,12 @@ folder is at segment 2. The function returned null; the shared downloader theref
 replacement to try after 404. The reported download failure is consistent with that code path,
 before decoding. This is an uncovered C109 path shape, not evidence of an internet-wide failure.
 
-**Correction candidate, 2026-10-22:** `fix/modland-nested-legacy-paths`, based on develop
+**Correction, 2026-10-22:** `fix/modland-nested-legacy-paths`, based on develop
 **6fc91b2**, recognizes a single exact `- unknown` directory between the format root and filename,
 at any depth. Multiple matching directories are ambiguous and are not guessed. Original IDs,
 cache keys, successful-original priority, the 404-only guard, one alternative request and cookie
 handling remain unchanged. No index refresh, extension guessing or schema/data migration is
-introduced. C109's original YM/SPC acceptance remains recorded; it is not acceptance of C119.
+introduced. C109's original YM/SPC acceptance remains recorded separately from C119's trial below.
 
 **Checked by the agent:** separate production-downloader regressions for each reported path failed on
 the old implementation. Fresh real HTTP requests again returned legacy 404/current 200 with
@@ -101,11 +101,18 @@ flag, ZIP integrity/16 KiB alignment, minSdk 29/targetSdk 36 and engine/UADE lib
 three ABIs. R8 executed and its nonempty mapping was retained with the reports under ignored
 `user/c119-verification/`. VersionName remains 1.3.0, schema 23. This is not a Play artifact.
 
-**Unchecked:** Android playback and detailed device regressions; no phone acceptance inferred
-from host results or APK inspection. No merge, push or release/tag movement; develop remains
-**6fc91b2**, master/tag **d456fa7**. C118 remains a separate task. Later documentation commits
-do not relabel this APK's source revision or versionCode.
-[Mechanism and scope](MODLAND_LEGACY_DOWNLOADS.md), [phone checks](TESTING.md#c119-nested-modland-downloads--candidate).
+**Accepted and merged, 2026-10-22:** practical phone playback was reported satisfactory after
+the APK handoff and integration was approved. Individual results for every retained scenario,
+including offline cache/restart and unrelated-catalogue regressions, were not separately supplied.
+This is reported phone acceptance, not an agent-run Android test or exhaustive coverage.
+
+Merged `fix/modland-nested-legacy-paths` (**8f2453b**) into develop as **0a7bcc0**, without
+conflicts. The agent checked that the merge tree equals the accepted branch and application,
+native, web and script sources still equal tested **657f4da**. No full test/lint rerun or APK
+build for these unchanged sources. Master/tag **d456fa7** remain unchanged; no push or new
+store release. C118 remains a separate task. Later documentation commits do not relabel this
+APK's source revision or versionCode.
+[Mechanism and scope](MODLAND_LEGACY_DOWNLOADS.md), [retained phone checks](TESTING.md#c119-nested-modland-downloads--accepted-trial).
 
 ## C118 History does not show newly recorded plays while the view remains open
 
