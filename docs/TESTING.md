@@ -3,6 +3,39 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## C112 two-row dock — phone trial pending
+
+[Presentation decision and verification](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text).
+Use corrected minified release APK **1.3.0 (1281), source 0b9169b**. The forced full gate passed
+1113 tests / 145 suites, all companion checks and fresh lint (0 errors / 72 warnings).
+The first trial **1.3.0 (1279), source bb7a75b** was not accepted because it increased height and
+changed text margins; its 1111-test host gate did not protect those proportions. The new render
+was inspected beside the original and unchanged dock regions compared pixel-by-pixel. Actual
+phone appearance, compact Keep touch comfort, TalkBack and acceptance remain unchecked.
+
+1. Compare the dock's overall height and title/metadata spacing with the retained pre-change
+   screenshot, rather than downgrading the installed app or clearing its data. The normal-size
+   card must remain 60 dp with the original 8 dp text edge insets, not 76 dp.
+   Compare one-subsong and multi-subsong files, including
+   `Impulsetracker/Treks/battle of honour.it`. Title is top-left, metadata bottom-left,
+   Keep top-right and the full tune-position text bottom-right. Keep and Queue do not move
+   horizontally as the tune count changes. Queue remains outside the card, at the right.
+2. Tap Keep: retain the previous save-to-playlist behaviour without opening Now Playing. Tap
+   title, metadata or tune count: open Now Playing and its existing subsong selector. Tap Queue:
+   open Queue only. Tap just below Keep and across the tune label: these must open the player,
+   not accidentally save through an expanded Keep hit target.
+3. Return to playback from the selected playlist, where Keep is absent. Title width, card height
+   and Queue placement should stay stable. Recheck idle/loading and a long title/subtitle.
+4. Check EN/PL, a narrow viewport and enlarged system text. The card may grow vertically; at
+   accessibility sizes the footer may wrap, keeping the counter end-aligned instead of hiding
+   metadata. Text and the tune label must not overlap or clip. The compact Keep slot is 48 x
+   32 dp with the same 24 dp icon; judge its smaller vertical target honestly on the phone.
+   Verify TalkBack can distinguish opening the player, keeping a track and opening Queue.
+5. Seek, play/pause, previous/next (including file-skip holds), shuffle and repeat remain in their
+   current places. Recheck Queue's usable space above the dock and real scrolling/tap behaviour.
+
+Host geometry and screenshots do not establish phone appearance, touch feel or acceptance.
+
 ## C109/C111 download and Browse alignment — accepted trial
 
 The two fixes were accepted and merged in order on 2026-10-21: C109 **122368f**, then C111

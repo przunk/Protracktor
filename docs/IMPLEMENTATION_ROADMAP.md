@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-21. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-22. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
 The latest prepared tagged AAB is **1.3.0 (1269)**; upload and Play publication are unconfirmed.
@@ -29,8 +29,9 @@ The manual-queue extension was subsequently accepted after phone testing and mer
 2026-10-21 as **3bc5a98**, including C113–C117 and Clear/reorder/Info/gesture work. Its source
 1a1503f passed 1096 tests/full gates/lint; APK 1.2.0 (1261) remains the artifact. B45 follow-up
 is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
-Granular device checks remain recorded separately; AMP/C112 stay deferred. C109/C111 were
-accepted and merged on 2026-10-21; C118 records History freshness and C119 the uncovered deeper
+Granular device checks remain recorded separately; AMP stays deferred. C112's newly authorized
+dock trial is tracked below. C109/C111 were accepted and merged on 2026-10-21; C118 records History
+freshness and C119 the uncovered deeper
 Modland path shape below.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
@@ -82,7 +83,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | ~~C111~~ | ~~Add music and Online catalogues content padding changes between views~~ | Accepted and merged **03dfc1d**, 2026-10-21, after the 1106-test full gate/lint and shared APK trial. Slight residual movement is accepted; not a pixel-identical layout claim. [Report](STATUS.md#c111-add-music-and-online-catalogues-have-inconsistent-padding). |
 | ~~C110~~ | ~~Browse reopens playing History instead of the main Browse view~~ | Owner accepted and requested merge, 2026-10-19; merged `7e7f242`, tree equals accepted branch. 963 tests, lint without errors; APK 1.2.0 (1231) remains the artifact. [Evidence](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_C110_BROWSE_ROOT_NAVIGATION.md). |
 | ~~C109~~ | ~~Legacy Modland unknown-author paths fail to download (YM and Same Game SPC)~~ | Provisionally resolved after satisfactory phone playback; merged **122368f**, 2026-10-21. Saved identities are retained; 36 focused checks and the combined 1106-test full gate/lint passed. Longer-term coverage remains open. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
-| C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Owner/user report, 2026-10-20; explicitly deferred from the unified-list iteration. Compact presentation needs later discussion. |
+| C112 | Dock subsong-position label crowds the Now Playing text beside Queue | Unmerged on `fix/dock-identity-layout`. Corrected APK **1.3.0 (1281), 0b9169b** restores 60 dp card/original text insets after trial 1279 was not accepted. Original-image geometry and unchanged controls match; 1113 tests/full gates/lint passed. Phone appearance and compact Keep touch comfort pending. [Decision and evidence](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |

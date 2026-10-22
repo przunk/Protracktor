@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-21 — C109/C111 accepted and merged in order as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); latest test APK 1.3.0 (1273), source d370ea2; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; C112 deferred; schema 23.
+Updated: 2026-10-22 — C112 compact correction ready on unmerged fix/dock-identity-layout; latest APK 1.3.0 (1281), source 0b9169b; preceding trial 1279 was not accepted; C109/C111 accepted and merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -323,11 +323,107 @@ All new phone behaviour is unchecked. AMP, C111 and C112 are outside the impleme
 
 ## C112 Dock subsong count crowds Now Playing text
 
-Owner/user feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
+User feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
 beside the Queue action, reducing room for Now Playing. The latest supplied APK was 1.2.0 (1239);
-the installed build ID and exact layout measurements were not separately supplied. **Open and
-explicitly deferred** by the owner. Record a future compact presentation discussion; do not bundle
-it into the unified-list implementation. Phone report only, no agent-run visual confirmation.
+the installed build ID and exact layout measurements were not separately supplied. This was
+explicitly deferred from the unified-list implementation.
+
+**Presentation decision, 2026-10-21:** trial a two-row identity card. Keep the title top-left and
+the shared metadata bottom-left; put Keep top-right and the complete translated tune-position
+label bottom-right. Remove the expansion chevron, retain the clickable card and accessibility
+description, and leave Queue outside it on the right. Keep the existing seek/transport controls
+and First-only/All-subsongs policies. Shortening the counter to a fraction, moving shuffle/repeat
+out of the dock and adding a separate action row were not selected.
+
+The agent's host capture of `Impulsetracker/Treks/battle of honour.it` showed the crowding with
+five subsongs on a 360 dp viewport; the supplied feedback also describes the issue on a wider
+phone. The existing horizontal row gives variable-width counter text and the chevron space
+beside Keep and both identity lines. This moves Keep and narrows the title as counts change.
+The rows reserve the upper Keep slot even when that action is absent and constrain the counter
+only against metadata. Large system text may grow the card; if it leaves less than 64 dp for
+metadata, the footer flows onto another line with its counter end-aligned. This accessibility
+fallback does not add another action row.
+
+**Spacing correction, 2026-10-22 — phone trial pending:** the first trial was not accepted. Feedback
+describes a taller dock, excess space above the text and reduced space below. The agent's prior
+visual check established text fit but missed the changed proportions visible in the render.
+The first row's 48 dp Keep slot, followed by a 20 dp footer and 4 dp padding on each side,
+increased the card from 60 to 76 dp. The text top inset became 16 instead of 8 dp; metadata
+bottom inset became 4 instead of 8 dp. Transport and seek padding themselves had not changed.
+
+Restore the 60 dp normal-size card and original 8 dp title/metadata edge insets, with consecutive
+text lines. Keep stays above the tune counter, Queue outside and transport unchanged. This uses
+a compact **48 x 32 dp Keep slot**, not the first trial's 48 x 48 dp target; the visible 24 dp
+icon is unchanged. The smaller vertical target is an explicit compact-layout trade-off to check
+on the phone, not a claim of equivalent accessibility. A default-size geometry test failed
+before correction (152 rather than 120 px at 2x density). The compact hit probe then showed the
+expanded Keep touch target could intercept a tap one dp below its layout box; making the footer
+an explicit opening region prevents saving through the tune-label area. That probe also failed
+before its guard. The restored focused run passed **12 tests / 3 suites**. A fresh host capture
+passed and was inspected beside the original, before approving the visual correction.
+
+Read-only pixel comparison at 720 x 1600 (2x density) confirms original and compact dock bounds
+**y=1212..1600**, card **y=1320..1440**: **194 dp overall / 60 dp card**, rather than the first
+trial's 210 / 76 dp. The seek strip, external Queue region, transport and bottom spacing are
+pixel-identical to the original render. Tests also assert the original 8 dp text edge insets
+and consecutive title/metadata lines. Expanded Now Playing remains byte-identical. Evidence
+is retained in ignored `user/c112-spacing-verification/`.
+
+**Ready for phone trial, unmerged:** clean application source **0b9169b** passed the forced full
+gate in **592 s**, **1113 tests / 145 suites**, zero failures/errors/skips; all companion checks
+passed. The unit stage took **410.0 s** with all 31 Gradle tasks executed. Fresh lint completed
+in **92.4 s**, **0 errors / 72 warnings**, matching the preceding warning count.
+
+Minified, test-signed release APK built in **129 s**:
+[protracktor-release-1.3.0-1281-0b9169b-20261022-003321.apk](../dist/protracktor-release-1.3.0-1281-0b9169b-20261022-003321.apk),
+**11,917,883 bytes**, SHA-256
+`171abc0b8680549472082e2c17b4245ee7b20bb50ca2af869f2cd43a67bf3461`.
+The agent checked package/name/code, embedded full source revision, non-debuggable flag, APK v2
+signature with the same public test certificate as APK 1279, ZIP CRCs/alignment, minSdk 29 /
+targetSdk 36 and the three engine/UADE ABIs. R8 executed and its mapping was retained alongside
+logs/reports in the ignored evidence directory. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+
+**Checked:** host geometry/physical taps, original-versus-compact image inspection and pixel
+comparison, full gates/lint and artifact properties. **Unchecked:** actual phone appearance,
+touch comfort (especially the compact Keep slot), TalkBack and acceptance. No merge/push/tag or
+store release; C119 remains outside the correction. VersionName 1.3.0 and schema 23 unchanged.
+Later documentation commits do not relabel this APK's source SHA or versionCode. Retain the
+original 1279 artifact/evidence below; they do not establish acceptance.
+
+### First trial — APK 1279, superseded by spacing feedback
+
+**First-trial source:** `fix/dock-identity-layout` starts at **da7b26b**; original application source
+**bb7a75b**. The agent's original layout regression failed before the change when the tune count
+altered the title bounds. The corrected focused run passed **10 tests / 3 suites**, including physical taps, count changes,
+selected-playlist transitions and a 320 dp Polish viewport at 200% text size. A deliberate
+fixed-height mutation made the accessibility regression fail; the adaptive height was restored.
+Logs and retained evidence live in ignored `user/c112-verification/`.
+
+The restored host capture passed and was visually inspected at 360 dp with the same real track
+metadata: the full title and author/platform/year fit, Keep is above the counter and Queue is
+separate. Both collapsed and expanded views are retained in the ignored evidence directory;
+these are host renders with preset playback, not live Android audio or phone screenshots.
+
+**First-trial host verification, 2026-10-22:** the restored forced full gate passed in **561 s**,
+**1111 tests / 145 suites**, zero failures/errors/skips; all companion checks passed. Fresh lint
+analysis completed in **88.2 s**, **0 errors / 72 warnings**, matching the preceding warning count.
+The unit stage took **387.3 s** and executed all 31 Gradle tasks rather than reusing cached tests.
+
+Minified, test-signed release APK built from clean source **bb7a75b** in **120 s**:
+[protracktor-release-1.3.0-1279-bb7a75b-20261022-000750.apk](../dist/protracktor-release-1.3.0-1279-bb7a75b-20261022-000750.apk),
+**11,917,043 bytes**, SHA-256
+`90d6a3a8c5d76a3456d239510b6c4f453894c1fbe45fdf08f3c78a6bc8b084df`.
+The agent independently checked package/name/code, embedded full source revision, non-debuggable
+flag, APK v2 signature and the same public test-certificate SHA-256 as APK 1273
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`), ZIP CRCs/alignment,
+minSdk 29/targetSdk 36 and three engine/UADE ABIs. R8 executed and its mapping was retained.
+The expanded Now Playing capture is byte-identical to the pre-change capture; only the dock
+presentation changes in this trial. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+
+**Checked:** host gates, rendered geometry, physical host-test taps and artifact properties.
+**Unchecked:** actual phone appearance/touch feel, TalkBack and acceptance. C119 remains open and
+is not corrected in this APK. VersionName stays 1.3.0 and schema 23. No merge, push, tag or store
+release. Later documentation commits do not relabel this artifact's source SHA or versionCode.
 
 ## ~~C111 Add music and Online catalogues have inconsistent padding~~
 
