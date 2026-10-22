@@ -31,6 +31,7 @@ class RemoteFilesModlandTest {
     @get:Rule val temporary = TemporaryFolder()
     private lateinit var server: HttpServer
     private lateinit var remote: RemoteFiles
+    private lateinit var context: ContextWrapper
     private val responses = ConcurrentHashMap<String, Int>()
     private val requested = LinkedBlockingQueue<String>()
     private val agents = LinkedBlockingQueue<String>()
@@ -61,10 +62,11 @@ class RemoteFilesModlandTest {
         server.start()
         val cache = temporary.newFolder("cache")
         val files = temporary.newFolder("files")
-        remote = RemoteFiles(object : ContextWrapper(RuntimeEnvironment.getApplication()) {
+        context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
             override fun getCacheDir(): File = cache
             override fun getFilesDir(): File = files
-        }, connect = { address ->
+        }
+        remote = RemoteFiles(context, connect = { address ->
             requested.add(address)
             if (transportFails) throw IOException("Controlled connection failure")
             // Only the transport is redirected. Production sees real catalogue identities and
@@ -96,6 +98,35 @@ class RemoteFilesModlandTest {
         val old = Modland.urlFor("Nintendo SPC/- unknown/Same Game/same game (22).spc")
         val current = Modland.urlFor("Nintendo SPC/_unknown/Same Game/same game (22).spc")
         responses["/pub/modules/Nintendo SPC/_unknown/Same Game/same game (22).spc"] = 200
+        assertArrayEquals(payload, remote.fetch(old))
+        assertRequests(old, current)
+    }
+
+    @Test fun `nested AdLib legacy folder recovers and survives downloader recreation`() = runBlocking {
+        val old = Modland.urlFor("Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m")
+        val current = Modland.urlFor("Ad Lib/Screamtracker 3 AdLib/_unknown/(opl2) totally nuts.s3m")
+        responses["/pub/modules/Ad Lib/Screamtracker 3 AdLib/_unknown/(opl2) totally nuts.s3m"] = 200
+        assertArrayEquals(payload, remote.fetch(old))
+        assertTrue(remote.isCached(old))
+        assertFalse(remote.isCached(current))
+
+        var attemptedNetwork = false
+        val reopened = RemoteFiles(context, connect = {
+            attemptedNetwork = true
+            throw IOException("The saved original identity must work offline")
+        })
+        assertArrayEquals(payload, reopened.fetch(old))
+        assertFalse(attemptedNetwork)
+        assertRequests(old, current)
+    }
+
+    @Test fun `nested Sega legacy folder retains the game directory and original cache identity`() = runBlocking {
+        val old = Modland.urlFor("Video Game Music/Sega Megadrive/- unknown/World Championship Soccer/06 ending theme.vgz")
+        val current = Modland.urlFor("Video Game Music/Sega Megadrive/_unknown/World Championship Soccer/06 ending theme.vgz")
+        responses["/pub/modules/Video Game Music/Sega Megadrive/_unknown/World Championship Soccer/06 ending theme.vgz"] = 200
+        assertArrayEquals(payload, remote.fetch(old))
+        assertTrue(remote.isCached(old))
+        assertFalse(remote.isCached(current))
         assertArrayEquals(payload, remote.fetch(old))
         assertRequests(old, current)
     }

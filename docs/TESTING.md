@@ -3,6 +3,32 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## C119 nested Modland downloads — candidate
+
+[Cause and bounded recovery](MODLAND_LEGACY_DOWNLOADS.md). Use minified release APK **1.3.0
+(1285), source 657f4da**, identified in [Status](STATUS.md), from
+`fix/modland-nested-legacy-paths`. The forced full gate passed **1119 tests / 146 suites**, all
+companion checks and fresh lint **0 errors / 72 warnings**. The branch is unmerged; original
+C109 acceptance does not establish Android playback for these deeper layouts. Host
+HTTP/decoder checks and APK inspection are not phone verification.
+
+1. Without refreshing the existing Modland index, select both reported old references:
+   `Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m` and
+   `Video Game Music/Sega Megadrive/- unknown/World Championship Soccer/06 ending theme.vgz`.
+   They should download and start, without a connection-error notice. If the current index no
+   longer exposes `- unknown`, use an already saved playlist/History reference instead; playing
+   only the new `_unknown` address does not exercise recovery.
+2. Replay a recovered file, including after restarting the app and with the network disabled.
+   Its existing saved-list membership and cache availability should remain intact. Do not clear
+   data or refresh the index merely to exercise this fix.
+3. Recheck Conflict Europe YM, Same Game SPC, an ordinary Modland download and an UnExoticA
+   download. A genuinely unavailable file must still report failure. Current `_unknown`
+   references must continue working directly.
+4. Check that the accepted compact dock, next/previous and Queue behave as before; this change
+   touches download recovery, not presentation or playback-context rules.
+
+Device playback and these detailed scenarios remain **unchecked** until results are supplied.
+
 ## C112 two-row dock — accepted trial
 
 Positive phone feedback after the corrected APK handoff and integration approval were received
