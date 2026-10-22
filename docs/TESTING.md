@@ -3,15 +3,20 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## C112 two-row dock — phone trial pending
+## C112 two-row dock — accepted trial
+
+Positive phone feedback after the corrected APK handoff and integration approval were received
+on 2026-10-22; merged as **e90c817**. This is practical trial acceptance, not individual outcomes
+for every retained scenario below. No new APK or full gate was run for the unchanged merge tree.
 
 [Presentation decision and verification](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text).
 Use corrected minified release APK **1.3.0 (1281), source 0b9169b**. The forced full gate passed
 1113 tests / 145 suites, all companion checks and fresh lint (0 errors / 72 warnings).
 The first trial **1.3.0 (1279), source bb7a75b** was not accepted because it increased height and
 changed text margins; its 1111-test host gate did not protect those proportions. The new render
-was inspected beside the original and unchanged dock regions compared pixel-by-pixel. Actual
-phone appearance, compact Keep touch comfort, TalkBack and acceptance remain unchecked.
+was inspected beside the original and unchanged dock regions compared pixel-by-pixel. Overall
+phone operation is accepted; detailed TalkBack, large-font and touch-target outcomes were not
+separately reported.
 
 1. Compare the dock's overall height and title/metadata spacing with the retained pre-change
    screenshot, rather than downgrading the installed app or clearing its data. The normal-size
@@ -34,7 +39,8 @@ phone appearance, compact Keep touch comfort, TalkBack and acceptance remain unc
 5. Seek, play/pause, previous/next (including file-skip holds), shuffle and repeat remain in their
    current places. Recheck Queue's usable space above the dock and real scrolling/tap behaviour.
 
-Host geometry and screenshots do not establish phone appearance, touch feel or acceptance.
+Host geometry and screenshots alone do not establish phone appearance or touch feel. Practical
+phone acceptance is reported separately above; retain unreported cases for regression checks.
 
 ## C109/C111 download and Browse alignment — accepted trial
 

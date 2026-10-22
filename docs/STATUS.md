@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — C112 compact correction ready on unmerged fix/dock-identity-layout; latest APK 1.3.0 (1281), source 0b9169b; preceding trial 1279 was not accepted; C109/C111 accepted and merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — C112 accepted after positive phone testing and merged as e90c817; latest APK 1.3.0 (1281), source 0b9169b, unchanged; C109/C111 merged as 122368f/03dfc1d; C119 open (deeper legacy Modland paths outside C109 recovery); C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -321,7 +321,19 @@ Previous APK 1239/results below are historical only. Later documentation commits
 the source SHA/code of this artifact. Develop, AMP and master are unchanged; no merge/push/tag.
 All new phone behaviour is unchecked. AMP, C111 and C112 are outside the implementation scope.
 
-## C112 Dock subsong count crowds Now Playing text
+## ~~C112 Dock subsong count crowds Now Playing text~~
+
+**Accepted and merged, 2026-10-22, as e90c817.** Positive phone feedback after the corrected APK
+1281 handoff establishes practical trial acceptance and integration is approved. Individual
+checklist outcomes and a separate installed build-ID report were not supplied; no exhaustive
+accessibility or touch-target measurement is inferred.
+
+Merged `fix/dock-identity-layout` (**7f09db2**) into develop without conflicts. The agent checked
+that the merge tree equals the accepted branch and application/native/web/build/script sources
+still equal verified APK source **0b9169b**. No tests/lint or APK build were rerun for these
+unchanged sources. Master/tag **d456fa7** remain unchanged; no push or new store release. C119
+and C118 remain open. Source SHA and versionCode of the existing APK are not relabelled by merge
+or documentation commits.
 
 User feedback, 2026-10-20: the subsong-position label occupies too much of the compact dock
 beside the Queue action, reducing room for Now Playing. The latest supplied APK was 1.2.0 (1239);
@@ -344,7 +356,7 @@ only against metadata. Large system text may grow the card; if it leaves less th
 metadata, the footer flows onto another line with its counter end-aligned. This accessibility
 fallback does not add another action row.
 
-**Spacing correction, 2026-10-22 — phone trial pending:** the first trial was not accepted. Feedback
+**Spacing correction, 2026-10-22 — accepted trial:** the first trial was not accepted. Feedback
 describes a taller dock, excess space above the text and reduced space below. The agent's prior
 visual check established text fit but missed the changed proportions visible in the render.
 The first row's 48 dp Keep slot, followed by a 20 dp footer and 4 dp padding on each side,
@@ -354,8 +366,8 @@ bottom inset became 4 instead of 8 dp. Transport and seek padding themselves had
 Restore the 60 dp normal-size card and original 8 dp title/metadata edge insets, with consecutive
 text lines. Keep stays above the tune counter, Queue outside and transport unchanged. This uses
 a compact **48 x 32 dp Keep slot**, not the first trial's 48 x 48 dp target; the visible 24 dp
-icon is unchanged. The smaller vertical target is an explicit compact-layout trade-off to check
-on the phone, not a claim of equivalent accessibility. A default-size geometry test failed
+icon is unchanged. The smaller vertical target is part of the accepted practical trial, not a
+claim of equivalent accessibility or separately measured touch-target coverage. A geometry test failed
 before correction (152 rather than 120 px at 2x density). The compact hit probe then showed the
 expanded Keep touch target could intercept a tap one dp below its layout box; making the footer
 an explicit opening region prevents saving through the tune-label area. That probe also failed
@@ -369,7 +381,7 @@ pixel-identical to the original render. Tests also assert the original 8 dp text
 and consecutive title/metadata lines. Expanded Now Playing remains byte-identical. Evidence
 is retained in ignored `user/c112-spacing-verification/`.
 
-**Ready for phone trial, unmerged:** clean application source **0b9169b** passed the forced full
+**Verified source of the accepted trial:** clean application source **0b9169b** passed the forced full
 gate in **592 s**, **1113 tests / 145 suites**, zero failures/errors/skips; all companion checks
 passed. The unit stage took **410.0 s** with all 31 Gradle tasks executed. Fresh lint completed
 in **92.4 s**, **0 errors / 72 warnings**, matching the preceding warning count.
@@ -381,12 +393,13 @@ Minified, test-signed release APK built in **129 s**:
 The agent checked package/name/code, embedded full source revision, non-debuggable flag, APK v2
 signature with the same public test certificate as APK 1279, ZIP CRCs/alignment, minSdk 29 /
 targetSdk 36 and the three engine/UADE ABIs. R8 executed and its mapping was retained alongside
-logs/reports in the ignored evidence directory. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+logs/reports in the ignored evidence directory. [Retained phone checks](TESTING.md#c112-two-row-dock--accepted-trial).
 
 **Checked:** host geometry/physical taps, original-versus-compact image inspection and pixel
-comparison, full gates/lint and artifact properties. **Unchecked:** actual phone appearance,
-touch comfort (especially the compact Keep slot), TalkBack and acceptance. No merge/push/tag or
-store release; C119 remains outside the correction. VersionName 1.3.0 and schema 23 unchanged.
+comparison, full gates/lint, artifact properties and reported practical phone acceptance.
+**Not individually reported:** detailed accessibility/TalkBack, large-font and touch-target
+checklist outcomes. Integration is recorded above; no push, tag or new store release. C119
+remains outside the correction. VersionName 1.3.0 and schema 23 unchanged.
 Later documentation commits do not relabel this APK's source SHA or versionCode. Retain the
 original 1279 artifact/evidence below; they do not establish acceptance.
 
@@ -418,7 +431,7 @@ flag, APK v2 signature and the same public test-certificate SHA-256 as APK 1273
 (`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`), ZIP CRCs/alignment,
 minSdk 29/targetSdk 36 and three engine/UADE ABIs. R8 executed and its mapping was retained.
 The expanded Now Playing capture is byte-identical to the pre-change capture; only the dock
-presentation changes in this trial. [Phone checks](TESTING.md#c112-two-row-dock--phone-trial-pending).
+presentation changes in this trial. [Phone checks](TESTING.md#c112-two-row-dock--accepted-trial).
 
 **Checked:** host gates, rendered geometry, physical host-test taps and artifact properties.
 **Unchecked:** actual phone appearance/touch feel, TalkBack and acceptance. C119 remains open and
