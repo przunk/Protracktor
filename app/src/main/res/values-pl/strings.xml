@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="settings_volume_normalization">Normalizacja głośności (eksperymentalna)</string>
+    <string name="settings_volume_normalization_detail">Zmniejsza różnice głośności między utworami. Pierwszy odsłuch korzysta z ograniczonej analizy, a kolejne mogą użyć pełniejszego zapisanego pomiaru. Nie zmienia głośności telefonu ani eksportowanego audio.</string>
     <string name="queue_clear">Wyczyść kolejkę</string>
     <string name="queue_clear_body">Zachowaj tylko bieżący utwór, bez przerywania odtwarzania. Usuń kontekst i oczekujące utwory; zapisane playlisty pozostają bez zmian. Cofnij przywraca plan, dopóki odtwarzanie nie przejdzie dalej lub nie ułożysz nowej kolejki.</string>
     <string name="notice_queue_cleared">Kolejka odtwarzania wyczyszczona.</string>

@@ -407,6 +407,8 @@ fun ProtracktorApp(
                         playAllSubsongs = state.playAllSubsongs,
                         stereoMix = state.stereoMix,
                         onStereoMixSelected = viewModel::setStereoMix,
+                        volumeNormalization = state.volumeNormalization,
+                        onVolumeNormalizationChanged = viewModel::setVolumeNormalization,
                         selectedLanguage = selectedLanguage,
                         cacheBytes = browse.storageBytes.first,
                         archiveBytes = browse.archiveBytes,

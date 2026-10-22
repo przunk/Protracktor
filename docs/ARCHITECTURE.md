@@ -1,5 +1,16 @@
 # Architecture
 
+## Volume normalization — unmerged Android trial, 2026-10-22
+
+Pure `LoudnessMeter`/`VolumeNormalizer` consume float stereo after the existing width mixer and
+before independent focus ducking. `LoudnessPreparation` serializes optional budgeted prefix
+analysis on worker threads using a separate backend. `LoudnessProfiles` stores bounded,
+disposable content/subsong/mix/decoder-version statistics, never user state. Controller hooks
+bind results to the current native track and capture longer listening measurements. Atomic
+commands preserve real-time ownership; cache snapshots skip busy decoders rather than blocking
+the UI behind a seek. Off remains an exact bypass after a live transition settles. There is no
+new service, database schema or dependency. [Contract and verification](VOLUME_NORMALIZATION.md).
+
 ## Queue source navigation — accepted and merged, 2026-10-22
 
 `QueueSourceNavigation` resolves typed destinations and restores only captured Browse route/result

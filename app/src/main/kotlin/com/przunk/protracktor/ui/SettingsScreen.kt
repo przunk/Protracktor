@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -94,6 +96,8 @@ fun SettingsScreen(
     onDeleteIndex: (String) -> Unit,
     onDeleteSongMetadata: () -> Unit,
     onDeleteReplayRoutines: () -> Unit,
+    volumeNormalization: Boolean,
+    onVolumeNormalizationChanged: (Boolean) -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -142,6 +146,17 @@ fun SettingsScreen(
         item { Section(R.string.settings_playback) }
 
         item { StereoMixSetting(selected = stereoMix, onSelect = onStereoMixSelected) }
+
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_volume_normalization)) },
+                supportingContent = { Text(stringResource(R.string.settings_volume_normalization_detail),
+                    style = MaterialTheme.typography.bodySmall) },
+                trailingContent = { Switch(checked=volumeNormalization,
+                    onCheckedChange={ enabled -> haptics.toggle(enabled); onVolumeNormalizationChanged(enabled) },
+                    modifier=Modifier.semantics { contentDescription=context.getString(R.string.settings_volume_normalization) }) },
+            )
+        }
 
         // Global already, and until now reachable only from inside Now Playing on a file that
         // happens to have more than one tune -- so a setting that governs every file could only be

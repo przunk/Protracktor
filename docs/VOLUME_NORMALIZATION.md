@@ -67,6 +67,38 @@ initial subsong and reads its own identity. Discard optional measurement failure
 results without preventing playback. Disk cache entries are bounded to 512 small profiles;
 no schema migration, external audio effect or new dependency is required.
 
+The native production-path checks initially covered 37 cases, plus 12 pure DSP checks; ASan/UBSan
+passed. Deliberately bypassing callback normalization fails three integration checks. Replacing
+the best-effort snapshot with a blocking lock fails the controlled concurrent-seek regression.
+Both mutations were restored. The Kotlin focused set passed 17 tests / 5 suites (129.1 s),
+including the physical Settings switch, preference persistence, cache identity/corruption,
+initial audible subsong, cancellation and optional-analysis failure. An initial UI fixture
+failed because the unrelated storage overview asked for an Android decoder library absent
+on the host; only that fingerprint supplier is substituted, not the new setting path.
+
+Four 20-second real decoded prefixes (Original stereo) reduce a 21.14 LU spread to 2.57 LU:
+IT -26.25 to -23, S3M -18.55 to -23, SPC -10.43 to -23, VGZ -31.57 to -25.57 LUFS. These are
+prefix measurements, not complete-song results or listening tests. Three meter/DSP passes over
+each 20-second input took about 33–38 ms on this host; no Android CPU claim follows.
+
+Final hardening adds a fixed-size checksum-validated cache record and retains the existing
+cancel-on-second-press rule while optional analysis is in flight. Full forced gate/lint and
+minified APK remain pending. No phone behaviour, merge or store release is established.
+
+Additional guards: a relative-gate regression uses quiet but audible material above the absolute
+gate (silence alone would not distinguish the two). Disabling the relative gate fails it.
+Bypassing the cache checksum also fails on a one-bit mantissa change which remains finite and
+in range. Both mutations were restored. The final DSP set contains 12 cases.
+
+The first full gate was interrupted intentionally after 370 s (not a passing gate): some
+backends open their nonzero default subsong but omit that text field. Guessing zero would bind
+normalization to another melody. A new production Player regression fails before publishing
+`Backend::currentSubsong()` in Android metadata. Prefix it before the multiline message, which
+consumes the remainder of the block; a parser regression protects that boundary. Both the initial
+Android indicator and normalization now follow the real initial tune. This Android-only fix
+does not change web metadata or audio export. Native Player checks now number 38; full gate
+and sanitizer verification must be repeated for this correction.
+
 References: [ITU BS.1770](https://www.itu.int/rec/R-REC-BS.1770/en),
 [EBU metering](https://tech.ebu.ch/loudness/),
 [EBU streaming/headroom guidance](https://tech.ebu.ch/docs/r/r128s2.pdf).

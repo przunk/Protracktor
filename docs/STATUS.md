@@ -1,11 +1,45 @@
 # Status
 
-Updated: 2026-10-22 — Queue return-to-source accepted and merged as 70e1a61; latest accepted APK 1.3.0 (1290), source b225ff9; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume-normalization trial in progress on feature/volume-normalization; Queue return-to-source accepted and merged as 70e1a61; latest accepted APK 1.3.0 (1290), source b225ff9; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B52 Volume normalization — experimental Android playback
+
+Selected 2026-10-22, branch `feature/volume-normalization` from develop **9c44fc9**. Settings
+offers Off/On, default Off. Use bounded prefix analysis and independent per-subsong/content/mix
+measurement cache, fixed trim towards -23 LUFS and an emergency linked sample-peak guard.
+Measurements happen before focus ducking; no source-file, system-volume, web or export changes.
+No schema migration or new dependency. [Contract and limitations](VOLUME_NORMALIZATION.md).
+
+**Checked so far:** twelve pure DSP checks and 38 production native Player/analysis checks,
+including JNI, ducking, BT recovery, subsong reset, exact settled Off bypass and nonblocking
+controls during seek. Gain-policy and callback-bypass mutations demonstrably fail regressions;
+both were restored. Restoring a blocking snapshot also fails the controlled seek regression;
+the nonblocking implementation was restored. Final ASan/UBSan passed all 50 native/DSP checks,
+including actual-default-subsong metadata and its multiline-message boundary.
+Four actual 20-second decoded IT/S3M/SPC/VGZ prefixes measured -26.25/-18.55/-10.43/-31.57 LUFS;
+the experimental policy produces -23/-23/-23/-25.57 LUFS. The remaining quieter VGZ respects
+the +6 dB partial-analysis cap. This is numeric host evidence, not a listening test.
+
+Focused verification passed 17 tests / 5 suites, zero failures/errors/skips, in 129.1 s.
+The checksum mutation fails on a one-bit mantissa change that still passes range validation;
+the checksum was restored. Disabling the relative gate likewise fails its audible-quiet-section
+regression and was restored. The final hardening/loading hook will be rechecked by the full
+forced gate. Full tests/lint and minified APK are pending. The host UI fixture
+substitutes only the unavailable Android decoder fingerprint used by the unrelated storage
+overview; Settings/VM/controller/persistence and the physical switch stay real. Android sound,
+layout, CPU/battery cost and practical acceptance are **unchecked**. No merge or push.
+
+The first full gate was deliberately interrupted after 370 s, with no observed test failures,
+because inspection exposed a normalization-identity issue: ASAP/sc68/SID can open a nonzero
+default subsong without a text metadata field. A production Player regression failed before
+publishing its actual typed index in Android metadata, before the multiline message. This fixes
+both normalization identity and the initial Android subsong indicator; web/export remain unchanged.
+The new parser guard preserves message contents. Full verification must restart from this correction.
 
 ## Queue return-to-source — trial
 

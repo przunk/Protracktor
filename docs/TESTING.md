@@ -3,6 +3,29 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## B52 Volume normalization — trial
+
+[Contract and limits](VOLUME_NORMALIZATION.md). A new minified APK is being prepared on
+`feature/volume-normalization`; APK 1.3.0 (1290) predates this change. The trial is unmerged.
+
+1. In Settings, enable **Volume normalization (experimental)**. Start with a modest device
+   volume, then compare several quiet/loud tunes with Off and On. On can intentionally sound
+   quieter overall; the aim is fewer track-to-track jumps, not maximum loudness.
+2. Use Random and manual Queue entries, Next/Previous, a quiet intro followed by a loud passage,
+   and a natural fade-out. Listen for distortion, pumping or unpleasant settling during an
+   unknown first play. A partial measurement intentionally limits amplification; not every
+   quiet file reaches the target on its first play.
+3. Replay after longer listening and after restarting the app. Try different subsongs in the
+   same file, including a short one. Their corrections must not bleed into each other.
+4. Toggle while playing and paused; paused playback must stay paused. Try Original/Narrow/Mono,
+   seek, repeat, and a notification/navigation interruption. Normalization must not cancel ducking.
+5. Repeat the accepted BT transitions: playing to BT continues there; disconnect pauses;
+   paused route changes stay silent. Listen for changes in trim or new stalls/crackles.
+6. Confirm the preference survives restart and that the existing Queue-source return, dock and
+   Settings controls remain usable. Exported audio and web playback are deliberately unchanged.
+
+Actual phone sound, transition comfort, UI, accessibility and CPU/battery behaviour are **unchecked**.
+
 ## Queue return-to-source — trial
 
 Practical phone operation was reported satisfactory and integration approved on 2026-10-22.

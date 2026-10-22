@@ -156,6 +156,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val _state = MutableStateFlow(PlayerUiState(
         stereoMix = Appearance.stereoMix(context),
+        volumeNormalization = Appearance.volumeNormalization(context),
         cacheAhead = Appearance.cacheAhead(context),
         shareAudioMinutes = Appearance.shareAudioMinutes(context),
     ))
@@ -269,7 +270,51 @@ class PlaybackController private constructor(private val context: Context) {
     private val remoteFiles = RemoteFiles(context)
     private val trackFileAccess = AndroidTrackFileAccess(context.contentResolver, remoteFiles)
     private val trackFiles = TrackFiles(trackFileAccess, backgroundWork, ::refreshOnPhone)
-    private val readAhead = PlaybackReadAhead(scope, trackFiles::read)
+    private val loudnessProfiles = LoudnessProfiles(java.io.File(context.cacheDir,"loudness-v1"))
+    private val loudnessPreparation = LoudnessPreparation(loudnessProfiles,
+        { NativeEngine.backendsFingerprint() }, { b,n,c,s,w -> NativeEngine.measureLoudness(b,n,c,s,w) })
+    private var loudnessBase: String? = null
+    private var loudnessSubsong = 0
+    private var loudnessWidth = 100
+    private var loudnessJob: Job? = null
+    private val readAhead = PlaybackReadAhead(scope) { ref ->
+        val bytes=trackFiles.read(ref)
+        if (bytes != null && _state.value.volumeNormalization) {
+            val companions=trackFiles.companions(ref)
+            val width=_state.value.stereoMix.widthPercent
+            withContext(Dispatchers.IO) { loudnessPreparation.prepare(bytes,ref.fileNameOrTitle,companions,-1,width) }
+        }
+        bytes
+    }
+
+    private fun rememberLoudness() {
+        val base=loudnessBase ?: return
+        val profile=track?.loudnessProfile() ?: return
+        val key=LoudnessProfiles.key(base,loudnessSubsong,loudnessWidth)
+        scope.launch(Dispatchers.IO) { loudnessProfiles.write(key,profile) }
+    }
+
+    private fun closeCurrentTrack() {
+        loudnessJob?.cancel(); loudnessJob=null
+        rememberLoudness()
+        track?.close(); track=null; loudnessBase=null
+    }
+
+    private fun refreshNormalization() {
+        loudnessJob?.cancel()
+        val open=track ?: return
+        val enabled=_state.value.volumeNormalization
+        open.setNormalization(enabled)
+        val base=loudnessBase ?: return
+        val subsong=loudnessSubsong
+        val width=loudnessWidth
+        if (!enabled) return
+        loudnessJob=scope.launch {
+            val profile=withContext(Dispatchers.IO) { loudnessProfiles.read(LoudnessProfiles.key(base,subsong,width)) }
+            if (track === open && loudnessBase==base && loudnessSubsong==subsong && loudnessWidth==width &&
+                _state.value.volumeNormalization) open.setNormalization(true,profile)
+        }
+    }
     private val browseCache = BrowseCache(
         files = object : BrowseCache.Files {
             override fun isCached(url: String) = remoteFiles.isCached(url)
@@ -2596,9 +2641,12 @@ class PlaybackController private constructor(private val context: Context) {
         val open = track ?: return
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
+        rememberLoudness()
         sampleListening()
         listening.baseline(0.0, playing = false)
         open.selectSubsong(index)
+        loudnessSubsong=index
+        refreshNormalization()
         // **Re-read once the switch has landed**, which is the audio thread's business and takes a
         // buffer. A GBS names each of its tunes and a SNDH often does; the phone went on showing the
         // first one's name whatever was playing (`docs/review-round-8.md` R4). The web player was
@@ -2647,9 +2695,20 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun setStereoMix(mode: StereoMix) {
         if (_state.value.stereoMix == mode) return
+        rememberLoudness()
         Appearance.selectStereoMix(context, mode)
         _state.update { it.copy(stereoMix = mode) }
         track?.setStereoMix(mode)
+        loudnessWidth=mode.widthPercent
+        refreshNormalization()
+    }
+
+    fun setVolumeNormalization(enabled: Boolean) {
+        if (_state.value.volumeNormalization==enabled) return
+        rememberLoudness()
+        Appearance.selectVolumeNormalization(context,enabled)
+        _state.update { it.copy(volumeNormalization=enabled) }
+        refreshNormalization()
     }
 
     fun setShareAudioMinutes(minutes: Int) {
@@ -3089,8 +3148,7 @@ class PlaybackController private constructor(private val context: Context) {
         seekGeneration++
         _state.update { it.copy(seekingTo = null, seekSlow = false) }
         openJob = scope.launch {
-            track?.close()
-            track = null
+            closeCurrentTrack()
 
             // Already read while the previous track was playing, which is the whole point.
             // Removed rather than left: it is about to be the current track, and holding a second
@@ -3163,6 +3221,22 @@ class PlaybackController private constructor(private val context: Context) {
             // after the audio callback has begun is the same race the position poll had. Before
             // `start()` there is no other thread to race with.
             val described = opened.describe()
+            val measuredWidth=_state.value.stereoMix.widthPercent
+            val openedSubsong=described["subsong"]?.toIntOrNull() ?: 0
+            // Keep the existing cancel-on-second-press rule alive during optional analysis too.
+            _state.update { it.copy(loadingTrack=true) }
+            val prepared=withContext(Dispatchers.IO) {
+                if (_state.value.volumeNormalization)
+                    loudnessPreparation.prepare(bytes,ref.fileNameOrTitle,companions,openedSubsong,measuredWidth)
+                else LoudnessPreparation.Prepared(LoudnessProfiles.contentKey(bytes,ref.fileNameOrTitle,
+                    companions,NativeEngine.backendsFingerprint()),null)
+            }
+            ensureActive()
+            _state.update { it.copy(loadingTrack=false) }
+            loudnessBase=prepared.base; loudnessSubsong=openedSubsong
+            loudnessWidth=_state.value.stereoMix.widthPercent
+            opened.setStereoMix(_state.value.stereoMix)
+            opened.setNormalization(_state.value.volumeNormalization,prepared.profile.takeIf { loudnessWidth==measuredWidth })
 
             // **The lengths before the start**, now that one of them decides what the start does
             // (A52). Hashed once for both databases -- HVSC keys on all of the MD5, songdb on its
@@ -3415,8 +3489,7 @@ class PlaybackController private constructor(private val context: Context) {
         openJob?.cancel()
         openJob = null
         readAhead.clear()
-        track?.close()
-        track = null
+        closeCurrentTrack()
         // A retry cannot resurrect the abandoned source.
         pendingRetry = null
         audioFocus.release()
