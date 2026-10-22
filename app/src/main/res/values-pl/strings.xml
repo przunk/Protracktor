@@ -348,6 +348,10 @@
     <string name="notice_playlist_emptied">Playlista opróżniona. Jest jedyna, więc zostaje.</string>
     <string name="notice_playlist_empty">Ta playlista jest pusta.</string>
     <string name="notice_playlist_failed">Nie udało się przygotować playlisty.</string>
+    <string name="queue_open_source">Przejdź do źródła: %1$s</string>
+    <string name="queue_source_unavailable">Pierwotne źródło odtwarzania nie jest już dostępne.</string>
+    <string name="queue_source_unsaved">Zapisz lub odrzuć zmiany playlisty przed przejściem do tego źródła.</string>
+    <string name="queue_source_save_failed">Nie udało się zapisać playlisty. Twoje zmiany zostały zachowane; spróbuj ponownie.</string>
     <string name="notice_file_unreadable">Nie udało się odczytać tego pliku.</string>
     <string name="notice_file_no_tracks">W tym pliku nie ma utworów.</string>
     <string name="notice_track_unreadable">Nie udało się odczytać %1$s</string>

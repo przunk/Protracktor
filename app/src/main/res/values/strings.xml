@@ -345,6 +345,10 @@
     <string name="notice_playlist_emptied">Playlist emptied. It is the only one, so it stays.</string>
     <string name="notice_playlist_empty">There is nothing in this playlist.</string>
     <string name="notice_playlist_failed">Could not prepare the playlist.</string>
+    <string name="queue_open_source">Go to source: %1$s</string>
+    <string name="queue_source_unavailable">The original playback source is no longer available.</string>
+    <string name="queue_source_unsaved">Save or discard your playlist changes before opening this source.</string>
+    <string name="queue_source_save_failed">Could not save the playlist. Your edits are kept; please retry.</string>
     <string name="notice_file_unreadable">Could not read that file.</string>
     <string name="notice_file_no_tracks">No tracks in that file.</string>
     <string name="notice_track_unreadable">Could not read %1$s</string>

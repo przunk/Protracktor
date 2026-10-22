@@ -154,9 +154,16 @@ This is search-query history, separate from playback History and B43's listened 
 
 ## B45. Active playback queue independent of the visible playlist — accepted and merged, 2026-10-21
 
+**Return-to-source follow-up, selected 2026-10-22:** open the originating view from Queue's
+existing source name for every source type, not only Random. Preserve transport and normal-size
+header geometry; protect dirty playlist drafts and handle missing sources. Implementation trial
+on `feature/queue-source-navigation`, unmerged and not phone-accepted. Source b225ff9 passed
+1147 host tests/full gate/lint; minified APK 1.3.0 (1290) is prepared. This does not reopen the
+accepted manual-queue baseline. [Contract and verification](QUEUE_SOURCE_NAVIGATION.md).
+
 The complete manual-queue follow-up is accepted after phone testing and merged as **3bc5a98**,
-2026-10-21, including shared swipes, pending-only reorder, Info, Clear and C113–C117. Latest
-supplied APK remains **1.2.0 (1261), source 1a1503f**, with 1096 tests/full gates/lint passed.
+2026-10-21, including shared swipes, pending-only reorder, Info, Clear and C113–C117. Its accepted
+baseline APK is **1.2.0 (1261), source 1a1503f**, with 1096 tests/full gates/lint passed.
 [Integration record](QUEUE_BRANCH_REVIEW.md#acceptance-and-integration--2026-10-21).
 Earlier pending/unmerged records below describe their own stages, not the current merge state.
 Further usage feedback, 2026-10-21: the queue has proved useful dozens of times during normal

@@ -119,17 +119,23 @@ internal class PlaylistSessionState(
         }
     }
 
-    fun switchPlaylist(id: Long, tracks: List<TrackRef>, playlists: List<SavedPlaylist>) {
+    fun switchPlaylist(id: Long, tracks: List<TrackRef>, playlists: List<SavedPlaylist>, preservePlayback: Boolean = false) {
         player.update {
             val active = it.activePlayback
-            val next = if (active.belongsTo(id)) active.order.withTracks(tracks)
-                else PlayQueue(tracks = tracks, shuffle = it.transportQueue.shuffle, repeat = it.transportQueue.repeat)
+            // The selected source playlist is live. Reveal its captured order rather than letting
+            // the activePlayback getter replace it with a possibly different disk snapshot.
+            val next = when {
+                preservePlayback && active.belongsTo(id) -> active.order
+                active.belongsTo(id) -> active.order.withTracks(tracks)
+                else -> PlayQueue(tracks = tracks, shuffle = it.transportQueue.shuffle, repeat = it.transportQueue.repeat)
+            }
             it.copy(
-                playback = if (active.belongsTo(id)) active.withOrder(next) else active,
+                playback = if (active.belongsTo(id) && !preservePlayback) active.withOrder(next) else active,
                 queue = next,
                 playlists = playlists,
                 activePlaylistId = id,
-                dirty = false,
+                dirty = preservePlayback && active.belongsTo(id) &&
+                    next.tracks.map { track -> track.id } != tracks.map { track -> track.id },
             )
         }
     }

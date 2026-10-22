@@ -2052,6 +2052,61 @@ class PlaybackController private constructor(private val context: Context) {
         return true
     }
 
+    /** Reveal a source without selecting a track, rebuilding its context or starting the service. */
+    fun openQueueSource(expected: QueueSource, edits: SourcePlaylistEdits = SourcePlaylistEdits.KEEP,
+        onOpened: (QueueSourceView) -> Unit) {
+        val state = _state.value
+        fun unavailable() { _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unavailable))) } }
+        if (state.activePlayback.source != expected) { unavailable(); return }
+        val destination = QueueSourceNavigation.destination(expected, state.playlists.map { it.id }.toSet(),
+            randomSession, sessionBrowse) ?: run { unavailable(); return }
+        when (destination) {
+            QueueSourceView.PLAYLIST -> {
+                val id = (expected as QueueSource.Playlist).id
+                if (id == state.activePlaylistId) { onOpened(destination); return }
+                if (state.dirty && edits == SourcePlaylistEdits.KEEP) {
+                    _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unsaved))) }
+                    return
+                }
+                if (state.dirty && edits == SourcePlaylistEdits.SAVE) {
+                    val selectedId = state.activePlaylistId
+                    playlistSession.savePlaylist { saved ->
+                        val current = _state.value
+                        if (current.activePlaylistId != selectedId) return@savePlaylist
+                        if (!saved) {
+                            _state.update { it.copy(message = Message(context.getString(R.string.queue_source_save_failed))) }
+                        } else if (current.activePlayback.source != expected) {
+                            // Saving succeeded, but a new context superseded the navigation request.
+                            return@savePlaylist
+                        } else if (current.dirty) {
+                            _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unsaved))) }
+                        } else openQueueSource(expected, SourcePlaylistEdits.KEEP, onOpened)
+                    }
+                    return
+                }
+                playlistSession.switchToPlaylist(id, preservePlayback = true,
+                    canActivate = { _state.value.activePlayback.source == expected }) { opened ->
+                    if (opened && _state.value.activePlayback.source == expected) onOpened(destination)
+                    else unavailable()
+                }
+            }
+            QueueSourceView.RANDOM -> {
+                // Random's Back must lead to Browse root, never the route visited underneath Queue.
+                openDomain(BrowseDomain.ROOT)
+                onOpened(destination)
+            }
+            QueueSourceView.BROWSE -> {
+                savedPlaces.cancelOpening()
+                browseWorkflow.cancelSearch()
+                waitingBrowse = null
+                val snapshot = sessionBrowse ?: run { unavailable(); return }
+                _browse.update { QueueSourceNavigation.restore(snapshot, it) }
+                refreshOnPhone()
+                onOpened(destination)
+            }
+        }
+    }
+
     fun resumeSearch() {
         val waiting = waitingBrowse ?: return
         waitingBrowse = null

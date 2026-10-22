@@ -76,6 +76,9 @@ import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.PlayerViewModel
 import com.przunk.protracktor.player.QueueLink
+import com.przunk.protracktor.player.QueueSource
+import com.przunk.protracktor.player.QueueSourceView
+import com.przunk.protracktor.player.SourcePlaylistEdits
 import kotlinx.coroutines.launch
 
 /**
@@ -231,6 +234,16 @@ fun ProtracktorApp(
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
+    var pendingQueueSource by remember { mutableStateOf<QueueSource.Playlist?>(null) }
+    val revealQueueSource: (QueueSourceView) -> Unit = { destination ->
+        if (showQueue) {
+            showQueue = false
+            showNowPlaying = false
+            showSettings = false
+            showBrowse = destination == QueueSourceView.BROWSE
+            showRandom = destination == QueueSourceView.RANDOM
+        }
+    }
     var pendingAddToPlaylist by remember { mutableStateOf<List<com.przunk.protracktor.player.TrackRef>?>(null) }
     // Hoisted so Now Playing can send the list to the playing track without owning the list.
     val playlistState = rememberLazyListState()
@@ -555,6 +568,12 @@ fun ProtracktorApp(
                             onRemovePending = viewModel::removePendingRequest,
                             onMovePending = viewModel::movePendingRequest,
                             onClear = viewModel::clearQueue,
+                            onOpenSource = { source ->
+                                if (source is QueueSource.Playlist && source.id != state.activePlaylistId && state.dirty) {
+                                    pendingQueueSource = source
+                                    pendingSwitch = source.id
+                                } else viewModel.openQueueSource(source, onOpened = revealQueueSource)
+                            },
                             onRemoveContext = { viewModel.removeContextEntry(it, state.schedule.generation) })
                     }
                 }
@@ -656,6 +675,7 @@ fun ProtracktorApp(
             viewModel = viewModel,
             // Switching abandons unsaved edits, so ask before losing them rather than after.
             onSelect = { id ->
+                pendingQueueSource = null
                 if (state.dirty) pendingSwitch = id else viewModel.switchToPlaylist(id)
             },
             onImport = { playlistPicker.launch(arrayOf("*/*")) },
@@ -665,20 +685,25 @@ fun ProtracktorApp(
 
     pendingSwitch?.let { target ->
         AlertDialog(
-            onDismissRequest = { pendingSwitch = null },
+            onDismissRequest = { pendingSwitch = null; pendingQueueSource = null },
             title = { Text(stringResource(R.string.playlist_unsaved_title)) },
             text = { Text(stringResource(R.string.playlist_unsaved_body)) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.savePlaylist()
-                    viewModel.switchToPlaylist(target)
+                    val source = pendingQueueSource
+                    if (source != null) viewModel.openQueueSource(source, SourcePlaylistEdits.SAVE, revealQueueSource)
+                    else { viewModel.savePlaylist(); viewModel.switchToPlaylist(target) }
                     pendingSwitch = null
+                    pendingQueueSource = null
                 }) { Text(stringResource(R.string.action_save)) }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    viewModel.switchToPlaylist(target)
+                    val source = pendingQueueSource
+                    if (source != null) viewModel.openQueueSource(source, SourcePlaylistEdits.DISCARD, revealQueueSource)
+                    else viewModel.switchToPlaylist(target)
                     pendingSwitch = null
+                    pendingQueueSource = null
                 }) { Text(stringResource(R.string.action_discard)) }
             },
         )

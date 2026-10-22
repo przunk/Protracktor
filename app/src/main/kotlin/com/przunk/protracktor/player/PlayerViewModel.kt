@@ -176,6 +176,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
     fun returnToSession(): Boolean = controller.returnToSession()
+    fun openQueueSource(source: QueueSource, edits: SourcePlaylistEdits = SourcePlaylistEdits.KEEP,
+        onOpened: (QueueSourceView) -> Unit) = controller.openQueueSource(source, edits, onOpened)
     fun playFromResults(results: List<TrackRef>, index: Int) {
         ensureServiceRunning()
         controller.playFromResults(results, index)
