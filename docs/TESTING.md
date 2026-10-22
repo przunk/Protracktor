@@ -5,8 +5,11 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## B52 Volume normalization — trial
 
-[Contract and limits](VOLUME_NORMALIZATION.md). A new minified APK is being prepared on
-`feature/volume-normalization`; APK 1.3.0 (1290) predates this change. The trial is unmerged.
+[Contract and limits](VOLUME_NORMALIZATION.md). Use minified release APK **1.3.0 (1295),
+source 48466de**, identified in [Status](STATUS.md), from `feature/volume-normalization`.
+The forced full host gate passed 1158 tests / 152 suites, all companion checks and lint
+(0 errors / 73 warnings). All 50 native/DSP checks also passed ASan/UBSan; independent APK
+inspection passed. The trial is unmerged and not phone-accepted. APK 1290 predates this change.
 
 1. In Settings, enable **Volume normalization (experimental)**. Start with a modest device
    volume, then compare several quiet/loud tunes with Off and On. On can intentionally sound
@@ -16,13 +19,15 @@ APK numbers identify the original handoff, not a recommendation to install an ol
    unknown first play. A partial measurement intentionally limits amplification; not every
    quiet file reaches the target on its first play.
 3. Replay after longer listening and after restarting the app. Try different subsongs in the
-   same file, including a short one. Their corrections must not bleed into each other.
+   same file, including a short one and a file opening at a nonzero default. Their corrections
+   must not bleed into each other; the initial indicator should identify the actual played tune.
 4. Toggle while playing and paused; paused playback must stay paused. Try Original/Narrow/Mono,
    seek, repeat, and a notification/navigation interruption. Normalization must not cancel ducking.
 5. Repeat the accepted BT transitions: playing to BT continues there; disconnect pauses;
    paused route changes stay silent. Listen for changes in trim or new stalls/crackles.
 6. Confirm the preference survives restart and that the existing Queue-source return, dock and
-   Settings controls remain usable. Exported audio and web playback are deliberately unchanged.
+   Settings controls remain usable. Normalization must not process exported audio; when exporting
+   a played subsong, its selection should match the indicator. Web playback stays unchanged.
 
 Actual phone sound, transition comfort, UI, accessibility and CPU/battery behaviour are **unchecked**.
 

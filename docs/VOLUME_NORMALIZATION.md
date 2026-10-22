@@ -24,7 +24,8 @@ on `feature/volume-normalization`, from develop 9c44fc9. Do not merge before pho
   hardware/resampler processing. It may alter an unexpected transient; document that limitation.
 - Fixed trim avoids chasing quiet intros/outros. A previously unknown fallback can settle once
   after sufficient audio; there is no promise of perfect first-play normalization without cost.
-- Android first. Web playback and exported audio remain unchanged. DSP stays Android-free.
+- Android first. Web playback stays unchanged and normalization does not process exported audio.
+  DSP stays Android-free.
 
 ## Verification plan
 
@@ -82,8 +83,8 @@ prefix measurements, not complete-song results or listening tests. Three meter/D
 each 20-second input took about 33–38 ms on this host; no Android CPU claim follows.
 
 Final hardening adds a fixed-size checksum-validated cache record and retains the existing
-cancel-on-second-press rule while optional analysis is in flight. Full forced gate/lint and
-minified APK remain pending. No phone behaviour, merge or store release is established.
+cancel-on-second-press rule while optional analysis is in flight. Its full verification and
+artifact are recorded below. No phone behaviour, merge or store release is established.
 
 Additional guards: a relative-gate regression uses quiet but audible material above the absolute
 gate (silence alone would not distinguish the two). Disabling the relative gate fails it.
@@ -95,9 +96,33 @@ backends open their nonzero default subsong but omit that text field. Guessing z
 normalization to another melody. A new production Player regression fails before publishing
 `Backend::currentSubsong()` in Android metadata. Prefix it before the multiline message, which
 consumes the remainder of the block; a parser regression protects that boundary. Both the initial
-Android indicator and normalization now follow the real initial tune. This Android-only fix
-does not change web metadata or audio export. Native Player checks now number 38; full gate
-and sanitizer verification must be repeated for this correction.
+Android indicator and normalization now follow the real initial tune, as do existing consumers
+of that selection. This Android-only metadata fix does not apply normalization to exports or
+change web metadata. Native Player checks now number 38; final ASan/UBSan passed all 50 native/
+DSP cases and the full gate below was rerun after this correction.
+
+## Final verification and APK — 2026-10-23
+
+Clean source **48466de589f533397527c405c51ad0c8284d5183** passed
+`./scripts/test-protracktor.sh --really --no-configuration-cache` in **685 s**:
+**1158 tests / 152 suites**, zero failures/errors/skips. All 31 unit-stage tasks executed
+(489.0 s). All companion checks passed. Fresh lint ran in **103.7 s**, **0 errors / 73 warnings**;
+the extra advisory versus the previous 72 is UseKtx in unchanged RecentSearchPreferences.kt.
+
+Minified test-signed release **1.3.0 (1295)** built in **231 s** (233.3 s supervised):
+[protracktor-release-1.3.0-1295-48466de-20261023-001631.apk](../dist/protracktor-release-1.3.0-1295-48466de-20261023-001631.apk),
+**11,960,131 bytes**, SHA-256
+`8f4974e5e81940f2243f412bf0411400e9715a4f4ffa1f7c6124d3818b8eef5f`.
+Independent inspection checked the v2 test signature, version/code, full embedded source revision,
+non-debuggable manifest, ZIP CRCs/alignment, minSdk 29/targetSdk 36, engine/UADE libraries and
+the three new JNI exports in arm64-v8a, armeabi-v7a and x86_64. R8 executed and its mapping is
+retained alongside logs, reports, decoded examples and mutation evidence under ignored
+`user/volume-normalization-verification/`. No store release, push or merge is implied.
+
+**Checked:** host evidence above. **Unchecked:** actual Android sound, settling/transition
+comfort, UI/accessibility and device CPU/battery cost. Settings defaults Off; enable manually
+and start with modest device volume. [Phone checklist](TESTING.md#b52-volume-normalization--trial).
+Develop stays 9c44fc9; master/tag stay d456fa7; AMP untouched. VersionName 1.3.0, schema 23.
 
 References: [ITU BS.1770](https://www.itu.int/rec/R-REC-BS.1770/en),
 [EBU metering](https://tech.ebu.ch/loudness/),

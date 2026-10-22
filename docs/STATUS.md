@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-23 — B52 volume-normalization trial in progress on feature/volume-normalization; Queue return-to-source accepted and merged as 70e1a61; latest accepted APK 1.3.0 (1290), source b225ff9; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume-normalization trial ready on unmerged feature/volume-normalization; latest test APK 1.3.0 (1295), source 48466de; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -12,7 +12,8 @@ Historical dated checks below describe their own builds; they are not current te
 Selected 2026-10-22, branch `feature/volume-normalization` from develop **9c44fc9**. Settings
 offers Off/On, default Off. Use bounded prefix analysis and independent per-subsong/content/mix
 measurement cache, fixed trim towards -23 LUFS and an emergency linked sample-peak guard.
-Measurements happen before focus ducking; no source-file, system-volume, web or export changes.
+Measurements happen before focus ducking; source files, system volume and web stay untouched,
+and normalization is not applied to exported audio.
 No schema migration or new dependency. [Contract and limitations](VOLUME_NORMALIZATION.md).
 
 **Checked so far:** twelve pure DSP checks and 38 production native Player/analysis checks,
@@ -28,8 +29,8 @@ the +6 dB partial-analysis cap. This is numeric host evidence, not a listening t
 Focused verification passed 17 tests / 5 suites, zero failures/errors/skips, in 129.1 s.
 The checksum mutation fails on a one-bit mantissa change that still passes range validation;
 the checksum was restored. Disabling the relative gate likewise fails its audible-quiet-section
-regression and was restored. The final hardening/loading hook will be rechecked by the full
-forced gate. Full tests/lint and minified APK are pending. The host UI fixture
+regression and was restored. The final hardening/loading hook passed the full forced gate.
+The host UI fixture
 substitutes only the unavailable Android decoder fingerprint used by the unrelated storage
 overview; Settings/VM/controller/persistence and the physical switch stay real. Android sound,
 layout, CPU/battery cost and practical acceptance are **unchecked**. No merge or push.
@@ -38,8 +39,33 @@ The first full gate was deliberately interrupted after 370 s, with no observed t
 because inspection exposed a normalization-identity issue: ASAP/sc68/SID can open a nonzero
 default subsong without a text metadata field. A production Player regression failed before
 publishing its actual typed index in Android metadata, before the multiline message. This fixes
-both normalization identity and the initial Android subsong indicator; web/export remain unchanged.
-The new parser guard preserves message contents. Full verification must restart from this correction.
+both normalization identity and the initial Android subsong indicator, including existing consumers
+of that selection. It does not apply normalization to exports or alter web metadata. The parser
+guard preserves message contents. The complete verification below was rerun after this correction.
+
+Clean source **48466de589f533397527c405c51ad0c8284d5183** passed the forced full gate in
+**685 s**: **1158 tests / 152 suites**, zero failures/errors/skips. All 31 unit-stage tasks
+executed (**489.0 s**). All companion checks passed, including 581 page, 49 engine, 8 SAP,
+50 native/DSP and 11 server checks, web migration, metadata, runner/release fixtures, icons and PWA.
+Fresh lint completed in **103.7 s**, **0 errors / 73 warnings**. Compared with the previous 72,
+the additional advisory is UseKtx in unchanged `RecentSearchPreferences.kt`, not normalization code.
+
+Minified, test-signed release APK built in **231 s** (233.3 s supervised invocation):
+[protracktor-release-1.3.0-1295-48466de-20261023-001631.apk](../dist/protracktor-release-1.3.0-1295-48466de-20261023-001631.apk),
+**11,960,131 bytes**, SHA-256
+`8f4974e5e81940f2243f412bf0411400e9715a4f4ffa1f7c6124d3818b8eef5f`.
+The agent independently checked v2 test signature, package/name/code, full embedded source SHA,
+absence of the debuggable flag, ZIP CRCs/alignment, minSdk 29/targetSdk 36 and all three engine/
+UADE ABIs. All three new normalization JNI symbols are exported in each ABI. R8 executed and
+its mapping was retained. Public test-certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Evidence is retained in ignored `user/volume-normalization-verification/`; subsequent docs do
+not relabel this device-test artifact. No Play upload, push or merge. Develop remains **9c44fc9**,
+master/tag remain **d456fa7**, AMP untouched. VersionName stays 1.3.0 and schema 23.
+
+**Checked on the host:** the measurements, tests, sanitizer and artifact properties above.
+**Unchecked:** Android sound/transition comfort, UI, first-play delay, battery/accessibility and
+phone acceptance. Use the [phone checklist](TESTING.md#b52-volume-normalization--trial).
 
 ## Queue return-to-source — trial
 
