@@ -155,9 +155,10 @@ This is search-query history, separate from playback History and B43's listened 
 ## B45. Active playback queue independent of the visible playlist — accepted and merged, 2026-10-21
 
 **Return-to-source follow-up, selected 2026-10-22:** open the originating view from Queue's
-existing source name for every source type, not only Random. Preserve transport and header
-geometry; protect dirty playlist drafts and handle missing sources. Implementation trial on
-`feature/queue-source-navigation`, unmerged and not phone-accepted. This does not reopen the
+existing source name for every source type, not only Random. Preserve transport and normal-size
+header geometry; protect dirty playlist drafts and handle missing sources. Implementation trial
+on `feature/queue-source-navigation`, unmerged and not phone-accepted. Source b225ff9 passed
+1147 host tests/full gate/lint; minified APK 1.3.0 (1290) is prepared. This does not reopen the
 accepted manual-queue baseline. [Contract and verification](QUEUE_SOURCE_NAVIGATION.md).
 
 The complete manual-queue follow-up is accepted after phone testing and merged as **3bc5a98**,

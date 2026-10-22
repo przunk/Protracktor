@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — Queue return-to-source trial in progress on feature/queue-source-navigation; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; latest supplied APK 1.3.0 (1285), source 657f4da; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — Queue return-to-source trial ready on unmerged feature/queue-source-navigation; latest test APK 1.3.0 (1290), source b225ff9; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -37,10 +37,30 @@ text; the guard still checks complete text without ellipses/height overflow. A f
 exposed a mid-word Polish wrap, corrected with action width allocation and a word-boundary guard.
 All four final render cases passed in 24.4 s and were inspected: normal/narrow headers remain
 64 dp with fixed Clear/Help positions; enlarged EN/PL headers grow from 83 to 100 dp to retain
-complete captions and the source. The final full tests/lint/APK are in progress. These are host
-component renders, not phone screenshots.
+complete captions and the source. These are host component renders, not phone screenshots.
+
+Clean source **b225ff91edc00510523781ff09111b560e676b36** passed the forced full gate in
+**579 s**: **1147 tests / 149 suites**, zero failures/errors/skips. All 31 unit-stage tasks
+executed, **402.8 s**; no ignored diagnostic capture suite entered the full results. All companion
+checks passed, including 581 page, 49 engine, 8 SAP and 11 server checks, native audio, web
+migration, metadata, runner/release fixtures, icons and PWA. Fresh lint ran in **86.0 s**:
+**0 errors / 72 unchanged warnings**.
+
+Minified, test-signed release APK built in **153 s** (156.1 s supervised invocation):
+[protracktor-release-1.3.0-1290-b225ff9-20261022-231620.apk](../dist/protracktor-release-1.3.0-1290-b225ff9-20261022-231620.apk),
+**11,928,703 bytes**, SHA-256
+`d1210d43f9743d0d48b755eaf7b69f8dd8a3b2bdd7958309837b6af915d35b41`.
+The agent independently checked APK v2 signature, package/name/code, full embedded source SHA,
+absence of the debuggable flag, ZIP CRCs/alignment, minSdk 29/targetSdk 36 and all three
+engine/UADE ABIs. R8 executed and its mapping was retained. Public test-certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is a device-test artifact, not a Play upload. Evidence is retained in ignored
+`user/queue-source-verification/`. Later documentation commits do not relabel this artifact.
+
 **Unchecked:** Android navigation, layout, TalkBack and device acceptance. No merge or push.
-The supplied APK 1285 predates this trial. B52 is recorded as the next task, not implemented here.
+Develop remains **d0d5b8d**; master/tag remain **d456fa7**; AMP is untouched.
+Use the [phone checklist](TESTING.md#queue-return-to-source--trial). B52 is recorded as the next
+task, not implemented here. VersionName stays 1.3.0 and schema 23.
 
 ## C109/C111 — accepted and merged, 2026-10-21
 

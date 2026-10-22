@@ -5,9 +5,11 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## Queue return-to-source — trial
 
-[Contract and safeguards](QUEUE_SOURCE_NAVIGATION.md). A new minified APK is being prepared on
-`feature/queue-source-navigation`; APK **1.3.0 (1285)** predates this trial. Use the new artifact
-from [Status](STATUS.md) once recorded. The trial is unmerged and not phone-accepted.
+[Contract and safeguards](QUEUE_SOURCE_NAVIGATION.md). Use minified release APK **1.3.0 (1290),
+source b225ff9**, identified in [Status](STATUS.md), from `feature/queue-source-navigation`.
+The forced full host gate passed 1147 tests / 149 suites, all companion checks and fresh lint
+(0 errors / 72 unchanged warnings); host renders and independent artifact checks passed.
+The trial is unmerged and not phone-accepted. APK 1285 predates this feature.
 
 1. Start Random, return to the playlist, open Queue and tap its source name. The remembered
    Random list/filter returns without rerolling, resuming a pause or interrupting audio. Back

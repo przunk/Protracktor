@@ -75,7 +75,7 @@ failed before retiring that navigation completion without altering successful pe
 Late playlist reads are also guarded against replaced sources and release their write protection
 when abandoned.
 
-## Host verification checkpoint
+## Verification and APK handoff
 
 The latest public focused set passed **91 tests / 7 suites**, zero failures/errors/skips, covering
 actual shell taps for all source shapes, dirty-draft choices and failure, delayed Save ownership,
@@ -95,8 +95,23 @@ an ugly mid-word Polish wrap; a word-boundary assertion and slightly unequal act
 protect that case. The corrected enlarged EN/PL headers are **100 dp** rather than the reference's
 83 dp, retaining complete action words and the source slot. Normal/narrow geometry is unchanged.
 The final four renders passed in **24.4 s** and the corrected images were inspected again.
-Images are host component renders, not
-full application or phone screenshots. Evidence is retained in ignored `user/queue-source-verification/`.
+Images are host component renders, not full application or phone screenshots.
 
-The full forced gate/lint and a new minified APK remain pending. Android behaviour, real touch
-feel and TalkBack are unchecked; no integration approval is inferred from these host results.
+Clean source **b225ff91edc00510523781ff09111b560e676b36** passed the forced full gate in
+**579 s**: **1147 tests / 149 suites**, zero failures/errors/skips. All 31 unit-stage tasks
+executed (402.8 s); ignored diagnostic capture code was not included. All companion checks
+passed. Fresh lint completed in **86.0 s**, **0 errors / 72 unchanged warnings**.
+
+Minified, test-signed release **1.3.0 (1290)** built in **153 s** (156.1 s supervised invocation):
+[protracktor-release-1.3.0-1290-b225ff9-20261022-231620.apk](../dist/protracktor-release-1.3.0-1290-b225ff9-20261022-231620.apk),
+**11,928,703 bytes**, SHA-256
+`d1210d43f9743d0d48b755eaf7b69f8dd8a3b2bdd7958309837b6af915d35b41`.
+Independent inspection verified the v2 test signature, name/code, embedded full source revision,
+non-debuggable manifest, ZIP CRCs/alignment, minSdk 29/targetSdk 36 and engine/UADE libraries for
+arm64-v8a, armeabi-v7a and x86_64. R8 executed; its mapping is retained with logs, reports,
+renders and regression evidence in ignored `user/queue-source-verification/`.
+
+**Checked on the host:** the tests, renders and artifact properties above. **Unchecked:** Android
+behaviour, real touch feel, TalkBack and phone acceptance. This is an unmerged device-test trial,
+not a store release. Develop remains d0d5b8d and master/tag remain d456fa7; no push or AMP changes.
+The [phone checklist](TESTING.md#queue-return-to-source--trial) is the remaining gate.
