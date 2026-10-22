@@ -10,6 +10,19 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B52. Consistent perceived loudness between tracks — next task, recorded 2026-10-22
+
+Listening feedback, 2026-10-22: playback levels vary considerably between tracks, making a quiet
+track followed by a loud one unpleasant. Select loudness normalization as the next task after
+Queue's return-to-source navigation; do not start its implementation as part of that change.
+
+The goal is consistent perceived track-to-track loudness, not a louder global volume setting.
+Before implementation, compare measurement and gain strategies, account for unknown lengths
+and loops, preserve musical dynamics, and prevent clipping or abrupt gain changes. Establish
+coverage across playback backends, interaction with stereo mixing, preference/default behaviour
+and any measurement cache. These are analysis topics, not selected algorithms or dependencies.
+No failing track pair, output device, measurements or quantitative target were supplied.
+
 ## B51. Save an individual subsong in a playlist — TODO, recorded 2026-10-21
 
 Request recorded 2026-10-21: allow adding a selected subsong to a playlist rather than only the
