@@ -20,3 +20,6 @@ c++ -std=c++20 -O1 -g -Wall -Wextra -Werror -pthread \
     -I"$ROOT/scripts/audio-host-test" -I"$TASK_JDK/include" -I"$TASK_JDK/include/linux" \
     "$ROOT/scripts/audio-host-test/player_test.cpp" -o "$TASK_OUT/check-audio-host"
 "$TASK_OUT/check-audio-host"
+c++ -std=c++20 -O1 -g -Wall -Wextra -Werror "${TASK_EXTRA[@]}" \
+    "$ROOT/scripts/audio-host-test/loudness_test.cpp" -o "$TASK_OUT/check-loudness"
+"$TASK_OUT/check-loudness"
