@@ -14,9 +14,10 @@ been overtaken by work already done, it says so.
 
 Implementation experiment selected 2026-10-22 on `feature/volume-normalization`, from develop
 9c44fc9 after Queue-source acceptance. Android Off/On, default Off, bounded pre-analysis,
-content/subsong/mix cache and fixed trim with sample-peak headroom. Source 48466de passed the
-1158-test full host gate/lint; minified APK 1.3.0 (1295) is ready, 2026-10-23. Sound/quality
-and phone acceptance remain unchecked; no merge. [Trial contract](VOLUME_NORMALIZATION.md).
+content/subsong/mix cache and fixed trim with sample-peak headroom. Reviewed source 9b99bb4
+passed the 1162-test full host gate/lint and 53 native/DSP sanitizer checks; minified APK
+1.3.0 (1297) is ready, 2026-10-23. Initial listening established a difference, not quality
+acceptance; the replacement APK still needs phone checks. No merge. [Trial contract](VOLUME_NORMALIZATION.md).
 
 Listening feedback, 2026-10-22: playback levels vary considerably between tracks, making a quiet
 track followed by a loud one unpleasant. This was selected as a separate experiment after

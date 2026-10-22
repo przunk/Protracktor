@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-23 — B52 volume-normalization review hardening awaits full verification on unmerged feature/volume-normalization; latest available test APK 1.3.0 (1295), source 48466de predates review fixes; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume-normalization review checked on host, unmerged feature/volume-normalization; latest test APK 1.3.0 (1297), source 9b99bb4; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -12,14 +12,30 @@ Historical dated checks below describe their own builds; they are not current te
 **Review update, 2026-10-23:** initial listening confirms a difference, not quality acceptance.
 Review hardening preserves gain smoothing across live stereo-mix changes, binds atomic gain
 commands to their measured mix and keeps a preparing decoder private until adoption, with
-cleanup at both cancellation handoffs. The two new production Player regressions failed before
-their fixes; a third regression exposes initial Mono/Narrow being mistaken for a mid-song
-change and falsely preventing a complete measurement. That continuity check is corrected too.
-52 native/DSP checks passed ASan/UBSan before this last correction; the expanded 53 are being
-checked again. Bypassing cleanup failed three Kotlin
-ownership tests; cleanup was restored. Expanded Kotlin tests, full gate/lint
-and a replacement release APK are pending. No merge or acceptance.
+cleanup at both cancellation handoffs. Initial Mono/Narrow no longer falsely invalidates
+whole-song measurement. Three production Player regressions failed before their fixes;
+bypassing cleanup failed three Kotlin ownership tests. All corrections are restored and checked.
+
+**Checked:** forced full gate **1162 tests / 152 suites**, zero failures/errors/skips,
+**703 s** overall; all 31 unit-stage tasks executed (**453.0 s**). All companion checks pass,
+including the final **41 Player/analysis + 12 DSP** cases. The same **53** pass ASan/UBSan.
+Lint **0 errors / 73 unchanged warnings**, **134.6 s**; warning identities/messages match the
+previous report. Four decoded-prefix measurements remain unchanged. The final native-only
+correction preceded the native stage; the running JVM stage's inputs remained byte-identical.
+
+Minified, test-signed release **1.3.0 (1297)**, clean source
+**9b99bb45cfee63a4746ee3cc60187337de2a22f6**, built in **225 s** (226.2 s supervised):
+[protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk](../dist/protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk),
+**11,963,575 bytes**, SHA-256
+`457acdd507adf773d0ecc7778b0a8ddce52b559c2a0bb98663775d112b398887`.
+Independent inspection confirms v2 test signature, version/source, non-debuggable manifest,
+ZIP CRCs/16 KB alignment, minSdk 29/targetSdk 36, all three engine/UADE ABIs and normalization
+JNI exports. R8 executed; mapping and evidence are retained under ignored
+`user/volume-normalization-verification/`. **Unchecked:** this replacement APK's Android sound,
+live transitions/loading interaction, accessibility and device power cost. No merge or acceptance.
 [Findings and rationale](VOLUME_NORMALIZATION.md#code-review-and-hardening--2026-10-23).
+
+### Original implementation and APK 1295 — historical verification
 
 Selected 2026-10-22, branch `feature/volume-normalization` from develop **9c44fc9**. Settings
 offers Off/On, default Off. Use bounded prefix analysis and independent per-subsong/content/mix

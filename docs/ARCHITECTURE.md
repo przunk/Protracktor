@@ -8,8 +8,9 @@ analysis on worker threads using a separate backend. `LoudnessProfiles` stores b
 disposable content/subsong/mix/decoder-version statistics, never user state. Controller hooks
 bind results to the current native track and capture longer listening measurements. Atomic
 commands carry their measured stereo mode and preserve real-time ownership; a width change
-resets statistics but retains the audible gain for a smooth transition. Cache snapshots skip busy decoders rather than blocking
-the UI behind a seek. Off remains an exact bypass after a live transition settles. There is no
+resets statistics but retains the audible gain for a smooth transition. Cache snapshots skip
+busy decoders rather than blocking the UI behind a seek. Off remains an exact bypass after a
+live transition settles. There is no
 new service, database schema or dependency. [Contract and verification](VOLUME_NORMALIZATION.md).
 An opening decoder remains caller-private across optional analysis; `prepareOrClose` owns cleanup
 on cancellation/failure, including a native allocation whose worker result was not delivered.
@@ -17,9 +18,10 @@ Only successful preparation adopts the handle and acquires audio focus. This kee
 of the preparation window and prevents an old cancellation from closing a newer playing track.
 Android metadata publishes the backend's actual initial subsong before its multiline message,
 so normalization and the existing selection consumers cannot guess a different tune. Clean
-source 48466de passed 1158 host tests/full gate/lint (0 errors/73 warnings); release APK 1.3.0
-(1295) and 50 native/DSP sanitizer checks are recorded in the contract. Phone acceptance remains
-unchecked; the branch is unmerged.
+source 9b99bb4 passed 1162 host tests/full gate/lint (0 errors/73 unchanged warnings); release
+APK 1.3.0 (1297) and 53 native/DSP sanitizer checks are recorded in the contract. Initial
+non-default mix selection preserves full-measurement eligibility; only a change after samples
+invalidates it. Phone acceptance remains unchecked; the branch is unmerged.
 
 ## Queue source navigation — accepted and merged, 2026-10-22
 

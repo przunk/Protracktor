@@ -174,9 +174,29 @@ remaining trade-offs are preview/opening latency, conservative first-play matchi
 alteration of unexpected peaks and unmeasured device power cost. None is settled by green host
 tests or by the initial listening feedback.
 
-**Review verification in progress:** all three native regressions failed before their corrections;
-40 Player/analysis plus 12 DSP checks passed ASan/UBSan before the last initial-mode correction;
-the expanded 41+12 set is being checked again outside the ptrace sandbox.
-Bypassing cleanup failed three of the eight Kotlin preparation tests; cleanup was restored.
-The expanded Kotlin cancellation set, forced full gate, lint and replacement release APK are
-pending. The original APK/source above remains historical evidence, not a build of these changes.
+### Review verification and replacement APK
+
+All three native regressions failed before their corrections. The final **41 Player/analysis
+plus 12 DSP** checks pass, including ASan/UBSan outside the ptrace sandbox. Bypassing cleanup
+failed three of the eight Kotlin preparation tests; cleanup was restored. All eight pass in
+the forced full gate: **1162 tests / 152 suites**, zero failures/errors/skips, **703 s** overall.
+All 31 unit-stage tasks executed (**453.0 s**). The last correction was native-only and completed
+before the native stage; JVM inputs remained byte-identical throughout the forced unit stage.
+All companion checks pass. Fresh lint: **134.6 s**, **0 errors / 73 warnings**, with no diagnostic
+added or removed versus the previous report. The four real decoded-prefix measurements are
+unchanged; these are still host numbers, not listening or device-power evidence.
+
+Clean reviewed source **9b99bb45cfee63a4746ee3cc60187337de2a22f6** produced minified,
+test-signed release **1.3.0 (1297)** in **225 s** (226.2 s supervised):
+[protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk](../dist/protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk),
+**11,963,575 bytes**, SHA-256
+`457acdd507adf773d0ecc7778b0a8ddce52b559c2a0bb98663775d112b398887`.
+Independent inspection confirms the v2 test signature, exact source/version/code, non-debuggable
+manifest, ZIP CRCs/16 KB alignment, minSdk 29/targetSdk 36 and engine/UADE libraries in all three
+ABIs. All three normalization JNI exports exist in each ABI. R8 executed; its mapping, reports,
+logs and mutation evidence remain under ignored `user/volume-normalization-verification/`.
+
+**Unchecked:** this replacement APK's Android sound, transition comfort, loading/control
+interaction, UI/accessibility and power cost. No merge, push or quality acceptance. VersionName
+1.3.0 and schema 23 are unchanged; develop remains 9c44fc9 and master/tag remain d456fa7.
+The original APK 1295/source above is historical evidence, not a build of these review fixes.

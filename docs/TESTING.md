@@ -5,10 +5,10 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## B52 Volume normalization — trial
 
-[Contract and limits](VOLUME_NORMALIZATION.md). Use minified release APK **1.3.0 (1295),
-source 48466de**, identified in [Status](STATUS.md), from `feature/volume-normalization`.
-The forced full host gate passed 1158 tests / 152 suites, all companion checks and lint
-(0 errors / 73 warnings). All 50 native/DSP checks also passed ASan/UBSan; independent APK
+[Contract and limits](VOLUME_NORMALIZATION.md). Use minified release APK **1.3.0 (1297),
+source 9b99bb4**, identified in [Status](STATUS.md), from `feature/volume-normalization`.
+The forced full host gate passed 1162 tests / 152 suites, all companion checks and lint
+(0 errors / 73 unchanged warnings). All 53 native/DSP checks also passed ASan/UBSan; independent APK
 inspection passed. The trial is unmerged and not phone-accepted. APK 1290 predates this change.
 
 1. In Settings, enable **Volume normalization (experimental)**. Start with a modest device
@@ -28,8 +28,15 @@ inspection passed. The trial is unmerged and not phone-accepted. APK 1290 predat
 6. Confirm the preference survives restart and that the existing Queue-source return, dock and
    Settings controls remain usable. Normalization must not process exported audio; when exporting
    a played subsong, its selection should match the indicator. Web playback stays unchanged.
+7. Switch Original/Narrow/Mono repeatedly while playing, including a quiet track: the gain
+   transition must be smooth rather than jumping with the mix. Also select Mono/Narrow before
+   starting a new short track, let it finish and replay it to exercise complete-profile reuse.
+8. During a cold/slow load, cancel with Pause or immediately choose another track. The abandoned
+   decoder must not start later or interrupt the newer track. Try subsong controls during loading;
+   no half-prepared track should start under the previous track's metadata.
 
-Actual phone sound, transition comfort, UI, accessibility and CPU/battery behaviour are **unchecked**.
+Initial listening to APK 1295 established a difference, not quality acceptance. The replacement
+APK's sound, transition/loading behaviour, UI, accessibility and CPU/battery cost are **unchecked**.
 
 ## Queue return-to-source — trial
 
