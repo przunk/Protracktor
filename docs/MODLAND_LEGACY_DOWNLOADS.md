@@ -1,4 +1,4 @@
-# C109 — Legacy Modland unknown-author downloads
+# Legacy Modland unknown-author downloads — C109/C119
 
 Recorded 2026-10-21. User-reported playback failure; correction from
 `fix/modland-download-failures` merged as **122368f** after satisfactory phone playback was
@@ -7,10 +7,10 @@ reported. Considered resolved for now, subject to further use and retained regre
 **Later follow-up, 2026-10-21:** [C119](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download)
 identifies two deeper layouts not covered by the correction below: AdLib/Screamtracker and
 Video Game Music/Sega Megadrive. Their legacy URLs return 404, current `_unknown` URLs return
-200 and the downloaded files decode non-silent audio on the host. The existing segment-1 guard
-does not match their segment-2 unknown folder. This is diagnosis only; no further implementation
-or phone verification is claimed. Acceptance of the original YM/SPC examples is not withdrawn
-or generalized to every legacy Modland path.
+200 and the downloaded files decode non-silent audio on the host. C109's segment-1 guard does
+not match their segment-2 unknown folder. The separate C119 correction below extends that rule;
+phone verification is pending. Acceptance of the original YM/SPC examples is not withdrawn or
+generalized to every legacy Modland path.
 
 ## Report and observed mechanism
 
@@ -40,7 +40,9 @@ old paths for fresh selections but does not rewrite existing saved playlist/Hist
 
 - Try the original address first; a successful original wins.
 - Only after **HTTP 404**, and only for the exact HTTPS Modland file base, offer a second
-  request replacing the author path segment `- unknown` with `_unknown`.
+  request replacing the author directory `- unknown` with `_unknown`. C109 recognized only
+  segment 1; C119 recognizes one exact matching directory at any depth between root and filename.
+  Paths with multiple matching directories are ambiguous and receive no guessed alternative.
 - Keep nested game folders and normal path escaping. Do not rewrite similarly named authors,
   filenames, foreign hosts, queries or fragments.
 - Do not retry for connection exceptions, access/rate-limit failures, 410 or server errors.
@@ -52,7 +54,35 @@ old paths for fresh selections but does not rewrite existing saved playlist/Hist
 The generic unavailable-file message remains the existing fallback for other failures. This
 change does not claim to classify or repair every possible archive, network or decoder failure.
 
-## Verification
+## Nested layouts — C119 candidate, 2026-10-22
+
+Branch `fix/modland-nested-legacy-paths` starts at develop **6fc91b2**. AdLib and Video Game
+Music use format subdirectories, so the unknown-author folder need not follow the format root
+immediately. Recovery is a request-only transformation; catalogue parsing and stored data do
+not change. Selecting an old saved reference does not require re-indexing.
+
+| Reported legacy path | Current folder | Fresh HTTP check, 2026-10-22 |
+| --- | --- | --- |
+| `Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m` | `_unknown` | Legacy 404; current 200, 9,236 bytes |
+| `Video Game Music/Sega Megadrive/- unknown/World Championship Soccer/06 ending theme.vgz` | `_unknown` | Legacy 404; current 200, 2,524 bytes |
+
+The first extension is `.s3m`, confirmed after a typing error in the report; no filename-extension
+repair is needed. Both production-downloader HTTP regressions failed separately before the
+change. New checks cover nested request URLs, original cache identities, offline disk-cache
+reuse after downloader recreation, variable-depth paths/escaping and refused ambiguous paths.
+An encoded-separator regression also failed against the first broader rule; recovery now keeps
+decoded segment boundaries and refuses encoded slashes instead of manufacturing directories.
+Focused verification passed **26 tests / 4 suites**, zero failures/errors/skips. Deliberately
+including the format root and filename in recovery broke the boundary regression as intended;
+the correct range was restored. The full gate/lint and a minified APK are pending; this branch
+is not merged or phone-accepted.
+
+Fresh actual downloads also rendered non-silent PCM with the existing host WASM engine:
+**2 played / 0 silent / 0 refused**. This is not an Android playback result. Raw HTTP, payloads,
+decoder output and regression logs are retained in ignored `user/c119-verification/`.
+[Current verification/artifact state](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download).
+
+## Original C109 verification
 
 **Checked on the host:** the production downloader, with only its connection factory redirected
 to a local HTTP server, failed the new Same Game regression before the correction. Fail-fast
