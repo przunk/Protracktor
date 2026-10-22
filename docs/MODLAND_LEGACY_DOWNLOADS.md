@@ -5,7 +5,7 @@ Recorded 2026-10-21. User-reported playback failure; correction from
 reported. Considered resolved for now, subject to further use and retained regression checks.
 
 **Later follow-up, 2026-10-21:** [C119](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download)
-identifies two deeper layouts not covered by the correction below: AdLib/Screamtracker and
+identifies two deeper layouts not covered by the original C109 correction: AdLib/Screamtracker and
 Video Game Music/Sega Megadrive. Their legacy URLs return 404, current `_unknown` URLs return
 200 and the downloaded files decode non-silent audio on the host. C109's segment-1 guard does
 not match their segment-2 unknown folder. The separate C119 correction below extends that rule;
@@ -74,8 +74,16 @@ An encoded-separator regression also failed against the first broader rule; reco
 decoded segment boundaries and refuses encoded slashes instead of manufacturing directories.
 Focused verification passed **26 tests / 4 suites**, zero failures/errors/skips. Deliberately
 including the format root and filename in recovery broke the boundary regression as intended;
-the correct range was restored. The full gate/lint and a minified APK are pending; this branch
-is not merged or phone-accepted.
+the correct range was restored and the focused set passed again. Clean source **657f4da** then
+passed the forced full gate in **601 s**: **1119 tests / 146 suites**, zero failures/errors/skips,
+all companion checks and fresh lint **0 errors / 72 warnings**. All 31 unit-stage tasks executed.
+
+Minified, test-signed release APK **1.3.0 (1285)** was built in **203 s** and independently
+inspected for signature, source/package identity, non-debuggable status, ZIP integrity/alignment,
+SDK levels and all three engine/UADE ABIs. R8 executed; mapping retained.
+[Artifact and SHA-256](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download).
+The branch remains unmerged and phone playback/acceptance remain unchecked. No schema or
+versionName change, push or release is performed.
 
 Fresh actual downloads also rendered non-silent PCM with the existing host WASM engine:
 **2 played / 0 silent / 0 refused**. This is not an Android playback result. Raw HTTP, payloads,

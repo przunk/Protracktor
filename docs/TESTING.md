@@ -5,10 +5,12 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## C119 nested Modland downloads — candidate
 
-[Cause and bounded recovery](MODLAND_LEGACY_DOWNLOADS.md). A minified release APK is being
-prepared on `fix/modland-nested-legacy-paths`; use the artifact identified in [Status](STATUS.md)
-once recorded. The original C109 acceptance does not establish Android playback for these
-deeper layouts. Host HTTP/decoder checks are not phone verification.
+[Cause and bounded recovery](MODLAND_LEGACY_DOWNLOADS.md). Use minified release APK **1.3.0
+(1285), source 657f4da**, identified in [Status](STATUS.md), from
+`fix/modland-nested-legacy-paths`. The forced full gate passed **1119 tests / 146 suites**, all
+companion checks and fresh lint **0 errors / 72 warnings**. The branch is unmerged; original
+C109 acceptance does not establish Android playback for these deeper layouts. Host
+HTTP/decoder checks and APK inspection are not phone verification.
 
 1. Without refreshing the existing Modland index, select both reported old references:
    `Ad Lib/Screamtracker 3 AdLib/- unknown/(opl2) totally nuts.s3m` and

@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — C119 correction in progress on fix/modland-nested-legacy-paths; C112 accepted and merged as e90c817; latest supplied APK 1.3.0 (1281), source 0b9169b; C109/C111 merged as 122368f/03dfc1d; C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — C119 candidate ready on fix/modland-nested-legacy-paths, unmerged and phone playback unchecked; latest APK 1.3.0 (1285), source 657f4da; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -64,7 +64,7 @@ files and probe logs are retained in ignored `user/modland-followup-20261021/`.
 **Mechanism at diagnosis:** `Modland.legacyUnknownAuthorUrl` handled `- unknown` only at path segment 1
 (zero-based), immediately after the first format directory. These examples have a format
 subdirectory, so that segment contains `Screamtracker 3 AdLib` or `Sega Megadrive` and the unknown
-folder is at segment 2. The function returns null; the shared downloader therefore has no
+folder is at segment 2. The function returned null; the shared downloader therefore had no
 replacement to try after 404. The reported download failure is consistent with that code path,
 before decoding. This is an uncovered C109 path shape, not evidence of an internet-wide failure.
 
@@ -75,7 +75,7 @@ cache keys, successful-original priority, the 404-only guard, one alternative re
 handling remain unchanged. No index refresh, extension guessing or schema/data migration is
 introduced. C109's original YM/SPC acceptance remains recorded; it is not acceptance of C119.
 
-**Checked so far:** separate production-downloader regressions for each reported path failed on
+**Checked by the agent:** separate production-downloader regressions for each reported path failed on
 the old implementation. Fresh real HTTP requests again returned legacy 404/current 200 with
 the same file sizes; both downloaded files rendered non-silent audio in the host WASM engine
 (2 played / 0 silent / 0 refused). Evidence is retained in ignored `user/c119-verification/`.
@@ -83,8 +83,28 @@ Focused verification passed **26 tests / 4 suites**, zero failures/errors/skips.
 encoded-separator regression failed against the first broader rule, then passed with segment
 boundaries retained; encoded slashes cannot manufacture a directory from a filename. Deliberately
 including the root and filename in the search also failed the boundary regression; the correct
-range was restored. The full gate/lint and a new minified APK are pending. **Unchecked:** Android
-playback and detailed device regressions. No merge or push; C118 remains a separate task.
+range was restored and the 26-test focused set passed again.
+
+Clean source **657f4da** passed the forced full gate in **601 s**: **1119 tests / 146 suites**,
+zero failures/errors/skips, all companion checks passed. All 31 unit-stage tasks executed;
+unit stage **399.3 s**. Fresh lint analysis completed in **98.1 s** with **0 errors / 72
+warnings**, unchanged warning count.
+
+Minified, test-signed release APK built in **203 s**:
+[protracktor-release-1.3.0-1285-657f4da-20261022-214639.apk](../dist/protracktor-release-1.3.0-1285-657f4da-20261022-214639.apk),
+**11,918,007 bytes**, SHA-256
+`2fc8e0dfc3e825ac47bc2f969a6e87f8ce6e044a6d1325df0f264e0835950b4d`.
+The agent independently checked v2 signature and the existing public test certificate
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`), package/versionCode,
+embedded source revision **657f4da9f9f3777d3a67272f54bdb0f56fc06877**, absence of the debuggable
+flag, ZIP integrity/16 KiB alignment, minSdk 29/targetSdk 36 and engine/UADE libraries for all
+three ABIs. R8 executed and its nonempty mapping was retained with the reports under ignored
+`user/c119-verification/`. VersionName remains 1.3.0, schema 23. This is not a Play artifact.
+
+**Unchecked:** Android playback and detailed device regressions; no phone acceptance inferred
+from host results or APK inspection. No merge, push or release/tag movement; develop remains
+**6fc91b2**, master/tag **d456fa7**. C118 remains a separate task. Later documentation commits
+do not relabel this APK's source revision or versionCode.
 [Mechanism and scope](MODLAND_LEGACY_DOWNLOADS.md), [phone checks](TESTING.md#c119-nested-modland-downloads--candidate).
 
 ## C118 History does not show newly recorded plays while the view remains open
