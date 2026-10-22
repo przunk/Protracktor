@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-23 — B52 volume-normalization trial ready on unmerged feature/volume-normalization; latest test APK 1.3.0 (1295), source 48466de; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume-normalization review hardening awaits full verification on unmerged feature/volume-normalization; latest available test APK 1.3.0 (1295), source 48466de predates review fixes; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -8,6 +8,18 @@ The last recorded Google response requested additional closed testing; later pro
 Historical dated checks below describe their own builds; they are not current test counts.
 
 ## B52 Volume normalization — experimental Android playback
+
+**Review update, 2026-10-23:** initial listening confirms a difference, not quality acceptance.
+Review hardening preserves gain smoothing across live stereo-mix changes, binds atomic gain
+commands to their measured mix and keeps a preparing decoder private until adoption, with
+cleanup at both cancellation handoffs. The two new production Player regressions failed before
+their fixes; a third regression exposes initial Mono/Narrow being mistaken for a mid-song
+change and falsely preventing a complete measurement. That continuity check is corrected too.
+52 native/DSP checks passed ASan/UBSan before this last correction; the expanded 53 are being
+checked again. Bypassing cleanup failed three Kotlin
+ownership tests; cleanup was restored. Expanded Kotlin tests, full gate/lint
+and a replacement release APK are pending. No merge or acceptance.
+[Findings and rationale](VOLUME_NORMALIZATION.md#code-review-and-hardening--2026-10-23).
 
 Selected 2026-10-22, branch `feature/volume-normalization` from develop **9c44fc9**. Settings
 offers Off/On, default Off. Use bounded prefix analysis and independent per-subsong/content/mix

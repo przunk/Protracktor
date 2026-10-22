@@ -34,6 +34,15 @@ namespace {
 using protracktor::Backend;
 using protracktor::openBackend;
 
+// Low 32 bits hold the gain; flags and mix identity form one command with its revision.
+constexpr std::uint64_t normalizationEnabled = 1ull << 32;
+constexpr std::uint64_t normalizationPrepared = 1ull << 33;
+constexpr std::uint64_t normalizationMixMask = 3ull << 34;
+constexpr std::uint64_t normalizationRevision = 1ull << 36;
+constexpr std::uint64_t normalizationMix(int width) {
+    return (width == 0 ? 2ull : width == 50 ? 1ull : 0ull) << 34;
+}
+
 /**
  * Nothing thrown by a decoder may leave this file (`docs/STATUS.md` C42, C55).
  *
@@ -188,12 +197,21 @@ public:
             0);
 
         const int width=stereoWidth_.load(std::memory_order_relaxed);
-        if (width!=processedWidth_) { normalizer_.reset(); continuousMeasurement_=false; processedWidth_=width; }
+        const bool mixChanged=width!=processedWidth_;
+        if (mixChanged) {
+            if (normalizer_.hasMeasurement()) continuousMeasurement_=false;
+            normalizer_.resetMeasurement(); processedWidth_=width;
+        }
         const auto normalization=normalizationControl_.load(std::memory_order_acquire);
-        if (normalization!=appliedNormalization_) {
-            const bool enabled=(normalization & (1ull<<32))!=0;
-            normalizer_.configureGain(enabled,std::bit_cast<float>(static_cast<std::uint32_t>(normalization)),
-                (normalization & (1ull<<33))!=0);
+        if (mixChanged || normalization!=appliedNormalization_) {
+            const bool enabled=(normalization & normalizationEnabled)!=0;
+            const bool prepared=(normalization & normalizationPrepared)!=0 &&
+                (normalization & normalizationMixMask)==normalizationMix(width);
+            // A callback can observe the new width and an older command, or vice versa.
+            // Never apply another mix's profile; reconsider the command when its width arrives.
+            const float gain=prepared ? std::bit_cast<float>(static_cast<std::uint32_t>(normalization)) :
+                protracktor::VolumeNormalizer::gainFor({});
+            normalizer_.configureGain(enabled,gain,prepared);
             if (!enabled) continuousMeasurement_=false;
             appliedNormalization_=normalization;
         }
@@ -294,9 +312,11 @@ public:
     void setNormalization(bool enabled, const protracktor::LoudnessProfile& profile) {
         // Publish one complete command; neither the UI nor audio thread waits behind a seek.
         const auto data=std::uint64_t(std::bit_cast<std::uint32_t>(protracktor::VolumeNormalizer::gainFor(profile))) |
-            (std::uint64_t(enabled)<<32) | (std::uint64_t(profile.usable())<<33);
+            (enabled ? normalizationEnabled : 0) | (profile.usable() ? normalizationPrepared : 0) |
+            normalizationMix(stereoWidth_.load(std::memory_order_relaxed));
         auto old=normalizationControl_.load(std::memory_order_relaxed);
-        while (!normalizationControl_.compare_exchange_weak(old,((old+(1ull<<34)) & ~((1ull<<34)-1))|data,
+        while (!normalizationControl_.compare_exchange_weak(old,
+            ((old+normalizationRevision) & ~(normalizationRevision-1))|data,
             std::memory_order_release,std::memory_order_relaxed)) {}
     }
     protracktor::LoudnessProfile normalizationProfile() {

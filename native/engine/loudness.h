@@ -110,7 +110,15 @@ public:
         if (!started_) gain_=target_;
         prepared_=prepared;
     }
-    void reset() { meter_=LoudnessMeter(); started_=false; prepared_=false; gain_=target_=0.5f; nextProbe_=3; continuous_=true; }
+    void reset() {
+        resetMeasurement(); started_=false; gain_=target_=0.5f; continuous_=true;
+    }
+    /** A live mix change invalidates statistics, not the gain currently reaching the listener. */
+    void resetMeasurement() {
+        continuous_=continuous_ && !hasMeasurement();
+        meter_=LoudnessMeter(); prepared_=false; nextProbe_=3;
+    }
+    bool hasMeasurement() const { return meter_.seconds()>0; }
     void process(float* audio, std::size_t frames, int rate) {
         if (!frames || (!enabled_ && (!started_ || gain_==1))) return;
         if (enabled_) {

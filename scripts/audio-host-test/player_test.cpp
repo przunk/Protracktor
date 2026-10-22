@@ -418,6 +418,44 @@ int main() {
         Fixture f; f.player.setNormalization(true,{}); f.player.setNormalization(false,{});
         require(oboe::TestDevice::streams.empty() && f.decoder->started==0,"setting started audio");
     });
+    check("changing stereo mix preserves the live trim while a new profile ramps in", [] {
+        Fixture f; f.decoder->left=.1f; f.decoder->right=0;
+        f.player.setNormalization(true,{20,-6,.5,true}); f.player.start();
+        const auto before=f.stream()->render();
+        f.player.setStereoWidth(0);
+        f.player.setNormalization(true,{20,-29,.1,false});
+        const auto transition=f.stream()->render(12000);
+        require(std::abs(transition[0]-before[0])<.0001,"mix change jumped to the new gain");
+        require(transition.back()>.09f,"new mix profile did not settle");
+    });
+    check("a profile for another stereo mode waits until that mode is actually rendered", [] {
+        Fixture f; f.decoder->left=.1f; f.decoder->right=0;
+        f.player.setNormalization(true,{20,-6,.5,true}); f.player.start(); f.stream()->render();
+        // Model the callback seeing a width and a command from different control updates.
+        f.player.setStereoWidth(0);
+        f.player.setNormalization(true,{20,-29,.1,false});
+        f.player.setStereoWidth(100);
+        const auto original=f.stream()->render(12000);
+        require(std::abs(original[original.size()-2]-.05f)<.0001,"wrong-mode profile was applied");
+        f.player.setStereoWidth(0);
+        const auto mono=f.stream()->render(12000);
+        require(mono.back()>.09f,"matching cached command was lost after the width changed");
+    });
+    check("an initial mix can finish a whole-song measurement but a live mix change cannot", [] {
+        for (int width : {0,50,100}) {
+            Fixture f; f.decoder->left=.1f; f.decoder->right=.1f;
+            f.player.setStereoWidth(width); f.player.setNormalization(true,{20,-23,.1,false});
+            f.player.start(); f.decoder->frameLimit=24000; f.stream()->render(48000);
+            const auto profile=f.player.normalizationProfile();
+            require(profile.usable() && profile.complete,"initial stereo mode invalidated a complete measurement");
+        }
+        Fixture f; f.decoder->left=.1f; f.decoder->right=.1f;
+        f.player.setNormalization(true,{20,-23,.1,false}); f.player.start(); f.stream()->render(24000);
+        f.player.setStereoWidth(0); f.player.setNormalization(true,{20,-23,.1,false});
+        f.decoder->frameLimit=24000; f.stream()->render(48000);
+        const auto profile=f.player.normalizationProfile();
+        require(profile.usable() && !profile.complete,"live mix change claimed a whole-song measurement");
+    });
     check("bounded analysis drives a separate decoder without starting background measurements", [] {
         Decoder d; const auto p=protracktor::analyseLoudness(d,2,100,100,.5);
         require(p.seconds>=.49 && p.seconds<=.51 && !p.complete,"prefix marked complete or duration unbounded");

@@ -3169,8 +3169,13 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val companions = trackFiles.companions(ref)
-            val result = withContext(Dispatchers.IO) {
-                NativeEngine.open(bytes, ref.fileNameOrTitle, companions)
+            // A cancelled dispatcher handoff can discard the result after native allocation.
+            // Capture inside the worker so cleanup also owns that not-yet-returned handle.
+            var openingTrack: NativeEngine.Track? = null
+            val result = AutoCloseable { openingTrack?.close() }.prepareOrClose {
+                withContext(Dispatchers.IO) {
+                    NativeEngine.open(bytes, ref.fileNameOrTitle, companions).also { openingTrack = it.track }
+                }
             }
             val opened = result.track
             if (opened == null) {
@@ -3207,13 +3212,6 @@ class PlaybackController private constructor(private val context: Context) {
                 throw CancellationException()
             }
 
-            if (!audioFocus.acquire()) {
-                opened.close()
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
-                return@launch
-            }
-
-            track = opened
             // Read after asynchronous opening so a Settings change during loading wins.
             opened.setStereoMix(_state.value.stereoMix)
             // **Described before it starts.** `describe()` reads the decoder's own metadata, and
@@ -3225,14 +3223,24 @@ class PlaybackController private constructor(private val context: Context) {
             val openedSubsong=described["subsong"]?.toIntOrNull() ?: 0
             // Keep the existing cancel-on-second-press rule alive during optional analysis too.
             _state.update { it.copy(loadingTrack=true) }
-            val prepared=withContext(Dispatchers.IO) {
-                if (_state.value.volumeNormalization)
-                    loudnessPreparation.prepare(bytes,ref.fileNameOrTitle,companions,openedSubsong,measuredWidth)
-                else LoudnessPreparation.Prepared(LoudnessProfiles.contentKey(bytes,ref.fileNameOrTitle,
-                    companions,NativeEngine.backendsFingerprint()),null)
+            // Keep the unopened-for-playback handle private across suspension: subsong controls
+            // must not start it before its metadata, lengths and normalization are ready.
+            val prepared=opened.prepareOrClose {
+                withContext(Dispatchers.IO) {
+                    if (_state.value.volumeNormalization)
+                        loudnessPreparation.prepare(bytes,ref.fileNameOrTitle,companions,openedSubsong,measuredWidth)
+                    else LoudnessPreparation.Prepared(LoudnessProfiles.contentKey(bytes,ref.fileNameOrTitle,
+                        companions,NativeEngine.backendsFingerprint()),null)
+                }
             }
             ensureActive()
             _state.update { it.copy(loadingTrack=false) }
+            if (!audioFocus.acquire()) {
+                opened.close()
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+                return@launch
+            }
+            track = opened
             loudnessBase=prepared.base; loudnessSubsong=openedSubsong
             loudnessWidth=_state.value.stereoMix.widthPercent
             opened.setStereoMix(_state.value.stereoMix)

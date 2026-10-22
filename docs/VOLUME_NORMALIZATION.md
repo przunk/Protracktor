@@ -127,3 +127,56 @@ Develop stays 9c44fc9; master/tag stay d456fa7; AMP untouched. VersionName 1.3.0
 References: [ITU BS.1770](https://www.itu.int/rec/R-REC-BS.1770/en),
 [EBU metering](https://tech.ebu.ch/loudness/),
 [EBU streaming/headroom guidance](https://tech.ebu.ch/docs/r/r128s2.pdf).
+
+## Code review and hardening — 2026-10-23
+
+Initial listening established an audible difference, not sound-quality acceptance. Keep the
+experiment Off by default and unmerged. The agent reviewed the branch's DSP, analysis, JNI,
+controller lifecycle, cache, setting and regression tests; no redesign of the loudness policy
+or new dependency is justified by this review.
+
+### Findings and corrections
+
+1. **Live mix changes discarded the current trim.** Resetting the whole normalizer also reset
+   its smoothing state, so the first callback could jump directly to a different cached gain.
+   Reset only the measurement on a live mix change; retain the audible gain and ramp to the
+   new target. A new subsong still starts with fresh conservative state. The production Player
+   regression failed before this correction and passes afterward.
+2. **Mix and gain commands could cross callback boundaries.** Width and normalization are
+   separate atomic updates. A callback could observe a width with a profile prepared for another
+   width; alternatively, resetting the width could discard an already-consumed matching profile.
+   The normalization command now carries its mix identity. Use the unknown fallback for a
+   mismatch and reconsider the same command when the matching width arrives. Named packet
+   fields replace the repeated bit positions. A controlled production Player regression fails
+   the previous implementation and passes both sides of the crossed-update case after the fix.
+3. **Preparation exposed the native track too early.** The controller assigned its playable
+   handle before optional analysis suspended. Subsong controls could then start/change that
+   decoder while opening still assumed exclusive access for metadata and known lengths.
+   Keep the handle private until preparation completes, acquire audio focus afterward, then
+   adopt it. Capture the actual decoder inside the opening worker too: cancellation at the
+   dispatcher handoff previously could discard its result without closing the native allocation,
+   including with normalization Off. One small `prepareOrClose` guard closes private resources
+   on failure/cancellation without touching a later playback's focus or track. Tests exercise
+   successful adoption, failure and both cancellation handoffs; the complete Android loading
+   and control interaction still requires phone retesting.
+4. **A non-default initial mix falsely prevented complete measurements.** The first callback
+   treated initial Mono/Narrow as a mid-song change from Original, invalidating completeness
+   even though no audio had been measured. Invalidate continuity only after samples exist.
+   A regression failed for the initial mode before the fix; it also checks that an actual
+   mid-song mix change still cannot claim a complete measurement.
+
+### Review assessment
+
+The fixed trim, bounded meter and disposable cache remain separate from queue rules and system
+volume. Keep them together as an optional trial; do not add a continuous compressor, full-library
+scanner or additional persistent state to improve the first-play approximation. The principal
+remaining trade-offs are preview/opening latency, conservative first-play matching, possible
+alteration of unexpected peaks and unmeasured device power cost. None is settled by green host
+tests or by the initial listening feedback.
+
+**Review verification in progress:** all three native regressions failed before their corrections;
+40 Player/analysis plus 12 DSP checks passed ASan/UBSan before the last initial-mode correction;
+the expanded 41+12 set is being checked again outside the ptrace sandbox.
+Bypassing cleanup failed three of the eight Kotlin preparation tests; cleanup was restored.
+The expanded Kotlin cancellation set, forced full gate, lint and replacement release APK are
+pending. The original APK/source above remains historical evidence, not a build of these changes.

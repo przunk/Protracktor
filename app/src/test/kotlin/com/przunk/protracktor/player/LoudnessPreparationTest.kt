@@ -5,6 +5,7 @@ package com.przunk.protracktor.player
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
@@ -14,6 +15,57 @@ import org.junit.rules.TemporaryFolder
 
 class LoudnessPreparationTest {
     @get:Rule val temporary=TemporaryFolder()
+    @Test fun `successful preparation leaves the decoder open for playback adoption`() = runBlocking {
+        var closes=0
+        val opened=AutoCloseable { closes++ }
+        assertEquals("ready",opened.prepareOrClose { "ready" })
+        assertEquals(0,closes)
+        opened.close()
+        assertEquals(1,closes)
+    }
+    @Test fun `failed preparation closes its private decoder without masking the cause`() = runBlocking {
+        var closes=0
+        val failure=java.io.IOException("Controlled preparation failure")
+        try {
+            AutoCloseable { closes++ }.prepareOrClose { throw failure }
+            fail("Preparation failure was swallowed")
+        } catch (actual: java.io.IOException) {
+            assertSame(failure,actual)
+        }
+        assertEquals(1,closes)
+    }
+    @Test fun `cancellation at the worker handoff closes the still private decoder once`() = runBlocking {
+        var closes=0
+        val entered=CountDownLatch(1); val release=CountDownLatch(1)
+        val job=async(Dispatchers.Default) {
+            AutoCloseable { closes++ }.prepareOrClose {
+                withContext(Dispatchers.IO) {
+                    entered.countDown(); check(release.await(5,TimeUnit.SECONDS))
+                    "ready"
+                }
+            }
+        }
+        try { assertTrue(entered.await(5,TimeUnit.SECONDS)); job.cancel() }
+        finally { release.countDown(); job.join() }
+        assertEquals(1,closes)
+    }
+    @Test fun `cancellation also closes a native allocation whose worker result was never delivered`() = runBlocking {
+        var closes=0
+        var opened: AutoCloseable?=null
+        val entered=CountDownLatch(1); val release=CountDownLatch(1)
+        val job=async(Dispatchers.Default) {
+            AutoCloseable { opened?.close() }.prepareOrClose {
+                withContext(Dispatchers.IO) {
+                    opened=AutoCloseable { closes++ }
+                    entered.countDown(); check(release.await(5,TimeUnit.SECONDS))
+                    "allocated"
+                }
+            }
+        }
+        try { assertTrue(entered.await(5,TimeUnit.SECONDS)); job.cancel() }
+        finally { release.countDown(); job.join() }
+        assertEquals(1,closes)
+    }
     @Test fun `a content matched cache avoids decoding and a different subsong or mix does not`() = runBlocking {
         var calls=0
         val preparation=LoudnessPreparation(LoudnessProfiles(temporary.newFolder()),{"decoder"}) { _,_,_,s,_ ->

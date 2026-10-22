@@ -8,6 +8,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 
+/** Keep an opened decoder caller-private until its cancellable preparation can be adopted. */
+internal suspend fun <T> AutoCloseable.prepareOrClose(prepare: suspend () -> T): T = try {
+    prepare().also { coroutineContext.ensureActive() }
+} catch (failure: Throwable) {
+    close()
+    throw failure
+}
+
 /** One analysis decoder at a time; stale work can populate cache but never controls playback. */
 internal class LoudnessPreparation(
     private val cache: LoudnessProfiles,
