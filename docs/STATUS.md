@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-22 — Queue return-to-source trial ready on unmerged feature/queue-source-navigation; latest test APK 1.3.0 (1290), source b225ff9; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — Queue return-to-source accepted and merged as 70e1a61; latest accepted APK 1.3.0 (1290), source b225ff9; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -8,6 +8,13 @@ The last recorded Google response requested additional closed testing; later pro
 Historical dated checks below describe their own builds; they are not current test counts.
 
 ## Queue return-to-source — trial
+
+**Accepted and merged, 2026-10-22:** practical phone operation was reported satisfactory and
+integration approved. Merged `feature/queue-source-navigation` as **70e1a61**, without conflicts.
+The agent compared the complete merge tree with the accepted branch and application/native/web/
+script/build sources with tested **b225ff9**: unchanged. No new test/lint run or APK was needed
+for these unchanged sources. Overall acceptance does not establish every individual checklist
+outcome, accessibility or long-term coverage.
 
 Selected 2026-10-22, branch `feature/queue-source-navigation` from develop **d0d5b8d**. The
 existing source name in Queue becomes an inline icon/name action, without another caption or
@@ -57,10 +64,11 @@ engine/UADE ABIs. R8 executed and its mapping was retained. Public test-certific
 This is a device-test artifact, not a Play upload. Evidence is retained in ignored
 `user/queue-source-verification/`. Later documentation commits do not relabel this artifact.
 
-**Unchecked:** Android navigation, layout, TalkBack and device acceptance. No merge or push.
-Develop remains **d0d5b8d**; master/tag remain **d456fa7**; AMP is untouched.
-Use the [phone checklist](TESTING.md#queue-return-to-source--trial). B52 is recorded as the next
-task, not implemented here. VersionName stays 1.3.0 and schema 23.
+**Checked:** host verification above, merge/source comparisons and reported practical phone
+acceptance. **Unchecked individually:** detailed scenario outcomes, TalkBack and long-term coverage
+without separate results. No push, new APK or store release; master/tag remain **d456fa7** and
+AMP is untouched. Retain the [phone checklist](TESTING.md#queue-return-to-source--trial) for regression.
+B52 is recorded as the next task, not implemented here. VersionName stays 1.3.0 and schema 23.
 
 ## C109/C111 — accepted and merged, 2026-10-21
 

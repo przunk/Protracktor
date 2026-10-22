@@ -1,7 +1,8 @@
 # Return from Queue to its source
 
-Trial selected 2026-10-22. This is navigation to the active playback context's originating view,
-not a Random-only shortcut and not another way to start playback. Implementation branch:
+Trial selected and accepted 2026-10-22 after satisfactory practical phone operation was reported.
+Merged as **70e1a61**. This is navigation to the active playback context's originating view,
+not a Random-only shortcut and not another way to start playback. Implementation branch was
 `feature/queue-source-navigation`, from develop after the B52 planning record.
 
 ## Interaction and layout
@@ -60,10 +61,10 @@ unsaved playlist choices and Back. Compare header bounds and Clear/Help position
 previous layout at normal/narrow widths and enlarged text; inspect generated before/after images.
 Run the forced full test/lint gate and build a minified test-signed release APK into `dist/`.
 
-Host evidence and images do not establish phone appearance or behaviour. This trial stays
-unmerged pending device acceptance. B52 loudness normalization is the next task, not part of this
-implementation. Cross-restart restoration of playback contexts and automatic re-indexing are
-outside this trial.
+Host evidence and images do not establish phone appearance or behaviour. Practical phone
+acceptance and integration are recorded separately below. B52 loudness normalization is the next
+task, not part of this implementation. Cross-restart restoration of playback contexts and
+automatic re-indexing are outside this trial.
 
 Initial evidence: the actual header-tap regression failed before the feature existed. A first
 playlist-return draft failed the context-preservation test because keeping only the explicit
@@ -111,7 +112,11 @@ non-debuggable manifest, ZIP CRCs/alignment, minSdk 29/targetSdk 36 and engine/U
 arm64-v8a, armeabi-v7a and x86_64. R8 executed; its mapping is retained with logs, reports,
 renders and regression evidence in ignored `user/queue-source-verification/`.
 
-**Checked on the host:** the tests, renders and artifact properties above. **Unchecked:** Android
-behaviour, real touch feel, TalkBack and phone acceptance. This is an unmerged device-test trial,
-not a store release. Develop remains d0d5b8d and master/tag remain d456fa7; no push or AMP changes.
-The [phone checklist](TESTING.md#queue-return-to-source--trial) is the remaining gate.
+**Checked on the host:** the tests, renders and artifact properties above. Practical phone
+operation was subsequently reported satisfactory and integration approved on 2026-10-22.
+The agent merged as **70e1a61**, compared the complete merge tree with the accepted branch,
+and confirmed application/native/web/script/build sources equal tested b225ff9. No full gate,
+lint or APK was rerun for unchanged sources; the accepted artifact retains its original identity.
+Detailed individual checklist, enlarged-text and TalkBack outcomes remain unreported. No push,
+new tag or store release; master/tag remain d456fa7 and AMP is untouched. Retain the
+[phone checklist](TESTING.md#queue-return-to-source--trial) for regression.

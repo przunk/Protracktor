@@ -5,11 +5,16 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## Queue return-to-source — trial
 
+Practical phone operation was reported satisfactory and integration approved on 2026-10-22.
+Merged as **70e1a61**. The agent compared the merge tree with the accepted branch and application
+sources with tested **b225ff9**; no new APK or full gate for unchanged sources. Individual
+outcomes for every retained scenario below were not separately supplied.
+
 [Contract and safeguards](QUEUE_SOURCE_NAVIGATION.md). Use minified release APK **1.3.0 (1290),
 source b225ff9**, identified in [Status](STATUS.md), from `feature/queue-source-navigation`.
 The forced full host gate passed 1147 tests / 149 suites, all companion checks and fresh lint
 (0 errors / 72 unchanged warnings); host renders and independent artifact checks passed.
-The trial is unmerged and not phone-accepted. APK 1285 predates this feature.
+Overall practical phone operation is accepted. APK 1285 predates this feature.
 
 1. Start Random, return to the playlist, open Queue and tap its source name. The remembered
    Random list/filter returns without rerolling, resuming a pause or interrupting audio. Back
@@ -32,8 +37,9 @@ The trial is unmerged and not phone-accepted. APK 1285 predates this feature.
 6. Recheck Queue Help/Clear/Undo, row Play/Info/swipes/reorder, dock controls and the C112 compact
    dock. Returning to a source must not consume manual requests or change Next/Previous order.
 
-Host checks/renders are partial evidence only. Actual phone navigation, appearance, timing and
-TalkBack remain **unchecked** until results are supplied.
+Host checks/renders are partial evidence only. Overall practical phone operation is accepted;
+detailed scenario outcomes, enlarged-text/accessibility and TalkBack remain **unchecked
+individually** unless separately reported. Retain this checklist for regression and longer-term use.
 
 ## C119 nested Modland downloads — accepted trial
 

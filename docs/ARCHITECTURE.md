@@ -1,6 +1,6 @@
 # Architecture
 
-## Queue source navigation — unmerged trial, 2026-10-22
+## Queue source navigation — accepted and merged, 2026-10-22
 
 `QueueSourceNavigation` resolves typed destinations and restores only captured Browse route/result
 fields over current shared resources. The controller retires obsolete Browse reads and routes
@@ -9,8 +9,10 @@ guarded activation and successful-save callback. Because the selected source edi
 `PlaylistSessionState` reveals the active order, marking membership/order differences from disk as
 an unsaved draft rather than silently replacing playback or writing to storage. The UI reveals a
 destination only after navigation succeeds. No new persistence, service or playback owner is added.
-Source b225ff9 passed the full 1147-test host gate/lint; release APK 1.3.0 (1290) is prepared, but
-phone behaviour and acceptance remain unchecked. [Contract and evidence](QUEUE_SOURCE_NAVIGATION.md).
+Source b225ff9 passed the full 1147-test host gate/lint; release APK 1.3.0 (1290) was accepted
+after practical phone testing. Merged as **70e1a61**, with identical application sources; no new
+build or test run for the unchanged merge tree. Granular checklist/TalkBack outcomes remain
+unreported. [Contract and evidence](QUEUE_SOURCE_NAVIGATION.md).
 
 ## Manual playback queue — accepted and merged, 2026-10-21
 

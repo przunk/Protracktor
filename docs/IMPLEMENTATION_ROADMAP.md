@@ -32,13 +32,16 @@ is no longer unfinished inventory work. [Integration record](QUEUE_BRANCH_REVIEW
 Granular device checks remain recorded separately; AMP stays deferred. C112's compact dock trial
 was accepted and merged as **e90c817**, 2026-10-22. C109/C111 were accepted and merged on
 2026-10-21; C119's deeper Modland path correction was accepted and merged as **0a7bcc0**,
-2026-10-22. C118 still records the open History freshness issue below.
+2026-10-22. The B45 return-to-source follow-up was then accepted after practical phone testing
+and merged as **70e1a61** on 2026-10-22; it is no longer unfinished inventory work. Source
+b225ff9 passed 1147 host tests/full gate/lint, and APK 1.3.0 (1290) remains the accepted artifact.
+Granular checklist/accessibility outcomes remain unreported. [Contract and acceptance](QUEUE_SOURCE_NAVIGATION.md).
+C118 still records the open History freshness issue below.
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
 | B52 | Normalize perceived loudness between tracks | Selected 2026-10-22 as the next task after Queue return-to-source navigation. Listening feedback: quiet-to-loud track transitions are unpleasant. Algorithm, clipping protection, dynamics, backend coverage and measurement/cache strategy need analysis; not implemented or started as part of navigation. [Wishlist](WISHLIST.md#b52-consistent-perceived-loudness-between-tracks--next-task-recorded-2026-10-22). |
-| B45 — return to source | Open the active context's originating view from Queue | Selected 2026-10-22. Separate unmerged trial on `feature/queue-source-navigation`; all source types, playback independence, dirty-draft protection and fixed normal-size header geometry. Source b225ff9 passed 1147 host tests/full gate/lint; release APK 1.3.0 (1290) is ready for phone acceptance, not part of the previously accepted manual-queue baseline. [Contract and artifact](QUEUE_SOURCE_NAVIGATION.md). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |

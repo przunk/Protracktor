@@ -156,9 +156,10 @@ This is search-query history, separate from playback History and B43's listened 
 
 **Return-to-source follow-up, selected 2026-10-22:** open the originating view from Queue's
 existing source name for every source type, not only Random. Preserve transport and normal-size
-header geometry; protect dirty playlist drafts and handle missing sources. Implementation trial
-on `feature/queue-source-navigation`, unmerged and not phone-accepted. Source b225ff9 passed
-1147 host tests/full gate/lint; minified APK 1.3.0 (1290) is prepared. This does not reopen the
+header geometry; protect dirty playlist drafts and handle missing sources. Practical phone
+operation was accepted and `feature/queue-source-navigation` merged as **70e1a61**, 2026-10-22.
+Source b225ff9 passed 1147 host tests/full gate/lint; minified APK 1.3.0 (1290) remains the accepted
+artifact. Granular checklist/accessibility outcomes were not separately supplied. This does not reopen the
 accepted manual-queue baseline. [Contract and verification](QUEUE_SOURCE_NAVIGATION.md).
 
 The complete manual-queue follow-up is accepted after phone testing and merged as **3bc5a98**,
