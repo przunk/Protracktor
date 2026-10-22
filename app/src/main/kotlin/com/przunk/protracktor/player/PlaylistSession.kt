@@ -267,10 +267,12 @@ internal class PlaylistSession(
      * Switches the active playlist and abandons edits after the UI has confirmed their loss.
      * Browsing another playlist never transfers playback ownership.
      */
-    fun switchToPlaylist(id: Long) {
+    fun switchToPlaylist(id: Long, preservePlayback: Boolean = false, canActivate: () -> Boolean = { true },
+        onComplete: ((Boolean) -> Unit)? = null) {
         val generation = ++activationGeneration
         activating = true
-        fun current() = generation == activationGeneration
+        fun ownsActivation() = generation == activationGeneration
+        fun current() = ownsActivation() && canActivate()
         scope.launch {
             try {
                 saveNow(::current)
@@ -279,20 +281,28 @@ internal class PlaylistSession(
                 if (!current()) return@launch
                 val playlists = store.playlists()
                 if (!current()) return@launch
+                if (preservePlayback && playlists.none { it.id == id }) {
+                    onComplete?.invoke(false)
+                    return@launch
+                }
                 // No suspension between assigning ownership and publishing its queue.
                 playlistId = id
                 activating = false
-                state.switchPlaylist(id, tracks, playlists)
+                state.switchPlaylist(id, tracks, playlists, preservePlayback)
                 if (!current()) return@launch
                 scheduleSave()
                 resolveMetadataInBackground()
+                onComplete?.invoke(true)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
                 // Superseded failures belong to the abandoned request, not the new selection.
-                if (current()) throw failure
+                if (current()) {
+                    if (onComplete == null) throw failure
+                    onComplete(false)
+                }
             } finally {
-                if (current()) activating = false
+                if (ownsActivation()) activating = false
             }
         }
     }

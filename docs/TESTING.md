@@ -3,6 +3,36 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## Queue return-to-source — trial
+
+[Contract and safeguards](QUEUE_SOURCE_NAVIGATION.md). A new minified APK is being prepared on
+`feature/queue-source-navigation`; APK **1.3.0 (1285)** predates this trial. Use the new artifact
+from [Status](STATUS.md) once recorded. The trial is unmerged and not phone-accepted.
+
+1. Start Random, return to the playlist, open Queue and tap its source name. The remembered
+   Random list/filter returns without rerolling, resuming a pause or interrupting audio. Back
+   leads to Browse root, then playlist. Repeat with an unrelated Browse route visited in between.
+2. Repeat from Search with a narrowed scope, filtered/paged History, an online author and a local
+   subfolder. Restore the actual originating view/results, not just the main Browse section.
+   Back follows that source's ordinary hierarchy; generic Browse still starts at root (C110).
+3. Play playlist A, select B without starting it, then return to A via Queue. Context, current
+   position, shuffle/repeat and pending requests are unchanged. With dirty edits in B, test
+   Cancel, Save and Discard; Cancel keeps Queue open, Save completes before switching. A source
+   order differing from disk returns as an unsaved draft without overwriting the saved playlist.
+4. While a manual request plays, the source action still opens the underlying context. After
+   Clear, or with an externally opened file without a source view, there is no misleading action.
+   A deleted source playlist must explain unavailability and retain Queue/playback.
+5. Compare normal-size header height and Clear/Help placement with the previous presentation.
+   No new caption or row; long source names remain limited to two lines. At enlarged text,
+   source and both actions must remain reachable; full action captions wrap and the row may
+   grow vertically to fit them. Only the source name may ellipsize. Check EN/PL, narrow width
+   and TalkBack's explicit source action label.
+6. Recheck Queue Help/Clear/Undo, row Play/Info/swipes/reorder, dock controls and the C112 compact
+   dock. Returning to a source must not consume manual requests or change Next/Previous order.
+
+Host checks/renders are partial evidence only. Actual phone navigation, appearance, timing and
+TalkBack remain **unchecked** until results are supplied.
+
 ## C119 nested Modland downloads — accepted trial
 
 Practical phone playback was reported satisfactory and integration approved on 2026-10-22.

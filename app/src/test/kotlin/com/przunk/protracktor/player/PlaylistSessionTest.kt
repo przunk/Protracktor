@@ -25,6 +25,79 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistSessionTest {
+    @Test(timeout = 5_000)
+    fun `abandoned source navigation cannot publish a late playlist and does not block later saves`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var allowed = true
+        var completed = false
+        f.before = { if (it == "tracks:2") { entered.complete(Unit); release.await() } }
+        f.session.switchToPlaylist(2, preservePlayback = true, canActivate = { allowed }) { completed = true }
+        entered.await()
+        allowed = false
+        release.complete(Unit)
+        drain()
+        assertFalse(completed)
+        assertEquals(1L, f.player.value.activePlaylistId)
+        f.player.value = f.player.value.copy(dirty = true)
+        f.session.savePlaylist()
+        drain()
+        assertFalse(f.player.value.dirty)
+        assertEquals(1L, f.writes.single().first)
+    }
+
+    @Test(timeout = 5_000)
+    fun `returning to a source playlist keeps the exact running context and manual requests`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val context = ActiveQueue(QueueSource.Playlist(1), PlayQueue(listOf(track("context-only"))).startAt(0))
+        val schedule = PlaybackSchedule().contextSelected(context, SchedulePlacement.REPLACE).enqueue(track("manual"))
+        f.player.value = f.player.value.withPlayback(context).copy(schedule = schedule, playing = true, positionSeconds = 12.5)
+        f.session.switchToPlaylist(2)
+        drain()
+        var completed: Boolean? = null
+        f.session.switchToPlaylist(1, preservePlayback = true) { completed = it }
+        drain()
+        assertEquals(true, completed)
+        assertEquals(1L, f.player.value.activePlaylistId)
+        assertEquals(context.order.tracks, f.player.value.queue.tracks)
+        assertTrue("A captured order differing from disk is an unsaved draft, not an automatic write", f.player.value.dirty)
+        assertEquals(listOf(track("one")), f.rows[1])
+        assertEquals(context, f.player.value.activePlayback)
+        assertEquals(schedule, f.player.value.schedule)
+        assertTrue(f.player.value.playing)
+        assertEquals(12.5, f.player.value.positionSeconds, 0.0)
+    }
+
+    @Test(timeout = 5_000)
+    fun `source navigation reports a deleted playlist without publishing an empty replacement`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val before = f.player.value
+        var completed: Boolean? = null
+        f.session.switchToPlaylist(99, preservePlayback = true) { completed = it }
+        drain()
+        assertEquals(false, completed)
+        assertEquals(before, f.player.value)
+        assertEquals(1L, f.session.playlistId)
+    }
+
+    @Test(timeout = 5_000)
+    fun `source navigation reports read failure while retaining the selected editor`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val before = f.player.value
+        f.before = { if (it == "tracks:2") throw java.io.IOException("Controlled read failure") }
+        var completed: Boolean? = null
+        f.session.switchToPlaylist(2, preservePlayback = true) { completed = it }
+        drain()
+        assertEquals(false, completed)
+        assertEquals(before, f.player.value)
+        assertEquals(1L, f.session.playlistId)
+    }
+
     private fun activationFixture(scope: CoroutineScope) = Fixture(scope).apply {
         lists[3] = SavedPlaylist(3, "Three")
         rows[1] = listOf(track("one"))

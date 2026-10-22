@@ -1,11 +1,46 @@
 # Status
 
-Updated: 2026-10-22 — C119 accepted after positive phone testing and merged as 0a7bcc0; latest APK 1.3.0 (1285), source 657f4da, unchanged; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open (History does not refresh while visible); prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-22 — Queue return-to-source trial in progress on feature/queue-source-navigation; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; latest supplied APK 1.3.0 (1285), source 657f4da; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Queue return-to-source — trial
+
+Selected 2026-10-22, branch `feature/queue-source-navigation` from develop **d0d5b8d**. The
+existing source name in Queue becomes an inline icon/name action, without another caption or
+header row. Return to the active context's playlist, remembered Random, captured Search/History,
+online author or local subfolder without playing, rerolling or changing the pending requests.
+Manual playback still links to the underlying context; manual-only/external sources have no
+fabricated destination. Missing/stale destinations explain the failure.
+
+Different-playlist returns protect unsaved edits, wait for Save success and preserve the running
+context. The live source editor must display its captured order; a membership/order difference
+from disk is an unsaved draft, not an automatic write. Original chooser behaviour is unchanged.
+Browse restoration retains live shared resources and retires unrelated asynchronous/Back routes.
+At enlarged text, bound action widths and wrap full captions to keep all controls reachable;
+the row may grow vertically for accessibility. Ordinary-size geometry must
+match the previous header. [Contract and implementation findings](QUEUE_SOURCE_NAVIGATION.md).
+
+**Checked so far:** an actual header-tap regression failed before implementation; a focused
+91-test / 7-suite set passed in 67.4 s with zero failures/errors/skips. Context-preservation and large-text
+tests exposed and corrected initial draft problems. A deliberate whole-snapshot restore broke
+the live-resource regression; the correct current-state rule was restored. The delayed successful
+Save/source-change regression failed before retiring obsolete navigation without a false error.
+Four initial diagnostic before/after render cases passed and were inspected. Normal/narrow
+headers retained 64 dp and exact Clear/Help bounds. The first forced full gate then stopped after
+1050 tests with one failure: the existing Polish 200%-font guard rejected shortened action
+captions. Caption wrapping now preserves full labels, permitting vertical growth only at enlarged
+text; the guard still checks complete text without ellipses/height overflow. A further render
+exposed a mid-word Polish wrap, corrected with action width allocation and a word-boundary guard.
+All four final render cases passed in 24.4 s and were inspected: normal/narrow headers remain
+64 dp with fixed Clear/Help positions; enlarged EN/PL headers grow from 83 to 100 dp to retain
+complete captions and the source. The final full tests/lint/APK are in progress. These are host
+component renders, not phone screenshots.
+**Unchecked:** Android navigation, layout, TalkBack and device acceptance. No merge or push.
+The supplied APK 1285 predates this trial. B52 is recorded as the next task, not implemented here.
 
 ## C109/C111 — accepted and merged, 2026-10-21
 

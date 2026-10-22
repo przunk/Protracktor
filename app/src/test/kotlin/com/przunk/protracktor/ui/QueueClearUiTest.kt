@@ -161,9 +161,11 @@ class QueueClearUiTest : PlaybackShellTest() {
             }
             // Fractional glyph widths can exceed an integer layout by less than one pixel;
             // check actual text truncation, not that rounding-only didOverflowWidth flag.
+            // Enlarged Queue headers may wrap captions, but must retain every character/line.
             assertTrue("Clipped header label: $label ${layouts.map { "${it.size}, end=${it.getLineEnd(0, true)}, ellipsis=${it.isLineEllipsized(0)}" }}",
                 layouts.isNotEmpty() && layouts.all {
-                    !it.didOverflowHeight && !it.isLineEllipsized(0) && it.getLineEnd(0, true) == label.length
+                    !it.didOverflowHeight && (0 until it.lineCount).none(it::isLineEllipsized) &&
+                        it.getLineEnd(it.lineCount - 1, true) == label.length
                 })
         }
         val clear = compose.onNodeWithTag("queue-clear").fetchSemanticsNode().boundsInRoot

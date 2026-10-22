@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -168,6 +169,8 @@ internal fun LabelledAction(
     enabled: Boolean = true,
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
     slim: Boolean = false,
+    /** Queue's enlarged header can grow to keep full captions alongside its source. */
+    wrapLabel: Boolean = false,
 
 ) {
     val haptics = rememberHaptics()
@@ -213,7 +216,7 @@ internal fun LabelledAction(
             // label forced on every pill push the words against the edges, and filling the row's
             // height turns the Random header into a window-tall banner, because that row is
             // offered the whole screen.
-            .height(pillHeight(slim))
+            .then(if (wrapLabel) Modifier.heightIn(min = pillHeight(slim)) else Modifier.height(pillHeight(slim)))
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 enabled = enabled,
@@ -226,14 +229,15 @@ internal fun LabelledAction(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = if (wrapLabel) Arrangement.Top else Arrangement.Center,
             modifier = Modifier
                 .fillMaxHeight()
                 // **The air goes before the word does.** A slim pill cannot grow past the bar it
                 // lives in, so at the largest text sizes the choice is between padding and
                 // legibility. Three device-independent pixels either side are still a gap; half a
                 // letter missing is not a word.
-                .padding(horizontal = 6.dp, vertical = if (slim && tightened) 3.dp else 6.dp),
+                .padding(horizontal = if (wrapLabel) 3.dp else 6.dp,
+                    vertical = if (slim && tightened) 3.dp else 6.dp),
         ) {
             // The same quieter pair as the follow-track navigation button. Using the named
             // content colour with its container keeps contrast intact for dynamic colour schemes.
@@ -248,11 +252,9 @@ internal fun LabelledAction(
                 style = MaterialTheme.typography.labelSmall,
                 color = LocalContentColor.current,
                 textAlign = TextAlign.Center,
-                // **A slim pill gets one line and grows sideways instead.** It lives in a bar of
-                // fixed height, so a second line has nowhere to go: a long word wrapped there is a
-                // word with its lower half cut off. Width follows the label, and the top bar has
-                // room across; height does not.
-                maxLines = if (slim) 1 else 2,
+                // Fixed-height bars keep slim captions on one line. Queue's intrinsic-height
+                // header explicitly opts into wrapping when accessibility text is enlarged.
+                maxLines = if (wrapLabel) Int.MAX_VALUE else if (slim) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),
             )
