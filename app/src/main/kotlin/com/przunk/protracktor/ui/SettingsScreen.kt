@@ -150,11 +150,24 @@ fun SettingsScreen(
         item {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_volume_normalization)) },
-                supportingContent = { Text(stringResource(R.string.settings_volume_normalization_detail),
-                    style = MaterialTheme.typography.bodySmall) },
-                trailingContent = { Switch(checked=volumeNormalization,
-                    onCheckedChange={ enabled -> haptics.toggle(enabled); onVolumeNormalizationChanged(enabled) },
-                    modifier=Modifier.semantics { contentDescription=context.getString(R.string.settings_volume_normalization) }) },
+                supportingContent = {
+                    Text(
+                        stringResource(R.string.settings_volume_normalization_detail),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = volumeNormalization,
+                        onCheckedChange = { enabled ->
+                            haptics.toggle(enabled)
+                            onVolumeNormalizationChanged(enabled)
+                        },
+                        modifier = Modifier.semantics {
+                            contentDescription = context.getString(R.string.settings_volume_normalization)
+                        },
+                    )
+                },
             )
         }
 

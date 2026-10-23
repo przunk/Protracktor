@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_volume_normalization">Volume normalization (experimental)</string>
-    <string name="settings_volume_normalization_detail">Reduce volume differences between tunes. First plays use a limited analysis; later plays can use a fuller saved measurement. Does not change device volume or exported audio.</string>
+    <string name="settings_volume_normalization">Volume normalization</string>
+    <string name="settings_volume_normalization_detail">Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.</string>
     <string name="queue_clear">Clear queue</string>
     <string name="queue_clear_body">Keep only the current track, without interrupting it. Remove the context and waiting requests; saved playlists stay unchanged. Undo restores the plan until playback advances or you build a new queue.</string>
     <string name="notice_queue_cleared">Playback queue cleared.</string>
