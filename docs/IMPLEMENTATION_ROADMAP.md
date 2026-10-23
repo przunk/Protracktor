@@ -39,8 +39,8 @@ Granular checklist/accessibility outcomes remain unreported. [Contract and accep
 C118 still records the open History freshness issue below. B52 normalization was retained after
 a reported phone comparison and merged as **4aab46e** on 2026-10-23. Its default-Off control
 and fixed -23 LUFS target remain; concise Settings copy passed the 1163-test full gate/lint.
-It is no longer unfinished inventory work. No new APK was requested after cleanup; individual
-device checks remain separate. [Contract and integration](VOLUME_NORMALIZATION.md).
+It is no longer unfinished inventory work. No APK was requested for the integration step;
+later device builds and remaining checks are recorded in the [contract](VOLUME_NORMALIZATION.md).
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |

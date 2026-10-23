@@ -16,8 +16,8 @@ Retained and merged as **4aab46e** after phone feedback reported comparable perc
 for Studium Fałszu (Jakim) and Lotus 3 Space ninja with normalization enabled. Android Off/On,
 default Off, bounded pre-analysis, content/subsong/mix cache and fixed trim with sample-peak
 headroom. Settings now uses regular, concise PL/EN wording. Cleanup source d68bfad passed
-1163 tests/full host gate/lint; all 53 native/DSP checks pass. No new APK was requested; the
-last supplied artifact remains 1.3.0 (1297), source 9b99bb4. Individual device scenarios and
+1163 tests/full host gate/lint; all 53 native/DSP checks pass. No APK was requested for the
+integration step; later device builds are recorded in the contract. Individual device scenarios and
 power/accessibility remain unreported. [Contract and integration](VOLUME_NORMALIZATION.md).
 
 Listening feedback, 2026-10-22: playback levels vary considerably between tracks, making a quiet

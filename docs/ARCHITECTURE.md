@@ -23,8 +23,9 @@ non-default mix selection preserves full-measurement eligibility; only a change 
 invalidates it. Merged as **4aab46e**, with the same tree as the checked source, after phone
 feedback reported comparable loudness for a quiet/loud pair. Default Off and the fixed -23 LUFS
 policy remain unchanged; Settings drops experimental wording and retains first-play/export
-limits. No APK was built after cleanup. Supplied APK 1.3.0 (1297) and the unchanged native
-code's 53 ASan/UBSan checks remain historical evidence in the contract. Individual device
+limits. Cleanup was integrated without an APK; the subsequent develop device build is recorded
+in the contract. Earlier APK 1.3.0 (1297) and the unchanged native code's 53 ASan/UBSan checks
+remain historical evidence in the contract. Individual device
 checks and power/accessibility outcomes are not inferred from integration approval.
 
 ## Queue source navigation — accepted and merged, 2026-10-22

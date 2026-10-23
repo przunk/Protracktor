@@ -1,11 +1,29 @@
 # Status
 
-Updated: 2026-10-23 — B52 volume normalization accepted and merged as 4aab46e after Settings-copy cleanup; latest supplied APK 1.3.0 (1297), source 9b99bb4 predates final copy; no new APK requested; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — latest develop test APK 1.3.0 (1301), source 296de93, includes final Settings copy; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Latest develop test APK — 2026-10-23
+
+Built from clean source **296de936968e6740ab4377839e738d4c13b57b47**, without repeating the
+long test gate or standalone lint, as requested. Application/native/web/build sources are
+byte-identical to checked **d68bfad** (1163 tests/full gate, 53 native/DSP checks, lint 0 errors /
+73 warnings). This reuses that evidence; it is not a fresh test run or phone confirmation.
+
+Minified, test-signed release **1.3.0 (1301)** built in **187 s** (199.8 s supervised):
+[protracktor-release-1.3.0-1301-296de93-20261023-230558.apk](../dist/protracktor-release-1.3.0-1301-296de93-20261023-230558.apk),
+**11,963,415 bytes**, SHA-256
+`f5d6ec30b0079eefeb8c99bce3931329c726a7c64d6981c1284b494f84a529ef`.
+Independent inspection confirms the v2 test signature, version/code, exact source revision,
+non-debuggable manifest, ZIP CRCs/16 KB alignment, minSdk 29/targetSdk 36 and all three engine/
+UADE ABIs. Compiled resources contain the final English/Polish normalization labels/help.
+R8 executed; mapping and build/inspection logs are retained in ignored
+`user/volume-normalization-verification/develop-apk/`. **Unchecked:** this APK on a phone.
+No version bump, release procedure, AAB, push or tag/master change was performed.
 
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 
@@ -25,8 +43,9 @@ unchanged. No target slider is introduced.
 including **53 native/DSP** cases. Lint: **0 errors / 73 unchanged warnings**, **102.9 s**.
 The bilingual-copy regression failed on the old experimental caption before cleanup; final
 physical-switch, visible-label/help and localized-copy checks pass. The merge requires no new
-gate for its identical application tree. **No APK built**, as requested: supplied APK 1297 below
-retains its original source/hash and old experimental caption. Final copy on a phone,
+gate for its identical application tree. No APK was built during that cleanup/integration step,
+as requested; the later develop build is recorded above. Earlier APK 1297 below retains its
+original source/hash and experimental caption. Final copy on a phone,
 accessibility/power and unreported playback scenarios remain **unchecked**.
 [Playback contract and integration](VOLUME_NORMALIZATION.md).
 

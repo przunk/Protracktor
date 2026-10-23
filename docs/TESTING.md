@@ -12,10 +12,11 @@ cleanup source **d68bfad**: 1163 tests / 152 suites, all companion checks and li
 (0 errors / 73 unchanged warnings). All 53 native/DSP cases pass; the unchanged native code
 also passed ASan/UBSan at the review checkpoint.
 
-No new APK was requested after copy cleanup. The last supplied minified APK remains
-**1.3.0 (1297), source 9b99bb4**; it still calls the setting **Volume normalization (experimental)**.
-Current develop drops that suffix. The phone report did not identify an exact installed build
-or individually confirm the retained regression checklist below.
+The later minified [develop test APK](STATUS.md#latest-develop-test-apk--2026-10-23) includes
+the final copy. It was built without repeating long tests or standalone lint, as requested;
+compiled labels/help were inspected independently. Earlier **1.3.0 (1297), source 9b99bb4**
+still uses **Volume normalization (experimental)**; the new APK drops that suffix. The phone
+report did not identify an exact installed build or individually confirm the retained checklist.
 
 1. In Settings, enable **Volume normalization**. Start with a modest device
    volume, then compare several quiet/loud tunes with Off and On. On can intentionally sound

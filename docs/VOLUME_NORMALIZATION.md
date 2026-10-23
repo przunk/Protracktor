@@ -18,9 +18,11 @@ All 31 unit-stage tasks executed (**433.4 s**); all companion checks passed, inc
 DSP cases. Lint: **102.9 s**, **0 errors / 73 unchanged warnings**. The copy regression failed
 before cleanup; physical-switch, visible-copy and both-language checks pass afterward.
 
-Merge **4aab46e** has exactly the checked source tree. **No new APK was built**, as requested;
-the last supplied artifact remains 1.3.0 (1297), source 9b99bb4, with its original experimental
-caption and hash below. Final copy on a phone and unreported device scenarios remain unchecked.
+Merge **4aab46e** has exactly the checked source tree. No APK was built during that integration
+step, as requested. The later [develop test APK](STATUS.md#latest-develop-test-apk--2026-10-23)
+includes the final copy and was built without repeating long tests. Earlier artifact 1.3.0
+(1297), source 9b99bb4, retains its original experimental caption and hash below. Final copy
+on a phone and unreported device scenarios remain unchecked.
 VersionName stays 1.3.0 and schema 23; master/tag remain d456fa7. No push or store release.
 Earlier checkpoint records below retain their original pre-acceptance and unmerged states.
 
