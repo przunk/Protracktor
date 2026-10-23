@@ -62,9 +62,9 @@ previous layout at normal/narrow widths and enlarged text; inspect generated bef
 Run the forced full test/lint gate and build a minified test-signed release APK into `dist/`.
 
 Host evidence and images do not establish phone appearance or behaviour. Practical phone
-acceptance and integration are recorded separately below. B52 loudness normalization is the next
-task, not part of this implementation. Cross-restart restoration of playback contexts and
-automatic re-indexing are outside this trial.
+acceptance and integration are recorded separately below. B52 loudness normalization was selected
+as the following task and [implemented separately](VOLUME_NORMALIZATION.md). Cross-restart
+restoration of playback contexts and automatic re-indexing are outside this trial.
 
 Initial evidence: the actual header-tap regression failed before the feature existed. A first
 playlist-return draft failed the context-preservation test because keeping only the explicit

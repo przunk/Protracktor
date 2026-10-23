@@ -3,15 +3,21 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## B52 Volume normalization — trial
+## B52 Volume normalization — accepted and merged, 2026-10-23
 
-[Contract and limits](VOLUME_NORMALIZATION.md). Use minified release APK **1.3.0 (1297),
-source 9b99bb4**, identified in [Status](STATUS.md), from `feature/volume-normalization`.
-The forced full host gate passed 1162 tests / 152 suites, all companion checks and lint
-(0 errors / 73 unchanged warnings). All 53 native/DSP checks also passed ASan/UBSan; independent APK
-inspection passed. The trial is unmerged and not phone-accepted. APK 1290 predates this change.
+[Contract and limits](VOLUME_NORMALIZATION.md). Phone feedback reports comparable perceived
+loudness for Studium Fałszu (Jakim) and Lotus 3 Space ninja with normalization On, followed by
+approval to keep the function on develop. Merged as **4aab46e**, with the same tree as checked
+cleanup source **d68bfad**: 1163 tests / 152 suites, all companion checks and lint
+(0 errors / 73 unchanged warnings). All 53 native/DSP cases pass; the unchanged native code
+also passed ASan/UBSan at the review checkpoint.
 
-1. In Settings, enable **Volume normalization (experimental)**. Start with a modest device
+No new APK was requested after copy cleanup. The last supplied minified APK remains
+**1.3.0 (1297), source 9b99bb4**; it still calls the setting **Volume normalization (experimental)**.
+Current develop drops that suffix. The phone report did not identify an exact installed build
+or individually confirm the retained regression checklist below.
+
+1. In Settings, enable **Volume normalization**. Start with a modest device
    volume, then compare several quiet/loud tunes with Off and On. On can intentionally sound
    quieter overall; the aim is fewer track-to-track jumps, not maximum loudness.
 2. Use Random and manual Queue entries, Next/Previous, a quiet intro followed by a loud passage,
@@ -35,8 +41,9 @@ inspection passed. The trial is unmerged and not phone-accepted. APK 1290 predat
    decoder must not start later or interrupt the newer track. Try subsong controls during loading;
    no half-prepared track should start under the previous track's metadata.
 
-Initial listening to APK 1295 established a difference, not quality acceptance. The replacement
-APK's sound, transition/loading behaviour, UI, accessibility and CPU/battery cost are **unchecked**.
+Final copy on a phone, per-case transition/loading behaviour, accessibility and CPU/battery
+cost remain **unchecked** unless separately reported. The comparison supports integration,
+not a claim of catalogue-wide equalization or exhaustive device coverage.
 
 ## Queue return-to-source — trial
 

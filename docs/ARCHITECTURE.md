@@ -1,6 +1,6 @@
 # Architecture
 
-## Volume normalization — unmerged Android trial, 2026-10-22
+## Volume normalization — accepted and merged, 2026-10-23
 
 Pure `LoudnessMeter`/`VolumeNormalizer` consume float stereo after the existing width mixer and
 before independent focus ducking. `LoudnessPreparation` serializes optional budgeted prefix
@@ -18,10 +18,14 @@ Only successful preparation adopts the handle and acquires audio focus. This kee
 of the preparation window and prevents an old cancellation from closing a newer playing track.
 Android metadata publishes the backend's actual initial subsong before its multiline message,
 so normalization and the existing selection consumers cannot guess a different tune. Clean
-source 9b99bb4 passed 1162 host tests/full gate/lint (0 errors/73 unchanged warnings); release
-APK 1.3.0 (1297) and 53 native/DSP sanitizer checks are recorded in the contract. Initial
+source d68bfad passed 1163 host tests/full gate/lint (0 errors/73 unchanged warnings). Initial
 non-default mix selection preserves full-measurement eligibility; only a change after samples
-invalidates it. Phone acceptance remains unchecked; the branch is unmerged.
+invalidates it. Merged as **4aab46e**, with the same tree as the checked source, after phone
+feedback reported comparable loudness for a quiet/loud pair. Default Off and the fixed -23 LUFS
+policy remain unchanged; Settings drops experimental wording and retains first-play/export
+limits. No APK was built after cleanup. Supplied APK 1.3.0 (1297) and the unchanged native
+code's 53 ASan/UBSan checks remain historical evidence in the contract. Individual device
+checks and power/accessibility outcomes are not inferred from integration approval.
 
 ## Queue source navigation — accepted and merged, 2026-10-22
 

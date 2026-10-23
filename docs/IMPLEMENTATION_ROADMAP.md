@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-22. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-23. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
 The latest prepared tagged AAB is **1.3.0 (1269)**; upload and Play publication are unconfirmed.
@@ -36,12 +36,15 @@ was accepted and merged as **e90c817**, 2026-10-22. C109/C111 were accepted and 
 and merged as **70e1a61** on 2026-10-22; it is no longer unfinished inventory work. Source
 b225ff9 passed 1147 host tests/full gate/lint, and APK 1.3.0 (1290) remains the accepted artifact.
 Granular checklist/accessibility outcomes remain unreported. [Contract and acceptance](QUEUE_SOURCE_NAVIGATION.md).
-C118 still records the open History freshness issue below.
+C118 still records the open History freshness issue below. B52 normalization was retained after
+a reported phone comparison and merged as **4aab46e** on 2026-10-23. Its default-Off control
+and fixed -23 LUFS target remain; concise Settings copy passed the 1163-test full gate/lint.
+It is no longer unfinished inventory work. No new APK was requested after cleanup; individual
+device checks remain separate. [Contract and integration](VOLUME_NORMALIZATION.md).
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B52 | Normalize perceived loudness between tracks | Unmerged `feature/volume-normalization`, selected 2026-10-22. Android Off/On, default Off, bounded prefix/per-subsong measurement and conservative trim. Reviewed source 9b99bb4 passed 1162 host tests/full gate/lint and 53 native/DSP sanitizer checks; minified APK 1.3.0 (1297) ready 2026-10-23. Initial listening is not quality acceptance; replacement APK phone checks pending. [Contract, review and APK](VOLUME_NORMALIZATION.md). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |

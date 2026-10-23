@@ -30,6 +30,9 @@ available for operational reversibility, not because permission is pending.
 HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` the one an Amiga
 tune cannot; what neither knows is measured while the tune plays.
 
+Optional [volume normalization](docs/VOLUME_NORMALIZATION.md) reduces track-to-track loudness
+differences during Android playback; it does not process exported audio.
+
 There is also a **player for the browser** in `web/`, which plays the same archives and takes a
 playlist handed to it by the phone. It is a second player rather than a second screen; see
 `docs/WEB_SERVER.md` to run one.
@@ -54,6 +57,7 @@ source comments may refer to their historical paths.
 | [`docs/STATUS.md`](docs/STATUS.md) | what is done, known defects numbered **C1…Cn**, branch state |
 | [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | current inventory of unfinished work, deferred ideas and open decisions |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how it is built and **why that way** |
+| [`docs/VOLUME_NORMALIZATION.md`](docs/VOLUME_NORMALIZATION.md) | playback loudness matching, measurement limits and verification |
 | [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | decisions deliberately left open, with options |
 | [`docs/PLAN_FORMATS.md`](docs/PLAN_FORMATS.md) | decoder integration plans, decisions and historical implementation records |
 | [`docs/PLAN_CATALOGUES.md`](docs/PLAN_CATALOGUES.md) | archive integration plans and decisions |

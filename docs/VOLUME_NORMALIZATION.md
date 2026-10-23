@@ -1,14 +1,35 @@
-# Volume normalization — experimental Android playback
+# Volume normalization — Android playback
 
-Selected 2026-10-22 after the Queue-source feature was accepted. B52 is implemented separately
-on `feature/volume-normalization`, from develop 9c44fc9. Do not merge before phone acceptance.
+Selected 2026-10-22 after Queue-source acceptance, implemented on `feature/volume-normalization`
+from develop 9c44fc9, and retained for develop on 2026-10-23. Integrated as **4aab46e**.
 
-## Trial contract
+## Acceptance and integration — 2026-10-23
+
+Phone feedback reports comparable perceived loudness for Studium Fałszu (Jakim) and Lotus 3
+Space ninja with normalization enabled. It does not identify an exact installed build or
+establish every regression, accessibility or power scenario. Keep the existing Off/On control,
+default Off and fixed -23 LUFS policy; no manual target slider is included in this integration.
+
+Settings now uses regular labels and shorter PL/EN help, retaining first-play/export limits
+and the existing layout/accessibility. All audio/cache code remains byte-identical
+to reviewed source 9b99bb4. Cleanup source **d68bfade78c1166b4f4acef561e16960b6ee9328** passed
+the forced full gate: **1163 tests / 152 suites**, zero failures/errors/skips, **656 s** overall.
+All 31 unit-stage tasks executed (**433.4 s**); all companion checks passed, including 53 native/
+DSP cases. Lint: **102.9 s**, **0 errors / 73 unchanged warnings**. The copy regression failed
+before cleanup; physical-switch, visible-copy and both-language checks pass afterward.
+
+Merge **4aab46e** has exactly the checked source tree. **No new APK was built**, as requested;
+the last supplied artifact remains 1.3.0 (1297), source 9b99bb4, with its original experimental
+caption and hash below. Final copy on a phone and unreported device scenarios remain unchecked.
+VersionName stays 1.3.0 and schema 23; master/tag remain d456fa7. No push or store release.
+Earlier checkpoint records below retain their original pre-acceptance and unmerged states.
+
+## Playback contract
 
 - Settings offers Off/On, default Off; preserve versionName 1.3.0 and schema 23.
 - Measure perceived stereo loudness using BS.1770 K weighting and gated 400 ms blocks. Use
   a bounded 0.1-LU histogram, not an unbounded allocation in the audio callback.
-- Start with an experimental -23 LUFS target. Apply one measured trim per subsong, with at most
+- Use a fixed -23 LUFS target. Apply one measured trim per subsong, with at most
   +6 dB for partial analysis and +12 dB for complete analysis; peak headroom may reduce either.
 - A disposable measurement cache is independent of History and playlists. Identity includes
   source content, companion content, subsong, stereo mode and algorithm/decoder revision.
@@ -35,8 +56,8 @@ ducking and BT recovery. Exercise production JNI/Player paths with the existing 
 Check cache invalidation/corruption and stale asynchronous results. Demonstrate a failing
 regression/mutation, then force full tests/lint and inspect the minified release APK.
 
-Phone sound quality, comfortable transitions and real-device CPU/battery cost remain unchecked
-until the trial is used on a phone. This document is a contract, not verification evidence yet.
+The reported phone comparison supports integration, not every individual checklist outcome.
+Host checks and artifact inspection below are separate from unreported device behaviour.
 
 ## First host checkpoint
 
@@ -121,7 +142,7 @@ retained alongside logs, reports, decoded examples and mutation evidence under i
 
 **Checked:** host evidence above. **Unchecked:** actual Android sound, settling/transition
 comfort, UI/accessibility and device CPU/battery cost. Settings defaults Off; enable manually
-and start with modest device volume. [Phone checklist](TESTING.md#b52-volume-normalization--trial).
+and start with modest device volume. [Phone checklist](TESTING.md#b52-volume-normalization--accepted-and-merged-2026-10-23).
 Develop stays 9c44fc9; master/tag stay d456fa7; AMP untouched. VersionName 1.3.0, schema 23.
 
 References: [ITU BS.1770](https://www.itu.int/rec/R-REC-BS.1770/en),

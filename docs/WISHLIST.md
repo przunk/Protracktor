@@ -10,25 +10,26 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B52. Consistent perceived loudness between tracks — experimental trial
+## B52. ~~Consistent perceived loudness between tracks~~ — DONE 2026-10-23
 
-Implementation experiment selected 2026-10-22 on `feature/volume-normalization`, from develop
-9c44fc9 after Queue-source acceptance. Android Off/On, default Off, bounded pre-analysis,
-content/subsong/mix cache and fixed trim with sample-peak headroom. Reviewed source 9b99bb4
-passed the 1162-test full host gate/lint and 53 native/DSP sanitizer checks; minified APK
-1.3.0 (1297) is ready, 2026-10-23. Initial listening established a difference, not quality
-acceptance; the replacement APK still needs phone checks. No merge. [Trial contract](VOLUME_NORMALIZATION.md).
+Retained and merged as **4aab46e** after phone feedback reported comparable perceived loudness
+for Studium Fałszu (Jakim) and Lotus 3 Space ninja with normalization enabled. Android Off/On,
+default Off, bounded pre-analysis, content/subsong/mix cache and fixed trim with sample-peak
+headroom. Settings now uses regular, concise PL/EN wording. Cleanup source d68bfad passed
+1163 tests/full host gate/lint; all 53 native/DSP checks pass. No new APK was requested; the
+last supplied artifact remains 1.3.0 (1297), source 9b99bb4. Individual device scenarios and
+power/accessibility remain unreported. [Contract and integration](VOLUME_NORMALIZATION.md).
 
 Listening feedback, 2026-10-22: playback levels vary considerably between tracks, making a quiet
 track followed by a loud one unpleasant. This was selected as a separate experiment after
 Queue's return-to-source navigation, not part of that earlier change.
 
 The goal is consistent perceived track-to-track loudness, not a louder global volume setting.
-The trial compares bounded prefix measurement with fuller listening statistics and conservative
+The implementation combines bounded prefix measurement with fuller listening statistics and conservative
 fixed trim, accounting for loops, unknown lengths, stereo modes and focus ducking. It does not
-promise perfect first-play matching or certified true-peak limiting. Device feedback must establish
-usefulness and acceptable sound/CPU cost before integration. The original report did not identify
-a particular failing pair/output device; current host examples are not a phone reproduction.
+promise perfect first-play matching or certified true-peak limiting. The original report did not
+identify a pair; the follow-up comparison above supports keeping the feature without a target
+slider. It does not establish catalogue-wide matching or measured device power cost.
 
 ## B51. Save an individual subsong in a playlist — TODO, recorded 2026-10-21
 

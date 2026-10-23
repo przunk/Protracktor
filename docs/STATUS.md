@@ -1,13 +1,36 @@
 # Status
 
-Updated: 2026-10-23 — B52 volume-normalization review checked on host, unmerged feature/volume-normalization; latest test APK 1.3.0 (1297), source 9b99bb4; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume normalization accepted and merged as 4aab46e after Settings-copy cleanup; latest supplied APK 1.3.0 (1297), source 9b99bb4 predates final copy; no new APK requested; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B52 Volume normalization — experimental Android playback
+## B52 Volume normalization — accepted and merged, 2026-10-23
+
+Retained after phone feedback reported comparable perceived loudness for Studium Fałszu (Jakim)
+and Lotus 3 Space ninja with normalization enabled. That comparison did not identify an exact
+installed build or establish every device scenario. Integration was approved after UI/copy
+cleanup, explicitly without another APK build. Merged `feature/volume-normalization` as
+**4aab46e**; its complete merge tree equals checked source **d68bfad**.
+
+Settings now uses a regular **Volume normalization** / **Normalizacja głośności** label and a
+short description in both languages, retaining first-play/export limitations and the accessible
+switch label. Default Off, fixed -23 LUFS target, boost/peak limits and all audio/cache code are
+unchanged. No target slider is introduced.
+
+**Checked on the host:** forced full gate **1163 tests / 152 suites**, zero failures/errors/skips,
+**656 s** overall; all 31 unit-stage tasks executed (**433.4 s**). All companion checks passed,
+including **53 native/DSP** cases. Lint: **0 errors / 73 unchanged warnings**, **102.9 s**.
+The bilingual-copy regression failed on the old experimental caption before cleanup; final
+physical-switch, visible-label/help and localized-copy checks pass. The merge requires no new
+gate for its identical application tree. **No APK built**, as requested: supplied APK 1297 below
+retains its original source/hash and old experimental caption. Final copy on a phone,
+accessibility/power and unreported playback scenarios remain **unchecked**.
+[Playback contract and integration](VOLUME_NORMALIZATION.md).
+
+### Review checkpoint and APK 1297 — historical verification
 
 **Review update, 2026-10-23:** initial listening confirms a difference, not quality acceptance.
 Review hardening preserves gain smoothing across live stereo-mix changes, binds atomic gain
@@ -93,7 +116,7 @@ master/tag remain **d456fa7**, AMP untouched. VersionName stays 1.3.0 and schema
 
 **Checked on the host:** the measurements, tests, sanitizer and artifact properties above.
 **Unchecked:** Android sound/transition comfort, UI, first-play delay, battery/accessibility and
-phone acceptance. Use the [phone checklist](TESTING.md#b52-volume-normalization--trial).
+phone acceptance. Use the [phone checklist](TESTING.md#b52-volume-normalization--accepted-and-merged-2026-10-23).
 
 ## Queue return-to-source — trial
 
