@@ -1,16 +1,38 @@
 # Status
 
-Updated: 2026-10-23 — latest develop test APK 1.3.0 (1301), source 296de93, includes final Settings copy; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-24 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest supplied test APK remains 1.3.0 (1301), source 296de93; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Next-release notes — 2026-10-23
+## Prepared 1.4.0 release — 2026-10-24
+
+The interactive procedure prepared `dist/protracktor-1.4.0-1304.aab`, **22,224,341 bytes**,
+SHA-256 `3c78300eb5074f50a1409c61c75b62e3db519904178fbd8418b5544e0099d67a`.
+Master and annotated `v1.4.0` point to **5b6936e5389d9e34bd6861e574907bb8becd6015**;
+1304 equals that source's commit count. The later release-ledger commit is on develop only.
+
+The agent inspected the existing artifact and release-run evidence, without rebuilding or
+signing another AAB. Size/hash, embedded source, ZIP CRCs, all three engine/UADE ABIs and the
+public upload-certificate fingerprint match the release record. JAR verification succeeds with
+the same warning categories as 1.3.0; no Play acceptance follows from that result.
+
+The release gate executed **1163 tests / 152 suites**, zero failures/errors/skips; all 31 unit
+tasks executed (**458.0 s**) and all companion checks recorded exit zero. Lint succeeded in
+**9.1 s** by reusing analysis/report tasks: retained **0 errors / 73 warnings**, not fresh lint
+analysis. Bundle Gradle executed R8/package/sign/bundle tasks and succeeded in **92 s**.
+[Full release evidence and scope](RELEASE_NOTES_1.4.0.md),
+[unchanged script-generated ledger](../store/play-console/releases.md).
+
+**Unconfirmed:** Git publication, Play upload/acceptance, rollout/production access and testing
+of a Play-generated 1.4.0 build. No push, tag movement or new build was performed by the agent.
+
+## Release-note draft preparation — 2026-10-23 historical record
 
 Prepared copy-ready English/Polish notes for the proposed 1.4.0 scope since `v1.3.0`:
-[full draft](RELEASE_NOTES_1.4.0.md). The Play summaries include the implemented user feedback
+[now-prepared release record](RELEASE_NOTES_1.4.0.md). The Play summaries include the implemented user feedback
 and stay within the project's 500-character limit. Historical note links are pinned to their
 tags rather than the mutable working files. This documentation does not bump versionName,
 create a tag/AAB or establish publication. Application inputs and APK identity remain unchanged.

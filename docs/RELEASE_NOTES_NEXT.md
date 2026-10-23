@@ -1,7 +1,7 @@
 # Historical 1.1.0 release notes draft
 
 Historical **1.1.0 draft**, retained as the original planning record below, not the next-release
-inventory. See the [proposed 1.4.0 notes](RELEASE_NOTES_1.4.0.md) for the current draft and the
+inventory. See the [prepared 1.4.0 record](RELEASE_NOTES_1.4.0.md) and the
 [release ledger](../store/play-console/releases.md) for prepared artifacts and their evidence.
 
 Prepared 2026-10-11 at the owner's request to include all implemented user feedback in the

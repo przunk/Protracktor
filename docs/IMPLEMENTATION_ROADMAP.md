@@ -1,10 +1,10 @@
 # Implementation roadmap
 
-Updated: 2026-10-23. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-24. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
-The latest prepared tagged AAB is **1.3.0 (1269)**; upload and Play publication are unconfirmed.
-[Current release record](RELEASE_NOTES_1.3.0.md). Pre-correction historical IDs/SHAs below refer to
+The latest prepared tagged AAB is **1.4.0 (1304)**; upload and Play publication are unconfirmed.
+[Current release record](RELEASE_NOTES_1.4.0.md). Pre-correction historical IDs/SHAs below refer to
 the archived original graph, not newly built artifacts. [Commit map and validation](VERSION_HISTORY_REWRITE.md).
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.

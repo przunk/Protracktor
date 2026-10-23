@@ -2,6 +2,8 @@
 
 Selected 2026-10-22 after Queue-source acceptance, implemented on `feature/volume-normalization`
 from develop 9c44fc9, and retained for develop on 2026-10-23. Integrated as **4aab46e**.
+Prepared release [1.4.0 (1304)](RELEASE_NOTES_1.4.0.md) retains this playback policy. Earlier
+integration/build checkpoints below preserve their original 1.3.0 version and Git states.
 
 ## Acceptance and integration — 2026-10-23
 
@@ -28,7 +30,7 @@ Earlier checkpoint records below retain their original pre-acceptance and unmerg
 
 ## Playback contract
 
-- Settings offers Off/On, default Off; preserve versionName 1.3.0 and schema 23.
+- Settings offers Off/On, default Off. Schema stays 23; versionName follows the release procedure.
 - Measure perceived stereo loudness using BS.1770 K weighting and gated 400 ms blocks. Use
   a bounded 0.1-LU histogram, not an unbounded allocation in the audio callback.
 - Use a fixed -23 LUFS target. Apply one measured trim per subsong, with at most
