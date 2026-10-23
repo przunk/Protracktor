@@ -17,8 +17,9 @@ SHA-256: `3f63164fb1256160696fd374615e7bb21d6be41f029997177c2860eccafec8db`.
 The unchanged script-generated [release ledger](../store/play-console/releases.md) contains the
 artifact metadata and public upload-certificate fingerprint. Its uploaded-notes wording identifies
 the tagged text, not independent confirmation of an upload. The copy-ready
-[English](../store/listing/en-US/release-notes/default.txt) and
-[Polish](../store/listing/pl-PL/release-notes/default.txt) notes match `v1.3.0`.
+[English](https://github.com/przunk/Protracktor/blob/v1.3.0/store/listing/en-US/release-notes/default.txt) and
+[Polish](https://github.com/przunk/Protracktor/blob/v1.3.0/store/listing/pl-PL/release-notes/default.txt)
+notes are pinned to `v1.3.0`; the working files are reused for the next release.
 
 ## Changes since 1.2.0
 

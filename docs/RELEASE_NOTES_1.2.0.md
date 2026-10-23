@@ -15,8 +15,9 @@ Scope: `v1.1.0..v1.2.0`. This is the Android release, not a separate web deploym
 The immutable, script-generated [release evidence](../store/play-console/releases.md) contains
 the SHA-256 and public upload-certificate fingerprint. That entry's reference to uploaded notes
 identifies the tagged text, not independent evidence that an upload happened. The copy-ready
-[English](../store/listing/en-US/release-notes/default.txt) and
-[Polish](../store/listing/pl-PL/release-notes/default.txt) summaries are preserved at `v1.2.0`.
+[English](https://github.com/przunk/Protracktor/blob/v1.2.0/store/listing/en-US/release-notes/default.txt) and
+[Polish](https://github.com/przunk/Protracktor/blob/v1.2.0/store/listing/pl-PL/release-notes/default.txt)
+summaries are preserved at `v1.2.0`; the working files are reused for later releases.
 
 ## Implemented user feedback
 

@@ -1,6 +1,8 @@
-A new playback queue, refined through user testing and feedback:
+Based on user feedback:
 
-- Browse catalogues and playlists without interrupting playback.
-- Swipe to queue tracks; reorder manual entries, remove entries or clear the queue.
-- Return to your remembered Random list; double-tap the dice to reroll it.
-- Fixes for Browse navigation, downloads, cache handling and list interactions.
+- Optional volume normalization in Settings reduces volume differences between tracks.
+- Return from Queue to its source without interrupting playback.
+- Clearer compact player with stable controls and more room for track details.
+- Consistent spacing in Browse and Online catalogues.
+- Fixed some older Modland download links, including nested folders.
+- More reliable loading and initial subsong indicators.

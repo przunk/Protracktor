@@ -1,7 +1,8 @@
-# Next release — changes since 1.0.0
+# Historical 1.1.0 release notes draft
 
-Historical **1.1.0 draft**, retained as the original planning record below. The current prepared
-release is **1.2.0**; see [its full notes and publication state](RELEASE_NOTES_1.2.0.md).
+Historical **1.1.0 draft**, retained as the original planning record below, not the next-release
+inventory. See the [proposed 1.4.0 notes](RELEASE_NOTES_1.4.0.md) for the current draft and the
+[release ledger](../store/play-console/releases.md) for prepared artifacts and their evidence.
 
 Prepared 2026-10-11 at the owner's request to include all implemented user feedback in the
 release description. Scope: `v1.0.0..d5dbe4a`; later release-preparation documentation does not
@@ -9,9 +10,10 @@ change the application. Recommended version: **1.1.0**, because this adds user-f
 the number still awaits the owner's decision. No version bump, release tag or AAB is created
 by these notes. Android publication remains pending; web deployment is recorded separately.
 
-The short English and Polish Play notes are in
-[`en-US`](../store/listing/en-US/release-notes/default.txt) and
-[`pl-PL`](../store/listing/pl-PL/release-notes/default.txt). This full record preserves details
+The historical short English and Polish Play notes are pinned to
+[`en-US`](https://github.com/przunk/Protracktor/blob/v1.1.0/store/listing/en-US/release-notes/default.txt) and
+[`pl-PL`](https://github.com/przunk/Protracktor/blob/v1.1.0/store/listing/pl-PL/release-notes/default.txt).
+This full record preserves details
 that do not fit their 500-character limit. The previous notes remain in Git at `v1.0.0`.
 
 ## Implemented user feedback

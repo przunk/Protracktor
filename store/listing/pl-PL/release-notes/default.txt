@@ -1,6 +1,8 @@
-Nowa kolejka, dopracowana po testach i uwagach użytkowników:
+Zmiany na podstawie uwag użytkowników:
 
-- Przeglądaj katalogi i playlisty bez przerywania muzyki.
-- Dodawaj utwory gestem do kolejki; zmieniaj kolejność ręcznych pozycji, usuwaj lub czyść kolejkę.
-- Wróć do zapamiętanej listy Random; dwuklik kostki losuje nową.
-- Poprawki nawigacji Browse, pobierania, cache i płynności list.
+- Opcjonalna normalizacja głośności w ustawieniach.
+- Powrót z kolejki do źródła bez przerywania muzyki.
+- Czytelniejszy zwinięty odtwarzacz, stabilne przyciski i więcej miejsca na dane utworu.
+- Spójne odstępy w Browse i Online catalogues.
+- Naprawione pobieranie wybranych starszych adresów Modlandu, także w zagnieżdżonych folderach.
+- Stabilniejsze ładowanie i poprawne wskazanie początkowego subsongu.

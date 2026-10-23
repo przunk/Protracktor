@@ -7,6 +7,14 @@ versionCode is the source commit count; later documentation commits do not relab
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Next-release notes — 2026-10-23
+
+Prepared copy-ready English/Polish notes for the proposed 1.4.0 scope since `v1.3.0`:
+[full draft](RELEASE_NOTES_1.4.0.md). The Play summaries include the implemented user feedback
+and stay within the project's 500-character limit. Historical note links are pinned to their
+tags rather than the mutable working files. This documentation does not bump versionName,
+create a tag/AAB or establish publication. Application inputs and APK identity remain unchanged.
+
 ## Latest develop test APK — 2026-10-23
 
 Built from clean source **296de936968e6740ab4377839e738d4c13b57b47**, without repeating the
