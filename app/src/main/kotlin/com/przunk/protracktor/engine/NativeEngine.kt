@@ -5,6 +5,7 @@ package com.przunk.protracktor.engine
 
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.StereoMix
+import com.przunk.protracktor.player.LoudnessProfile
 
 /**
  * The Kotlin side of the native player.
@@ -13,6 +14,11 @@ import com.przunk.protracktor.player.StereoMix
  * code, so nothing here runs on the audio thread.
  */
 object NativeEngine {
+
+    /** Worker-only prefix analysis, independent of the audible decoder and audio stream. */
+    fun measureLoudness(bytes: ByteArray, name: String, companions: List<Pair<String,ByteArray>>,
+        subsong: Int, width: Int): DoubleArray? = nativeMeasureLoudness(bytes,name,
+            companions.map { it.first }.toTypedArray(),companions.map { it.second }.toTypedArray(),subsong,width)
 
     init {
         System.loadLibrary("protracktor_engine")
@@ -202,6 +208,11 @@ object NativeEngine {
         /** Applies playback width without changing the decoder or opening another output. */
         fun setStereoMix(mode: StereoMix) = nativeSetStereoWidth(handle(), mode.widthPercent)
 
+        fun setNormalization(enabled: Boolean, profile: LoudnessProfile? = null) = nativeSetNormalization(
+            handle(),enabled,profile?.seconds ?: 0.0,profile?.lufs ?: -100.0,profile?.peak ?: 0.0,profile?.complete ?: false)
+
+        fun loudnessProfile(): LoudnessProfile? = LoudnessProfile.fromNative(nativeLoudnessProfile(handle()))
+
         fun stop() = nativeStop(handle())
 
         fun positionSeconds(): Double = nativePositionSeconds(handle())
@@ -250,6 +261,12 @@ object NativeEngine {
         errorOut: Array<String?>,
     ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
+    @JvmStatic private external fun nativeMeasureLoudness(bytes: ByteArray, name: String,
+        companionNames: Array<String>, companionData: Array<ByteArray>, subsong: Int, width: Int): DoubleArray?
+    @JvmStatic private external fun nativeLoudnessProfile(handle: Long): DoubleArray?
+    @JvmStatic private external fun nativeSetNormalization(handle: Long, enabled: Boolean,
+        seconds: Double, lufs: Double, peak: Double, complete: Boolean)
+
     @JvmStatic private external fun nativeRenderOpen(
         data: ByteArray,
         fileName: String,

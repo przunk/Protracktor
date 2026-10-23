@@ -10,6 +10,12 @@ import org.junit.Test
 /** `docs/STATUS.md` C40: a module's message arrived with its first line only. */
 class DescribeBlockTest {
 
+    @Test fun `typed initial subsong metadata remains outside a multiline backend message`() {
+        val fields=DescribeBlock.parse("subsong\t2\nmessage\tNotes\nsubsong\t999")
+        assertEquals("2",fields["subsong"])
+        assertEquals("Notes\nsubsong\t999",fields["message"])
+    }
+
     @Test
     fun `the message comes back whole, every line and its spacing`() {
         val fields = DescribeBlock.parse(

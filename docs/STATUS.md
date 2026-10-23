@@ -1,11 +1,99 @@
 # Status
 
-Updated: 2026-10-22 — Queue return-to-source accepted and merged as 70e1a61; latest accepted APK 1.3.0 (1290), source b225ff9; B52 loudness normalization selected next; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
+Updated: 2026-10-23 — B52 volume-normalization review checked on host, unmerged feature/volume-normalization; latest test APK 1.3.0 (1297), source 9b99bb4; latest accepted APK 1.3.0 (1290), source b225ff9; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; prepared AAB 1.3.0 (1269), tag v1.3.0/master d456fa7; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B52 Volume normalization — experimental Android playback
+
+**Review update, 2026-10-23:** initial listening confirms a difference, not quality acceptance.
+Review hardening preserves gain smoothing across live stereo-mix changes, binds atomic gain
+commands to their measured mix and keeps a preparing decoder private until adoption, with
+cleanup at both cancellation handoffs. Initial Mono/Narrow no longer falsely invalidates
+whole-song measurement. Three production Player regressions failed before their fixes;
+bypassing cleanup failed three Kotlin ownership tests. All corrections are restored and checked.
+
+**Checked:** forced full gate **1162 tests / 152 suites**, zero failures/errors/skips,
+**703 s** overall; all 31 unit-stage tasks executed (**453.0 s**). All companion checks pass,
+including the final **41 Player/analysis + 12 DSP** cases. The same **53** pass ASan/UBSan.
+Lint **0 errors / 73 unchanged warnings**, **134.6 s**; warning identities/messages match the
+previous report. Four decoded-prefix measurements remain unchanged. The final native-only
+correction preceded the native stage; the running JVM stage's inputs remained byte-identical.
+
+Minified, test-signed release **1.3.0 (1297)**, clean source
+**9b99bb45cfee63a4746ee3cc60187337de2a22f6**, built in **225 s** (226.2 s supervised):
+[protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk](../dist/protracktor-release-1.3.0-1297-9b99bb4-20261023-005024.apk),
+**11,963,575 bytes**, SHA-256
+`457acdd507adf773d0ecc7778b0a8ddce52b559c2a0bb98663775d112b398887`.
+Independent inspection confirms v2 test signature, version/source, non-debuggable manifest,
+ZIP CRCs/16 KB alignment, minSdk 29/targetSdk 36, all three engine/UADE ABIs and normalization
+JNI exports. R8 executed; mapping and evidence are retained under ignored
+`user/volume-normalization-verification/`. **Unchecked:** this replacement APK's Android sound,
+live transitions/loading interaction, accessibility and device power cost. No merge or acceptance.
+[Findings and rationale](VOLUME_NORMALIZATION.md#code-review-and-hardening--2026-10-23).
+
+### Original implementation and APK 1295 — historical verification
+
+Selected 2026-10-22, branch `feature/volume-normalization` from develop **9c44fc9**. Settings
+offers Off/On, default Off. Use bounded prefix analysis and independent per-subsong/content/mix
+measurement cache, fixed trim towards -23 LUFS and an emergency linked sample-peak guard.
+Measurements happen before focus ducking; source files, system volume and web stay untouched,
+and normalization is not applied to exported audio.
+No schema migration or new dependency. [Contract and limitations](VOLUME_NORMALIZATION.md).
+
+**Checked so far:** twelve pure DSP checks and 38 production native Player/analysis checks,
+including JNI, ducking, BT recovery, subsong reset, exact settled Off bypass and nonblocking
+controls during seek. Gain-policy and callback-bypass mutations demonstrably fail regressions;
+both were restored. Restoring a blocking snapshot also fails the controlled seek regression;
+the nonblocking implementation was restored. Final ASan/UBSan passed all 50 native/DSP checks,
+including actual-default-subsong metadata and its multiline-message boundary.
+Four actual 20-second decoded IT/S3M/SPC/VGZ prefixes measured -26.25/-18.55/-10.43/-31.57 LUFS;
+the experimental policy produces -23/-23/-23/-25.57 LUFS. The remaining quieter VGZ respects
+the +6 dB partial-analysis cap. This is numeric host evidence, not a listening test.
+
+Focused verification passed 17 tests / 5 suites, zero failures/errors/skips, in 129.1 s.
+The checksum mutation fails on a one-bit mantissa change that still passes range validation;
+the checksum was restored. Disabling the relative gate likewise fails its audible-quiet-section
+regression and was restored. The final hardening/loading hook passed the full forced gate.
+The host UI fixture
+substitutes only the unavailable Android decoder fingerprint used by the unrelated storage
+overview; Settings/VM/controller/persistence and the physical switch stay real. Android sound,
+layout, CPU/battery cost and practical acceptance are **unchecked**. No merge or push.
+
+The first full gate was deliberately interrupted after 370 s, with no observed test failures,
+because inspection exposed a normalization-identity issue: ASAP/sc68/SID can open a nonzero
+default subsong without a text metadata field. A production Player regression failed before
+publishing its actual typed index in Android metadata, before the multiline message. This fixes
+both normalization identity and the initial Android subsong indicator, including existing consumers
+of that selection. It does not apply normalization to exports or alter web metadata. The parser
+guard preserves message contents. The complete verification below was rerun after this correction.
+
+Clean source **48466de589f533397527c405c51ad0c8284d5183** passed the forced full gate in
+**685 s**: **1158 tests / 152 suites**, zero failures/errors/skips. All 31 unit-stage tasks
+executed (**489.0 s**). All companion checks passed, including 581 page, 49 engine, 8 SAP,
+50 native/DSP and 11 server checks, web migration, metadata, runner/release fixtures, icons and PWA.
+Fresh lint completed in **103.7 s**, **0 errors / 73 warnings**. Compared with the previous 72,
+the additional advisory is UseKtx in unchanged `RecentSearchPreferences.kt`, not normalization code.
+
+Minified, test-signed release APK built in **231 s** (233.3 s supervised invocation):
+[protracktor-release-1.3.0-1295-48466de-20261023-001631.apk](../dist/protracktor-release-1.3.0-1295-48466de-20261023-001631.apk),
+**11,960,131 bytes**, SHA-256
+`8f4974e5e81940f2243f412bf0411400e9715a4f4ffa1f7c6124d3818b8eef5f`.
+The agent independently checked v2 test signature, package/name/code, full embedded source SHA,
+absence of the debuggable flag, ZIP CRCs/alignment, minSdk 29/targetSdk 36 and all three engine/
+UADE ABIs. All three new normalization JNI symbols are exported in each ABI. R8 executed and
+its mapping was retained. Public test-certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Evidence is retained in ignored `user/volume-normalization-verification/`; subsequent docs do
+not relabel this device-test artifact. No Play upload, push or merge. Develop remains **9c44fc9**,
+master/tag remain **d456fa7**, AMP untouched. VersionName stays 1.3.0 and schema 23.
+
+**Checked on the host:** the measurements, tests, sanitizer and artifact properties above.
+**Unchecked:** Android sound/transition comfort, UI, first-play delay, battery/accessibility and
+phone acceptance. Use the [phone checklist](TESTING.md#b52-volume-normalization--trial).
 
 ## Queue return-to-source — trial
 

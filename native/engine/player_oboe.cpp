@@ -9,9 +9,11 @@
 // process instead is `docs/OPEN_QUESTIONS.md` Q9.
 
 #include <cmath>
+#include <bit>
 #include <algorithm>
 #include "engine.h"
 #include "stereo_mix.h"
+#include "loudness_analysis.h"
 #include "log.h"
 
 #include <jni.h>
@@ -31,6 +33,15 @@ namespace {
 
 using protracktor::Backend;
 using protracktor::openBackend;
+
+// Low 32 bits hold the gain; flags and mix identity form one command with its revision.
+constexpr std::uint64_t normalizationEnabled = 1ull << 32;
+constexpr std::uint64_t normalizationPrepared = 1ull << 33;
+constexpr std::uint64_t normalizationMixMask = 3ull << 34;
+constexpr std::uint64_t normalizationRevision = 1ull << 36;
+constexpr std::uint64_t normalizationMix(int width) {
+    return (width == 0 ? 2ull : width == 50 ? 1ull : 0ull) << 34;
+}
 
 /**
  * Nothing thrown by a decoder may leave this file (`docs/STATUS.md` C42, C55).
@@ -122,6 +133,8 @@ public:
         {
             const std::lock_guard<std::mutex> held(decoderGuard_);
             if (!backend_->selectSubsong(index)) return;
+            normalizer_.reset();
+            continuousMeasurement_ = true;
             finished_.store(false, std::memory_order_release);
             publishPosition();
             publishDuration();
@@ -183,7 +196,27 @@ public:
             },
             0);
 
-        stereoMixer_.process(out, rendered, stereoWidth_.load(std::memory_order_relaxed), stream->getSampleRate());
+        const int width=stereoWidth_.load(std::memory_order_relaxed);
+        const bool mixChanged=width!=processedWidth_;
+        if (mixChanged) {
+            if (normalizer_.hasMeasurement()) continuousMeasurement_=false;
+            normalizer_.resetMeasurement(); processedWidth_=width;
+        }
+        const auto normalization=normalizationControl_.load(std::memory_order_acquire);
+        if (mixChanged || normalization!=appliedNormalization_) {
+            const bool enabled=(normalization & normalizationEnabled)!=0;
+            const bool prepared=(normalization & normalizationPrepared)!=0 &&
+                (normalization & normalizationMixMask)==normalizationMix(width);
+            // A callback can observe the new width and an older command, or vice versa.
+            // Never apply another mix's profile; reconsider the command when its width arrives.
+            const float gain=prepared ? std::bit_cast<float>(static_cast<std::uint32_t>(normalization)) :
+                protracktor::VolumeNormalizer::gainFor({});
+            normalizer_.configureGain(enabled,gain,prepared);
+            if (!enabled) continuousMeasurement_=false;
+            appliedNormalization_=normalization;
+        }
+        stereoMixer_.process(out, rendered, width, stream->getSampleRate());
+        normalizer_.process(out, rendered, stream->getSampleRate());
 
         // Ducking is applied here rather than by stopping the stream. A notification arriving should
         // lower the music for a moment, not end it -- and the only place a gain can be applied
@@ -259,6 +292,11 @@ public:
         // unreadable description costs a line of metadata, not the process.
         std::string text = guarded<std::string>("describe", [&] { return protracktor::describeOf(*backend_); },
                                                 std::string());
+        // ASAP/sc68/SID may open a nonzero default without including its index in their text.
+        // Publish the decoder's typed value so both the UI and loudness identity use that tune.
+        const int subsong=guarded<int>("currentSubsong",[&]{ return backend_->currentSubsong(); },0);
+        // The multiline message consumes the rest of the block, so metadata must precede it.
+        text = "subsong\t" + std::to_string(std::max(0,subsong)) + "\n" + text;
         const std::lock_guard<std::mutex> held(describeGuard_);
         describe_ = std::move(text);
     }
@@ -267,7 +305,25 @@ public:
     void setGain(float gain) { gain_.store(gain, std::memory_order_relaxed); }
 
     void setStereoWidth(int percent) {
-        stereoWidth_.store(percent == 0 || percent == 50 ? percent : 100, std::memory_order_relaxed);
+        const int width=percent == 0 || percent == 50 ? percent : 100;
+        stereoWidth_.store(width,std::memory_order_relaxed);
+    }
+
+    void setNormalization(bool enabled, const protracktor::LoudnessProfile& profile) {
+        // Publish one complete command; neither the UI nor audio thread waits behind a seek.
+        const auto data=std::uint64_t(std::bit_cast<std::uint32_t>(protracktor::VolumeNormalizer::gainFor(profile))) |
+            (enabled ? normalizationEnabled : 0) | (profile.usable() ? normalizationPrepared : 0) |
+            normalizationMix(stereoWidth_.load(std::memory_order_relaxed));
+        auto old=normalizationControl_.load(std::memory_order_relaxed);
+        while (!normalizationControl_.compare_exchange_weak(old,
+            ((old+normalizationRevision) & ~(normalizationRevision-1))|data,
+            std::memory_order_release,std::memory_order_relaxed)) {}
+    }
+    protracktor::LoudnessProfile normalizationProfile() {
+        const std::unique_lock<std::mutex> held(decoderGuard_,std::try_to_lock);
+        if (!held.owns_lock() || processedWidth_!=stereoWidth_.load(std::memory_order_relaxed) ||
+            appliedNormalization_!=normalizationControl_.load(std::memory_order_acquire)) return {};
+        return normalizer_.profile(continuousMeasurement_ && isFinished());
     }
 
     /**
@@ -292,6 +348,7 @@ public:
             return seekRequests_.load(std::memory_order_acquire) != mine;
         };
         backend_->seek(target);
+        continuousMeasurement_=false;
         backend_->seekAbandoned = nullptr;
         finished_.store(false, std::memory_order_release);
         publishPosition();
@@ -301,6 +358,7 @@ public:
     bool restart() {
         stop();
         backend_->rewind();
+        continuousMeasurement_=false;
         finished_.store(false, std::memory_order_release);
         publishPosition();
         return start();
@@ -475,6 +533,11 @@ private:
     std::atomic<float> gain_{1.0f};
     std::atomic<int> stereoWidth_{100};
     protracktor::StereoMixer stereoMixer_;
+    protracktor::VolumeNormalizer normalizer_;
+    std::atomic<std::uint64_t> normalizationControl_{0};
+    std::uint64_t appliedNormalization_=0;
+    int processedWidth_=100;
+    bool continuousMeasurement_=true;
 
     /**
      * Held by whoever is touching the decoder. **The audio callback only ever tries.**
@@ -601,6 +664,40 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderOpen(JNIEnv *env, jc
     std::unique_ptr<Backend> backend =
         openFromJava(env, data, fileName, companionNames, companionData, errorOut);
     return reinterpret_cast<jlong>(backend.release());
+}
+
+JNIEXPORT jdoubleArray JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeMeasureLoudness(JNIEnv *env, jclass, jbyteArray data,
+    jstring fileName, jobjectArray companionNames, jobjectArray companionData, jint subsong, jint width) {
+    return guarded<jdoubleArray>("measureLoudness", [&]() -> jdoubleArray {
+        auto backend=openFromJava(env,data,fileName,companionNames,companionData,nullptr);
+        if (!backend) return nullptr;
+        const int selected=subsong<0?backend->currentSubsong():subsong;
+        const auto p=protracktor::analyseLoudness(*backend,selected,width);
+        const jdouble values[]={p.seconds,p.lufs,p.peak,p.complete?1.:0.,double(selected)};
+        const auto result=env->NewDoubleArray(5);
+        if (result) env->SetDoubleArrayRegion(result,0,5,values);
+        return result;
+    },nullptr);
+}
+
+JNIEXPORT jdoubleArray JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeLoudnessProfile(JNIEnv *env,jclass,jlong handle) {
+    return guarded<jdoubleArray>("loudnessProfile",[&]() -> jdoubleArray {
+        const auto p=asPlayer(handle)->normalizationProfile();
+        const jdouble values[]={p.seconds,p.lufs,p.peak,p.complete?1.:0.};
+        const auto result=env->NewDoubleArray(4);
+        if (result) env->SetDoubleArrayRegion(result,0,4,values);
+        return result;
+    },nullptr);
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetNormalization(JNIEnv*,jclass,jlong handle,
+    jboolean enabled,jdouble seconds,jdouble lufs,jdouble peak,jboolean complete) {
+    guardedVoid("setNormalization",[&] {
+        asPlayer(handle)->setNormalization(enabled,{seconds,lufs,peak,complete==JNI_TRUE});
+    });
 }
 
 JNIEXPORT void JNICALL

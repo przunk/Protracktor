@@ -37,6 +37,7 @@ object Appearance {
     private const val CACHE_AHEAD = "cache_ahead"
     private const val SHARE_AUDIO_MINUTES = "share_audio_minutes"
     private const val STEREO_MIX = "stereo_mix"
+    private const val VOLUME_NORMALIZATION = "volume_normalization"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -167,6 +168,14 @@ object Appearance {
 
     fun stereoMix(context: Context): com.przunk.protracktor.player.StereoMix =
         com.przunk.protracktor.player.StereoMix.fromStored(prefs(context).getString(STEREO_MIX, null))
+
+    fun volumeNormalization(context: Context): Boolean = prefs(context).getBoolean(VOLUME_NORMALIZATION,false)
+
+    fun selectVolumeNormalization(context: Context, enabled: Boolean): Boolean {
+        if (volumeNormalization(context)==enabled) return false
+        prefs(context).edit().putBoolean(VOLUME_NORMALIZATION,enabled).apply()
+        return true
+    }
 
     fun selectStereoMix(context: Context, mode: com.przunk.protracktor.player.StereoMix): Boolean {
         if (stereoMix(context) == mode) return false

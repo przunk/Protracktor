@@ -59,6 +59,7 @@ class SettingsStereoMixTest {
             MaterialTheme {
                 SettingsScreen(
                     playAllSubsongs = false, stereoMix = selected.value,
+                    volumeNormalization = false, onVolumeNormalizationChanged = {},
                     onStereoMixSelected = { mode ->
                         requests += mode
                         Appearance.selectStereoMix(activity.get(), mode)

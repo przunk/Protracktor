@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <functional>
 #include <limits>
+#include <future>
 #include "../../native/engine/player_oboe.cpp"
 
 namespace protracktor {
@@ -374,6 +375,119 @@ int main() {
             require(std::abs(back[0] - first[first.size() - 2]) < 0.003f, "mid-ramp retarget jumped");
             require(back[back.size() - 2] == 1.0f && back.back() == 0.0f, "Original did not settle exactly");
         }
+    });
+    check("normalization JNI applies before independent focus ducking and survives Bluetooth", [] {
+        Fixture f; f.decoder->left=.5f; f.decoder->right=.25f;
+        Java_com_przunk_protracktor_engine_NativeEngine_nativeSetNormalization(nullptr,nullptr,
+            reinterpret_cast<jlong>(&f.player),JNI_TRUE,20,-6,.5,JNI_TRUE);
+        f.player.setGain(.25f); f.player.start();
+        const auto first=f.stream()->render();
+        require(first[0]<.05f && first[0]>0,"normalization absent or silent");
+        f.stream()->fail(); require(f.player.recoverOutput()==1,"route recovery failed");
+        require(f.stream()->render()[0]==first[0],"route reset normalization");
+        f.player.setGain(1); const auto restored=f.stream()->render();
+        require(std::abs(restored[0]-first[0]*4)<1e-6,"focus gain replaced normalization");
+        require(std::abs(restored[0]/restored[1]-2)<1e-5,"stereo balance changed");
+    });
+    check("a new subsong cannot inherit the previous tune's boost", [] {
+        Fixture f; f.decoder->left=.01f; f.decoder->right=.01f;
+        f.player.setNormalization(true,{20,-45,.01,true}); f.player.start();
+        require(f.stream()->render()[0]>.03f,"fixture not boosted");
+        f.player.requestSubsong(3);
+        require(f.stream()->render()[0]<=.0051f,"new subsong inherited boost");
+    });
+    check("normalized final audio retains its sample bound and silent tail", [] {
+        Fixture f; f.decoder->left=5; f.decoder->right=2.5; f.decoder->frameLimit=2;
+        f.player.setNormalization(true,{20,-30,.01,false}); f.player.start();
+        const auto data=f.stream()->render(8);
+        for(float x:data) require(std::abs(x)<=protracktor::VolumeNormalizer::ceiling+1e-6,"peak escaped");
+        for(std::size_t i=4;i<data.size();++i) require(data[i]==0,"EOF tail not silent");
+        require(f.player.isFinished(),"EOF swallowed");
+    });
+    check("turning normalization Off settles to exact original PCM without reopening output", [] {
+        Fixture f; f.decoder->left=.1f; f.decoder->right=-.1f;
+        f.player.setNormalization(true,{20,-6,.5,true}); f.player.start();
+        const auto first=f.stream()->render(); f.player.setNormalization(false,{});
+        const auto transition=f.stream()->render(5000);
+        require(std::abs(transition[0]-first[0])<.0001,"Off produced an abrupt gain jump");
+        const auto bypass=f.stream()->render();
+        require(bypass[0]==.1f && bypass[1]==-.1f,"Off not exact after settling");
+        require(oboe::TestDevice::streams.size()==1 && f.decoder->rewinds==0,"setting reopened playback");
+    });
+    check("paused normalization settings neither start playback nor call length measurement", [] {
+        Fixture f; f.player.setNormalization(true,{}); f.player.setNormalization(false,{});
+        require(oboe::TestDevice::streams.empty() && f.decoder->started==0,"setting started audio");
+    });
+    check("changing stereo mix preserves the live trim while a new profile ramps in", [] {
+        Fixture f; f.decoder->left=.1f; f.decoder->right=0;
+        f.player.setNormalization(true,{20,-6,.5,true}); f.player.start();
+        const auto before=f.stream()->render();
+        f.player.setStereoWidth(0);
+        f.player.setNormalization(true,{20,-29,.1,false});
+        const auto transition=f.stream()->render(12000);
+        require(std::abs(transition[0]-before[0])<.0001,"mix change jumped to the new gain");
+        require(transition.back()>.09f,"new mix profile did not settle");
+    });
+    check("a profile for another stereo mode waits until that mode is actually rendered", [] {
+        Fixture f; f.decoder->left=.1f; f.decoder->right=0;
+        f.player.setNormalization(true,{20,-6,.5,true}); f.player.start(); f.stream()->render();
+        // Model the callback seeing a width and a command from different control updates.
+        f.player.setStereoWidth(0);
+        f.player.setNormalization(true,{20,-29,.1,false});
+        f.player.setStereoWidth(100);
+        const auto original=f.stream()->render(12000);
+        require(std::abs(original[original.size()-2]-.05f)<.0001,"wrong-mode profile was applied");
+        f.player.setStereoWidth(0);
+        const auto mono=f.stream()->render(12000);
+        require(mono.back()>.09f,"matching cached command was lost after the width changed");
+    });
+    check("an initial mix can finish a whole-song measurement but a live mix change cannot", [] {
+        for (int width : {0,50,100}) {
+            Fixture f; f.decoder->left=.1f; f.decoder->right=.1f;
+            f.player.setStereoWidth(width); f.player.setNormalization(true,{20,-23,.1,false});
+            f.player.start(); f.decoder->frameLimit=24000; f.stream()->render(48000);
+            const auto profile=f.player.normalizationProfile();
+            require(profile.usable() && profile.complete,"initial stereo mode invalidated a complete measurement");
+        }
+        Fixture f; f.decoder->left=.1f; f.decoder->right=.1f;
+        f.player.setNormalization(true,{20,-23,.1,false}); f.player.start(); f.stream()->render(24000);
+        f.player.setStereoWidth(0); f.player.setNormalization(true,{20,-23,.1,false});
+        f.decoder->frameLimit=24000; f.stream()->render(48000);
+        const auto profile=f.player.normalizationProfile();
+        require(profile.usable() && !profile.complete,"live mix change claimed a whole-song measurement");
+    });
+    check("bounded analysis drives a separate decoder without starting background measurements", [] {
+        Decoder d; const auto p=protracktor::analyseLoudness(d,2,100,100,.5);
+        require(p.seconds>=.49 && p.seconds<=.51 && !p.complete,"prefix marked complete or duration unbounded");
+        require(d.started==0 && d.rewinds==0 && d.position>12,"analysis used playback lifecycle");
+    });
+    check("normalization controls and cache snapshots never wait behind an in-flight seek", [] {
+        struct BusyDecoder: Decoder {
+            std::promise<void> entered, release;
+            void seek(double) override { entered.set_value(); release.get_future().wait(); }
+        };
+        auto backend=std::make_unique<BusyDecoder>(); auto* busy=backend.get(); Fixture f(std::move(backend));
+        f.player.start(); auto seeking=std::async(std::launch::async,[&]{ f.player.seek(20); });
+        busy->entered.get_future().wait();
+        auto control=std::async(std::launch::async,[&]{
+            f.player.setNormalization(true,{20,-20,.1,false}); f.player.setStereoWidth(0);
+            return f.player.normalizationProfile().seconds;
+        });
+        const auto status=control.wait_for(std::chrono::milliseconds(200));
+        busy->release.set_value(); seeking.get(); const auto seconds=control.get();
+        require(status==std::future_status::ready && seconds==0,"UI waited for the decoder");
+    });
+    check("published Android metadata identifies the actual default subsong even without a backend text field", [] {
+        Fixture f;
+        require(f.player.describe().find("subsong\t2\n")!=std::string::npos,"initial subsong guessed as zero");
+        f.player.requestSubsong(3);
+        require(f.player.describe().find("subsong\t3\n")!=std::string::npos,"selected subsong metadata not refreshed");
+        struct MessageDecoder: Decoder {
+            std::string describe() const override { return "message\tNotes\nsubsong\t999"; }
+        };
+        Fixture withMessage(std::make_unique<MessageDecoder>());
+        require(withMessage.player.describe()=="subsong\t2\nmessage\tNotes\nsubsong\t999",
+            "metadata was appended inside a multiline message");
     });
     std::cout << total << " audio-host checks, " << failed << " failed\n";
     return total == 0 || failed > 0 ? 1 : 0;
