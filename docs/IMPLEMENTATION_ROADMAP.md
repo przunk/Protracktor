@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-24. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-25. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
 The latest prepared tagged AAB is **1.4.0 (1304)**; upload and Play publication are unconfirmed.
@@ -45,6 +45,8 @@ later device builds and remaining checks are recorded in the [contract](VOLUME_N
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B54 | Floating playback controls | Proposal recorded 2026-10-25; selected for discussion next. Scope, placement, actions and in-app versus cross-app behaviour remain open; no implementation selected. [Wishlist](WISHLIST.md#b54-floating-playback-controls--for-discussion-recorded-2026-10-25). |
+| B53 | Integrate a free music library | Proposal recorded 2026-10-25. Identify the intended service and URL before assessing access and integration; no provider or implementation selected. [Wishlist](WISHLIST.md#b53-integrate-a-free-music-library--idea-recorded-2026-10-25). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
@@ -81,6 +83,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
+| C120 | Same song heard twice consecutively with playlist shuffle | Observation recorded 2026-10-25; potential defect, not reproduced or diagnosed. Build, playlist contents, repeat mode and transition details remain unknown; verify the shuffle contract before deciding on a fix. [Report](STATUS.md#c120-same-song-heard-twice-consecutively-with-playlist-shuffle). |
 | ~~C119~~ | ~~Nested Modland legacy unknown-author folders are outside C109's recovery rule~~ | Accepted after satisfactory phone playback and merged **0a7bcc0**, 2026-10-22. Exact-directory recovery at variable depth without ID/cache changes; failing-before-fix regressions, real non-silent host decode, forced 1119-test full gate and fresh lint passed. APK **1.3.0 (1285)**, source **657f4da**, unchanged. Detailed phone scenarios not individually reported. [Report](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download). |
 | C118 | Open History does not reflect newly recorded playback until leaving and reopening it | User report, 2026-10-21. Open, not implemented or independently reproduced. Reconcile live updates with A56's stable History ordering and no self-recording policy. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open). |
 | ~~C116~~ | ~~Queue briefly flashes after Next scrolls below the viewport~~ | Accepted and merged **3bc5a98**, 2026-10-21. Surviving-row opacity regression failed before correction; disappearance/placement retained. Overall trial accepted; granular phone results not enumerated. [Evidence](QUEUE_AUTO_FOLLOW.md). |

@@ -1,11 +1,23 @@
 # Status
 
-Updated: 2026-10-24 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest supplied test APK remains 1.3.0 (1301), source 296de93; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; schema 23.
+Updated: 2026-10-25 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest supplied test APK remains 1.3.0 (1301), source 296de93; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C120 Same song heard twice consecutively with playlist shuffle
+
+Playback observation recorded 2026-10-25: with shuffle enabled on a playlist, the same song
+played twice in succession. **Potential defect; not independently reproduced or diagnosed.**
+The installed build, playlist size and entries, repeat mode, and whether the transition was
+automatic or requested with Next were not supplied.
+
+Before deciding whether this violates the shuffle contract, distinguish a repeated playlist
+entry from duplicate entries for the same file, a shuffle-cycle boundary, subsongs and manual
+queue requests. These are investigation questions, not established explanations. No code
+analysis, test, fix or behaviour change has been performed for this report.
 
 ## Prepared 1.4.0 release — 2026-10-24
 

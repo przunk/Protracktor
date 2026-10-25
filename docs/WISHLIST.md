@@ -10,6 +10,21 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B54. Floating playback controls — for discussion, recorded 2026-10-25
+
+New feature proposal: add floating playback controls. This is the next topic selected for
+discussion; no design or implementation has been agreed. Clarify the intended use, where the
+controls should appear, their actions, positioning and dismissal, and how they relate to the
+existing dock and notification. Whether they stay within the app or appear over other apps
+remains open.
+
+## B53. Integrate a free music library — idea, recorded 2026-10-25
+
+New feature proposal: connect an additional free music library. The intended service and URL
+have not yet been identified. Establish those before assessing catalogue access, playback and
+download options, metadata, supported formats and integration terms. No provider, access method
+or implementation has been selected.
+
 ## B52. ~~Consistent perceived loudness between tracks~~ — DONE 2026-10-23
 
 Retained and merged as **4aab46e** after phone feedback reported comparable perceived loudness
