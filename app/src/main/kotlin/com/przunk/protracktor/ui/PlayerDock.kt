@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -92,6 +91,8 @@ fun PlayerDock(
     onRepeat: () -> Unit,
     modifier: Modifier = Modifier,
     onQueue: () -> Unit = {},
+    onLongPlayPause: (() -> Unit)? = null,
+    longPlayPauseLabel: String? = null,
 ) {
     val haptics = rememberHaptics()
     val loaded = state.current
@@ -264,12 +265,13 @@ fun PlayerDock(
                     longClickEnabled = state.canGoPreviousFile,
                 )
 
-                FilledIconButton(
-                    onClick = { haptics.press(); onPlayPause() },
+                PlayPauseButton(
+                    onClick = onPlayPause,
+                    onLongClick = onLongPlayPause,
+                    longDescription = longPlayPauseLabel,
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
                     enabled = state.loadingTrack || state.current != null || state.transportQueue.tracks.isNotEmpty() || state.schedule.pending.isNotEmpty(),
-                    modifier = Modifier.size(64.dp),
                 ) {
                     // Three states, not two. A track being fetched is not "paused", and the button
                     // that would restart the same download is the one press nobody wants twice.
@@ -319,6 +321,39 @@ fun PlayerDock(
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlayPauseButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    longDescription: String?,
+    content: @Composable () -> Unit,
+) {
+    val haptics = rememberHaptics()
+    val currentClick by rememberUpdatedState(onClick)
+    val currentHold by rememberUpdatedState(onLongClick)
+    // A changing playback position must not restart a hold that is already in progress.
+    val click = remember { { haptics.press(); currentClick() } }
+    val hold = remember { { haptics.gestureEnd(); currentHold?.invoke(); Unit } }
+    Surface(
+        modifier = Modifier.size(64.dp).clip(CircleShape).combinedClickable(
+            enabled = enabled,
+            role = Role.Button,
+            onClick = click,
+            onLongClick = if (onLongClick != null) hold else null,
+            onLongClickLabel = longDescription,
+        ),
+        shape = CircleShape,
+        color = if (enabled) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
     }
 }
 

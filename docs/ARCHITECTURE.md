@@ -12,7 +12,8 @@ enabled panel subscribes to that projection. Its callbacks use the same controll
 session and notification. It adds no queue, engine, database schema or dependency.
 `FloatingPanelPosition` stores normalized travel coordinates; `FloatingPanelDrag` uses screen
 coordinates and touch slop to avoid feedback from a moving window's origin. The dedicated handle
-alone moves the window. The Now Playing action explains and checks the optional overlay grant.
+alone moves the window. A hold on the dock Play/Pause control invokes the permission flow in the
+application shell; its result launcher remains registered independently of Now Playing visibility.
 EN/PL presentation follows the selected app language. Android/Maps behaviour still requires phone
 acceptance; host checks do not establish visibility over another app.
 

@@ -5,15 +5,19 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## B54 Floating controls — phone acceptance pending
 
-[Contract and host evidence](FLOATING_CONTROLS.md#test-apk-and-verification). Use branch release
+[Contract and host evidence](FLOATING_CONTROLS.md). Use branch release
 **1.4.0 (1309), source 9c73ad0**, recorded in [Status](STATUS.md); the earlier 1.3.0 APK does
 not contain this feature. The 1195-test full host gate, lint and independent APK inspection passed;
 these are not phone acceptance. Test while parked.
 
-1. Start Random and open expanded Now Playing → **Floating controls**. Decline the explanation
+1. Start Random and hold the dock's **Play/Pause** control. An ordinary tap must still only
+   play/pause, with no new button or row in expanded Now Playing. Decline the explanation
    or the Android permission once: audio stays unchanged and refusal is explained. Try again,
    choose **Open settings**, enable **Display over other apps** for Protracktor, and return.
    Repeat with a rotation while Android settings is open; the pending activation should survive.
+   If Android blocks the switch, check **Settings → Apps → Protracktor → ⋮ → Allow restricted
+   settings**, if available, then retry **Display over other apps**. Record whether this resolves
+   the reported refusal; the APK does not override system restrictions.
 2. Open actual Google Maps. The panel should remain above it, with maps usable outside its
    bounds. Drag only the **Move** handle; tapping or swiping transport buttons must not move it.
    Check that the panel stays under the finger while moving in every direction.
@@ -22,7 +26,8 @@ these are not phone acceptance. Test while parked.
 4. Press **Keep** twice quickly: the heart stays in its slot, no accidental Next occurs, and
    saving completes to the selected playlist. Hide, return to the playlist, restart the app and
    check persistence. A filled heart must not remove a track.
-5. **Hide** removes the panel while audio continues. Reopen it and check remembered placement.
+5. **Hide**, or holding the dock's **Play/Pause** again, removes the panel while audio continues.
+   Reopen it with another hold and check remembered placement.
    Rotate with Maps visible, then hide/reopen in each orientation. Avoid clipping at cutouts,
    navigation/status bars and screen edges. Verify EN/PL and enlarged system text.
 6. Lock/unlock the phone: no panel over the lock screen, and an explicitly enabled session can

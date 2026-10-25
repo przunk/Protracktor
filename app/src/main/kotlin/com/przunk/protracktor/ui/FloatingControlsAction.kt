@@ -16,19 +16,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.FloatingControls
 
+internal data class FloatingControlsToggle(val onToggle: () -> Unit, val label: String)
+
 @Composable
-internal fun FloatingControlsAction(available: Boolean, modifier: Modifier = Modifier) {
+internal fun rememberFloatingControlsAction(available: Boolean): FloatingControlsToggle {
     val context = LocalContext.current
     val visible by FloatingControls.visible.collectAsState()
+    val currentVisible by rememberUpdatedState(visible)
     val currentAvailable by rememberUpdatedState(available)
     var explain by rememberSaveable { mutableStateOf(false) }
     var waiting by rememberSaveable { mutableStateOf(false) }
@@ -43,20 +46,17 @@ internal fun FloatingControlsAction(available: Boolean, modifier: Modifier = Mod
             }
         }
     }
-    LabelledAction(
-        PlayerIcons.FloatingControls,
-        stringResource(if (visible) R.string.floating_hide else R.string.floating_show),
-        onClick = {
+    val toggle = remember {
+        {
             when {
-                visible -> FloatingControls.request(context, show = false)
+                waiting -> Unit
+                currentVisible -> FloatingControls.request(context, show = false)
+                !currentAvailable -> problem = R.string.floating_no_track
                 Settings.canDrawOverlays(context) -> FloatingControls.request(context, show = true)
                 else -> explain = true
             }
-        },
-        modifier = modifier,
-        enabled = (available || visible) && !waiting,
-    )
-    if (!available && !visible) Text(stringResource(R.string.floating_no_track))
+        }
+    }
     if (explain) {
         AlertDialog(
             onDismissRequest = { explain = false },
@@ -90,4 +90,6 @@ internal fun FloatingControlsAction(available: Boolean, modifier: Modifier = Mod
             } },
         )
     }
+    return FloatingControlsToggle(toggle,
+        stringResource(if (visible) R.string.floating_hide else R.string.floating_show))
 }

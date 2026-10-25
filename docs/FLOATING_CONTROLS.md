@@ -4,12 +4,15 @@
 
 Implement an Android trial on `feature/floating-playback-controls`, based on develop `b52a6d7`.
 The motivating use is controlling Random while Google Maps is visible. The panel is optional,
-explicitly enabled from expanded Now Playing, and remains available outside Protracktor.
+explicitly enabled by holding the dock's Play/Pause control, and remains available outside Protracktor.
 This is a phone overlay, not an Android Auto integration. Acceptance and merging follow phone
 testing; application versionName remains 1.4.0 and database schema remains 23.
 
 Selected interaction:
 
+- Hold the dock's existing Play/Pause control to show or hide the panel, with haptic feedback and
+  an accessibility action label. Ordinary taps retain Play/Pause/Stop. There is no dedicated
+  floating-controls button in expanded Now Playing.
 - One movable horizontal panel with Previous, Play/Pause and Next, followed by the playlist heart.
 - Dark translucent background with contrasting icons and short visible captions. Primary touch
   targets are at least 64 dp high; the initial panel fits ordinary phone widths. Larger system
@@ -43,8 +46,8 @@ The service owns and removes the window and its Compose lifecycle. Service stop/
 an empty playback session remove it. Temporary loading does not count as an empty session. Hide
 changes presentation only. Activation is session-only: process restart does not silently enable
 the overlay or start audio. Position preferences are independent of playlists and the database.
-An outstanding permission request can complete after activity recreation. Expanded Now Playing
-therefore retains its open state across recreation, preserving its result launcher and saved request.
+An outstanding permission request can complete after activity recreation. The permission flow
+is registered in the application shell, independently of whether Now Playing is expanded.
 Hide the panel while the screen is locked and restore it after unlock only within that explicitly
 enabled service session. Recheck permission during window refresh and handle revocation gracefully.
 
@@ -55,7 +58,8 @@ enabled service session. Recheck permission during window refresh and handle rev
 - An Android window host owns attachment, positioning, disposal and the permission check.
 - A small Compose panel uses the existing icon/caption actions and Haptics; it delegates all
   playback and heart operations to the same controller used by the notification.
-- The Now Playing action owns the permission explanation/return flow. Strings are EN/PL.
+- The application shell owns the permission explanation/return flow; the dock delegates its hold
+  gesture to that shared action. Strings are EN/PL.
 - No new dependency, decoder, schema change, queue behaviour or playback policy is required.
 
 Deferred choices: adjustable size/opacity, vertical layouts, auto-start, automatic edge snapping,
@@ -76,7 +80,7 @@ text. Configure placement before driving; the trial does not establish driving s
 
 ## Implementation review and host checkpoint
 
-Focused verification passed **32 tests / 6 suites**, zero failures, errors or skips. Coverage
+Initial implementation: focused verification passed **32 tests / 6 suites**, zero failures, errors or skips. Coverage
 includes actual panel taps/drag separation, fixed slots during a delayed save, permission denial
 and return/recreation, the window configuration and cleanup on API 29/33, language changes,
 normalized geometry and screen-coordinate dragging. Two controlled negative probes disconnected
@@ -99,7 +103,28 @@ The trial remains on its branch, ready for phone testing and awaiting acceptance
 Actual operation above Google Maps remains unverified. C118, C120, B53 and the separate AMP
 branch are outside this task.
 
-## Test APK and verification
+## Play/Pause hold follow-up — 2026-10-25
+
+Phone feedback found the separate activation button too large and visually intrusive. Replace
+it with a long press on the existing dock Play/Pause control. Keep its size, circular appearance,
+ordinary tap, loading cancellation and transport availability. The hold must not trigger a tap
+or repeat when playback progress recomposes the dock. Haptics and the labelled accessibility
+action provide feedback without adding a visible row.
+
+Android also refused access to the overlay switch on the phone. The reported system message
+is consistent with restricted settings for a sideloaded application; the device model/version
+and successful resolution have not been confirmed. Add conditional instructions to the denied-
+grant explanation: in Android **Settings → Apps → Protracktor → ⋮ → Allow restricted settings**, if
+available, then grant **Display over other apps**. The application cannot grant this permission
+for itself, and the new APK does not claim to remove the system restriction. No global security
+setting is changed. [Android's restricted-settings help](https://support.google.com/android/answer/12623953?hl=en).
+
+For this iteration, run focused gesture/permission regressions and build a release APK, without
+repeating the full test suite, as requested. The earlier full-gate evidence below remains tied
+to its original source; it does not establish a full pass for the follow-up. Phone checks remain
+open. Updated artifact and focused results will be recorded after building.
+
+## Initial test APK and verification
 
 The agent ran the full host gate against clean source
 **9c73ad0441cd256c4937a98df2f053f04542db2f**: **1195 tests / 158 suites**, zero failures,

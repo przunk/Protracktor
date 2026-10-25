@@ -289,10 +289,10 @@
     <string name="floating_keep_unavailable">A loaded track and selected playlist are needed to save.</string>
     <string name="floating_no_track">Load a track to enable floating controls.</string>
     <string name="floating_permission_explanation">Show playback controls over other apps, such as Maps. In Android settings, allow Protracktor to display over other apps, then return here. Hiding the controls keeps your music playing.</string>
-    <string name="floating_permission_denied">Floating controls need permission to display over other apps. Playback is unchanged. You can try again from Now Playing.</string>
+    <string name="floating_permission_denied">Android has not granted permission to display over other apps. If the switch is blocked, open Settings → Apps → Protracktor → ⋮ → Allow restricted settings, if available, then enable Display over other apps. Playback is unchanged. Hold Play/Pause to try again.</string>
     <string name="floating_open_settings">Open settings</string>
     <string name="floating_settings_unavailable">Android could not open overlay settings. You can allow Protracktor under Special app access → Display over other apps, then try again.</string>
-    <string name="floating_unavailable">Could not show floating controls. Check overlay permission and load a track, then try again from Now Playing.</string>
+    <string name="floating_unavailable">Could not show floating controls. Check overlay permission and load a track, then hold Play/Pause to try again.</string>
     <string name="notification_playlist_add">Add to %1$s</string>
     <string name="notification_playlist_member">On %1$s</string>
     <string name="notification_playlist_saving">Saving %1$s…</string>

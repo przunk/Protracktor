@@ -15,7 +15,7 @@ been overtaken by work already done, it says so.
 Selected for implementation after discussion on 2026-10-25: optional controls above other Android
 apps, motivated by Random playback with Google Maps visible. The horizontal panel has Previous,
 Play/Pause, Next and the existing add-and-save playlist heart, a separate drag handle and Hide.
-Activation is manual from expanded Now Playing, with an explicit overlay grant. Pause retains
+Activation is manual by holding the dock Play/Pause control, with an explicit overlay grant. Pause retains
 the panel; Hide leaves audio playing; normalized placement is remembered. Use the same playback
 controller and save guards as the notification. Implementation is on
 `feature/floating-playback-controls`, unmerged and not yet accepted on a phone.

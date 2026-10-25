@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
@@ -115,11 +114,6 @@ fun NowPlaying(
             // So the strip knows a *different file* is playing rather than inferring it from the
             // count, which two unrelated files can easily share.
             trackKey = track?.id,
-        )
-
-        FloatingControlsAction(
-            available = state.restored && track != null,
-            modifier = Modifier.widthIn(min = 160.dp, max = 240.dp),
         )
 
         // One row of icons with their names underneath, rather than a stack of full-width text

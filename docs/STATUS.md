@@ -10,7 +10,7 @@ Historical dated checks below describe their own builds; they are not current te
 ## B54 Floating controls — branch APK ready for phone testing, 2026-10-25
 
 Implemented on `feature/floating-playback-controls`, based on develop `b52a6d7`; unmerged and
-awaiting phone acceptance. An explicit Now Playing action requests optional overlay permission
+awaiting phone acceptance. Holding the dock Play/Pause control requests optional overlay permission
 and opens a movable, bounded panel above other apps. Previous/Play/Pause/Next and the add-only
 playlist heart delegate to existing playback/save operations. Pause retains the panel; Hide does
 not pause. The service disposes its window and composition; activation is session-only and
@@ -36,6 +36,13 @@ Host previews do not establish operation above Google Maps. Installation and dev
 remain **unchecked**; versionName remains 1.4.0, schema 23, release refs, prepared AAB and AMP
 are untouched. Develop remains `b52a6d7`; this feature is unmerged and nothing was pushed.
 [Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
+
+**Follow-up, 2026-10-25:** the initial phone check found the activation button oversized and
+Android refused access to the overlay setting. Replace the button with a Play/Pause hold; keep
+ordinary taps unchanged, and move permission-result ownership into the application shell. Add
+conditional restricted-settings guidance without claiming to override the system block. Focused
+regressions and a replacement APK are in progress; the full suite is explicitly not repeated for
+this iteration. The results above belong to the initial source 9c73ad0, not the follow-up.
 
 ## C120 Same song heard twice consecutively with playlist shuffle
 

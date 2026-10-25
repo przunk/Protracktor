@@ -204,10 +204,10 @@
     <string name="floating_keep_unavailable">Zapis wymaga wczytanego utworu i wybranej playlisty.</string>
     <string name="floating_no_track">Wczytaj utwór, aby włączyć pływające przyciski.</string>
     <string name="floating_permission_explanation">Wyświetlaj przyciski odtwarzania nad innymi aplikacjami, np. mapami. W ustawieniach Androida zezwól Protracktorowi na wyświetlanie nad innymi aplikacjami, a potem wróć tutaj. Ukrycie przycisków nie przerywa muzyki.</string>
-    <string name="floating_permission_denied">Pływające przyciski wymagają zgody na wyświetlanie nad innymi aplikacjami. Odtwarzanie pozostaje bez zmian. Możesz spróbować ponownie w widoku Teraz odtwarzane.</string>
+    <string name="floating_permission_denied">Android nie udzielił zgody na wyświetlanie nad innymi aplikacjami. Jeśli przełącznik jest zablokowany, otwórz Ustawienia → Aplikacje → Protracktor → ⋮ → Zezwól na ustawienia z ograniczeniami, jeśli ta opcja jest dostępna, a potem włącz wyświetlanie nad innymi aplikacjami. Odtwarzanie pozostaje bez zmian. Przytrzymaj Odtwórz/Pauza, aby spróbować ponownie.</string>
     <string name="floating_open_settings">Otwórz ustawienia</string>
     <string name="floating_settings_unavailable">Android nie mógł otworzyć ustawień. Zezwól Protracktorowi na wyświetlanie nad innymi aplikacjami w sekcji Specjalny dostęp do aplikacji i spróbuj ponownie.</string>
-    <string name="floating_unavailable">Nie udało się wyświetlić pływających przycisków. Sprawdź uprawnienie do wyświetlania nad aplikacjami i wczytaj utwór, a potem spróbuj ponownie w widoku Teraz odtwarzane.</string>
+    <string name="floating_unavailable">Nie udało się wyświetlić pływających przycisków. Sprawdź uprawnienie do wyświetlania nad aplikacjami i wczytaj utwór, a potem przytrzymaj Odtwórz/Pauza, aby spróbować ponownie.</string>
     <string name="notification_playlist_add">Dodaj do %1$s</string>
     <string name="notification_playlist_member">Na liście %1$s</string>
     <string name="notification_playlist_saving">Zapisywanie %1$s…</string>
