@@ -107,7 +107,30 @@ child cancellation caused the physical drag/hold regression to fail; it was rest
 EN/PL/enlarged-PL host previews were rendered and visually inspected, including the production
 native dismissal indicator. The indicator is drawn separately in the host preview because the
 offscreen Compose renderer omits AndroidView. These are not screenshots from Maps or a phone.
-Final verification and artifact identity will be recorded after building.
+Final verification against clean source **24976323fc27614eb34bfc5dba6cfc1b734ff577** passed
+**51 focused tests / 6 suites**, zero failures/errors/skips. This includes the native parent
+dispatch path, one file operation per hold, unavailable-file holds, cancellation, final drop
+coordinates, target cleanup and animation interruption on API 29/33. Fresh lint has **0 errors /
+79 warnings**; tests and lint took **199.8 s** together. The three additional warnings are two
+retired Move/Hide caption resources and `ViewConstructor` for the programmatic drag container,
+whose mandatory callbacks deliberately prevent XML/tools instantiation without wiring. The
+full test suite was **not repeated**, as requested.
+
+Latest minified, test-signed release **1.4.0 (1313)**:
+[protracktor-release-1.4.0-1313-2497632-20261026-001409.apk](../dist/protracktor-release-1.4.0-1313-2497632-20261026-001409.apk),
+**12,023,719 bytes**, SHA-256
+`b5b5710b8848488d53b3e1a3cfe58304296b3a681b4c80d997c63277e31411b6`.
+Build supervision took **131.2 s**; R8 executed. Independent inspection confirms the existing
+v2 test certificate, exact embedded source/version/code, non-debuggable manifest, overlay
+permission, minSdk 29/targetSdk 36, ZIP CRCs, 16 KB alignment and seven native libraries in each
+of the three supported ABIs. Logs, reports, inspected previews and metadata are retained under
+ignored `user/floating-controls-verification/bubble-gestures/`. Subsequent documentation commits
+do not relabel this artifact.
+
+Develop, master, tag v1.4.0 and the prepared AAB are unchanged. The branch is unmerged.
+**Unchecked on a phone:** actual Maps touch-through, whole-panel drag feel, edge animation,
+drop target, file holds and permission-restriction resolution. Use the updated
+[phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
 
 ## Verification and acceptance
 

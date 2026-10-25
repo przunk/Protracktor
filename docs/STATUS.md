@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-25 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest branch test APK 1.4.0 (1311), source 620e021, includes unmerged B54 with Play/Pause hold activation; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
+Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest branch test APK 1.4.0 (1313), source 2497632, includes unmerged B54 with whole-panel drag, edge docking and file holds; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -48,7 +48,7 @@ lint **0 errors / 76 warnings**, **121.5 s** together. Disconnecting the physica
 made its gesture assertion fail; the callback was restored for the passing run. The full suite
 was **not repeated**, as requested. The earlier 1195-test pass belongs to source 9c73ad0.
 
-Replacement minified, test-signed release **1.4.0 (1311)**, clean source
+Play/Pause-hold iteration, superseded by build 1313 below: minified, test-signed **1.4.0 (1311)**, clean source
 **620e0213a4e23b620d32f4cba0327819ca7e7687**:
 [protracktor-release-1.4.0-1311-620e021-20261025-231810.apk](../dist/protracktor-release-1.4.0-1311-620e021-20261025-231810.apk),
 **12,018,335 bytes**, SHA-256
@@ -59,12 +59,29 @@ and all three native ABIs passed independent inspection. Evidence is retained in
 the APK. **Unchecked on a phone:** new holds/taps, Maps overlay and successful resolution of the
 system refusal. No merge, push, release-ref movement or AAB change.
 
-**Gesture follow-up, 2026-10-26 — in progress:** use whole-panel native dragging, a temporary
+**Gesture follow-up, 2026-10-26 — APK ready for phone testing:** use whole-panel native dragging, a temporary
 bottom **× Hide** drop target and animated docking to the nearest edge, replacing the persistent
 Move/Hide controls. Keep all four actions visible. Previous/Next holds share the dock's existing
 file operations, including subsong and availability rules. Cancellation must not hide or trigger
-transport. Focused gesture/window/geometry verification and a new release APK are being prepared;
-the full suite will not be repeated. [Selected contract](FLOATING_CONTROLS.md).
+transport. A tap that interrupts snapping resumes docking on release; a cancelled drop does not
+hide. The final Up coordinates, rather than only the last Move, decide a drop.
+
+Clean source **24976323fc27614eb34bfc5dba6cfc1b734ff577** passed **51 focused tests / 6 suites**,
+zero failures/errors/skips; fresh lint **0 errors / 79 warnings**, **199.8 s** together. A negative
+probe detected a file hold when child cancellation was disconnected; it was restored before the
+passing run. The additional three warnings concern two retired caption resources and the drag
+container's required programmatic constructor. The full suite was **not repeated**, as requested.
+
+Minified, test-signed release **1.4.0 (1313)**:
+[protracktor-release-1.4.0-1313-2497632-20261026-001409.apk](../dist/protracktor-release-1.4.0-1313-2497632-20261026-001409.apk),
+**12,023,719 bytes**, SHA-256
+`b5b5710b8848488d53b3e1a3cfe58304296b3a681b4c80d997c63277e31411b6`.
+The supervised build took **131.2 s** and executed R8. Independent signature/source/manifest,
+ZIP CRC, 16 KB alignment and all three native-ABI checks passed. Evidence and three inspected
+EN/PL/enlarged-PL previews are under ignored `user/floating-controls-verification/bubble-gestures/`.
+Later documentation commits do not relabel the artifact. **Unchecked on a phone:** actual Maps
+overlay, new drag/drop/hold behaviour and resolution of the permission restriction. No merge,
+push, release-ref movement or AAB change. [Contract and checks](FLOATING_CONTROLS.md).
 
 ## C120 Same song heard twice consecutively with playlist shuffle
 

@@ -6,9 +6,9 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 ## B54 Floating controls — phone acceptance pending
 
 [Contract and host evidence](FLOATING_CONTROLS.md). Use branch release
-**1.4.0 (1311), source 620e021**, recorded in [Status](STATUS.md); it replaces the separate
-activation button with a Play/Pause hold. Seventeen focused checks, lint and independent APK
-inspection passed. The full suite was not repeated for this iteration, as requested; the initial
+**1.4.0 (1313), source 2497632**, recorded in [Status](STATUS.md); it adds whole-panel dragging,
+edge docking, drop-to-hide and file holds while retaining Play/Pause hold activation. Fifty-one
+focused checks, lint and independent APK inspection passed. The full suite was not repeated for this iteration, as requested; the initial
 1195-test full pass belongs to source 9c73ad0. These are not phone acceptance. Test while parked.
 
 1. Start Random and hold the dock's **Play/Pause** control. An ordinary tap must still only
