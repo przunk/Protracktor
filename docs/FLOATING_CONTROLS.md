@@ -119,10 +119,26 @@ available, then grant **Display over other apps**. The application cannot grant 
 for itself, and the new APK does not claim to remove the system restriction. No global security
 setting is changed. [Android's restricted-settings help](https://support.google.com/android/answer/12623953?hl=en).
 
-For this iteration, run focused gesture/permission regressions and build a release APK, without
-repeating the full test suite, as requested. The earlier full-gate evidence below remains tied
-to its original source; it does not establish a full pass for the follow-up. Phone checks remain
-open. Updated artifact and focused results will be recorded after building.
+The agent ran **17 focused tests / 2 suites**, with zero failures, errors or skips, covering real
+Play/Pause holds versus taps, loading cancellation, the labelled accessibility action, grant
+return/recreation, denied-grant guidance and existing dock geometry. A controlled disconnection
+of the actual dock hold callback made the grant/show gesture regression fail; the callback was
+restored before the passing run. Focused tests and fresh lint completed in **121.5 s**; lint has
+**0 errors / 76 warnings**. The full test suite was **not repeated**, as requested. The earlier
+1195-test full-gate evidence below belongs only to its original source.
+
+Replacement minified, test-signed release **1.4.0 (1311)**, clean source
+**620e0213a4e23b620d32f4cba0327819ca7e7687**:
+[protracktor-release-1.4.0-1311-620e021-20261025-231810.apk](../dist/protracktor-release-1.4.0-1311-620e021-20261025-231810.apk),
+**12,018,335 bytes**, SHA-256
+`b9f20ab3e1caeeda50e0cc2bc4874e3e94bbfff3daa3f14677b331b4f0832b31`.
+The supervised build took **161.1 s** and executed R8. Independent inspection confirms the same
+v2 test certificate, embedded source, version/code, non-debuggable manifest, overlay declaration,
+minSdk 29/targetSdk 36, ZIP CRCs, 16 KB alignment and seven native libraries in each of the three
+ABIs. Evidence is retained under ignored `user/floating-controls-verification/hold-followup/`.
+Later documentation commits do not relabel this APK. Develop, master, tags and the prepared AAB
+remain unchanged. New gestures, actual Maps operation and resolution of the Android restriction
+remain **unchecked on a phone**; the branch is unmerged.
 
 ## Initial test APK and verification
 
