@@ -4,7 +4,9 @@
 package com.przunk.protracktor.ui
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -12,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.unit.Density
@@ -38,26 +41,57 @@ class FloatingControlsPanelTest {
     @get:Rule val compose = createEmptyComposeRule()
     private lateinit var activity: ActivityController<ComponentActivity>
     private val heart = PlaylistHeart(PlaylistHeart.Request("song", 7), TrackRef("song", "Song"), "My list", false, false)
-    private val model = mutableStateOf(FloatingControlsState(true, true, false, true, true, heart))
+    private val model = mutableStateOf(FloatingControlsState(true, true, false, true, true, heart, true, true))
     private val events = mutableListOf<String>()
     private val moves = mutableListOf<Pair<Int, Int>>()
     private var ends = 0
+    private var starts = 0
+    private val cancellations = mutableListOf<Boolean>()
+    private lateinit var root: FloatingDragContainer
 
     @Before fun start() { activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
-    @After fun stop() { activity.get().setContent { }; compose.waitForIdle(); activity.close() }
+    @After fun stop() { root.cancelGesture(notify = false); activity.close() }
 
     private fun show(scale: Float = 1f) {
-        activity.get().setContent {
+        root = FloatingDragContainer(activity.get(), {}, {}, { starts++ },
+            { x, y, _, _ -> moves += x to y }, { cancelled -> ends++; cancellations += cancelled })
+        val content = ComposeView(activity.get()).apply { setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
                 MaterialTheme {
                     FloatingControlsPanel(model.value,
                         { events += "previous" }, { events += "play" }, { events += "next" },
                         { events += "heart:${it.playlistId}:${it.trackId}" }, { events += "hide" },
-                        { x, y -> moves += x to y }, { ends++ }, Modifier.width(320.dp))
+                        { x, y -> moves += x to y }, { ends++ },
+                        { events += "previousFile"; model.value = model.value.copy(playing = !model.value.playing) },
+                        { events += "nextFile"; model.value = model.value.copy(playing = !model.value.playing) },
+                        Modifier.width(288.dp))
                 }
             }
+        } }
+        root.addView(content, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT))
+        activity.get().setContentView(root)
+        compose.waitForIdle()
+    }
+
+    // Inject through the native parent, as WindowManager does. Direct Compose injection skips it.
+    private fun gesture(tag: String, delta: Offset = Offset.Zero, holdMillis: Long = 0,
+                        cancel: Boolean = false) {
+        val point = compose.onNodeWithTag("floating-$tag").fetchSemanticsNode().boundsInRoot.center
+        val downTime = SystemClock.uptimeMillis()
+        fun send(action: Int, at: Offset) {
+            compose.runOnIdle {
+                val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, at.x, at.y, 0)
+                try { root.dispatchTouchEvent(event) } finally { event.recycle() }
+            }
+            compose.mainClock.advanceTimeBy(16)
         }
+        send(MotionEvent.ACTION_DOWN, point)
+        if (delta != Offset.Zero) send(MotionEvent.ACTION_MOVE, point + delta)
+        if (holdMillis > 0) compose.mainClock.advanceTimeBy(holdMillis)
+        send(if (cancel) MotionEvent.ACTION_CANCEL else MotionEvent.ACTION_UP, point + delta)
+        compose.waitForIdle()
     }
 
     @Test fun `physical taps dispatch all actions without moving the panel`() {
@@ -65,27 +99,60 @@ class FloatingControlsPanelTest {
         for (tag in listOf("previous", "play", "next", "heart")) {
             compose.onNodeWithTag("floating-$tag").assertHeightIsAtLeast(64.dp).assertWidthIsAtLeast(56.dp)
         }
-        for (tag in listOf("previous", "play", "next", "heart", "hide")) {
-            compose.onNodeWithTag("floating-$tag").performTouchInput { click() }
-        }
-        assertEquals(listOf("previous", "play", "next", "heart:7:song", "hide"), events)
+        for (tag in listOf("previous", "play", "next", "heart")) gesture(tag)
+        assertEquals(listOf("previous", "play", "next", "heart:7:song"), events)
+        compose.onNodeWithTag("floating-hide").assertDoesNotExist()
+        compose.onNodeWithTag("floating-drag").assertDoesNotExist()
         assertTrue(moves.isEmpty())
         assertEquals(0, ends)
     }
 
-    @Test fun `only dragging the handle moves the panel and transport swipes do not click`() {
+    @Test fun `dragging a transport button moves the whole panel and cancels its click and hold`() {
         show()
-        compose.onNodeWithTag("floating-next").performTouchInput {
-            swipe(center, center + Offset(0f, 90f))
-        }
+        gesture("next", Offset(40f, 0f), holdMillis = 900)
         assertTrue(events.isEmpty())
-        assertTrue(moves.isEmpty())
-        compose.onNodeWithTag("floating-drag").performTouchInput {
-            swipe(center, center + Offset(70f, 60f))
-        }
         assertTrue(moves.any { it.first != 0 || it.second != 0 })
         assertEquals(1, ends)
+        assertEquals(1, starts)
+        assertEquals(listOf(false), cancellations)
+    }
+
+    @Test fun `stationary holds skip files once while ordinary taps retain subsong transport`() {
+        show()
+        gesture("next", holdMillis = 1400)
+        gesture("previous", holdMillis = 1400)
+        assertEquals(listOf("nextFile", "previousFile"), events)
+        gesture("next")
+        gesture("previous")
+        assertEquals(listOf("nextFile", "previousFile", "next", "previous"), events)
+        assertTrue(moves.isEmpty())
+    }
+
+    @Test fun `unavailable file holds do not fall through to a subsong click`() {
+        show()
+        compose.runOnIdle { model.value = model.value.copy(previousFile = false, nextFile = false) }
+        gesture("next", holdMillis = 700)
+        gesture("previous", holdMillis = 700)
         assertTrue(events.isEmpty())
+        gesture("next")
+        assertEquals(listOf("next"), events)
+    }
+
+    @Test fun `disabled buttons still drag and cancellation cannot dispatch playback`() {
+        show()
+        compose.runOnIdle { model.value = model.value.copy(previous = false) }
+        gesture("previous", Offset(-50f, 70f), cancel = true)
+        assertTrue(events.isEmpty())
+        assertTrue(moves.isNotEmpty())
+        assertEquals(listOf(true), cancellations)
+    }
+
+    @Test fun `small finger movement remains a tap rather than a drag`() {
+        show()
+        gesture("play", Offset(1f, 1f))
+        assertEquals(listOf("play"), events)
+        assertTrue(moves.isEmpty())
+        assertEquals(0, starts)
     }
 
     @Test fun `pending save retains every button slot and a second heart tap cannot become Next`() {
@@ -118,7 +185,7 @@ class FloatingControlsPanelTest {
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
     fun `large Polish captions remain visible with accessible move actions`() {
         show(scale = 2f)
-        for (text in listOf("Wstecz", "Pauza", "Dalej", "Zapisz", "Ukryj", "Przesuń")) {
+        for (text in listOf("Wstecz", "Pauza", "Dalej", "Zapisz")) {
             compose.onNodeWithText(text).assertIsDisplayed()
                 .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { get ->
                     val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
@@ -128,11 +195,13 @@ class FloatingControlsPanelTest {
                     assertFalse("$text: size=${layout.size}, paragraphWidth=${layout.multiParagraph.width}", layout.hasVisualOverflow)
                 }
         }
-        val actions = compose.onNodeWithTag("floating-drag").fetchSemanticsNode()
+        val actions = compose.onNodeWithTag("floating-panel").fetchSemanticsNode()
             .config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
-        assertEquals(4, actions.size)
+        assertEquals(5, actions.size)
         compose.runOnIdle { assertTrue(actions.first().action()) }
         assertTrue(moves.single().first < 0)
         assertEquals(1, ends)
+        compose.runOnIdle { assertTrue(actions.last().action()) }
+        assertEquals(listOf("hide"), events)
     }
 }

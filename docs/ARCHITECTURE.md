@@ -10,9 +10,13 @@ application-overlay window, and its own disposable Compose lifecycle/saved-state
 `FloatingControlsState` projects existing transport availability and `PlaylistHeart`; only an
 enabled panel subscribes to that projection. Its callbacks use the same controller as the media
 session and notification. It adds no queue, engine, database schema or dependency.
-`FloatingPanelPosition` stores normalized travel coordinates; `FloatingPanelDrag` uses screen
-coordinates and touch slop to avoid feedback from a moving window's origin. The dedicated handle
-alone moves the window. A hold on the dock Play/Pause control invokes the permission flow in the
+`FloatingPanelPosition` stores normalized travel coordinates and chooses the nearest edge;
+`FloatingPanelDrag` uses screen coordinates and touch slop. `FloatingDragContainer` observes native
+events before Compose and cancels child clicks/holds once the whole panel starts moving.
+The service host owns a temporary bounded, non-touchable dismissal indicator and a cancellable
+edge animation. Dropping on the indicator hides without changing playback; cancellation only
+ends the drag. Previous/Next holds use the dock's file operations and availability projection.
+A hold on the dock Play/Pause control invokes the permission flow in the
 application shell; its result launcher remains registered independently of Now Playing visibility.
 EN/PL presentation follows the selected app language. Android/Maps behaviour still requires phone
 acceptance; host checks do not establish visibility over another app.

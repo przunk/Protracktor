@@ -18,6 +18,8 @@ class FloatingControlsStateTest {
         val shown = FloatingControlsState.of(state)
         assertFalse(shown.previous)
         assertTrue(shown.next)
+        assertEquals(state.canGoPreviousFile, shown.previousFile)
+        assertEquals(state.canGoNextFile, shown.nextFile)
         assertEquals(PlaylistHeart.of(state), shown.heart)
     }
 
@@ -43,6 +45,8 @@ class FloatingControlsStateTest {
         val shown = FloatingControlsState.of(state)
         assertTrue(shown.previous)
         assertTrue(shown.next)
+        assertFalse(shown.previousFile)
+        assertFalse(shown.nextFile)
         assertNull(shown.heart)
         assertFalse(FloatingControlsState.of(PlayerUiState()).hasTrack)
     }

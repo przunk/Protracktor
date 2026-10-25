@@ -59,6 +59,13 @@ and all three native ABIs passed independent inspection. Evidence is retained in
 the APK. **Unchecked on a phone:** new holds/taps, Maps overlay and successful resolution of the
 system refusal. No merge, push, release-ref movement or AAB change.
 
+**Gesture follow-up, 2026-10-26 — in progress:** use whole-panel native dragging, a temporary
+bottom **× Hide** drop target and animated docking to the nearest edge, replacing the persistent
+Move/Hide controls. Keep all four actions visible. Previous/Next holds share the dock's existing
+file operations, including subsong and availability rules. Cancellation must not hide or trigger
+transport. Focused gesture/window/geometry verification and a new release APK are being prepared;
+the full suite will not be repeated. [Selected contract](FLOATING_CONTROLS.md).
+
 ## C120 Same song heard twice consecutively with playlist shuffle
 
 Playback observation recorded 2026-10-25: with shuffle enabled on a playlist, the same song

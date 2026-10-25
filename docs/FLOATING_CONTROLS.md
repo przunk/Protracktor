@@ -17,12 +17,18 @@ Selected interaction:
 - Dark translucent background with contrasting icons and short visible captions. Primary touch
   targets are at least 64 dp high; the initial panel fits ordinary phone widths. Larger system
   text may increase its height rather than clipping captions.
-- A dedicated, labelled drag handle moves the panel after touch slop; tapping a transport button
-  does not move it. Remember the position and keep it within usable screen bounds after rotation.
-- At ordinary text size, Move/Hide occupy a narrow side column to reduce the covered map area.
-  Above 1.25× font scale they use a header and a 2×2 action grid with room for full captions. The initial preferred
-  width is 320 dp, clamped to the usable display width; primary targets remain at least 64 dp high.
-- A separate Hide action removes the panel without pausing audio. Pause retains the panel.
+- Drag anywhere on the panel, including over a disabled control. Passing touch slop cancels the
+  child button gesture before moving the window. Taps and stationary holds retain their actions.
+- Release outside the dismissal target to animate to the nearest left/right edge. Save edge and
+  normalized height and keep the panel reachable after rotation or resizing.
+- During a drag, show a bounded bottom-centre **× Hide** target. Highlight it with a ring, size,
+  caption and haptic change when armed. Only a release inside it hides the panel; cancellation
+  and a downward drag elsewhere never hide or pause music. No persistent Move/Hide buttons.
+- The preferred width is 288 dp, clamped to the usable display. Ordinary text uses four columns;
+  above 1.25× font scale, use a 2×2 grid. Primary targets remain at least 64 dp high.
+- A hold on Previous/Next invokes the same previous-file/next-file operations and availability
+  rules as the dock. Unavailable file holds must not fall through to ordinary subsong clicks.
+- Pause retains the panel. Hiding by drop, the dock hold or an accessibility action preserves audio.
 - Controls keep their slots while unavailable, loading or saving. Loading uses the existing
   cancel-loading transport behaviour with an explicit Stop label.
 - The heart uses the notification's add-only operation: add to the selected editor playlist and
@@ -37,6 +43,9 @@ settings handler or a rejected window/service must produce feedback and leave pl
 The permission is optional; ordinary playback and notifications continue without it.
 
 Use a tightly bounded `TYPE_APPLICATION_OVERLAY` window, not a transparent full-screen layer.
+During dragging, a second bounded, non-focusable/non-touchable window shows only the dismissal
+target. Its window opacity respects Android's touch-through limit. Remove it on release,
+cancellation, lock, reconfiguration, permission failure or service destruction.
 Touches outside the panel must remain available to Maps. The panel must not take keyboard focus.
 Some applications and system screens suppress overlays; visibility above every app is not promised.
 Use the existing media-playback foreground service, launched from the visible app, rather than a
@@ -62,8 +71,43 @@ enabled service session. Recheck permission during window refresh and handle rev
   gesture to that shared action. Strings are EN/PL.
 - No new dependency, decoder, schema change, queue behaviour or playback policy is required.
 
-Deferred choices: adjustable size/opacity, vertical layouts, auto-start, automatic edge snapping,
-minimization to a bubble and additional actions. These are not part of this trial.
+Deferred choices: adjustable size/opacity, vertical layouts, auto-start, minimization to a bubble
+and additional actions. Edge snapping and bubble-style drag dismissal were selected in the
+follow-up below. System notification bubbles are conversation-specific; this remains an overlay.
+
+## Whole-panel dragging and dock-compatible holds — 2026-10-26
+
+Implement the agreed bubble-style gestures on the same experiment branch while keeping all four
+controls visible. Keep activation under the dock Play/Pause hold. A small collapsed circle would
+add a tap before Next, so collapsing is not selected. The current overlay permission remains
+necessary; this does not bypass the reported restricted-settings refusal.
+
+`FloatingDragContainer` receives native events before the Compose content. It uses raw screen
+coordinates, cancels the child press when dragging starts, and suppresses a drag's final Up. This
+keeps window movement out of tap/hold detection and prevents either a heart save or file skip
+while moving the panel. Multiple pointers and cancellation end the drag without hiding.
+`FloatingPanelPosition.snapped()` and `FloatingDropZone` own pure edge/drop geometry.
+`FloatingControlsWindow` owns the temporary drop window and cancellable 180 ms edge animation.
+Starting another touch cancels animation at its actual position; a plain tap resumes docking
+on release. The final Up position is checked again before deciding a drop. A dismissed panel reopens at
+its last saved resting position, rather than at the bottom drop target. Accessibility actions
+still expose left/right docking, vertical movement and Hide without requiring a drag.
+
+Project the existing file-transport availability and wire both holds directly to the existing
+controller's previousFile/nextFile operations. Ordinary transport and playlist-heart semantics
+remain unchanged, including current context and subsong handling.
+
+Run focused gesture/window/state/geometry checks and lint, then build a minified release APK.
+Do not repeat the full test suite for this iteration, as requested. Host checks must exercise
+native parent dispatch as well as Compose buttons; injecting directly into a Compose root alone
+would skip the production drag container. Phone acceptance remains required.
+
+Initial focused pass: **49 checks**, zero failures/errors/skips. A controlled disconnection of
+child cancellation caused the physical drag/hold regression to fail; it was restored. Three
+EN/PL/enlarged-PL host previews were rendered and visually inspected, including the production
+native dismissal indicator. The indicator is drawn separately in the host preview because the
+offscreen Compose renderer omits AndroidView. These are not screenshots from Maps or a phone.
+Final verification and artifact identity will be recorded after building.
 
 ## Verification and acceptance
 

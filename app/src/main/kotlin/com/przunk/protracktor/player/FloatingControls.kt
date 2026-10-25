@@ -45,11 +45,14 @@ internal data class FloatingControlsState(
     val previous: Boolean,
     val next: Boolean,
     val heart: PlaylistHeart?,
+    val previousFile: Boolean,
+    val nextFile: Boolean,
 ) {
     companion object {
         fun of(state: PlayerUiState) = FloatingControlsState(
             state.current != null, state.playing, state.loadingTrack,
             state.canGoPrevious, state.canGoNext, PlaylistHeart.of(state),
+            state.canGoPreviousFile, state.canGoNextFile,
         )
     }
 }

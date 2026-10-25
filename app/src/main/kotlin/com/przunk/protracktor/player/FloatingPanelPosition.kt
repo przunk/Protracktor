@@ -7,6 +7,8 @@ import kotlin.math.roundToInt
 
 /** Fractions of the available travel keep a saved panel reachable after rotation or resizing. */
 internal data class FloatingPanelPosition(val x: Float = 1f, val y: Float = .55f) {
+    fun snapped() = FloatingPanelPosition(if (finite(x, 1f) < .5f) 0f else 1f, finite(y, .55f))
+
     fun place(areaWidth: Int, areaHeight: Int, panelWidth: Int, panelHeight: Int, margin: Int): PanelOffset {
         val xRange = travel(areaWidth, panelWidth, margin)
         val yRange = travel(areaHeight, panelHeight, margin)
@@ -40,3 +42,8 @@ internal data class FloatingPanelPosition(val x: Float = 1f, val y: Float = .55f
 }
 
 internal data class PanelOffset(val x: Int, val y: Int)
+
+internal data class FloatingDropZone(val x: Float, val y: Float, val radius: Float) {
+    fun contains(pointerX: Float, pointerY: Float): Boolean = radius > 0f && radius.isFinite() &&
+        (pointerX - x) * (pointerX - x) + (pointerY - y) * (pointerY - y) <= radius * radius
+}

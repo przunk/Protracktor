@@ -189,9 +189,11 @@
     <string name="floating_hide">Ukryj pływające przyciski</string>
     <string name="floating_hide_short">Ukryj</string>
     <string name="floating_move">Przesuń</string>
-    <string name="floating_drag_hint">Przeciągnij tutaj, aby przesunąć przyciski. Akcje ułatwień dostępu pozwalają przesuwać w każdym kierunku.</string>
-    <string name="floating_move_left">Przesuń w lewo</string>
-    <string name="floating_move_right">Przesuń w prawo</string>
+    <string name="floating_drag_hint">Przeciągnij panel, aby go przesunąć; upuść na × Ukryj, aby go schować bez przerywania muzyki. Przytrzymanie Dalej i Wstecz pomija pliki.</string>
+    <string name="floating_drop_hide">Ukryj</string>
+    <string name="floating_release_hide">Puść, aby ukryć</string>
+    <string name="floating_move_left">Przyciągnij do lewej krawędzi</string>
+    <string name="floating_move_right">Przyciągnij do prawej krawędzi</string>
     <string name="floating_move_up">Przesuń w górę</string>
     <string name="floating_move_down">Przesuń w dół</string>
     <string name="floating_previous">Wstecz</string>

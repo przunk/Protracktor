@@ -90,7 +90,7 @@ class PlaybackService : Service() {
         }
         controller = PlaybackController.get(this)
         floating = FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
-            controller::next, controller::savePlayingToPlaylist)
+            controller::next, controller::savePlayingToPlaylist, controller::previousFile, controller::nextFile)
         createChannel()
         createSession()
 

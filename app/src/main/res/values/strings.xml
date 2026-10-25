@@ -274,9 +274,11 @@
     <string name="floating_hide">Hide floating controls</string>
     <string name="floating_hide_short">Hide</string>
     <string name="floating_move">Move</string>
-    <string name="floating_drag_hint">Drag here to move the controls. Accessibility actions move them in each direction.</string>
-    <string name="floating_move_left">Move left</string>
-    <string name="floating_move_right">Move right</string>
+    <string name="floating_drag_hint">Drag the panel to move it; drop on × Hide to hide it without stopping playback. Holds on Next and Previous skip files.</string>
+    <string name="floating_drop_hide">Hide</string>
+    <string name="floating_release_hide">Release to hide</string>
+    <string name="floating_move_left">Dock at left edge</string>
+    <string name="floating_move_right">Dock at right edge</string>
     <string name="floating_move_up">Move up</string>
     <string name="floating_move_down">Move down</string>
     <string name="floating_previous">Prev</string>
