@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-10-01
+Effective date: 2026-10-25
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -77,6 +77,13 @@ Protracktor* link points at the public web player and carries the tune's archive
 This transfer happens only after that explicit action. The receiving application or service applies its own privacy policy. Temporary
 share copies are removed after their retention window when Protracktor next performs cleanup; the
 receiving application may keep its own copy.
+
+### Floating playback controls
+
+Floating controls optionally use Android's permission to display over other apps. The permission
+is requested only when this feature is enabled. The panel controls Protracktor playback and
+saves its position locally; it does not read the content of other apps or capture the screen.
+Hiding the panel does not stop playback. The permission can be revoked in Android settings.
 
 ### Sending to a web player
 
@@ -192,6 +199,14 @@ utworu albo odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania An
 utworu w archiwum oraz jego tytuł. Transfer następuje tylko po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
 prywatności. Tymczasowe kopie są usuwane po okresie retencji podczas kolejnego sprzątania przez
 Protracktor; odbiorca może zachować własną kopię.
+
+### Pływające przyciski odtwarzania
+
+Pływające przyciski opcjonalnie korzystają z uprawnienia Androida do wyświetlania nad innymi
+aplikacjami. Prośba o zgodę pojawia się tylko przy włączaniu tej funkcji. Panel steruje
+odtwarzaniem Protracktora i zapamiętuje swoją pozycję na urządzeniu; nie odczytuje zawartości
+innych aplikacji ani nie przechwytuje ekranu. Ukrycie panelu nie zatrzymuje muzyki. Uprawnienie
+można cofnąć w ustawieniach Androida.
 
 ### Wysyłanie do odtwarzacza w przeglądarce
 

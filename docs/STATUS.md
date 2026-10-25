@@ -7,6 +7,23 @@ versionCode is the source commit count; later documentation commits do not relab
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## B54 Floating controls — branch implementation, 2026-10-25
+
+Implemented on `feature/floating-playback-controls`, based on develop `b52a6d7`; unmerged and
+awaiting phone acceptance. An explicit Now Playing action requests optional overlay permission
+and opens a movable, bounded panel above other apps. Previous/Play/Pause/Next and the add-only
+playlist heart delegate to existing playback/save operations. Pause retains the panel; Hide does
+not pause. The service disposes its window and composition; activation is session-only and
+normalized placement is saved separately from library data. EN/PL and privacy text are updated.
+
+Focused host pass: **32 tests / 6 suites**, zero failures/errors/skips, covering source projection,
+geometry/raw dragging, real panel gestures, permission return/recreation, window lifetime on
+API 29/33, language updates and enlarged text. Both controlled negative probes detected their
+intended regressions and were restored. Full gate/lint and the release APK are still pending.
+Host previews do not establish operation above Google Maps. No device behaviour is
+confirmed; versionName remains 1.4.0, schema 23, release refs and AMP are untouched.
+[Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
+
 ## C120 Same song heard twice consecutively with playlist shuffle
 
 Playback observation recorded 2026-10-25: with shuffle enabled on a playlist, the same song

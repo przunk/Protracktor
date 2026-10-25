@@ -3,6 +3,36 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## B54 Floating controls — phone acceptance pending
+
+[Contract and host evidence](FLOATING_CONTROLS.md). Use the new branch APK recorded in
+[Status](STATUS.md); the earlier 1.3.0 APK does not contain this feature. Test while parked.
+
+1. Start Random and open expanded Now Playing → **Floating controls**. Decline the explanation
+   or the Android permission once: audio stays unchanged and refusal is explained. Try again,
+   choose **Open settings**, enable **Display over other apps** for Protracktor, and return.
+   Repeat with a rotation while Android settings is open; the pending activation should survive.
+2. Open actual Google Maps. The panel should remain above it, with maps usable outside its
+   bounds. Drag only the **Move** handle; tapping or swiping transport buttons must not move it.
+   Check that the panel stays under the finger while moving in every direction.
+3. Check Previous, Play/Pause and Next against the same source/manual queue as the dock. During
+   a slow load, Stop cancels that load. Pause must retain the panel for a later Play.
+4. Press **Keep** twice quickly: the heart stays in its slot, no accidental Next occurs, and
+   saving completes to the selected playlist. Hide, return to the playlist, restart the app and
+   check persistence. A filled heart must not remove a track.
+5. **Hide** removes the panel while audio continues. Reopen it and check remembered placement.
+   Rotate with Maps visible, then hide/reopen in each orientation. Avoid clipping at cutouts,
+   navigation/status bars and screen edges. Verify EN/PL and enlarged system text.
+6. Lock/unlock the phone: no panel over the lock screen, and an explicitly enabled session can
+   restore it after unlock. A previously hidden panel must stay hidden. End the playback service
+   and restart the app: the panel must not silently reactivate or resume audio.
+7. Revoke **Display over other apps** while the feature is active. The window must disappear;
+   subsequent activation must explain the missing permission. Playback and ordinary notification
+   controls remain usable. Some apps/system screens can suppress overlays by design.
+
+These device outcomes remain unchecked until reported. Host renders preview the production panel,
+not its composition over Google Maps or behaviour on an actual navigation device.
+
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 
 [Contract and limits](VOLUME_NORMALIZATION.md). Phone feedback reports comparable perceived

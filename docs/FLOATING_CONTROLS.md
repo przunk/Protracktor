@@ -16,6 +16,9 @@ Selected interaction:
   text may increase its height rather than clipping captions.
 - A dedicated, labelled drag handle moves the panel after touch slop; tapping a transport button
   does not move it. Remember the position and keep it within usable screen bounds after rotation.
+- At ordinary text size, Move/Hide occupy a narrow side column to reduce the covered map area.
+  Above 1.25× font scale they use a header and a 2×2 action grid with room for full captions. The initial preferred
+  width is 320 dp, clamped to the usable display width; primary targets remain at least 64 dp high.
 - A separate Hide action removes the panel without pausing audio. Pause retains the panel.
 - Controls keep their slots while unavailable, loading or saving. Loading uses the existing
   cancel-loading transport behaviour with an explicit Stop label.
@@ -40,6 +43,8 @@ The service owns and removes the window and its Compose lifecycle. Service stop/
 an empty playback session remove it. Temporary loading does not count as an empty session. Hide
 changes presentation only. Activation is session-only: process restart does not silently enable
 the overlay or start audio. Position preferences are independent of playlists and the database.
+An outstanding permission request can complete after activity recreation. Expanded Now Playing
+therefore retains its open state across recreation, preserving its result launcher and saved request.
 Hide the panel while the screen is locked and restore it after unlock only within that explicitly
 enabled service session. Recheck permission during window refresh and handle revocation gracefully.
 
@@ -69,8 +74,30 @@ rotation/cutouts, Pause/resume, Hide without audio interruption, locking/unlocki
 service stop. Confirm heart persistence after reopening the playlist. Check EN/PL and enlarged
 text. Configure placement before driving; the trial does not establish driving safety.
 
-Current state: analysis recorded; implementation and verification pending. C118, C120, B53 and
-the separate AMP branch are outside this task.
+## Implementation review and host checkpoint
+
+Focused verification passed **32 tests / 6 suites**, zero failures, errors or skips. Coverage
+includes actual panel taps/drag separation, fixed slots during a delayed save, permission denial
+and return/recreation, the window configuration and cleanup on API 29/33, language changes,
+normalized geometry and screen-coordinate dragging. Two controlled negative probes disconnected
+the physical drag callback and bypassed the grant check; the corresponding UI assertions failed.
+Both mutations were restored. Full-gate, lint and APK verification still remain before handoff.
+
+Review refinements:
+
+- Subscribe to the extra presentation projection only while the panel is enabled.
+- Preserve fractional drag movement rather than losing slow movement to per-event rounding.
+- Release the composition, lifecycle, receiver, preference listener and window-context references
+  when closing; Hide never delegates to Pause.
+- Center captions in an explicitly width-filling text node. Enlarged-text checks exposed a
+  paragraph wider than its measured caption node; the opt-in `fillLabelWidth` mode fixes this
+  for overlay actions while preserving the existing action layout elsewhere.
+- Retain the permission flow through activity recreation and explain denial without starting
+  another playback session.
+
+The trial is implemented on its branch and awaits the full gate and a release APK. Actual
+operation above Google Maps remains unverified. C118, C120, B53 and the separate AMP branch
+are outside this task.
 
 ## Platform references
 

@@ -9,6 +9,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.pm.ServiceInfo
 import android.media.session.MediaSession
 import android.os.Build
@@ -32,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -65,6 +67,7 @@ class PlaybackService : Service() {
     private var everHadTrack = false
 
     private lateinit var session: MediaSession
+    private var floating: FloatingControlsWindow? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -86,6 +89,8 @@ class PlaybackService : Service() {
             return
         }
         controller = PlaybackController.get(this)
+        floating = FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
+            controller::next, controller::savePlayingToPlaylist)
         createChannel()
         createSession()
 
@@ -118,6 +123,12 @@ class PlaybackService : Service() {
         // the notification's would rebuild the whole thing five times a second for nothing.
         scope.launch {
             controller.state.collect { publishSession(it) }
+        }
+        scope.launch {
+            FloatingControls.visible.collectLatest { visible ->
+                if (visible) controller.state.map(FloatingControlsState::of).distinctUntilChanged()
+                    .collect { floating?.update(it) }
+            }
         }
     }
 
@@ -160,6 +171,13 @@ class PlaybackService : Service() {
             return START_NOT_STICKY
         }
         when (intent?.action) {
+            FloatingControls.SHOW -> {
+                if (started) {
+                    floating?.update(FloatingControlsState.of(controller.state.value))
+                    floating?.show()
+                } else FloatingControls.unavailable(this)
+            }
+            FloatingControls.HIDE -> floating?.close()
             ACTION_PLAY_PAUSE -> controller.togglePlayPause()
             ACTION_NEXT -> controller.next()
             ACTION_PREVIOUS -> controller.previous()
@@ -180,7 +198,13 @@ class PlaybackService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        floating?.refreshConfiguration()
+    }
+
     override fun onDestroy() {
+        floating?.close()
         if (::session.isInitialized) {
             session.isActive = false
             session.release()
@@ -225,6 +249,7 @@ class PlaybackService : Service() {
     }
 
     private fun stopForegroundAndSelf() {
+        floating?.close()
         // **Said out loud, because C43 had no reproduction.** If the transport goes missing again
         // while music plays, this line in the log is the difference between "the service stopped"
         // and "the notification was never posted" -- and they are different faults.

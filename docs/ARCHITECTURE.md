@@ -1,5 +1,21 @@
 # Architecture
 
+## B54 Floating controls — branch trial, 2026-10-25
+
+[Interaction, lifecycle and acceptance](FLOATING_CONTROLS.md). `PlaybackService` owns the optional
+`FloatingControlsWindow`; closing the window never pauses or replaces playback. Activation is
+explicit and session-only. The window uses a display-specific context, a bounded non-focusable
+application-overlay window, and its own disposable Compose lifecycle/saved-state owner.
+
+`FloatingControlsState` projects existing transport availability and `PlaylistHeart`; only an
+enabled panel subscribes to that projection. Its callbacks use the same controller as the media
+session and notification. It adds no queue, engine, database schema or dependency.
+`FloatingPanelPosition` stores normalized travel coordinates; `FloatingPanelDrag` uses screen
+coordinates and touch slop to avoid feedback from a moving window's origin. The dedicated handle
+alone moves the window. The Now Playing action explains and checks the optional overlay grant.
+EN/PL presentation follows the selected app language. Android/Maps behaviour still requires phone
+acceptance; host checks do not establish visibility over another app.
+
 ## Volume normalization — accepted and merged, 2026-10-23
 
 Pure `LoudnessMeter`/`VolumeNormalizer` consume float stereo after the existing width mixer and
@@ -210,7 +226,7 @@ plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary ass
 | Random history (C97) | `RandomHistory` owns the heard boundary, cursor, speculative tail and generation; the controller owns catalogue IO and playback | Scope changes discard only unheard entries. Next walks history; explicit re-roll appends a fresh pick. Serialized fills reject obsolete results after each suspension, including the small-pool fallback. Background replenishment never publishes speculative rows |
 | Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. The existing no-missing-bytes early return remains before cancellation |
 | Browse cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns Browse cache marks and both observers, including cancellation and stale-result protection | **Extracted:** `BrowseCache` combines `OnPhone` source checks with `FolderPrefetch` planning/execution. Narrow file/progress operations reuse the same remote cache and Browse writer; no new scope, cache or policy copy |
-| Android service | `PlaybackService` owns its coroutine scope, platform media session and notification; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
+| Android service | `PlaybackService` owns its coroutine scope, platform media session, notification and optional floating-controls window; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
 | Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |
 | Web | `app.js` owns queue/playback/session/DOM state; `store.js` owns IndexedDB access; `catalogue.js` handles archive/index operations; worklet owns its engine handle | Startup/composition entry point and explicit workflow/UI modules with acyclic imports; keep messages and storage keys |
 | Native engine | `engine.cpp` owns backend adapters and selection; `player_oboe.cpp` owns the locked audio host/JNI; `player_wasm.cpp` owns WASM handles | Adapter translation units behind the existing `Backend` contract; keep host ownership and probing order |

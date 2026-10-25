@@ -115,7 +115,7 @@ fun ProtracktorApp(
     val browse = remember(storedBrowse, state.listenedIds, state.learnedTitles) {
         storedBrowse.copy(listenedHere = state.listenedIds, learnedTitles = state.learnedTitles)
     }
-    var showNowPlaying by remember { mutableStateOf(false) }
+    var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
 
     // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition

@@ -10,12 +10,12 @@
     <!-- API 33+. Without it the notification is suppressed; the service still runs, so playback
          works and only the controls are missing. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Optional playback controls above other apps; requested only from Now Playing. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
-        The QR scanner, and the only permission in this app that a music player has to justify.
-        It is asked for at the moment the scanner opens and never at startup, it is used for one
-        thing, reading a pairing code off a screen, and nothing is recorded: frames are decoded
-        and dropped (docs/PLAN_HANDOFF.md §3 H2).
+        The QR scanner requests camera access when opened, never at startup. Frames are decoded
+        and dropped without recording (docs/PLAN_HANDOFF.md §3 H2).
     -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- A phone with no camera can still do everything else, so this must not filter it out. -->

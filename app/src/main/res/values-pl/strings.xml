@@ -185,6 +185,29 @@
 
 
     <string name="notification_stop">Zatrzymaj</string>
+    <string name="floating_show">Pływające przyciski</string>
+    <string name="floating_hide">Ukryj pływające przyciski</string>
+    <string name="floating_hide_short">Ukryj</string>
+    <string name="floating_move">Przesuń</string>
+    <string name="floating_drag_hint">Przeciągnij tutaj, aby przesunąć przyciski. Akcje ułatwień dostępu pozwalają przesuwać w każdym kierunku.</string>
+    <string name="floating_move_left">Przesuń w lewo</string>
+    <string name="floating_move_right">Przesuń w prawo</string>
+    <string name="floating_move_up">Przesuń w górę</string>
+    <string name="floating_move_down">Przesuń w dół</string>
+    <string name="floating_previous">Wstecz</string>
+    <string name="floating_next">Dalej</string>
+    <string name="floating_stop">Stop</string>
+    <string name="floating_keep">Zapisz</string>
+    <string name="floating_saving">Zapis…</string>
+    <string name="floating_loading">Wczytuję…</string>
+    <string name="floating_no_playlist">Brak listy</string>
+    <string name="floating_keep_unavailable">Zapis wymaga wczytanego utworu i wybranej playlisty.</string>
+    <string name="floating_no_track">Wczytaj utwór, aby włączyć pływające przyciski.</string>
+    <string name="floating_permission_explanation">Wyświetlaj przyciski odtwarzania nad innymi aplikacjami, np. mapami. W ustawieniach Androida zezwól Protracktorowi na wyświetlanie nad innymi aplikacjami, a potem wróć tutaj. Ukrycie przycisków nie przerywa muzyki.</string>
+    <string name="floating_permission_denied">Pływające przyciski wymagają zgody na wyświetlanie nad innymi aplikacjami. Odtwarzanie pozostaje bez zmian. Możesz spróbować ponownie w widoku Teraz odtwarzane.</string>
+    <string name="floating_open_settings">Otwórz ustawienia</string>
+    <string name="floating_settings_unavailable">Android nie mógł otworzyć ustawień. Zezwól Protracktorowi na wyświetlanie nad innymi aplikacjami w sekcji Specjalny dostęp do aplikacji i spróbuj ponownie.</string>
+    <string name="floating_unavailable">Nie udało się wyświetlić pływających przycisków. Sprawdź uprawnienie do wyświetlania nad aplikacjami i wczytaj utwór, a potem spróbuj ponownie w widoku Teraz odtwarzane.</string>
     <string name="notification_playlist_add">Dodaj do %1$s</string>
     <string name="notification_playlist_member">Na liście %1$s</string>
     <string name="notification_playlist_saving">Zapisywanie %1$s…</string>
