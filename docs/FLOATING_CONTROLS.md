@@ -81,7 +81,7 @@ includes actual panel taps/drag separation, fixed slots during a delayed save, p
 and return/recreation, the window configuration and cleanup on API 29/33, language changes,
 normalized geometry and screen-coordinate dragging. Two controlled negative probes disconnected
 the physical drag callback and bypassed the grant check; the corresponding UI assertions failed.
-Both mutations were restored. Full-gate, lint and APK verification still remain before handoff.
+Both mutations were restored. The full-gate and artifact results are recorded below.
 
 Review refinements:
 
@@ -95,9 +95,48 @@ Review refinements:
 - Retain the permission flow through activity recreation and explain denial without starting
   another playback session.
 
-The trial is implemented on its branch and awaits the full gate and a release APK. Actual
-operation above Google Maps remains unverified. C118, C120, B53 and the separate AMP branch
-are outside this task.
+The trial remains on its branch, ready for phone testing and awaiting acceptance before merging.
+Actual operation above Google Maps remains unverified. C118, C120, B53 and the separate AMP
+branch are outside this task.
+
+## Test APK and verification
+
+The agent ran the full host gate against clean source
+**9c73ad0441cd256c4937a98df2f053f04542db2f**: **1195 tests / 158 suites**, zero failures,
+errors or skips. All 31 unit-stage tasks executed; the unit stage took **462.8 s**, and the
+complete gate **678 s**. All companion checks passed, including **53 native/DSP cases**,
+web playback/page/database checks, build-runner/release fixtures, icons, PWA and local server.
+Fresh lint analysis completed in **107.7 s** with **0 errors / 76 warnings**.
+
+Compared with the preceding 73-warning report, the additional diagnostics are two KTX style
+suggestions and a physical-position gravity warning. The Gradle-version notice changed its
+suggested version and is not a new functional finding. The overlay deliberately anchors with
+`Gravity.LEFT`: drag and saved position use physical screen coordinates, which must not mirror
+when changing language. These warnings do not establish device behaviour or require a toolchain
+upgrade. Three production-panel host previews (EN, PL and enlarged PL) were rendered and visually
+inspected; they are not screenshots from Google Maps or a phone.
+
+Minified, test-signed release **1.4.0 (1309)**:
+[protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk](../dist/protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk),
+**12,017,471 bytes**, SHA-256
+`6a35fc56c44fbaec655052f27b84aaf9a72e1cb256c00dcf3a70adfa48a68ac1`.
+Build supervision completed in **221.7 s**; R8 executed. Independent inspection confirms the
+v2 test signature matches the preceding test APK, the exact source revision, non-debuggable
+manifest, optional overlay permission, minSdk 29/targetSdk 36, ZIP CRCs, 16 KB alignment and
+seven native libraries for each of arm64-v8a, armeabi-v7a and x86_64. This is a sideload test
+artifact, not a publishing-signed APK. Subsequent documentation commits do not change its
+source identity or versionCode.
+
+Logs, JUnit reports, lint reports, inspected previews, R8 mapping/configuration and artifact
+metadata are retained under ignored `user/floating-controls-verification/`. Develop remains
+`b52a6d7`; master/tag v1.4.0 and the prepared 1.4.0 AAB are unchanged. Nothing was pushed or
+merged, and no AAB or publishing key was used for this task.
+
+**Checked:** host assertions, full gate/lint and APK structure/signature/source identity.
+**Partially checked:** production panel presentation through host rendering and interaction tests.
+**Unchecked:** installation, actual overlay/Google Maps behaviour, physical gestures,
+rotation/cutouts, screen lock and permission revocation timing on a phone. Use the
+[phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending) before acceptance.
 
 ## Platform references
 

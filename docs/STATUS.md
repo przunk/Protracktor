@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-25 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest supplied test APK remains 1.3.0 (1301), source 296de93; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
+Updated: 2026-10-25 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest branch test APK 1.4.0 (1309), source 9c73ad0, includes unmerged B54 floating controls; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B54 Floating controls — branch implementation, 2026-10-25
+## B54 Floating controls — branch APK ready for phone testing, 2026-10-25
 
 Implemented on `feature/floating-playback-controls`, based on develop `b52a6d7`; unmerged and
 awaiting phone acceptance. An explicit Now Playing action requests optional overlay permission
@@ -19,9 +19,22 @@ normalized placement is saved separately from library data. EN/PL and privacy te
 Focused host pass: **32 tests / 6 suites**, zero failures/errors/skips, covering source projection,
 geometry/raw dragging, real panel gestures, permission return/recreation, window lifetime on
 API 29/33, language updates and enlarged text. Both controlled negative probes detected their
-intended regressions and were restored. Full gate/lint and the release APK are still pending.
-Host previews do not establish operation above Google Maps. No device behaviour is
-confirmed; versionName remains 1.4.0, schema 23, release refs and AMP are untouched.
+intended regressions and were restored. The agent ran the full host gate against clean source
+**9c73ad0441cd256c4937a98df2f053f04542db2f**: **1195 tests / 158 suites**, zero failures,
+errors or skips; all 31 unit tasks executed, all companion checks passed, including 53 native/DSP
+cases. The full gate took **678 s**; fresh lint completed with **0 errors / 76 warnings**.
+
+Minified, test-signed release **1.4.0 (1309)** is ready:
+[protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk](../dist/protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk),
+**12,017,471 bytes**, SHA-256
+`6a35fc56c44fbaec655052f27b84aaf9a72e1cb256c00dcf3a70adfa48a68ac1`.
+R8 executed; independent signature/source/manifest, CRC, alignment and native-ABI inspection
+passed. Logs and reports are retained in ignored `user/floating-controls-verification/`.
+Later documentation commits do not relabel this artifact.
+
+Host previews do not establish operation above Google Maps. Installation and device behaviour
+remain **unchecked**; versionName remains 1.4.0, schema 23, release refs, prepared AAB and AMP
+are untouched. Develop remains `b52a6d7`; this feature is unmerged and nothing was pushed.
 [Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
 
 ## C120 Same song heard twice consecutively with playlist shuffle

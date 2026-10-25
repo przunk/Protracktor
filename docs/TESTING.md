@@ -5,8 +5,10 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## B54 Floating controls — phone acceptance pending
 
-[Contract and host evidence](FLOATING_CONTROLS.md). Use the new branch APK recorded in
-[Status](STATUS.md); the earlier 1.3.0 APK does not contain this feature. Test while parked.
+[Contract and host evidence](FLOATING_CONTROLS.md#test-apk-and-verification). Use branch release
+**1.4.0 (1309), source 9c73ad0**, recorded in [Status](STATUS.md); the earlier 1.3.0 APK does
+not contain this feature. The 1195-test full host gate, lint and independent APK inspection passed;
+these are not phone acceptance. Test while parked.
 
 1. Start Random and open expanded Now Playing → **Floating controls**. Decline the explanation
    or the Android permission once: audio stays unchanged and refusal is explained. Try again,
