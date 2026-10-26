@@ -3,6 +3,60 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## B54 Floating controls — experimental, disabled by default
+
+Practical phone operation was reported satisfactory on 2026-10-26, followed by approval to
+retain the experiment in develop with **`FloatingControls.ENABLED = false`**. The exact installed
+build and individual scenario outcomes were not separately supplied. Public availability is
+not approved. With the constant false, the checks below require a deliberately enabled trial
+build: ordinary builds expose no floating-controls action or permission flow. Gate verification
+and integration are in progress; the full suite is not repeated for this iteration, as requested.
+
+[Contract and host evidence](FLOATING_CONTROLS.md). Retained enabled trial release:
+**1.4.0 (1313), source 2497632**, recorded in [Status](STATUS.md); it adds whole-panel dragging,
+edge docking, drop-to-hide and file holds while retaining Play/Pause hold activation. Fifty-one
+focused checks, lint and independent APK inspection passed. The full suite was not repeated for this iteration, as requested; the initial
+1195-test full pass belongs to source 9c73ad0. These are not phone acceptance. Test while parked.
+
+1. Start Random and hold the dock's **Play/Pause** control. An ordinary tap must still only
+   play/pause, with no new button or row in expanded Now Playing. Decline the explanation
+   or the Android permission once: audio stays unchanged and refusal is explained. Try again,
+   choose **Open settings**, enable **Display over other apps** for Protracktor, and return.
+   Repeat with a rotation while Android settings is open; the pending activation should survive.
+   If Android blocks the switch, check **Settings → Apps → Protracktor → ⋮ → Allow restricted
+   settings**, if available, then retry **Display over other apps**. Record whether this resolves
+   the reported refusal; the APK does not override system restrictions.
+2. Open actual Google Maps. The four controls should remain above it, with Maps usable outside
+   their bounds and no Move/Hide buttons. Drag from the background and from every control,
+   including a disabled one. It should follow the finger without executing a click or file hold.
+   Release on either half of the screen: animate to that edge and retain height. Start another
+   drag during that animation; it must follow from the position actually touched, without jumping.
+3. Check Previous, Play/Pause and Next against the same source/manual queue as the dock. During
+   a slow load, Stop cancels that load. Pause must retain the panel for a later Play.
+   Hold Next/Previous on a multi-subsong file: skip files exactly as in the dock, once per hold.
+   Where only a subsong transition is available, the hold must not become a normal tap.
+4. Press **Keep** twice quickly: the heart stays in its slot, no accidental Next occurs, and
+   saving completes to the selected playlist. Hide, return to the playlist, restart the app and
+   check persistence. A filled heart must not remove a track.
+5. During a drag, a bottom **× Hide** target appears. Moving into it changes its ring/size/caption
+   and gives haptic feedback; dropping there hides the panel while audio continues. A downward
+   move elsewhere, cancelling or adding a second finger must not hide it. The target disappears
+   when the drag ends. Holding the dock's **Play/Pause** again also hides without pausing.
+   Reopen with another hold: restore the last resting edge/height, rather than the drop location.
+   Rotate with Maps visible, then hide/reopen in each orientation. Avoid clipping at cutouts,
+   navigation/status bars and screen edges. Verify EN/PL and enlarged system text.
+6. Lock/unlock the phone: no panel over the lock screen, and an explicitly enabled session can
+   restore it after unlock. A previously hidden panel must stay hidden. End the playback service
+   and restart the app: the panel must not silently reactivate or resume audio.
+   Lock or rotate during a drag: no orphaned **× Hide** target or delayed accidental dismissal.
+7. Revoke **Display over other apps** while the feature is active. The window must disappear;
+   subsequent activation must explain the missing permission. Playback and ordinary notification
+   controls remain usable. Some apps/system screens can suppress overlays by design.
+
+Overall practical operation is accepted for the experiment; individual checklist outcomes remain
+unchecked unless separately reported. Host renders preview the production panel, not its
+composition over Google Maps or behaviour on an actual navigation device.
+
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 
 [Contract and limits](VOLUME_NORMALIZATION.md). Phone feedback reports comparable perceived

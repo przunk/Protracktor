@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
@@ -171,6 +172,8 @@ internal fun LabelledAction(
     slim: Boolean = false,
     /** Queue's enlarged header can grow to keep full captions alongside its source. */
     wrapLabel: Boolean = false,
+    /** Keep centered paragraphs within their measured node in a width-constrained window. */
+    fillLabelWidth: Boolean = false,
 
 ) {
     val haptics = rememberHaptics()
@@ -256,7 +259,7 @@ internal fun LabelledAction(
                 // header explicitly opts into wrapping when accessibility text is enlarged.
                 maxLines = if (wrapLabel) Int.MAX_VALUE else if (slim) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier.then(if (fillLabelWidth) Modifier.fillMaxWidth() else Modifier).padding(top = 2.dp),
             )
         }
     }

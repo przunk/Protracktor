@@ -1,11 +1,98 @@
 # Status
 
-Updated: 2026-10-25 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest supplied test APK remains 1.3.0 (1301), source 296de93; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
+Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest branch test APK 1.4.0 (1313), source 2497632, includes unmerged B54 with whole-panel drag, edge docking and file holds; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B54 Floating controls — accepted experiment; distribution gate in progress, 2026-10-26
+
+The practical phone trial was reported satisfactory and integration was approved with
+**`FloatingControls.ENABLED = false`**. This retains the experiment in develop while withholding
+its dock action, permission flow and overlay activation from normal users. No runtime toggle is
+exposed. The exact installed build was not restated; the latest supplied enabled APK is
+1.4.0 (1313), source 2497632. Its identity stays unchanged. Gate verification and integration are
+in progress. Historical unmerged/pending notes below describe earlier stages, not a remaining
+requirement to approve the already accepted integration. Individual device cases were not
+separately reported. [Distribution decision](FLOATING_CONTROLS.md).
+
+### Historical implementation and trial handoffs
+
+Implemented on `feature/floating-playback-controls`, based on develop `b52a6d7`; unmerged and
+awaiting phone acceptance. Holding the dock Play/Pause control requests optional overlay permission
+and opens a movable, bounded panel above other apps. Previous/Play/Pause/Next and the add-only
+playlist heart delegate to existing playback/save operations. Pause retains the panel; Hide does
+not pause. The service disposes its window and composition; activation is session-only and
+normalized placement is saved separately from library data. EN/PL and privacy text are updated.
+
+Initial-source host pass: **32 tests / 6 suites**, zero failures/errors/skips, covering source projection,
+geometry/raw dragging, real panel gestures, permission return/recreation, window lifetime on
+API 29/33, language updates and enlarged text. Both controlled negative probes detected their
+intended regressions and were restored. The agent ran the full host gate against clean source
+**9c73ad0441cd256c4937a98df2f053f04542db2f**: **1195 tests / 158 suites**, zero failures,
+errors or skips; all 31 unit tasks executed, all companion checks passed, including 53 native/DSP
+cases. The full gate took **678 s**; fresh lint completed with **0 errors / 76 warnings**.
+
+Initial minified, test-signed release **1.4.0 (1309)**, superseded by build 1311 below:
+[protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk](../dist/protracktor-release-1.4.0-1309-9c73ad0-20261025-225718.apk),
+**12,017,471 bytes**, SHA-256
+`6a35fc56c44fbaec655052f27b84aaf9a72e1cb256c00dcf3a70adfa48a68ac1`.
+R8 executed; independent signature/source/manifest, CRC, alignment and native-ABI inspection
+passed. Logs and reports are retained in ignored `user/floating-controls-verification/`.
+Later documentation commits do not relabel this artifact.
+
+Host previews do not establish operation above Google Maps. Phone feedback below confirms the
+activation-button and permission-screen observations; the exact installed build was not separately
+reported. Panel/Maps behaviour remains **unchecked**; versionName remains 1.4.0, schema 23, release refs, prepared AAB and AMP
+are untouched. Develop remains `b52a6d7`; this feature is unmerged and nothing was pushed.
+[Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--experimental-disabled-by-default).
+
+**Follow-up, 2026-10-25:** the initial phone check found the activation button oversized and
+Android refused access to the overlay setting. Replace the button with a Play/Pause hold; keep
+ordinary taps unchanged, and move permission-result ownership into the application shell. Add
+conditional restricted-settings guidance without claiming to override the system block.
+
+**Checked on the host:** **17 focused tests / 2 suites**, zero failures/errors/skips, plus fresh
+lint **0 errors / 76 warnings**, **121.5 s** together. Disconnecting the physical hold callback
+made its gesture assertion fail; the callback was restored for the passing run. The full suite
+was **not repeated**, as requested. The earlier 1195-test pass belongs to source 9c73ad0.
+
+Play/Pause-hold iteration, superseded by build 1313 below: minified, test-signed **1.4.0 (1311)**, clean source
+**620e0213a4e23b620d32f4cba0327819ca7e7687**:
+[protracktor-release-1.4.0-1311-620e021-20261025-231810.apk](../dist/protracktor-release-1.4.0-1311-620e021-20261025-231810.apk),
+**12,018,335 bytes**, SHA-256
+`b9f20ab3e1caeeda50e0cc2bc4874e3e94bbfff3daa3f14677b331b4f0832b31`.
+Build supervision took **161.1 s**; R8 executed. Signature/source/manifest, ZIP CRCs, alignment
+and all three native ABIs passed independent inspection. Evidence is retained in ignored
+`user/floating-controls-verification/hold-followup/`. Later documentation commits do not relabel
+the APK. **Unchecked on a phone:** new holds/taps, Maps overlay and successful resolution of the
+system refusal. No merge, push, release-ref movement or AAB change.
+
+**Gesture follow-up, 2026-10-26 — APK ready for phone testing:** use whole-panel native dragging, a temporary
+bottom **× Hide** drop target and animated docking to the nearest edge, replacing the persistent
+Move/Hide controls. Keep all four actions visible. Previous/Next holds share the dock's existing
+file operations, including subsong and availability rules. Cancellation must not hide or trigger
+transport. A tap that interrupts snapping resumes docking on release; a cancelled drop does not
+hide. The final Up coordinates, rather than only the last Move, decide a drop.
+
+Clean source **24976323fc27614eb34bfc5dba6cfc1b734ff577** passed **51 focused tests / 6 suites**,
+zero failures/errors/skips; fresh lint **0 errors / 79 warnings**, **199.8 s** together. A negative
+probe detected a file hold when child cancellation was disconnected; it was restored before the
+passing run. The additional three warnings concern two retired caption resources and the drag
+container's required programmatic constructor. The full suite was **not repeated**, as requested.
+
+Minified, test-signed release **1.4.0 (1313)**:
+[protracktor-release-1.4.0-1313-2497632-20261026-001409.apk](../dist/protracktor-release-1.4.0-1313-2497632-20261026-001409.apk),
+**12,023,719 bytes**, SHA-256
+`b5b5710b8848488d53b3e1a3cfe58304296b3a681b4c80d997c63277e31411b6`.
+The supervised build took **131.2 s** and executed R8. Independent signature/source/manifest,
+ZIP CRC, 16 KB alignment and all three native-ABI checks passed. Evidence and three inspected
+EN/PL/enlarged-PL previews are under ignored `user/floating-controls-verification/bubble-gestures/`.
+Later documentation commits do not relabel the artifact. **Unchecked on a phone:** actual Maps
+overlay, new drag/drop/hold behaviour and resolution of the permission restriction. No merge,
+push, release-ref movement or AAB change. [Contract and checks](FLOATING_CONTROLS.md).
 
 ## C120 Same song heard twice consecutively with playlist shuffle
 

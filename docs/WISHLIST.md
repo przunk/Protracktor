@@ -10,13 +10,24 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B54. Floating playback controls — for discussion, recorded 2026-10-25
+## B54. Floating playback controls — accepted experiment, default Off
 
-New feature proposal: add floating playback controls. This is the next topic selected for
-discussion; no design or implementation has been agreed. Clarify the intended use, where the
-controls should appear, their actions, positioning and dismissal, and how they relate to the
-existing dock and notification. Whether they stay within the app or appear over other apps
-remains open.
+Decision, 2026-10-26: retain the satisfactory phone trial in develop with
+`FloatingControls.ENABLED = false`. This is experimental integration only; public availability
+requires a later explicit decision. Gate verification and merging are in progress. The latest
+enabled trial APK remains 1.4.0 (1313), source 2497632; individual device scenarios were not
+separately reported. The description below applies when the experiment is compiled On.
+
+Selected for implementation after discussion on 2026-10-25: optional controls above other Android
+apps, motivated by Random playback with Google Maps visible. The horizontal panel has Previous,
+Play/Pause, Next and the existing add-and-save playlist heart. The 2026-10-26 follow-up replaces
+the drag handle/Hide buttons with whole-panel dragging, animated edge docking and a temporary
+bottom **× Hide** drop target. Previous/Next holds skip files exactly as in the dock.
+Activation is manual by holding the dock Play/Pause control, with an explicit overlay grant. Pause retains
+the panel; Hide leaves audio playing; normalized placement is remembered. Use the same playback
+controller and save guards as the notification. Implementation is on
+`feature/floating-playback-controls`, approved for integration with the compile-time gate Off.
+[Analysis, selected scope and verification](FLOATING_CONTROLS.md).
 
 ## B53. Integrate a free music library — idea, recorded 2026-10-25
 
