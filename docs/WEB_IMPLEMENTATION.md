@@ -39,8 +39,8 @@ evidence and final integrated checks. A model-only substage does not complete a 
 
 | Scope | Feature | State |
 | --- | --- | --- |
-| W01 | Independent playback context and selected playlist | Model substage checked; page/event integration in progress |
-| W02 | Full manual queue and list interactions | Pending |
+| W01 | Independent playback context and selected playlist | Core integration checked; shared Add availability retained for W02 |
+| W02 | Full manual queue and list interactions | Schedule/Clear model checked; playback and list integration pending |
 | W03 | Return to playback source | Pending |
 | W04 | Remembered Random and deliberate reroll | Pending |
 | W05 | Random platform/Favourites filters | Pending |
@@ -126,6 +126,8 @@ checked files. Full logs and JUnit/lint reports are retained under
 
 ### W01 page integration — 2026-10-27
 
+Editor/source integration: `0d3458c`, following the domain foundation `3676bc4`.
+
 The page now uses the selected editor independently of its transport source. The playlist sheet,
 Save, Discard, Save as, row removal/Undo, Add and the return from a collection all address the
 selected document. Changing its view sends no decoder command; an explicit track choice transfers
@@ -208,12 +210,25 @@ content, never audio traversal. Stale source actions are generation-bound. A cur
 must own metadata/History/transport independently of the source cursor; the W01 editor stays the
 only playlist persistence owner.
 
-An ignored draft ports the production schedule/clear model and **29 Android test scenarios**.
-All 29 pass; deliberately replacing Previous-to-anchor with ordinary source Previous fails its
-specific guard, and the restored draft passes. This is a host model draft, not committed W02
-application integration. The W01 full-gate inputs are left unchanged while that gate runs.
-Still required: production module/check registration, playback integration including subsong/end/
-failure/cancellation paths, one panel above the shared dock, stable/animated row updates, labelled
+An ignored draft first ported the production schedule/clear model and **29 Android test scenarios**.
+The model now lives in `web/src/playback-schedule.js`, with the ported cases in
+`scripts/check-playback-schedule.mjs`, registered in the full gate. It supplies one-shot scheduling,
+stable source/manual row projection, pending-only reorder/removal/Undo, origin-aware occurrences
+and Clear's guarded snapshot. It does not yet supply the application's manual-queue UI.
+
+All 29 production-model cases pass. A production-model mutation replacing Previous-to-anchor with
+ordinary source Previous fails its specific guard; restored code passes. The model/check inputs
+are part of the thirteen-file candidate and the forced **1218-test / 160-suite** full pass recorded
+above. No Android production/schema/native/dependency change is introduced. This checked model
+substage must not be reported as a completed W02 feature.
+
+A separate ignored draft ports controller state-to-effect handling and removal intent; **14
+controller-derived cases** pass, including paused removal, actual History origin and deferred
+Random draws. Forcing autoplay on paused removal fails its exact guard. That draft is not in the
+production page or full-gate input set, and does not prove a DOM-to-audio path.
+
+Still required: playback integration including subsong/end/failure/cancellation paths, one panel
+above the shared dock, stable/animated row updates, labelled
 menu/keyboard equivalents, directional gestures and pending-only reorder with Android's vertical
 priority. W02 remains open until those substages and their integrated checks are complete.
 

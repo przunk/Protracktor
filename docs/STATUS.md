@@ -56,8 +56,9 @@ selection persistence regression is corrected. W01 core separation is checked; i
 visibility case is retained for W02 actual-occurrence integration. Real-browser behaviour is
 unchecked. The model substage passed **1218 tests / 160
 suites**, 66 new domain checks and all existing companions; lint analysis was up to date, with
-zero errors / 79 warnings. W02 staging is recorded in the implementation ledger; its application
-integration is pending. Other scopes have not been declared complete.
+zero errors / 79 warnings. W02's production schedule/Clear model passes 29 Android-derived cases
+and is registered in the full gate; its application/list integration is pending. The additional
+14 controller state/effect cases remain an ignored draft. Other scopes have not been declared complete.
 Android production code and schema are unchanged.
 
 ## WEB and Android parity inventory — 2026-10-26
