@@ -582,6 +582,41 @@ const describeOf = (bytes, name) => {
     Buffer.from(config).includes(Buffer.from([0x05, 0x80, 0x80, 0x80, 0x02, 0x12, 0x10])));
 }
 
+// Exercise the real worklet message path against the packaged WASM, outside an audio device.
+{
+  const vm = await import('node:vm');
+  const replies = [];
+  let Processor;
+  const sandbox = {
+    EngineModule: (options) => import(engineFile).then((module) => module.default(options)),
+    AudioWorkletProcessor: class {
+      constructor() { this.port = { postMessage: (message) => replies.push(structuredClone(message)) }; }
+    },
+    registerProcessor: (_name, component) => { Processor = component; },
+    sampleRate: 44100, performance, crypto: globalThis.crypto,
+  };
+  const code = fs.readFileSync('web/src/processor.js', 'utf8')
+    .replace("import EngineModule from '../vendor/engine.mjs';", '');
+  vm.runInNewContext(code, sandbox);
+  const processor = new Processor({ processorOptions: { wasmBinary: fs.readFileSync('web/vendor/engine.wasm') } });
+  const send = (message) => processor.port.onmessage({ data: message });
+  send({ type: 'open', requestId: 40, name: 'first.mod', bytes: tinyModule });
+  send({ type: 'open', requestId: 41, name: 'second.mod', bytes: tinyModule });
+  const deadline = Date.now() + 10000;
+  while (processor.pending && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+  check('the actual worklet drains queued opens with their original request identity',
+    replies.filter((message) => message.type === 'opened').map((message) => message.requestId).join() === '40,41');
+  send({ type: 'subsong', index: 0 });
+  send({ type: 'seek', seconds: 0 });
+  processor.process([], [[new Float32Array(128), new Float32Array(128)]]);
+  check('subsong, seek and audio-clock replies retain the active request identity',
+    ['subsong', 'seeked', 'position'].every((type) => replies.some((message) => message.type === type && message.requestId === 41)));
+  send({ type: 'open', requestId: 42, name: 'invalid.mod', bytes: new Uint8Array([1, 2, 3]) });
+  check('a decoder refusal identifies the request that actually failed',
+    replies.at(-1)?.type === 'failed' && replies.at(-1)?.requestId === 42);
+  send({ type: 'close' });
+}
+
 console.log();
 if (failed) {
   console.error(`${failed} engine check${failed === 1 ? '' : 's'} failed`);

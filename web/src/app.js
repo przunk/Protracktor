@@ -6,6 +6,7 @@
 import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
+import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -114,7 +115,108 @@ let seeking = false;
  * every handoff and never deleted — the same bargain the phone's own default playlist has, from the
  * other end. Everything else here was made in this browser and is the browser's to keep.
  */
-let activePlaylist = PHONE;
+let workspace = new PlaybackWorkspace({ editor: {
+  id: PHONE, name: t('From the phone'), order: new PlayOrder(), dirty: false, revision: 0,
+} });
+let editorShown = true;
+let sourcePlaylistId = PHONE;
+let sourcePlaylistName = t('From the phone');
+let editorAsked = 0;
+let playAsked = 0;
+let selectionWrites = Promise.resolve();
+const playlistWrites = new Map();
+const writeVersions = new Map();
+const deletedPlaylists = new Set();
+
+function rememberEditorSelection(id) {
+  selectionWrites = selectionWrites.catch(() => {}).then(() => settings.set('active', id));
+  return selectionWrites;
+}
+
+function writePlaylist(id, write) {
+  const pending = playlistWrites.get(id) ?? Promise.resolve();
+  const operation = pending.catch(() => {}).then(write);
+  playlistWrites.set(id, operation);
+  return operation;
+}
+
+function captureTransport() {
+  const source = random ? { kind: 'random', session: random.sessionId ?? 1 }
+    : away ? { kind: 'collection', origin: away.kind, query: away.query ?? '', path: away.path ?? '' }
+    : { kind: 'playlist', id: sourcePlaylistId, name: sourcePlaylistName };
+  const previous = workspace.context;
+  const unchanged = previous.order.tracks.length === queue.length
+    && previous.order.tracks.every((track, i) => track === queue[i]);
+  const actualHistory = history.length ? history : index >= 0 ? [index] : [];
+  const current = new PlayOrder({ tracks: unchanged ? previous.order.tracks : queue, shuffle, repeat,
+    indices: shuffle && order.length ? order : undefined, history: actualHistory,
+    cursor: actualHistory.lastIndexOf(index), random: randomSource });
+  const context = JSON.stringify(previous.source) === JSON.stringify(source)
+    ? previous.withOrder(current) : new PlaybackContext({ source, order: current });
+  workspace = workspace.activate(context);
+  return context;
+}
+
+function editorTracks() { return workspace.editor.order.tracks; }
+function visibleTracks() { return editorShown ? editorTracks() : queue; }
+function editorOwnsPlayback() { return captureTransport().belongsTo(workspace.editor.id); }
+function visibleIndex() { return !editorShown || editorOwnsPlayback() ? index : -1; }
+
+function editorStash() {
+  const draft = workspace.editor;
+  return { queue: draft.order.tracks, index: draft.order.currentIndex ?? -1,
+    history: draft.order.history, order: draft.order.indices, name: draft.name };
+}
+
+function refreshStashes() {
+  const stash = editorStash();
+  if (random) random.stash = stash;
+  if (away) away.stash = stash;
+  if (away?.dice) away.dice.session.stash = stash;
+}
+
+function applyTransportOrder() {
+  const state = workspace.context.order;
+  queue = [...state.tracks];
+  index = state.currentIndex ?? -1;
+  history = [...state.history];
+  order = [...state.indices];
+}
+
+function changeEditorTracks(tracks, { dirty = true } = {}) {
+  const owns = editorOwnsPlayback();
+  workspace = workspace.editTracks(tracks, { dirty });
+  if (owns) applyTransportOrder();
+  refreshStashes();
+  setDirty(dirty);
+}
+
+function showEditor() {
+  showSessionView(null);
+  render();
+  setPlaying(playing);
+}
+
+function showPlaybackList() {
+  showSessionView(random ? 'random' : away?.kind ?? null);
+  editorShown = false;
+  if (!random && !away) $('playlistname').textContent = sourcePlaylistName;
+  setDirty(workspace.editor.dirty);
+  render();
+}
+
+function playEditorAt(at) {
+  if (!editorTracks()[at] || editorTracks()[at].local) return;
+  captureTransport();
+  random = null;
+  away = null;
+  sourcePlaylistId = workspace.editor.id;
+  sourcePlaylistName = workspace.editor.name;
+  workspace = workspace.playPlaylist(at);
+  applyTransportOrder();
+  showSessionView(null);
+  playAt(at);
+}
 
 /** How many tunes are inside the open file, and which one is sounding. */
 let subsongCount = 1;
@@ -368,6 +470,8 @@ function whenEngineReady(ms = 30000) {
 }
 
 function onWorklet(message) {
+  // An old decoder may answer after another source was selected or loading was stopped.
+  if (message.requestId != null && message.requestId !== playAsked) return;
   switch (message.type) {
     case 'ready':
       engineReady = true;
@@ -718,50 +822,12 @@ const arrivedByJump = () => !!jumpedTo && jumpedTo.join('\u0000') === browsePath
 async function showAuthorFolder(entry) {
   const folder = authorFolderOf(entry);
   if (!folder) return;
-  const digressing = !!random;
   $('browsesearch').value = '';
   browsePath = folder;
   jumpedTo = folder.slice();
   showPanel('browse');
-  // **The dice stands aside as the folder opens, not when something in it is played**
-  // (`docs/SPEC_RANDOM.md` §3). Doing it when something is played instead lets next roll another
-  // pick, lets Back climb the archive, and leaves the way back existing only by accident.
-  if (digressing) {
-    const [source, format, author] = folder;
-    const tracks = (await archive.tracksIn(format, author, source)).map(plain);
-    openDigression(tracks, tracks.findIndex((track) => track.url === entry.url));
-  }
   await renderBrowse();
-  // **On screen, not somewhere below the fold.** You came here from that tune, and an author with
-  // eighty of them would otherwise open at the top with no sign of the one you were listening to.
   revealRow(markPlayingIn($('browselist'), entry.url));
-}
-
-/**
- * The author's folder becomes what next and previous walk, **without restarting anything**.
- *
- * The tune playing is the tune the jump was made from, and it is in this folder — so the session
- * changes underneath it and the music does not notice. The dice waits inside the new session with
- * its record and its cursor (`docs/BACKLOG.md` A41).
- */
-function openDigression(tracks, at) {
-  if (!random || !tracks.length) return;
-  // A change the playlist was still waiting to save is its own; written before the swap.
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
-  away = {
-    stash: random.stash,
-    kind: 'browse',
-    dice: { session: random, queue, index, history, order },
-    author: browsePath[2] ?? '',
-  };
-  random = null;
-  queue = tracks.slice();
-  index = Math.max(0, at);
-  history = [index];
-  order = [];
-  if (shuffle) reshuffle(index);
-  showSessionView('browse');
-  render();
 }
 
 /** The machine the file is for, from its name, or '' -- the phone's `Platforms.forFileName`. */
@@ -937,14 +1003,17 @@ function nameTheTab(entry) {
 }
 
 async function playAt(next) {
+  const asked = ++playAsked;
   try {
     await start();
   } catch (error) {
     // `start` has already said what went wrong; this stops the queue walking on regardless.
+    if (asked !== playAsked) return;
     setPlaying(false);
     $('sub').textContent = '—';
     return;
   }
+  if (asked !== playAsked) return;
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
   remember();
@@ -1011,6 +1080,7 @@ async function playAt(next) {
       }
     }
   } catch (e) {
+    if (asked !== playAsked || abort.signal.aborted) return;
     // **Only the load that is still current clears the flag.** Two quick track changes overlap:
     // the older fetch finishes after the newer one has started, and clearing unconditionally would
     // wipe the newer controller -- leaving a download nobody can call off and a button that lies
@@ -1024,6 +1094,7 @@ async function playAt(next) {
     $('sub').textContent = '—';
     return;
   }
+  if (asked !== playAsked || abort.signal.aborted) return;
   // **The load is not over when the fetch is.** The bytes still have to reach the worklet and be
   // opened. In that gap the dock says "opening…" while the button would otherwise be back to a
   // play arrow, and pressing it would do something else entirely. The controller stays until the
@@ -1042,10 +1113,13 @@ async function playAt(next) {
   // Only for the three names HVSC could possibly know. Hashing every file would cost a pass over a
   // five-megabyte MP3 to learn that a C64 database has never heard of it.
   const decoderName = fileOf(entry);
-  openLengths = await songLengthsFor(decoderName, bytes);
-  openMetadata = await songMetadataFor(bytes);
+  const lengths = await songLengthsFor(decoderName, bytes);
+  const metadata = await songMetadataFor(bytes);
+  if (asked !== playAsked || abort.signal.aborted) return;
+  openLengths = lengths;
+  openMetadata = metadata;
 
-  node.port.postMessage({ type: 'open', bytes, name: decoderName }, [bytes]);
+  node.port.postMessage({ type: 'open', requestId: asked, bytes, name: decoderName }, [bytes]);
   setPlaying(false);
   announceGesture();
 
@@ -1099,7 +1173,7 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  */
 function followPlaying() {
   // Not while rows are being ticked: a list that moves under a working finger fights it.
-  if (!selected.size) revealRow($('queue').children[index]);
+  if (!selected.size && (!editorShown || editorOwnsPlayback())) revealRow($('queue').children[index]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
   if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), queue[index]?.url));
@@ -1149,7 +1223,7 @@ function setPlaying(on) {
   playing = on;
   // Offered for anything playing that is not the playlist: a dice pick, a Browse result, a tune
   // sent by link. Deciding to keep it is what you do after hearing it.
-  $('nowkeep').hidden = !(random || away) || !queue[index] || activePlaylist === PHONE;
+  $('nowkeep').hidden = !(random || away) || !queue[index] || workspace.editor.id === PHONE;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
@@ -1193,7 +1267,7 @@ let emptyAsked = 0;
 async function renderEmpty() {
   const asked = ++emptyAsked;
   const box = $('emptyplaylist');
-  const showing = () => !queue.length && !random && !away;
+  const showing = () => editorShown && !editorTracks().length;
   if (!showing()) { box.hidden = true; return; }
   let held = false;
   try {
@@ -1215,17 +1289,20 @@ async function renderEmpty() {
 }
 
 function render() {
+  captureTransport();
   renderEmpty();
+  const tracks = visibleTracks();
+  const shownIndex = visibleIndex();
   const list = $('queue');
   // Browse's Add buttons say whether a tune is in this list, and this is where the list changed.
   for (const row of $('browselist').children) row.repaintAdd?.();
   // And its rows follow what is playing and what is being fetched, since the list on screen during
   // a digression is Browse's rather than this one.
   if (!$('browse').hidden) markPlayingIn($('browselist'));
-  if (selected.size) selected = new Set([...selected].filter((entry) => queue.includes(entry)));
-  list.replaceChildren(...queue.map((entry, i) => {
+  if (selected.size) selected = new Set([...selected].filter((entry) => tracks.includes(entry)));
+  list.replaceChildren(...tracks.map((entry, i) => {
     const li = document.createElement('li');
-    li.className = i === index && rowState ? `track ${rowState}` : 'track';
+    li.className = i === shownIndex && rowState ? `track ${rowState}` : 'track';
     // Grey rather than red: `.failed` means a decoder refused this, and nothing here broke -- the
     // bytes simply never left the phone. A different state, and one that does not answer a click.
     if (entry.local) li.classList.add('local');
@@ -1273,20 +1350,20 @@ function render() {
         // an order dealt earlier played only what came after it -- the same tunes from any start,
         // and the ones before it never. And it is the first: back stops at it, since what played
         // before belonged to another order. The phone's `PlayQueue.startAt` does the same.
-        if (shuffle) { reshuffle(i); history = []; }
-        playAt(i);
+        if (editorShown) playEditorAt(i);
+        else { if (shuffle) { reshuffle(i); history = []; } playAt(i); }
       };
       holdToSelect(li, entry);
     }
     return li;
   }));
   updateSelectBar();
-  $('count').textContent = queue.length
-    ? tn(queue.length, '{n} track', '{n} tracks')
+  $('count').textContent = tracks.length
+    ? tn(tracks.length, '{n} track', '{n} tracks')
     : t('nothing yet');
-  if (random) $('count').textContent = tn(queue.length, '{n} played at random', '{n} played at random');
+  if (random && !editorShown) $('count').textContent = tn(queue.length, '{n} played at random', '{n} played at random');
   // What the session is, not always History's words: a tune sent here said "1 from your history".
-  if (away) {
+  if (away && !editorShown) {
     $('count').textContent = {
       history: tn(queue.length, '{n} from your history', '{n} from your history'),
       browse: tn(queue.length, '{n} from Browse', '{n} from Browse'),
@@ -1360,9 +1437,9 @@ async function copyLink(entry) {
 
 /** Scrolls the list to a row and marks it, which is what the phone's "Show in playlist" does. */
 function showInPlaylist(i) {
+  showPlaybackList();
   const row = $('queue').children[i];
-  if (!row) return;
-  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (row) revealRow(row);
   showPanel(null);
 }
 
@@ -1452,11 +1529,11 @@ function openRowMenu(entry, anchor) {
     [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
-  if (random) items.push([t('Remove from this list'), () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
+  if (random && !editorShown) items.push([t('Remove from this list'), () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
   // **A playlist of the user's own can lose a row**, as on the phone. "From the phone" is what
   // the phone sent and is never edited here; a session's list is not a playlist.
-  if (!random && !away && activePlaylist !== PHONE) {
-    items.push([t('Remove from this playlist'), () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
+  if (editorShown && workspace.editor.id !== PHONE) {
+    items.push([t('Remove from this playlist'), () => removeFromPlaylist(editorTracks().indexOf(entry)), true, ICON.remove]);
   }
   showMenu(items, anchor);
 }
@@ -1528,10 +1605,9 @@ addEventListener('scroll', closeRowMenu, true);
  */
 let saveTimer = null;
 function remember() {
-  // **The dice's record is never a playlist**, "From the phone" least of all.
-  if (random || away) return;
+  captureTransport();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { saveTimer = null; if (!random && !away) saveQueue(); }, 500);
+  saveTimer = setTimeout(() => { saveTimer = null; saveQueue(); }, 500);
 }
 
 /**
@@ -1541,25 +1617,28 @@ function remember() {
  * holds one playlist, and a hole the moment Random swaps it: a save still pending when the dice
  * takes over would write the dice's picks into the playlist it had just left.
  */
-async function saveQueue() {
-  // **Edits wait for Save**, as on the phone. While the list differs from the one on disk
-  // nothing is written, the place in it included --
-  // it would be a place in a list that was never saved.
-  if (dirty) return;
-  const id = activePlaylist;
-  // Inside Random or History the playlist waits in the stash, and that is what Save means.
-  const source = (random ?? away)?.stash ?? { queue, index };
-  // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that lives
-  // somewhere else, they are the largest thing in the queue by far, and a page that quietly hoards
-  // somebody's music is not what this is.
-  const tracks = source.queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
-  const at = source.index;
-  try {
-    const name = id === PHONE ? 'From the phone' : (await playlists.get(id))?.name ?? 'Playlist';
-    await playlists.save({ id, name, tracks, index: at });
-    await settings.set('active', id);
-  } catch (e) {
-    status(t('could not save the playlist: {reason}', { reason: e.message }));
+async function saveQueue({ explicit = false } = {}) {
+  captureTransport();
+  if ((workspace.editor.dirty && !explicit) || deletedPlaylists.has(workspace.editor.id)) return false;
+  const snapshot = workspace.saveSnapshot();
+  const name = workspace.editor.name;
+  const at = workspace.editor.order.currentIndex ?? 0;
+  const tracks = snapshot.tracks.map(plain);
+  const version = (writeVersions.get(snapshot.playlistId) ?? 0) + 1;
+  writeVersions.set(snapshot.playlistId, version);
+  const operation = writePlaylist(snapshot.playlistId, async () => {
+    if (writeVersions.get(snapshot.playlistId) !== version) return false;
+    const stored = await playlists.get(snapshot.playlistId);
+    if (writeVersions.get(snapshot.playlistId) !== version) return false;
+    await playlists.save({ id: snapshot.playlistId, name: stored?.name ?? name, tracks, index: at });
+    if (explicit) workspace = workspace.markSaved(snapshot);
+    setDirty(workspace.editor.dirty);
+    return true;
+  });
+  try { return await operation; }
+  catch (error) {
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    return false;
   }
 }
 
@@ -1617,11 +1696,11 @@ const SESSION = {
 };
 
 function showSessionView(kind) {
+  editorShown = !kind;
   $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
   $('randomnote').hidden = true;
-  // **A digression says whose folder it is**, in the shape the dice's own heading has (`docs/BACKLOG.md`
-  // A41): the dice is not over, it is waiting, and the way back is the button beside these words.
+  // Keep the author's name visible after an explicit choice from its folder.
   const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
@@ -1629,19 +1708,15 @@ function showSessionView(kind) {
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
-  // Back to the dice rather than out to the playlist, while there is a dice to go back to.
-  $('random-leave').innerHTML = iconSvg(digressing ? ICON.dice : ICON.playlist)
-    + (digressing ? t('Random') : t('Playlist'));
+  $('random-leave').innerHTML = iconSvg(ICON.playlist) + t('Playlist');
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
   if (digressing) $('randomscope').textContent = away.author;
   $('randomscope').hidden = kind !== 'random' && !digressing;
   $('random-filter').hidden = kind !== 'random';
-  // **The chip stays usable**, because it looks like a way out and ought to be one. The phone
-  // hides it here; the page lets it name where you are and choose where to go,
-  // and choosing a playlist ends the session on the way (`choosePlaylist`).
-  if (kind) $('playlistname').textContent = digressing ? t('Browsing') : SESSION[kind].chip;
-  setDirty(dirty);
+  // Selecting a playlist changes the editor; transport keeps its current source.
+  $('playlistname').textContent = kind ? (digressing ? t('Browsing') : SESSION[kind].chip) : workspace.editor.name;
+  setDirty(workspace.editor.dirty);
 }
 
 function showRandomView(on) { showSessionView(on ? 'random' : null); }
@@ -1659,11 +1734,12 @@ function enterRandomFromBrowse() {
  * inside a click -- and a pick has to be read from IndexedDB and fetched before it can play.
  */
 async function openRandom() {
+  captureTransport();
   const engine = start().catch(() => null);
   // A change the playlist was still waiting to save is its own; written now, before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
   // Entering again starts a new record but goes back to the same playlist when it ends.
-  const stash = random?.stash ?? away?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
+  const stash = editorStash();
   away = null;
   loading?.abort();
   loading = null;
@@ -1748,29 +1824,42 @@ async function rollRandom() {
  * only while the list is the saved one, because a place in an unsaved list means nothing on disk.
  * "From the phone" is never edited, so it is never dirty.
  */
-let dirty = false;
+
 let unsavedAnswer = null;
+let unsavedPending = null;
 
 function setDirty(value) {
-  dirty = value;
-  // The phone's rule: Save and Discard only while there is something to save, and not while the
-  // screen is showing a session rather than the playlist.
-  const show = dirty && !random && !away;
+  workspace = workspace.copy({ editor: { ...workspace.editor, dirty: value } });
+  const show = value && editorShown;
   $('tab-save').hidden = !show;
   $('tab-discard').hidden = !show;
 }
 
 async function saveEdits() {
-  setDirty(false);
-  await saveQueue();
-  status(t('Saved'));
+  const saved = await saveQueue({ explicit: true });
+  if (saved) status(t('Saved'));
+  return saved;
 }
 
 /** Reads the stored playlist back, throwing the edits away. */
 async function discardEdits() {
-  setDirty(false);
-  await switchTo(activePlaylist);
-  status(t('Changes discarded'));
+  const id = workspace.editor.id;
+  const asked = ++editorAsked;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  writeVersions.set(id, (writeVersions.get(id) ?? 0) + 1);
+  await (playlistWrites.get(id) ?? Promise.resolve()).catch(() => {});
+  try {
+    const saved = await playlists.get(id);
+    if (asked !== editorAsked || workspace.editor.id !== id) return false;
+    changeEditorTracks(saved?.tracks ?? [], { dirty: false });
+    render();
+    status(t('Changes discarded'));
+    return true;
+  } catch (error) {
+    if (asked === editorAsked) showNote(t('could not read it: {reason}', { reason: error.message }));
+    return false;
+  }
 }
 
 /**
@@ -1780,17 +1869,19 @@ async function discardEdits() {
  * them, both of which go on; closing it keeps editing, which does not.
  */
 function settleUnsaved() {
-  if (!dirty) return Promise.resolve(true);
-  return new Promise((resolve) => {
+  if (!workspace.editor.dirty) return Promise.resolve(true);
+  unsavedPending ??= new Promise((resolve) => {
     unsavedAnswer = resolve;
-    $('unsaved').hidden = false;
   });
+  $('unsaved').hidden = false;
+  return unsavedPending;
 }
 
 function answerUnsaved(go) {
   $('unsaved').hidden = true;
   const resolve = unsavedAnswer;
   unsavedAnswer = null;
+  unsavedPending = null;
   resolve?.(go);
 }
 
@@ -1850,51 +1941,47 @@ function removeFromPlaylist(at) { removeRows([at]); }
  * changed for a group is that undo has to bring all of it back, each to where it was.
  */
 function removeRows(ats) {
-  if (random || away || activePlaylist === PHONE) return;
-  const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < queue.length).sort((x, y) => x - y);
+  if (!editorShown || workspace.editor.id === PHONE) return;
+  const rows = editorTracks();
+  const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < rows.length).sort((a, b) => a - b);
   if (!sorted.length) return;
-  const current = queue[index];
-  const removed = sorted.map((at) => ({ at, track: queue[at] }));
-  const wasCurrent = sorted.includes(index);
-  for (let k = sorted.length - 1; k >= 0; k--) queue.splice(sorted[k], 1);
+  const owns = editorOwnsPlayback();
+  const current = rows[workspace.editor.order.currentIndex];
+  const removed = sorted.map((at) => ({ at, track: rows[at] }));
+  const wasCurrent = owns && sorted.includes(index);
+  changeEditorTracks(rows.filter((_, i) => !sorted.includes(i)));
   if (wasCurrent) {
     stopForLeaving();
     index = Math.min(sorted[0], queue.length - 1);
+    history = index >= 0 ? [index] : [];
     rowState = 'selected';
+    captureTransport();
     setPlaying(false);
     $('title').textContent = queue[index]?.name ?? t('Nothing playing');
     $('sub').textContent = queue[index] ? t('press play') : '—';
-  } else {
-    index = queue.indexOf(current);
   }
-  // The shuffle and the back-stack both hold indices, and every one past a gap has moved.
-  history = index >= 0 ? [index] : [];
-  if (shuffle) reshuffle(index >= 0 ? index : null);
-  lastRemoval = { removed, playlist: activePlaylist, wasCurrent, current };
-  setDirty(true);
+  lastRemoval = { removed, playlist: workspace.editor.id, wasCurrent, current };
   render();
-  showUndo(removed.length === 1 ? t('Removed {name}', { name: removed[0].track.name }) : tn(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
+  showUndo(removed.length === 1 ? t('Removed {name}', { name: removed[0].track.name })
+    : tn(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
 }
 
 function undoRemoval() {
   const removal = lastRemoval;
   hideUndo();
-  if (!removal || removal.playlist !== activePlaylist || random || away) return;
-  const current = queue[index];
-  // In ascending order of where they were, so each lands where it stood before the others went.
-  for (const { at, track } of removal.removed) queue.splice(Math.min(at, queue.length), 0, track);
-  if (removal.wasCurrent) {
+  if (!removal || removal.playlist !== workspace.editor.id || !editorShown) return;
+  const tracks = [...editorTracks()];
+  for (const { at, track } of removal.removed) tracks.splice(Math.min(at, tracks.length), 0, track);
+  const owns = editorOwnsPlayback();
+  changeEditorTracks(tracks);
+  if (removal.wasCurrent && owns) {
     index = queue.indexOf(removal.current);
+    history = index >= 0 ? [index] : [];
+    captureTransport();
     rowState = 'selected';
     $('title').textContent = removal.current?.name ?? t('Nothing playing');
     $('sub').textContent = t('press play');
-  } else {
-    index = queue.indexOf(current);
   }
-  history = index >= 0 ? [index] : [];
-  if (shuffle) reshuffle(index >= 0 ? index : null);
-  // Still an edit, as on the phone: undo restores the rows, not the saved state.
-  setDirty(true);
   render();
 }
 
@@ -1945,7 +2032,7 @@ function updateSelectBar() {
   $('selectcount').textContent = tn(selected.size, '{n} selected', '{n} selected');
   // Delete only where rows can go: one of the user's own playlists, not the phone's, not a
   // session's list.
-  $('sel-delete').hidden = !!(random || away) || activePlaylist === PHONE;
+  $('sel-delete').hidden = !editorShown || workspace.editor.id === PHONE;
 }
 
 /**
@@ -1954,15 +2041,15 @@ function updateSelectBar() {
  * rows by default; Browse passes the tune it was asked about, and is gone back to afterwards.
  */
 let addFromBrowse = false;
-async function openAddTo(tracks = queue.filter((entry) => selected.has(entry) && !entry.local), { browse = false } = {}) {
+async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has(entry) && !entry.local), { browse = false } = {}) {
   if (!tracks.length) return;
   pendingAdd = tracks;
   addFromBrowse = browse;
   // Ticked rows are already in the playlist on screen unless a session is showing; a tune from
   // Browse is in none of them.
-  const inSession = browse || !!(random || away);
+  const inSession = browse || !editorShown;
   const targets = (await playlists.all())
-    .filter((p) => p.id !== PHONE && (inSession || p.id !== activePlaylist));
+    .filter((p) => p.id !== PHONE && (inSession || p.id !== workspace.editor.id));
   const list = $('addtolist');
   list.replaceChildren();
   for (const target of targets) {
@@ -1990,7 +2077,7 @@ async function openAddTo(tracks = queue.filter((entry) => selected.has(entry) &&
 async function addTracksTo(id, newName = null) {
   const tracks = pendingAdd ?? [];
   pendingAdd = null;
-  if (id && id === activePlaylist) {
+  if (id && id === workspace.editor.id) {
     addToShowing(tracks);
   } else {
     const target = id ? await playlists.get(id) : { id: `p${Date.now().toString(36)}`, name: newName, tracks: [], index: 0 };
@@ -2019,23 +2106,22 @@ const plain = ({ url, name, meta, local, file }) => ({ url, name, meta, local, f
  * is not added twice (the phone's `appendTracks`).
  */
 function addToShowing(tracks) {
-  const session = random ?? away;
-  const target = session ? session.stash.queue : queue;
-  const name = session ? session.stash.name : $('playlistname').textContent;
-  const have = new Set(target.map((t) => t.url));
-  const adding = tracks.filter((t) => !have.has(t.url)).map(plain);
-  target.push(...adding);
-  if (adding.length) {
-    setDirty(true);
-    if (!session) render();
-  }
-  status(t('Added {n} to {name}', { n: adding.length, name }) + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
+  const target = editorTracks();
+  const have = new Set(target.map((track) => track.url));
+  const adding = tracks.filter((track) => {
+    if (have.has(track.url)) return false;
+    have.add(track.url);
+    return true;
+  }).map(plain);
+  if (adding.length) { changeEditorTracks([...target, ...adding]); render(); }
+  status(t('Added {n} to {name}', { n: adding.length, name: workspace.editor.name })
+    + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
   return adding.length;
 }
 
 /** Whether the playlist that is showing, or waiting under a session, holds [url] already. */
 function showingHas(url) {
-  return ((random ?? away)?.stash.queue ?? queue).some((t) => t.url === url);
+  return editorTracks().some((track) => track.url === url);
 }
 
 // --- what the page carries, and what it keeps (W4) -----------------------------------------------
@@ -2347,13 +2433,12 @@ function recordPlay(entry, fields) {
 let away = null;
 
 function openAway(tracks, at, kind = 'history') {
+  captureTransport();
   if (!tracks.length) return;
   // A change the playlist was still waiting to save is its own; written before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
-  const stash = random?.stash ?? away?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
-  // **The dice waits underneath** (`docs/BACKLOG.md` A41). Playing a tune from an author's folder
-  // does not end the session: the record and the cursor are kept, and the way back is the
-  // heading's button. A session opened from another session inherits whatever was already waiting.
+  const stash = editorStash();
+  // Retain the Random record separately; revealing it is not a request to activate it.
   const dice = random ? { session: random, queue, index, history, order } : away?.dice ?? null;
   const author = dice ? (away?.author ?? browsePath[2] ?? '') : null;
   random = null;
@@ -2372,8 +2457,9 @@ function openAway(tracks, at, kind = 'history') {
   playAt(index);
 }
 
-/** Stops what is playing on the way out of a session: nothing it chose should outlive it. */
+/** Explicit replacement/removal cancels loading as well as an already open decoder. */
 function stopForLeaving() {
+  playAsked++;
   loading?.abort();
   loading = null;
   clearTimeout(openWatchdog);
@@ -2382,67 +2468,17 @@ function stopForLeaving() {
   finished = false;
 }
 
-/** The playlist exactly where it was left -- nothing ever wrote to it. */
-function restoreStash(stash) {
-  ({ queue, index, history, order } = stash);
-  rowState = 'selected';
-  showSessionView(null);
-  $('playlistname').textContent = stash.name;
-  render();
-  setPlaying(false);
-  const entry = queue[index];
-  $('title').textContent = entry?.name ?? t('Nothing playing');
-  $('sub').textContent = entry ? t('press play') : '—';
-  nameTheTab(entry);
-}
-
-/**
- * Leaves Random: **playback stops**, the record goes -- what played is in the history -- and the
- * playlist is exactly where it was left.
- */
+/** Returning to the editor does not replace its independently playing source. */
 function endRandom() {
-  if (!random) return;
-  const { stash } = random;
-  random = null;
-  stopForLeaving();
-  restoreStash(stash);
+  if (random) showEditor();
 }
 
 function endAway() {
-  if (!away) return;
-  const { stash } = away;
-  away = null;
-  stopForLeaving();
-  restoreStash(stash);
+  if (away) showEditor();
 }
 
 /** The heading's way back, whichever session it is heading. */
 function endSession() { if (random) endRandom(); else endAway(); }
-
-/**
- * Back to the dice that was waiting (`docs/BACKLOG.md` A41).
- *
- * **Paused, on the pick it was on**, rather than starting it: coming back from a digression
- * should not put music on unasked. Play resumes that tune; next rolls. What played during the
- * digression is in the history, as everything played here is.
- */
-function resumeDice() {
-  const dice = away?.dice;
-  if (!dice) return;
-  away = null;
-  stopForLeaving();
-  random = dice.session;
-  ({ queue, index, history, order } = dice);
-  rowState = 'selected';
-  showSessionView('random');
-  render();
-  setPlaying(false);
-  const entry = queue[index];
-  $('title').textContent = entry?.name ?? t('Nothing playing');
-  $('sub').textContent = entry ? t('press play') : '—';
-  nameTheTab(entry);
-  status(t('Back to the dice — press play for the tune it was on, or next for another.'));
-}
 
 /** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
 function dropSession() {
@@ -2505,9 +2541,13 @@ function beforeCurrent() {
  * @param at which track to select, if the sender knows. Selected, not played.
  */
 function setQueue(urls, at = 0) {
-  // A queue arriving -- a playlist switched to, the phone's handoff, a tune played from Browse --
-  // replaces whatever was showing, and that includes the dice's record.
+  ++editorAsked;
+  stopForLeaving();
+  const wasDirty = workspace.editor.dirty;
+  // An incoming handoff explicitly replaces playback; ordinary view changes use switchTo.
   dropSession();
+  sourcePlaylistId = workspace.editor.id;
+  sourcePlaylistName = workspace.editor.name;
   // Another list arriving makes an undo for the last one meaningless.
   hideUndo();
   delete $('seek').dataset.opened;
@@ -2523,6 +2563,13 @@ function setQueue(urls, at = 0) {
   if (index >= 0 && !playable(index)) index = seek(index, 1) ?? seek(0, 1) ?? -1;
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
+  workspace = workspace.selectPlaylist({ id: workspace.editor.id, name: workspace.editor.name, tracks: queue });
+  captureTransport();
+  setDirty(wasDirty);
+  editorShown = true;
+  rememberEditorSelection(workspace.editor.id).catch((error) => {
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+  });
   render();
   setPlaying(false);
   remember();
@@ -2576,7 +2623,7 @@ async function renderPlaylists() {
   if (!all.some((p) => p.id === PHONE)) all.unshift({ id: PHONE, name: 'From the phone', tracks: [] });
   for (const playlist of all) {
     const li = document.createElement('li');
-    li.setAttribute('aria-current', String(playlist.id === activePlaylist));
+    li.setAttribute('aria-current', String(playlist.id === workspace.editor.id));
 
     // The size first, as the phone has it: which of these has anything in it (BACKLOG A21).
     const count = document.createElement('div');
@@ -2620,11 +2667,23 @@ function openPlaylistMenu(playlist, anchor) {
 async function renamePlaylist(playlist) {
   const name = prompt(t('Call it what?'), playlist.name)?.trim();
   if (!name || name === playlist.name) return;
-  await playlists.save({ ...(await playlists.get(playlist.id)), name });
-  if (activePlaylist === playlist.id) {
-    // Inside Random or History the chip names the session; the name waits in the stash for later.
-    const session = random ?? away;
-    if (session) session.stash.name = name; else $('playlistname').textContent = name;
+  try {
+    const renamed = await writePlaylist(playlist.id, async () => {
+      const stored = await playlists.get(playlist.id);
+      if (!stored || deletedPlaylists.has(playlist.id)) return false;
+      await playlists.save({ ...stored, name });
+      return true;
+    });
+    if (!renamed) return;
+  } catch (error) {
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    return;
+  }
+  if (sourcePlaylistId === playlist.id) sourcePlaylistName = name;
+  if (workspace.editor.id === playlist.id) {
+    workspace = workspace.copy({ editor: { ...workspace.editor, name } });
+    refreshStashes();
+    if (editorShown) $('playlistname').textContent = name;
   }
   renderPlaylists();
 }
@@ -2636,31 +2695,48 @@ async function renamePlaylist(playlist) {
  */
 async function deletePlaylist(playlist) {
   if (!confirm(tn(playlist.tracks?.length ?? 0, 'Delete “{name}”? Its {n} track goes with it.', 'Delete “{name}”? Its {n} tracks go with it.', { name: playlist.name }))) return;
-  await playlists.remove(playlist.id);
+  deletedPlaylists.add(playlist.id);
+  writeVersions.set(playlist.id, (writeVersions.get(playlist.id) ?? 0) + 1);
+  try { await writePlaylist(playlist.id, () => playlists.remove(playlist.id)); }
+  catch (error) {
+    deletedPlaylists.delete(playlist.id);
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    return;
+  }
   // Its unsaved edits went with it; there is nothing left to ask about.
-  if (activePlaylist === playlist.id) { setDirty(false); choosePlaylist(PHONE); }
+  if (workspace.editor.id === playlist.id) { setDirty(false); choosePlaylist(PHONE); }
   renderPlaylists();
 }
 
-/**
- * The sheet's answer to a playlist being chosen. Out of Random or History first -- playback stops,
- * as leaving by the heading's button does -- and then the playlist chosen, not the one left behind.
- */
+/** Settle the selected draft before choosing a different editor, without stopping playback. */
 async function choosePlaylist(id) {
-  endSession();
-  if (!(await settleUnsaved())) return;
-  switchTo(id);
-  showPanel(null);
+  if (!(await settleUnsaved())) return false;
+  const switched = await switchTo(id);
+  if (switched) showPanel(null);
+  return switched;
 }
 
-/** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
-async function switchTo(id) {
-  setDirty(false);
-  const playlist = await playlists.get(id);
-  activePlaylist = id;
-  $('playlistname').textContent = id === PHONE ? t('From the phone') : playlist?.name ?? t('Playlist');
-  setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
-  await settings.set('active', id);
+/** Load a selected editor while retaining the independently playing source and cursor. */
+async function switchTo(id, { preservePlayback = false } = {}) {
+  const asked = ++editorAsked;
+  let playlist;
+  try { playlist = await playlists.get(id); }
+  catch (error) {
+    if (asked === editorAsked) showNote(t('could not read it: {reason}', { reason: error.message }));
+    return false;
+  }
+  if (asked !== editorAsked) return false;
+  captureTransport();
+  workspace = workspace.selectPlaylist({ id, name: id === PHONE ? t('From the phone')
+    : playlist?.name ?? t('Playlist'), tracks: playlist?.tracks ?? [] }, { preservePlayback });
+  if (workspace.context.belongsTo(id)) applyTransportOrder();
+  selected = new Set();
+  hideUndo();
+  refreshStashes();
+  showEditor();
+  try { await rememberEditorSelection(id); }
+  catch (error) { showNote(t('could not save the playlist: {reason}', { reason: error.message })); }
+  return asked === editorAsked;
 }
 
 /*
@@ -2875,19 +2951,19 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   const add = document.createElement('button');
   add.className = 'badd';
   const paintAdd = () => {
-    const there = activePlaylist !== PHONE && showingHas(track.url);
+    const there = workspace.editor.id !== PHONE && showingHas(track.url);
     add.disabled = there;
     add.innerHTML = iconSvg(there ? ICON.check : ICON.playlistAdd);
     add.append(there ? t('Added') : t('Add'));
-    const into = (random ?? away)?.stash.name ?? $('playlistname').textContent;
+    const into = workspace.editor.name;
     add.title = there ? t('Already in {name}', { name: into })
-      : activePlaylist === PHONE ? t('Add to one of your playlists') : t('Add to {name}', { name: into });
+      : workspace.editor.id === PHONE ? t('Add to one of your playlists') : t('Add to {name}', { name: into });
   };
   paintAdd();
   li.repaintAdd = paintAdd;
   add.onclick = (event) => {
     event.stopPropagation();
-    if (activePlaylist === PHONE) { openAddTo([plain(track)], { browse: true }); return; }
+    if (workspace.editor.id === PHONE) { openAddTo([plain(track)], { browse: true }); return; }
     addToShowing([track]);
     paintAdd();
   };
@@ -3303,7 +3379,6 @@ $('browseback').onclick = async () => {
   if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else if (
     away?.dice && browsePath.length <= 3
   ) {
-    resumeDice();
     showPanel(null);
     return;
   } else if (arrivedByJump()) {
@@ -3331,14 +3406,15 @@ async function newPlaylist() {
   if (!(await settleUnsaved())) return false;
   const name = prompt(t('Call it what?'), t('New playlist'));
   if (!name) return false;
+  const asked = ++editorAsked;
   const id = `p${Date.now().toString(36)}`;
-  await playlists.save({ id, name, tracks: [], index: 0 });
-  activePlaylist = id;
-  $('playlistname').textContent = name;
-  await settings.set('active', id);
-  // Emptied on purpose: the point of a new list is to put something in it, and leaving the previous
-  // queue on screen under a new name is the opposite of empty.
-  setQueue([], 0);
+  try { await playlists.save({ id, name, tracks: [], index: 0 }); }
+  catch (error) {
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    return false;
+  }
+  if (asked !== editorAsked) return false;
+  await switchTo(id);
   status(t('{name} — empty. Browse for something to put in it.', { name }));
   return true;
 }
@@ -3346,19 +3422,21 @@ async function newPlaylist() {
 $('newlist').onclick = async () => { if (await newPlaylist()) renderPlaylists(); };
 
 $('saveas').onclick = async () => {
-  if (!queue.length) { status(t('there is nothing in the queue to save')); return; }
+  if (!visibleTracks().length) { status(t('there is nothing in the queue to save')); return; }
+  if (!(await settleUnsaved())) return;
   const name = prompt(t('Call it what?'), t('My playlist'));
   if (!name) return;
+  const tracks = visibleTracks().map(plain);
+  const at = Math.max(visibleIndex(), 0);
+  const asked = ++editorAsked;
   const id = `p${Date.now().toString(36)}`;
-  await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
-  // The edits went into the new playlist; the old one stays as it was saved.
-  setDirty(false);
-  // **Saved out of Random or History, the list becomes the playlist**, and the session is over:
-  // leaving it would otherwise put back the playlist that was showing before, under this one's name.
-  dropSession();
-  activePlaylist = id;
-  $('playlistname').textContent = name;
-  await settings.set('active', id);
+  try { await playlists.save({ id, name, tracks, index: at }); }
+  catch (error) {
+    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    return;
+  }
+  if (asked !== editorAsked) return;
+  await switchTo(id);
   renderPlaylists();
   status(t('Saved as {name}', { name }));
 };
@@ -3403,13 +3481,13 @@ $('load').onclick = () => {
   // showing, and the next handoff replaces "From the phone" wholesale -- so the paste would be
   // thrown away, silently, and until then the screen would show a queue the phone does not have.
   // The same holds for every function that writes into the showing list.
-  if (activePlaylist === PHONE) {
+  if (workspace.editor.id === PHONE) {
     $('pastenote').textContent = t('This would replace what the phone sent. Switch to one of your own playlists first, or make an empty one — the name at the top left opens them.');
     return;
   }
   $('pastenote').textContent = '';
-  setDirty(true);
-  setQueue(urls);
+  changeEditorTracks(urls.map(entryFor));
+  render();
   showPanel(null);
 };
 $('playpause').onclick = async () => {
@@ -3433,11 +3511,7 @@ $('playpause').onclick = async () => {
   }
   // While something is being fetched, this button means "stop waiting".
   if (loading) {
-    loading.abort();
-    loading = null;
-    clearTimeout(openWatchdog);
-    // It may already have the bytes and be opening them; tell it to drop what it has.
-    node?.port.postMessage({ type: 'close' });
+    stopForLeaving();
     setPlaying(false);
     $('sub').textContent = t('stopped');
     status(t('Stopped loading.'));
@@ -3487,12 +3561,12 @@ $('snackundo').onclick = () => undoRemoval();
 $('tab-save').onclick = () => saveEdits();
 $('sel-add').onclick = () => openAddTo();
 $('sel-share').onclick = () => {
-  const tracks = queue.filter((entry) => selected.has(entry));
+  const tracks = visibleTracks().filter((entry) => selected.has(entry));
   clearSelection();
   sendToWeb(tracks.map(plain));
 };
 $('sel-delete').onclick = () => {
-  const ats = queue.map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
+  const ats = visibleTracks().map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
   selected = new Set();
   removeRows(ats);
 };
@@ -3504,16 +3578,16 @@ $('addto-new').onclick = async () => {
 // Escape leaves the ticking first, the way Back does on the phone -- before it closes anything else.
 addEventListener('keydown', (event) => { if (event.key === 'Escape' && selected.size) clearSelection(); });
 $('tab-discard').onclick = () => discardEdits();
-$('unsaved-save').onclick = async () => { await saveEdits(); answerUnsaved(true); };
-$('unsaved-discard').onclick = () => { setDirty(false); answerUnsaved(true); };
+$('unsaved-save').onclick = async () => { if (await saveEdits()) answerUnsaved(true); };
+$('unsaved-discard').onclick = async () => { if (await discardEdits()) answerUnsaved(true); };
 // **Closing the tab** is the one switch the page cannot ask about in its own words; the browser's
 // question is the only one available, and losing edits silently is worse than a plain dialog.
 addEventListener('beforeunload', (event) => {
-  if (!dirty) return;
+  if (!workspace.editor.dirty) return;
   event.preventDefault();
   event.returnValue = '';
 });
-$('random-leave').onclick = () => (away?.dice ? resumeDice() : endSession());
+$('random-leave').onclick = () => endSession();
 
 $('next').onclick = () => {
   if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }
@@ -3781,7 +3855,9 @@ function seekLanded() {
  * being played -- which is what makes the first handoff design need no server at all
  * (`docs/PLAN_HANDOFF.md` §3 H1). Fifty tracks compress to under two thousand characters.
  */
+let fragmentAsked = 0;
 async function fromFragment() {
+  const asked = ++fragmentAsked;
   const raw = location.hash.slice(1);
   if (!raw) return;
   // **One tune to play**, not a queue to take over: Share with Protracktor (`QueueLink.PLAY_PREFIX`).
@@ -3804,18 +3880,20 @@ async function fromFragment() {
       const entry = entryFor(url);
       return title ? { ...entry, name: title } : entry;
     });
+    if (asked !== fragmentAsked) return;
     if (one) { playSentTune(entries.filter((e) => !e.local)); return; }
+    if (!(await settleUnsaved()) || asked !== fragmentAsked) return;
     // The code steps aside for a queue that came by link, as it does for one that came by pairing
     // (`applyReceive`) -- in a tab that was already open on it, `hashchange` brings us here.
     if (!$('pair').hidden) showPanel(null);
+    workspace = workspace.selectPlaylist({ id: PHONE, name: t('From the phone'), tracks: [] });
     setQueue(entries);
-    activePlaylist = PHONE;
     $('playlistname').textContent = t('From the phone');
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
     status(tn(lines.length - ghosts, '{n} track from the link', '{n} tracks from the link') +
            (ghosts ? tn(ghosts, ', and {n} that stayed on the phone', ', and {n} that stayed on the phone') : ''));
   } catch (e) {
-    status(t('the link could not be read: {reason}', { reason: e.message }));
+    if (asked === fragmentAsked) status(t('the link could not be read: {reason}', { reason: e.message }));
   }
 }
 
@@ -3963,6 +4041,7 @@ let lastSentLink = null;
  */
 let aacSupport = null;   // null: not yet known; then true or false
 (async () => {
+  const asked = editorAsked;
   try {
     const answer = typeof AudioEncoder === 'undefined' ? null
       : await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128000 });
@@ -4168,7 +4247,7 @@ function receive(message) {
   if (!message.queue?.length) return;
   // A queue from the phone replaces what is showing, so edits not yet written are asked about first,
   // as a switch asks. Kept editing, the queue is not loaded -- and the page says so.
-  if (dirty) {
+  if (workspace.editor.dirty) {
     settleUnsaved().then((go) => {
       if (go) applyReceive(message);
       else status(t('A queue arrived from the phone and was not loaded, to keep your unsaved changes.'));
@@ -4179,6 +4258,7 @@ function receive(message) {
 }
 
 function applyReceive(message) {
+  workspace = workspace.selectPlaylist({ id: PHONE, name: t('From the phone'), tracks: [] });
   setDirty(false);
   // The code did its job, so it stops standing in front of the music.
   if (!$('pair').hidden) showPanel(null);
@@ -4202,7 +4282,7 @@ function applyReceive(message) {
     message.index ?? 0,
   );
   // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
-  activePlaylist = PHONE;
+  refreshStashes();
   $('playlistname').textContent = t('From the phone');
   const stranded = message.queue.filter((row) => row.local).length;
   status(tn(message.queue.length - stranded, '{n} track from the phone — press play', '{n} tracks from the phone — press play') +
@@ -4283,12 +4363,13 @@ formatsReady().catch(() => {});
     await makePersistent();
     const id = await settings.get('active', PHONE);
     const playlist = await playlists.get(id);
+    if (asked !== editorAsked) return;
     // **An empty playlist is restored too.** Requiring tracks holds only while every playlist
     // arrives full from the phone; one made empty on purpose would be dropped on reload, putting
     // "From the phone" back in front of the reader -- and that is the one list Browse will not
     // write into, so the tab they had just unblocked shuts again.
     if (playlist && id !== PHONE) {
-      activePlaylist = id;
+      workspace = workspace.selectPlaylist({ id, name: playlist.name, tracks: playlist.tracks ?? [] });
       $('playlistname').textContent = playlist.name;
       setQueue(playlist.tracks ?? [], playlist.index ?? 0);
       showPanel(null);

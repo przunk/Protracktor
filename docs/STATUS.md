@@ -47,12 +47,18 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.
 All twenty-five selected scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md),
 with mandatory Android production-code/test comparison and a final retry of any skipped point.
-No merge or deployment is authorized. W01 currently has a domain-model substage and shared
-Kotlin/JavaScript transport fixtures; the model is not yet connected to the page. Browser/UI
-behaviour and completion of W01 are unchecked. The model substage passed **1218 tests / 160
+No merge or deployment is authorized. W01 has a domain-model substage and shared Kotlin/JavaScript
+transport fixtures. Page integration is prepared on the branch, with independent editor/transport,
+document-write ordering and obsolete-load/reply guards. Its forced integration gate passed
+**1218 tests / 160 suites**, 643 page checks, 52 engine/worklet checks and all companions in 610 s,
+recorded 2026-10-27. Fresh lint: zero errors / 79 warnings. A separately reproduced phone-document
+selection persistence regression is corrected. W01 core separation is checked; its shared Add
+visibility case is retained for W02 actual-occurrence integration. Real-browser behaviour is
+unchecked. The model substage passed **1218 tests / 160
 suites**, 66 new domain checks and all existing companions; lint analysis was up to date, with
-zero errors / 79 warnings. Page integration is in progress; other scopes have not been declared
-complete. Android production code and schema are unchanged.
+zero errors / 79 warnings. W02 staging is recorded in the implementation ledger; its application
+integration is pending. Other scopes have not been declared complete.
+Android production code and schema are unchanged.
 
 ## WEB and Android parity inventory — 2026-10-26
 
@@ -66,8 +72,9 @@ Application code, release versions and deployment are unchanged.
 implementation scope, with the [explicit exclusions and deferred integrations](WEB_ANDROID_PARITY_2026-10-26.md#scope-selected-after-the-inventory--2026-10-26).
 The local ignored GOAL.md now defines separate feature commits on `feature/web-feature-parity`,
 mandatory comparison with Android code/tests for each scope, regression gates and a final WEB
-bundle. Its previous contents are preserved under ignored `user/goals/`. Implementation has not
-started; no task branch, application build, merge or deployment was performed for this plan.
+bundle. Its previous contents are preserved under ignored `user/goals/`. At that plan-only
+checkpoint (`3183eee`), implementation had not started and no task branch, application build,
+merge or deployment had been performed; subsequent execution is recorded above.
 
 ## C122 Redmi Note 8 Pro crashes at startup after a previously working installation
 

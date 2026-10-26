@@ -72,7 +72,7 @@ Reference production paths: `player/PlayerUiState.kt` (`activePlayback`, `withEd
 and `PlaybackController.kt`. Reference tests include `ActiveQueueTest`, `TrackEditingTest`
 and `PlaylistSessionTest`.
 
-The WEB currently makes its `queue` both the transport source and the visible playlist. Random
+At baseline, WEB makes its `queue` both the transport source and the visible playlist. Random
 and Browse park one playlist in a session stash. `choosePlaylist` ends that session before reading
 the selected playlist, while `setQueue` changes the playback cursor and clears loaded state.
 This explains why selecting a view can interrupt playback, and why merely changing a button
@@ -95,8 +95,8 @@ Required comparison scenarios:
 `web/src/playback-context.js` supplies immutable finite order, source identity/occurrences and
 selected-editor ownership. It ports the relevant PlayQueue/ActiveQueue/PlaylistSessionState rules,
 including shuffle history, explicit Next versus Repeat One completion, source omissions and
-protection from a late save clearing a newer edit. The module is not connected to the page yet:
-this substage does not establish a completed W01 user feature.
+protection from a late save clearing a newer edit. At that model-only checkpoint the module was
+not connected to the page; that substage alone does not establish a completed W01 user feature.
 
 The new `docs/rules/playback-context-cases.tsv` has 32 transport cases, consumed both by
 `PlaybackContextParityTest` against production Kotlin ActiveQueue and by
@@ -105,7 +105,7 @@ with Gradle. The complete JS model suite currently passes **66 checks**, includi
 cases and ownership/immutability cases ported from existing Android tests. A deliberate mutation
 replacing the active context when a different playlist is selected fails the ownership test;
 restored code passes. The focused production-Kotlin parity test also passes all 32 fixture rows.
-Page/event integration remains in progress. Logs and mutation evidence
+Page/event integration follows below. Logs and mutation evidence
 are retained under ignored `user/web-parity-verification/`.
 
 The advancing-during-save regression first failed: a transport copy unnecessarily allocated a
@@ -123,6 +123,99 @@ other companions. Lint completed in 8.6 s using up-to-date analysis/report tasks
 Exact input hashes in `user/web-parity-verification/w01-model-candidate.json` still match the
 checked files. Full logs and JUnit/lint reports are retained under
 `user/web-parity-verification/w01-model-full-gate/`. No bundle or browser/device result is claimed.
+
+### W01 page integration — 2026-10-27
+
+The page now uses the selected editor independently of its transport source. The playlist sheet,
+Save, Discard, Save as, row removal/Undo, Add and the return from a collection all address the
+selected document. Changing its view sends no decoder command; an explicit track choice transfers
+playback. Author-folder navigation follows Android `PlaybackController.showNeighboursOf`: simply
+opening the folder must not transfer Next/Previous ownership. The previous WEB-only Resume Random
+path and its automatic source transfer are removed. Remembered Random entry remains W04.
+
+The page preserves the existing engine boundary and a compatibility projection of finite/Random
+transport into `PlaybackWorkspace`; W02 will integrate scheduling into this boundary. W01 does
+not claim the manual queue, remembered Random, queue-source navigation or the completed transport
+parity of W02. Android production code and the browser database version remain unchanged.
+
+Save snapshots keep their document identity through asynchronous writes. Per-document write
+serialization also covers Rename/Delete: a delayed save cannot restore old contents/name or
+resurrect a deleted document. Failed Save leaves the draft dirty and the decision open; failed
+Discard keeps the draft and reports the read error. An incoming full queue selects the phone
+document before publishing its contents, cancels the previous decoder and waits for Play.
+Its persisted form still excludes transferred phone bytes. Slow view reads and startup restoration
+cannot replace a newer selected editor. Shared single-tune links retain their collection semantics.
+
+Playback loads carry a request identity through fetch/metadata work and actual worklet replies.
+An obsolete download cannot open a decoder; old `opened`, clock or failure replies cannot describe
+the new source. This changes the JavaScript message envelope, not the native/WASM API or DSP.
+
+Focused host page checks pass with the real IndexedDB adapter and actual DOM event handlers.
+The worklet suite also invokes the actual processor against the existing WASM, proving queued
+open identities, subsong/seek/clock identity and decoder-refusal identity. An initial version of
+the new page checks observed the network-request log instead of the worklet port. That harness
+error was corrected; a nonzero real-command assertion and isolated ownership/reply mutations now
+prove the intended guards fail. Earlier incorrect-port results are not decoder-command evidence.
+Regression logs, original failing Discard/link/document-write cases and corrected mutation logs
+are retained in ignored `user/web-parity-verification/`.
+
+The complete forced integration gate passed **1218 tests / 160 suites**, zero failures/errors/
+skips, in **611 s**. Unit execution took 435.6 s; all unit-stage tasks executed. The gate includes
+**642 page checks**, **52 engine/worklet checks**, 66 context-model checks and every existing
+companion. Fresh lint analysis completed in 85.2 s with **zero errors / 79 warnings**. All eleven
+application/check input hashes in `w01-page-candidate.json` still match. Logs/JUnit/lint XML are
+retained under ignored `w01-page-first-full-gate/`.
+
+An additional isolated IndexedDB check exposed a W01 regression: receiving a full queue selected
+the phone document in memory without persisting that selection, so reload could restore an older
+playlist. Its exact persistence assertion failed. Incoming queues and ordinary editor selection
+now use one serialized selection writer; a delayed document save cannot change the selected ID.
+The restored page suite passes **643 checks**.
+
+The corrected W01 code and prepared W02 model passed another forced complete gate: **1218 tests /
+160 suites**, zero failures/errors/skips, **610 s** (unit execution 433.7 s), with 643 page checks,
+52 engine/worklet checks, 66 context cases, the 29 new schedule cases and all existing companions.
+Fresh lint analysis: **zero errors / 79 warnings**, 85.5 s. All thirteen input hashes in
+`w01-final-w02-model-candidate.json` match. Complete evidence is retained under ignored
+`w01-final-w02-model-full-gate/`.
+
+Core editor/source separation is checked on the host. The dock's existing Add visibility still
+uses the old Random/collection predicate; W02's actual-occurrence integration must also offer it
+when playlist A plays while selected playlist B is visible, matching Android `awayFromPlaylist`.
+Keep that shared-control case open rather than claiming all W01 presentation is complete. Layout,
+touch, real audio and background behaviour remain **unchecked in a real browser/device**. No bundle
+is handed off and no merge or deployment occurs.
+
+## W02 analysis and draft
+
+Reference: Android `PlaybackSchedule.kt`, `PlaybackPlan.kt`, the two matching test classes,
+`PlaybackController.applyScheduledStep`, `applyQueueStep`, `playContextEntry`,
+`removePendingRequest`, `removeContextEntry` and `advanceAfterRemoval`. Accepted presentation
+contracts are `QUEUE_UNIFIED_LIST.md`, `QUEUE_CLEAR.md`, `QUEUE_MANUAL_REORDER.md`,
+`QUEUE_SWIPE_INTENT.md` and later accepted row/follow corrections, not the older tabbed proposal.
+
+Keep a source order and a separate one-shot FIFO underneath one rendered list. Duplicate files
+have distinct occurrence keys. Played manual requests disappear; Previous from manual playback
+returns to the parked source, retaining pending requests. An explicit new source plays its chosen
+row first, then retained FIFO requests. Repeat One handles natural completion before the FIFO;
+explicit file Next advances it. Shuffle orders only source rows. Clear retains the actual track,
+its origin and current open job, detaches its source and supports guarded Undo without rewinding.
+
+Session-only source omissions never edit a playlist document. Removing the current occurrence
+advances with the existing playing/loading intent; during pause it selects without opening or
+recording the successor. Pending-only reorder cannot cross into source/current rows. Undo restores
+content, never audio traversal. Stale source actions are generation-bound. A current manual track
+must own metadata/History/transport independently of the source cursor; the W01 editor stays the
+only playlist persistence owner.
+
+An ignored draft ports the production schedule/clear model and **29 Android test scenarios**.
+All 29 pass; deliberately replacing Previous-to-anchor with ordinary source Previous fails its
+specific guard, and the restored draft passes. This is a host model draft, not committed W02
+application integration. The W01 full-gate inputs are left unchanged while that gate runs.
+Still required: production module/check registration, playback integration including subsong/end/
+failure/cancellation paths, one panel above the shared dock, stable/animated row updates, labelled
+menu/keyboard equivalents, directional gestures and pending-only reorder with Android's vertical
+priority. W02 remains open until those substages and their integrated checks are complete.
 
 ## Deferred or blocked work
 

@@ -75,6 +75,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     this.ended = false;
     this.playing = false;
     this.reported = -1;
+    this.requestId = null;
 
     // **The wasm binary arrives as bytes rather than being fetched here.** `fetch` does not exist
     // in an AudioWorkletGlobalScope, so a build that downloads its own `.wasm` cannot start; the
@@ -116,9 +117,13 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
       } catch (error) {
         this.handle = 0;
         this.playing = false;
-        this.port.postMessage({ type: 'failed', reason: `the engine failed on this file: ${error}` });
+        this.reply({ type: 'failed', reason: `the engine failed on this file: ${error}` });
       }
     };
+  }
+
+  reply(message) {
+    this.port.postMessage({ ...message, requestId: this.requestId });
   }
 
   onMessage(message) {
@@ -126,6 +131,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     if (!e) return;
     switch (message.type) {
       case 'open': {
+        this.requestId = message.requestId;
         this.close();
         const bytes = new Uint8Array(message.bytes);
         const buf = e._malloc(bytes.length);
@@ -137,12 +143,12 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         e._free(buf);
         e._free(namePtr);
         if (!this.handle) {
-          this.port.postMessage({ type: 'failed', reason: e.UTF8ToString(e._pt_last_error()) });
+          this.reply({ type: 'failed', reason: e.UTF8ToString(e._pt_last_error()) });
           return;
         }
         this.ended = false;
         this.playing = true;
-        this.port.postMessage({
+        this.reply({
           type: 'opened',
           describe: e.UTF8ToString(e._pt_describe(this.handle)),
           duration: e._pt_duration(this.handle),
@@ -164,7 +170,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           // Answered when it has landed: a SID or an SNDH seeks by running its machine there, for
           // seconds on a long SID, and the page shows a spinner until this says it is done (Q11).
           e._pt_seek(this.handle, message.seconds);
-          this.port.postMessage({ type: 'seeked', seconds: e._pt_position(this.handle) });
+          this.reply({ type: 'seeked', seconds: e._pt_position(this.handle) });
         }
         break;
       case 'subsong':
@@ -176,7 +182,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           // gives each track one -- and so is its title. Without this the page kept showing the
           // first tune's duration against the third one's audio, which is the same defect
           // `selectSubsong` fixed on the phone.
-          this.port.postMessage({
+          this.reply({
             type: 'subsong',
             index: e._pt_current_subsong(this.handle),
             duration: e._pt_duration(this.handle),
@@ -192,7 +198,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           this.ended = false;
           this.playing = true;
           this.reported = -1;
-          this.port.postMessage({ type: 'position', seconds: 0 });
+          this.reply({ type: 'position', seconds: 0 });
         }
         break;
       case 'close': this.close(); break;
@@ -262,7 +268,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
 
     if (rendered < frames) {
       this.ended = true;
-      this.port.postMessage({ type: 'ended' });
+      this.reply({ type: 'ended' });
       return true;
     }
 
@@ -271,7 +277,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     const position = e._pt_position(this.handle);
     if (Math.abs(position - this.reported) > 0.2) {
       this.reported = position;
-      this.port.postMessage({ type: 'position', seconds: position });
+      this.reply({ type: 'position', seconds: position });
     }
     return true;
   }

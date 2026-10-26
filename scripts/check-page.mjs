@@ -164,7 +164,9 @@ const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export
 // module's own import of it is the line that goes.
 const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
   + fs.readFileSync('web/src/i18n.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';", playbackSource)
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
@@ -186,7 +188,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -471,7 +473,7 @@ if (window.__api) {
   // something not cached must not mean ten seconds of a button that still says "play" and cannot
   // be taken back.
   holdTrackFetch = true;
-  window.__api.playAt(0);
+  window.document.querySelector('#queue li.track').click();
   await new Promise((r) => setTimeout(r, 80));
   check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
     'while a track is fetching, the button offers to stop');
@@ -1115,24 +1117,24 @@ if (window.__api) {
     'closing Browse leaves the music playing, under a heading that says where from');
   window.__api.endSession();
   await settle();
-  check(window.__api.awayState() == null && window.__api.queueNow().length === 2
-        && window.__api.queueNow()[0] === mine,
-    'the playlist comes back with what was added, and only that');
+  check(window.__api.awayState()?.kind === 'browse' && window.__api.editorShown()
+        && window.__api.editorNow().order.tracks.length === 2 && window.__api.editorNow().order.tracks[0].url === mine,
+    'returning reveals the selected playlist without replacing the Browse playback source');
   check(!$('tab-save').hidden, 'and Save offered for it');
 
   // Adding with nothing played from Browse goes straight into the list on screen.
   window.__api.showPanel('browse');
   await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
   const other = rows().find((li) => !button(li, 'badd').disabled);
-  const inList = rows().map((li) => window.__api.queueNow().includes(li.dataset.url));
+  const inList = rows().map((li) => window.__api.editorNow().order.tracks.some((track) => track.url === li.dataset.url));
   check(rows().every((li, i) => button(li, 'badd').disabled === inList[i]) && other,
     'a folder shows which of its tunes the playlist already has');
   button(other, 'badd').click();
-  check(window.__api.queueNow().length === 3 && window.__api.queueNow()[2] === other.dataset.url,
-    'and Add with nothing from Browse playing appends to the list on screen');
+  check(window.__api.editorNow().order.tracks.length === 3 && window.__api.editorNow().order.tracks[2].url === other.dataset.url,
+    'Add appends to the selected playlist while Browse keeps its source');
   await window.__api.discardEdits();
   await settle();
-  check(window.__api.queueNow().join() === mine, 'Discard takes the added tunes back out');
+  check(window.__api.editorNow().order.tracks.map((track) => track.url).join() === mine, 'Discard restores only the selected playlist');
   check(rows().filter((li) => button(li, 'badd').disabled).length === 0,
     'and Browse\'s rows stop saying they are in it');
 
@@ -1462,18 +1464,19 @@ if (window.__api) {
 
   window.__api.endRandom();
   await settle();
-  check(window.__api.randomState() == null && $('randomhead').hidden, 'leaving ends the session');
-  check(window.__api.queueNow().join() === `${one},${two}` && window.__api.indexNow() === 1,
-    'and the playlist is exactly where it was left');
-  check(!$('shuffle').disabled && !$('playlistchip').disabled, 'and the transport is the playlist\'s again');
+  check(window.__api.randomState() != null && $('randomhead').hidden && window.__api.editorShown(), 'leaving reveals the playlist while Random remains active');
+  check(window.__api.editorNow().order.tracks.map((track) => track.url).join() === `${one},${two}`
+        && window.__api.editorNow().order.currentIndex === 1, 'the playlist draft keeps its original track and position');
+  check($('shuffle').disabled && !$('playlistchip').disabled, 'transport still belongs to Random while playlist selection remains available');
 
   // Choosing a playlist from the sheet in the middle of a session leaves it for that playlist.
   await window.__api.openRandom();
   await settle();
   window.__api.choosePlaylist('p-random');
   await settle();
-  check(window.__api.randomState() == null && window.__api.queueNow().join() === `${one},${two}`,
-    'choosing a playlist from the sheet while the dice runs ends the session and shows that playlist');
+  check(window.__api.randomState() != null && window.__api.editorShown()
+        && window.__api.editorNow().order.tracks.map((track) => track.url).join() === `${one},${two}`,
+    'choosing a playlist displays its contents without ending Random');
 
   // "From the phone" is never written into -- by Browse, the paste box, and now by the dice.
   await window.__api.switchTo('phone');
@@ -1570,8 +1573,9 @@ if (window.__api) {
   check(JSON.stringify((await playlists.get('p-history'))?.tracks) === before,
     'playing from History leaves the playlist alone');
   window.__api.endSession();
-  check(window.__api.awayState() == null && window.__api.queueNow().join() === `${h1},${h2}`,
-    'and the way back puts the playlist back as it was');
+  check(window.__api.awayState()?.kind === 'history' && window.__api.editorShown()
+        && window.__api.editorNow().order.tracks.map((track) => track.url).join() === `${h1},${h2}`,
+    'the way back reveals the playlist without replacing the History context');
 
   // A tune the phone handed over as bytes: kept in History, not offered for a replay it cannot keep.
   await played.record({ url: 'content://phone/owned.mod', name: 'Owned', meta: 'from the phone',
@@ -1980,7 +1984,8 @@ if (window.__api) {
 
   api.endSession();
   await settle();
-  check(api.queueNow().join() === kept, 'leaving puts the playlist back');
+  check(api.editorShown() && api.editorNow().order.tracks.map((track) => track.url).join() === kept
+        && api.awayState()?.kind === 'link', 'leaving reveals the playlist while the shared track stays active');
 
   // **Several tunes, one link** (`docs/BACKLOG.md` A38).
   const second = { url: 'https://modland.com/pub/modules/AHX/Pink/frog.ahx', name: 'frog.ahx',
@@ -2221,126 +2226,86 @@ if (window.__api) {
   check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
 }
 
-// --- the dice waits while you browse an author (docs/BACKLOG.md A41) -----------------------------
+// Android showNeighboursOf: navigation must not transfer playback ownership.
 if (window.__api) {
-  console.log('\ndigression: the dice waits underneath:');
+  console.log('\nbrowsing an author preserves playback context:');
   const api = window.__api;
-  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const settle = (ms = 80) => new Promise((resolve) => setTimeout(resolve, ms));
   const archive = await import(path.resolve('web/src/catalogue.js'));
   const { catalogue: store, playlists: saved } = await import(path.resolve('web/src/store.js'));
-
-  const built = archive.toRecords(['1\tProtracker/Trio/a.mod', '1\tProtracker/Trio/b.mod',
-                                   '1\tProtracker/Trio/c.mod'].join('\n'));
+  const kept = 'https://example.test/kept.mod';
+  const built = archive.toRecords(['1\tProtracker/Trio/a.mod', '1\tProtracker/Trio/b.mod', '1\tProtracker/Trio/c.mod'].join('\n'));
   await store.clear('modland:');
   await store.putAll(built.records, 100);
-  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.tracks, phoneOnly: 0,
-                        buckets: built.buckets, formats: built.formats, fingerprint: 'x' }]);
-  await saved.save({ id: 'p-dig', name: 'Mine', tracks: [{ url: 'https://example.test/kept.mod', name: 'kept.mod' }], index: 0 });
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.tracks,
+    phoneOnly: 0, buckets: built.buckets, formats: built.formats, fingerprint: 'x' }]);
+  await saved.save({ id: 'p-dig', name: 'Mine', tracks: [{ url: kept, name: 'kept.mod' }], index: 0 });
   await api.switchTo('p-dig');
-
+  api.setQueue([{ url: kept, name: 'kept.mod' }]);
+  if ($('shuffle').classList.contains('on')) $('shuffle').click();
+  for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
   api.useRandomSource(() => 0.1);
   await api.openRandom();
   await settle();
   const record = api.queueNow();
   const cursor = api.indexNow();
-  check(api.randomState() != null && record.length > 0, 'the dice is rolling, with a record');
-
-  // Keeping what the dice gave, the way the phone's dock offers it.
-  check(!$('nowkeep').hidden && $('nowkeep').querySelector('svg'),
-    'the dock offers to keep what is playing, since it is not from the playlist');
+  check(api.randomState() != null && record.length > 0, 'Random starts with an actual source record');
+  check(!$('nowkeep').hidden && $('nowkeep').querySelector('svg'), 'the dock offers to keep the random track');
   const height = window.getComputedStyle($('nowcard')).height;
   $('nowkeep').click();
   await settle();
-  check(api.randomState().stash.queue.map((t) => t.url).join() === `https://example.test/kept.mod,${record[cursor]}`,
-    'pressing it appends that tune to the playlist waiting underneath');
-  check(api.dirtyNow(), 'as an edit waiting for Save, like every other');
-  check(window.getComputedStyle($('nowcard')).height === height,
-    'and the card is the same height with the button as without it');
-  // Saved first: what follows switches playlists, and an edit waiting would stop to ask.
+  check(api.editorNow().order.tracks.map((track) => track.url).join() === `${kept},${record[cursor]}`,
+    'keeping the random track changes only the selected playlist draft');
+  check(api.dirtyNow(), 'the addition waits for Save');
+  check(window.getComputedStyle($('nowcard')).height === height, 'keeping does not change dock height');
   await api.saveEdits();
-  await settle();
-
-  // The digression, by the way it is really reached: the row's own menu.
+  const before = window.__toWorklet.length;
   const scrolls = [];
-  const original = window.HTMLElement.prototype.scrollIntoView;
-  window.HTMLElement.prototype.scrollIntoView = function stub() { scrolls.push(this.dataset.url); };
-  window.document.querySelector('#queue li .rowmenu').click();
-  [...$('menu').children].find((b) => b.textContent === 'More from this author').click();
-  await settle();
-  const marked = [...$('browselist').children].filter((li) => li.classList.contains('playing'));
-  check(!$('browse').hidden && marked.length === 1 && marked[0].dataset.url === record[cursor],
-    'More from this author opens the folder with the tune that is playing marked');
-  check(scrolls.includes(record[cursor]), 'and brings it on screen rather than opening at the top');
-
-  // **The dice stands aside as the folder opens** (`docs/SPEC_RANDOM.md` §1, the digression), so
-  // everything below is true before anything in the folder has been played.
-  check(api.awayState()?.kind === 'browse' && api.awayState().dice != null,
-    'the dice waits from the moment the jump lands, not from the first tune played here');
-  const folder = [...$('browselist').children].map((li) => li.dataset.url);
-  check(api.queueNow().join() === folder.join() && api.queueNow()[api.indexNow()] === record[cursor],
-    'the folder is what next and previous walk, starting from the tune the jump was made from');
-  check(api.afterOf(0) === 1, 'so next is the author\'s next tune rather than another roll');
-  check($('browsesearch').hidden, 'a folder offers no search box, as the phone offers none');
-  check($('browseclose').hidden,
-    'and no Close beside it: the way out of a digression is the Back that returns to the dice');
-
-  // A row being fetched breathes here as it does in the playlist (`docs/WISHLIST.md` B32).
-  holdTrackFetch = true;
-  api.playAt(api.indexNow());
-  await settle();
-  check(window.document.querySelector('#browselist li.loading'),
-    'the row whose tune is being fetched says so in Browse too');
-  holdTrackFetch = false;
-  $('playpause').click();   // calls the download off, leaving the digression as it was
-  await settle();
-  check(!$('browsedigression').hidden
-        && $('browsedigression').textContent.includes('Browsing author')
-        && $('browsedigression').textContent.includes('Trio')
-        && $('browsedigression').querySelector('svg'),
-    'and the heading is in this screen, in the shape the dice\'s own heading has');
-  if (original) window.HTMLElement.prototype.scrollIntoView = original;
-  else delete window.HTMLElement.prototype.scrollIntoView;
-
-  window.document.querySelector('#browselist li.btrack').click();
-  await settle();
-  const session = api.awayState();
-  check(session?.kind === 'browse' && session.dice != null,
-    'playing one of them keeps the dice underneath rather than ending it');
-  check($('sessiontitle').textContent === 'Browsing author' && $('randomscope').textContent === 'Trio'
-        && !$('randomscope').hidden && $('playlistname').textContent === 'Browsing',
-    'and the heading says whose folder this is, in the two lines the dice\'s heading has');
-  check($('random-leave').textContent.includes('Random') && $('random-leave').querySelector('svg'),
-    'the way back offers the dice, not the playlist');
-  // What it held, plus the pick kept from the dock a moment ago — and nothing from this folder.
-  check(session.stash.queue.map((t) => t.url).join() === `https://example.test/kept.mod,${record[cursor]}`,
-    'the playlist is still waiting under both of them, with what was kept and nothing else');
-
-  // Back, out of the author's folder: the dice, where it was, paused.
-  $('browseback').click();
-  await settle();
-  check(api.randomState() != null && api.awayState() == null, 'Back from the author\'s folder returns to the dice');
-  check(api.queueNow().join() === record.join() && api.indexNow() === cursor,
-    'with the record it had and the cursor where it was');
-  check($('sessiontitle').textContent === 'Playing at random' && $('sub').textContent === 'press play',
-    'paused on that pick, not playing something new');
-  const selectedRow = [...window.document.querySelectorAll('#queue li.track')]
-    .findIndex((li) => li.classList.contains('selected'));
-  check(selectedRow === api.indexNow(),
-    'and the pick it will play is marked, so play starts what the screen names');
-  check($('browse').hidden, 'and Browse is closed');
-
-  // A playlist chosen while digressing ends both: a way back that leads nowhere is worse than none.
-  api.showPanel('browse');
-  await api.browseTo(['modland', 'Protracker', 'Trio']);
-  window.document.querySelector('#browselist li.btrack').click();
-  await settle();
-  check(api.awayState()?.dice != null, 'digressing again');
-  await api.choosePlaylist('p-dig');
-  await settle();
-  check(api.awayState() == null && api.randomState() == null
-        && api.queueNow().join() === `https://example.test/kept.mod,${record[cursor]}`,
-    'choosing a playlist ends the digression and the dice with it, and the playlist is what it kept');
-
+  const originalScroll = window.HTMLElement.prototype.scrollIntoView;
+  window.HTMLElement.prototype.scrollIntoView = function () { scrolls.push(this.dataset.url); };
+  const openAuthor = async () => {
+    window.document.querySelector('#queue li .rowmenu').click();
+    [...$('menu').children].find((button) => button.textContent === 'More from this author').click();
+    await settle();
+  };
+  try {
+    await openAuthor();
+    check(!$('browse').hidden && $('browsetitle').textContent === 'Protracker / Trio', 'the author menu opens the requested folder');
+    check(scrolls.includes(record[cursor]), 'the requested track is brought into view');
+    check(api.randomState() != null && api.awayState() == null && api.sourceNow().kind === 'random',
+      'merely opening an author leaves Random as the playback owner');
+    check(api.queueNow().join() === record.join() && api.indexNow() === cursor, 'the Random record and cursor are untouched');
+    check(window.__toWorklet.length === before, 'author navigation sends no playback command');
+    check(!$('browseclose').hidden && $('browsesearch').hidden, 'the folder can be closed without a resume action');
+    $('browseback').click();
+    await settle();
+    check($('browse').hidden && api.randomState() != null, 'Back closes the author jump without replacing Random');
+    check(window.__toWorklet.length === before, 'Back does not pause or reopen the source');
+    await openAuthor();
+    const folder = [...$('browselist').querySelectorAll('li.btrack')].map((row) => row.dataset.url);
+    $('browselist').querySelector('li.btrack').click();
+    await settle();
+    check(api.sourceNow().kind === 'collection' && api.queueNow().join() === folder.join(),
+      'only an explicit author-track tap transfers the source to that folder');
+    check($('random-leave').textContent.includes('Playlist'), 'the view exit returns to the playlist without a Resume Random control');
+    const authorQueue = api.queueNow().join();
+    const authorIndex = api.indexNow();
+    const commands = window.__toWorklet.length;
+    $('browseback').click();
+    await settle();
+    check($('browse').hidden && api.queueNow().join() === authorQueue && api.indexNow() === authorIndex,
+      'Back from the playing author leaves the author context active');
+    check(window.__toWorklet.length === commands, 'closing the playing author view sends no decoder command');
+    await api.choosePlaylist('p-dig');
+    check(api.editorShown() && api.editorNow().id === 'p-dig', 'the selected playlist is available normally');
+    check(api.sourceNow().kind === 'collection' && api.queueNow().join() === authorQueue,
+      'choosing that playlist still does not replace the author source');
+    check(api.editorNow().order.tracks.map((track) => track.url).join() === `${kept},${record[cursor]}`,
+      'the playlist contains only its original track and the explicitly kept track');
+  } finally {
+    if (originalScroll) window.HTMLElement.prototype.scrollIntoView = originalScroll;
+    else delete window.HTMLElement.prototype.scrollIntoView;
+  }
   await store.clear('modland:');
   await saved.remove('p-dig');
   await api.switchTo('phone');
@@ -3343,6 +3308,322 @@ if (window.__api) {
   await redraw;
   holdTrackFetch = false;
   api.showPanel(null);
+}
+
+// W01: ported ownership/save scenarios from ActiveQueueTest and PlaylistSessionTest.
+if (window.__api?.editorNow) {
+  console.log('\nindependent editor and playback:');
+  const api = window.__api;
+  const store = api.storeNow;
+  const settle = (ms = 70) => new Promise((resolve) => setTimeout(resolve, ms));
+  const tap = (button) => {
+    button.dispatchEvent(new window.Event('pointerdown'));
+    button.dispatchEvent(new window.Event('pointerup'));
+    button.click();
+  };
+  const urls = (tracks) => tracks.map((entry) => entry.url).join();
+  const editorUrls = () => urls(api.editorNow().order.tracks);
+  const rows = () => [...$('queue').querySelectorAll('li.track')];
+  const remove = (index) => {
+    rows()[index].querySelector('.rowmenu').click();
+    [...$('menu').querySelectorAll('button')].find((button) => button.textContent === 'Remove from this playlist').click();
+  };
+  const opened = (title) => api.onWorklet({ type: 'opened', describe: `title\t${title}\nformat\tProTracker MOD`,
+    duration: 90, subsongs: 1, current: 0, canSeek: true, rate: 44100 });
+  const a = [1, 2].map((n) => ({ url: `https://example.test/ownership/a${n}.mod`, name: `a${n}.mod` }));
+  const b = [1, 2].map((n) => ({ url: `https://example.test/ownership/b${n}.mod`, name: `b${n}.mod` }));
+  const c = [1, 2].map((n) => ({ url: `https://example.test/ownership/c${n}.mod`, name: `c${n}.mod` }));
+  if (api.dirtyNow()) await api.saveEdits();
+  for (const [id, tracks] of [['own-A', a], ['own-B', b], ['own-C', c]])
+    await store.save({ id, name: id, tracks, index: 0 });
+  await api.choosePlaylist('own-A');
+  rows()[0].click();
+  await settle();
+  opened('Playing A');
+  api.onWorklet({ type: 'position', seconds: 17 });
+  const closes = window.__toWorklet.filter((message) => message.type === 'close').length;
+  const opens = window.__toWorklet.filter((message) => message.type === 'open').length;
+  check(opens > 0, 'the ownership checks observe real commands sent to the worklet');
+  $('playlistchip').click();
+  await settle();
+  [...$('playlistlist').children].find((row) => row.querySelector('.pname')?.textContent === 'own-B').click();
+  await settle();
+  check(api.editorNow().id === 'own-B' && editorUrls() === urls(b), 'choosing B through the sheet shows B');
+  check(api.queueNow().join() === urls(a) && api.sourceNow().id === 'own-A', 'the actual source stays A');
+  check($('title').textContent === 'Playing A' && $('elapsed').textContent === '0:17', 'view selection preserves title and elapsed position');
+  check(window.__toWorklet.filter((message) => message.type === 'close').length === closes
+    && window.__toWorklet.filter((message) => message.type === 'open').length === opens, 'view selection neither closes nor opens a decoder');
+  check(rows().length === 2 && rows().every((row) => !row.classList.contains('playing')
+    && !row.classList.contains('loading') && !row.classList.contains('selected')), 'B has no active-source highlight');
+  if ($('shuffle').classList.contains('on')) $('shuffle').click();
+  for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
+  tap($('next'));
+  await settle();
+  opened('Playing A2');
+  check(api.indexNow() === 1 && api.queueNow().join() === urls(a), 'Next still walks A while B is visible');
+  remove(1);
+  check(editorUrls() === b[0].url && api.queueNow().join() === urls(a), 'editing B leaves playing A untouched');
+  $('tab-save').click();
+  await settle();
+  check(urls((await store.get('own-B')).tracks) === b[0].url && !api.dirtyNow(), 'Save persists B rather than the active source');
+  check(urls((await store.get('own-A')).tracks) === urls(a), 'saving B cannot overwrite A');
+  remove(0);
+  $('tab-discard').click();
+  await settle();
+  check(editorUrls() === b[0].url && !api.dirtyNow(), 'Discard restores B from its own saved data');
+  check(api.sourceNow().id === 'own-A' && $('title').textContent === 'Playing A2', 'Discard does not change the independently playing source');
+  rows()[0].click();
+  await settle();
+  opened('Playing B');
+  check(api.sourceNow().id === 'own-B' && api.queueNow().join() === b[0].url, 'only tapping B transfers playback ownership');
+  check(rows()[0].classList.contains('playing'), 'the selected source playlist now shows its active row');
+
+  const historyTracks = [1, 2].map((n) => ({ url: `https://modland.com/pub/modules/Protracker/Ownership/history${n}.mod`,
+    name: `history${n}.mod` }));
+  api.playFromBrowse(historyTracks, 0, 'history');
+  await settle();
+  opened('History source');
+  const collection = api.queueNow().join();
+  const beforeLeaving = window.__toWorklet.filter((message) => message.type === 'close').length;
+  $('random-leave').click();
+  await settle();
+  check(api.editorShown() && editorUrls() === b[0].url, 'returning to the playlist reveals its selected draft');
+  check(api.awayState()?.kind === 'history' && api.queueNow().join() === collection,
+    'returning to the playlist retains the History playback context');
+  check(window.__toWorklet.filter((message) => message.type === 'close').length === beforeLeaving,
+    'returning to the playlist does not close the collection decoder');
+  tap($('next'));
+  await settle();
+  check(api.indexNow() === 1 && api.queueNow().join() === collection, 'Next continues History after leaving its view');
+
+  const originalGet = store.get;
+  let releaseA;
+  const held = new Promise((resolve) => { releaseA = resolve; });
+  store.get = async (id) => { if (id === 'own-A') await held; return originalGet(id); };
+  try {
+    const old = api.choosePlaylist('own-A');
+    await settle(10);
+    await api.choosePlaylist('own-C');
+    releaseA();
+    await old;
+    check(api.editorNow().id === 'own-C' && editorUrls() === urls(c), 'a late A read cannot replace the newer selected C');
+    check(api.sourceNow().origin === 'history' && api.indexNow() === 1, 'late editor reads cannot change playback');
+  } finally { releaseA(); store.get = originalGet; }
+
+  store.get = async (id) => { if (id === 'own-A') throw new Error('Controlled playlist read failure'); return originalGet(id); };
+  try {
+    const result = await api.choosePlaylist('own-A');
+    check(result === false && api.editorNow().id === 'own-C', 'a failed read retains the selected editor');
+    check(!$('snackbar').hidden && $('snacktext').textContent.includes('Controlled playlist read failure'),
+      'a failed read explains itself at the action');
+  } finally { store.get = originalGet; }
+
+  await api.choosePlaylist('own-B');
+  remove(0);
+  const originalSave = store.save;
+  let releaseSave;
+  let enteredSave;
+  const savedEntered = new Promise((resolve) => { enteredSave = resolve; });
+  const saveGate = new Promise((resolve) => { releaseSave = resolve; });
+  store.save = async (playlist) => {
+    if (playlist.id === 'own-B') { enteredSave(); await saveGate; }
+    return originalSave(playlist);
+  };
+  try {
+    const pending = api.saveEdits();
+    await savedEntered;
+    // Publication is exercised directly here; the sheet's real gesture path is checked above.
+    await api.switchTo('own-C');
+    remove(0);
+    releaseSave();
+    await pending;
+    check(api.editorNow().id === 'own-C' && api.dirtyNow(), 'a late B save cannot clear newer unsaved C edits');
+    check((await store.get('own-B')).tracks.length === 0 && urls((await store.get('own-C')).tracks) === urls(c),
+      'the delayed write retains B identity and cannot write C contents');
+    check(api.sourceNow().origin === 'history' && api.indexNow() === 1, 'asynchronous saves do not change the active source');
+  } finally { releaseSave(); store.save = originalSave; }
+  store.save = async () => { throw new Error('Controlled save failure'); };
+  try {
+    const pendingChoice = api.choosePlaylist('own-A');
+    await settle();
+    $('unsaved-save').click();
+    await settle();
+    check(!$('unsaved').hidden && api.editorNow().id === 'own-C' && api.dirtyNow(),
+      'a failed Save leaves the unsaved-change decision open and preserves the draft');
+    check($('snacktext').textContent.includes('Controlled save failure'), 'a failed Save reports the storage error');
+    $('unsaved').querySelector('[data-close]').click();
+    await pendingChoice;
+  } finally { store.save = originalSave; }
+  await api.saveEdits();
+  const beforeCopy = api.queueNow().join();
+  const copyTracks = editorUrls();
+  const promptBeforeCopy = window.prompt;
+  try {
+    window.prompt = () => 'Copy selected C';
+    $('saveas').click();
+    await settle(120);
+    check(api.editorNow().name === 'Copy selected C' && editorUrls() === copyTracks,
+      'Save as copies the selected editor rather than the independently playing collection');
+    check(api.queueNow().join() === beforeCopy && api.sourceNow().origin === 'history',
+      'Save as selects the new document without replacing the playing source');
+  } finally { window.prompt = promptBeforeCopy; }
+  api.showPanel(null);
+}
+
+if (window.__api?.editorNow) {
+  console.log('\neditor failures and incoming source ownership:');
+  const api = window.__api;
+  const store = api.storeNow;
+  const settle = (ms = 80) => new Promise((resolve) => setTimeout(resolve, ms));
+  const mine = [{ url: 'https://example.test/ownership/kept.mod', name: 'kept.mod' }];
+  await store.save({ id: 'own-failure', name: 'Keep this playlist', tracks: mine, index: 0 });
+  await api.choosePlaylist('own-failure');
+  $('queue').querySelector('li.track').click();
+  await settle();
+  $('queue').querySelector('.rowmenu').click();
+  [...$('menu').children].find((button) => button.textContent === 'Remove from this playlist').click();
+  const originalGet = store.get;
+  store.get = async (id) => {
+    if (id === 'own-failure') throw new Error('Controlled discard failure');
+    return originalGet(id);
+  };
+  let rejected = false;
+  try { await api.discardEdits(); } catch { rejected = true; }
+  finally { store.get = originalGet; }
+  check(!rejected && api.dirtyNow() && api.editorNow().order.tracks.length === 0,
+    'a failed Discard retains the unsaved editor without an unhandled rejection');
+  check(!$('snackbar').hidden && $('snacktext').textContent.includes('Controlled discard failure'),
+    'a failed Discard explains why the draft was retained');
+  await api.discardEdits();
+  $('queue').querySelector('li.track').click();
+  await settle();
+  api.onWorklet({ type: 'opened', describe: 'title\tKeep this playing', duration: 90,
+    rate: 44100, subsongs: 1, current: 0, canSeek: true });
+  const closed = window.__toWorklet.filter((message) => message.type === 'close').length;
+  const sent = 'Protracker/Ownership/received.mod';
+  const zlib = await import('node:zlib');
+  window.location.hash = zlib.deflateSync(Buffer.from(sent)).toString('base64url');
+  await settle(180);
+  check(api.editorNow().id === 'phone' && api.editorNow().order.tracks.length === 1
+    && api.editorNow().order.tracks[0].url.endsWith('/received.mod'),
+    'a queue link selects the phone document before publishing its contents');
+  check(api.sourceNow().id === 'phone' && api.queueNow()[0]?.endsWith('/received.mod'),
+    'a queue link cannot associate its transport with the previously selected playlist');
+  check(window.__toWorklet.filter((message) => message.type === 'close').length === closed + 1,
+    'receiving a replacement queue closes the previous decoder and waits for Play');
+  await settle(550);
+  check((await store.get('own-failure')).tracks[0].url === mine[0].url,
+    'automatic persistence of a received queue cannot overwrite the previous playlist');
+  const persistedSettings = (await import(path.resolve('web/src/store.js'))).settings;
+  check(await persistedSettings.get('active') === 'phone', 'receiving a full queue persists the selected phone document');
+  window.location.hash = '';
+  await settle();
+
+  const latest = [1, 2].map((n) => ({ url: `https://example.test/ownership/load${n}.mod`, name: `load${n}.mod` }));
+  api.setQueue(latest);
+  const originalFetch = window.fetch;
+  let releaseFetch;
+  let fetchEntered = false;
+  const delayedResponse = new Promise((resolve) => { releaseFetch = resolve; });
+  window.fetch = (url, options) => {
+    if (url === latest[0].url) { fetchEntered = true; return delayedResponse; }
+    return originalFetch(url, options);
+  };
+  const beforeOpen = window.__toWorklet.filter((message) => message.type === 'open').length;
+  try {
+    $('queue').querySelectorAll('li.track')[0].click();
+    await settle();
+    check(fetchEntered, 'the older selection is waiting in the actual download path');
+    $('queue').querySelectorAll('li.track')[1].click();
+    await settle();
+    releaseFetch({ ok: true, arrayBuffer: async () => new ArrayBuffer(64) });
+    await settle();
+    const commands = window.__toWorklet.filter((message) => message.type === 'open').slice(beforeOpen);
+    check(commands.length === 1 && commands[0].name === 'load2.mod' && api.indexNow() === 1,
+      'an obsolete download cannot open its decoder after a newer row was selected');
+    check($('title').textContent === 'load2.mod', 'an obsolete download leaves the new title intact');
+    const currentRequest = commands.at(-1)?.requestId;
+    api.onWorklet({ type: 'opened', requestId: currentRequest, describe: 'title\tCurrent source',
+      duration: 90, subsongs: 1, current: 0, canSeek: true, rate: 44100 });
+    api.onWorklet({ type: 'position', requestId: currentRequest, seconds: 8 });
+    api.onWorklet({ type: 'opened', requestId: currentRequest - 1, describe: 'title\tObsolete source',
+      duration: 1, subsongs: 8, current: 2, rate: 44100 });
+    api.onWorklet({ type: 'position', requestId: currentRequest - 1, seconds: 99 });
+    api.onWorklet({ type: 'failed', requestId: currentRequest - 1, reason: 'Obsolete decoder failure' });
+    check(Number.isInteger(currentRequest) && $('title').textContent === 'Current source'
+      && $('elapsed').textContent === '0:08' && !$('error').textContent,
+      'obsolete worklet replies cannot replace the current source metadata, clock or error');
+  } finally {
+    releaseFetch({ ok: true, arrayBuffer: async () => new ArrayBuffer(64) });
+    window.fetch = originalFetch;
+  }
+}
+
+if (window.__api?.editorNow) {
+  console.log('\nplaylist document actions during pending writes:');
+  const api = window.__api;
+  const store = api.storeNow;
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
+  const tracks = [1, 2, 3].map((n) => ({ url: `https://example.test/document/${n}.mod`, name: `${n}.mod` }));
+  await store.save({ id: 'own-document', name: 'Before rename', tracks, index: 0 });
+  await api.choosePlaylist('own-document');
+  const removeFirst = () => {
+    $('queue').querySelector('.rowmenu').click();
+    [...$('menu').children].find((button) => button.textContent === 'Remove from this playlist').click();
+  };
+  const documentMenu = async (action) => {
+    $('playlistchip').click();
+    await settle();
+    [...$('playlistlist').children].find((row) => row.getAttribute('aria-current') === 'true').querySelector('.pmenu').click();
+    [...$('menu').children].find((button) => button.textContent === action).click();
+    await settle();
+  };
+  const originalSave = store.save;
+  const originalPrompt = window.prompt;
+  const originalConfirm = window.confirm;
+  const holdSave = () => {
+    let release, entered;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const waiting = new Promise((resolve) => { entered = resolve; });
+    store.save = async (playlist) => {
+      if (playlist.id === 'own-document') { entered(); await gate; }
+      return originalSave(playlist);
+    };
+    return { release, waiting };
+  };
+  let held;
+  try {
+    removeFirst();
+    held = holdSave();
+    const pending = api.saveEdits();
+    await held.waiting;
+    window.prompt = () => 'After rename';
+    await documentMenu('Rename');
+    held.release();
+    await pending;
+    await settle();
+    const renamed = await store.get('own-document');
+    check(renamed.name === 'After rename' && renamed.tracks.map((track) => track.url).join() === tracks.slice(1).map((track) => track.url).join(),
+      'Rename and a pending Save retain both the new name and saved contents');
+    store.save = originalSave;
+    api.showPanel(null);
+    removeFirst();
+    held = holdSave();
+    const deleting = api.saveEdits();
+    await held.waiting;
+    window.confirm = () => true;
+    await documentMenu('Delete');
+    held.release();
+    await deleting;
+    await settle();
+    check((await store.get('own-document')) == null && api.editorNow().id === 'phone',
+      'Delete cannot be undone by an earlier pending Save finishing afterwards');
+  } finally {
+    held?.release();
+    store.save = originalSave;
+    window.prompt = originalPrompt;
+    window.confirm = originalConfirm;
+  }
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
