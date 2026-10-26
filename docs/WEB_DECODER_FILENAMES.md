@@ -7,15 +7,31 @@ Reported and implemented 2026-10-26 on `fix/web-decoder-selection`, from develop
 Integrated on request as **`188db10ad0c5b7eeda129b969923671d42da852c`**. The merge tree equals
 branch `4cd637f`, and application/native/script/web/store sources match tested candidate
 `3bfa0ea`. The agent checked those identities; no new test run or APK build was needed for the
-unchanged sources. The retained test bundle keeps its original source and checksums. A separate
-browser-trial result was not supplied; the checklist below remains available for verification.
+unchanged sources. The retained test bundle keeps its original source and checksums. Later
+browser feedback is recorded below; the remaining checklist stays available for verification.
 Local GitHub Pages preparation and the subsequent manual push are separate publication steps.
 Site commit **`b6a3c5384c557b9e39baefb720e38962943e2ab3`** was prepared from source
 **`e1a428127f6517712699accc4ae98066c883b8c8`**. Its 50 files include the checked JavaScript and
 WASM, exact source metadata, the root redirect and a valid worker for 46 cached startup assets.
 The site revision is `6b7828441432848524f34f032131ff4dd78709f9232ce0644d6357c2f04498ce`.
-No remote push or deployment has been performed; push source and site together with
-`./scripts/push-protracktor.sh develop gh-pages`.
+The source and site were pushed: remote-tracking refs checked on 2026-10-26 match source branch
+head `667dc0d` and Pages commit `b6a3c53`. The agent did not perform the push or independently
+inspect the deployed HTTP responses.
+
+## Browser feedback — 2026-10-26
+
+Playback was reported working in a private window after the update. The normal browser session
+initially still failed, with an older cache suspected. Browser/device/version, exact page URL,
+per-file results and worker lifecycle state were not separately supplied. This is overall
+private-window playback feedback; Information and actual AAC export were not separately tested.
+
+The shipped worker serves application files from its revision's cache and does not call
+`skipWaiting`. A new version waits for existing player tabs/windows to close so that scripts and
+the decoder are not replaced during playback. Registration runs when the page loads; no update
+notification is currently shown. This policy explains how an old session can retain the earlier
+code, but the specific browser's cache and waiting-worker state have not been inspected.
+Close all normal-session player tabs and installed-PWA windows, then reopen to allow activation.
+The normal-session result remains pending; app data should be retained during this check.
 
 ## Report
 
@@ -94,7 +110,8 @@ SHA-256 and build metadata sidecars are beside the archive in `dist/`; inspectio
 retained with the local test evidence. Test-bundle preparation did not build an APK, deploy
 remotely or merge the branch; the subsequent integration is recorded above.
 
-Browser/PWA playback, Information and actual AAC export remain **unchecked** until a browser trial.
+Private-window playback has the reported result above. Normal-session/PWA activation,
+Information and actual AAC export remain **unchecked**.
 
 ## Browser trial
 

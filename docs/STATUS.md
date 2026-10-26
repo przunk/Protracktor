@@ -27,12 +27,17 @@ SHA-256 `85b25a9fca25bd85dcc8ec1fb72bcb71091dd400a64e9d86a6fa05f78eddb8c1`.
 Packed JavaScript, WASM, source metadata and PWA revision were checked. No APK or remote deployment.
 **~~C121 pending integration~~ — merged as `188db10`, 2026-10-26**, following the explicit merge
 request. The merge tree matches branch `4cd637f`; application/native/script/web/store sources
-match checked candidate `3bfa0ea`. These are source comparisons, not another test run. No separate
-browser-trial result was supplied; browser audio and AAC export remain unchecked. Local GitHub
+match checked candidate `3bfa0ea`. These are source comparisons, not another test run. Local GitHub
 Pages snapshot **`b6a3c53`** is prepared from source **`e1a4281`**: 50 files, with 46 cached startup
 assets. Its JavaScript and WASM match the checked payload; source metadata and PWA revision were
-verified. **Remote push/deployment pending.** Push both source and site with
-`./scripts/push-protracktor.sh develop gh-pages`.
+verified. The source/Pages push is reflected in remote-tracking refs `origin/develop` at
+`667dc0d` and `origin/gh-pages` at `b6a3c53`, checked 2026-10-26.
+
+**Browser feedback, 2026-10-26:** playback was reported working in a private window; the normal
+session initially still failed. The browser/device, per-file results and active/waiting worker
+state were not supplied. An older cached application is consistent with this report and the
+worker's policy of waiting for all existing player windows to close, but that browser cache was
+not inspected. Normal-session activation, Information and actual AAC export remain unchecked.
 [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
 
 ## Google Play production-access reapplication — 2026-10-26

@@ -3,7 +3,12 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## C121 WEB decoder filenames — browser trial pending
+## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
+
+2026-10-26 feedback reports playback working in a private window while the normal session
+initially still failed, with stale cache suspected. Browser/device, per-file results and worker
+state were not supplied. Cache activation in the normal session and the other checks below
+remain pending; the private-window result does not establish those outcomes.
 
 Use [the corrected web test bundle](../dist/protracktor-web-20261026-224832.tar.gz), source
 `3bfa0ea`. For an installed PWA, close its windows and reopen after updating the files so its
@@ -13,8 +18,9 @@ new worker can activate, preserving existing app data. Open title-bearing links 
 ASAP respectively while preserving the display titles. Replay from History and test audio
 export on a browser with AAC support. Check phone handoffs with an explicit filename, absent
 or empty filename fields and The Mod Archive's filename fragment. Preserve existing user data.
-Page-message checks and real-file WASM rendering passed on the host; browser/device output and
-AAC export remain unchecked. [Evidence and scope](WEB_DECODER_FILENAMES.md).
+Page-message checks and real-file WASM rendering passed on the host. Private-window playback
+feedback is recorded above; normal-session activation, Information and AAC export remain
+unchecked. [Evidence and scope](WEB_DECODER_FILENAMES.md).
 
 ## B54 Floating controls — experimental, disabled by default
 
