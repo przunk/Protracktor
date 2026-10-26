@@ -89,8 +89,10 @@ class PlaybackService : Service() {
             return
         }
         controller = PlaybackController.get(this)
-        floating = FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
-            controller::next, controller::savePlayingToPlaylist, controller::previousFile, controller::nextFile)
+        if (FloatingControls.ENABLED) {
+            floating = FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
+                controller::next, controller::savePlayingToPlaylist, controller::previousFile, controller::nextFile)
+        }
         createChannel()
         createSession()
 
@@ -124,10 +126,12 @@ class PlaybackService : Service() {
         scope.launch {
             controller.state.collect { publishSession(it) }
         }
-        scope.launch {
-            FloatingControls.visible.collectLatest { visible ->
-                if (visible) controller.state.map(FloatingControlsState::of).distinctUntilChanged()
-                    .collect { floating?.update(it) }
+        floating?.let { window ->
+            scope.launch {
+                FloatingControls.visible.collectLatest { visible ->
+                    if (visible) controller.state.map(FloatingControlsState::of).distinctUntilChanged()
+                        .collect(window::update)
+                }
             }
         }
     }
@@ -171,10 +175,10 @@ class PlaybackService : Service() {
             return START_NOT_STICKY
         }
         when (intent?.action) {
-            FloatingControls.SHOW -> {
+            FloatingControls.SHOW -> floating?.let { window ->
                 if (started) {
-                    floating?.update(FloatingControlsState.of(controller.state.value))
-                    floating?.show()
+                    window.update(FloatingControlsState.of(controller.state.value))
+                    window.show()
                 } else FloatingControls.unavailable(this)
             }
             FloatingControls.HIDE -> floating?.close()

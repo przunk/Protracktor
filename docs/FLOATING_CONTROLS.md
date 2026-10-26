@@ -1,5 +1,31 @@
 # B54 — Floating playback controls
 
+## Experimental integration and distribution gate — 2026-10-26
+
+The practical phone trial was reported satisfactory and integration into develop was approved
+with the feature disabled. This approves retaining the experiment, not making it available to
+other users. The exact installed build was not restated; the latest supplied enabled trial was
+**1.4.0 (1313), source 2497632**. Its APK, source and hash remain unchanged. Individual checklist
+outcomes, long-term usefulness and resolution of the initial permission refusal were not
+separately reported.
+
+Use a single compile-time constant, **`FloatingControls.ENABLED = false`**, in
+`app/src/main/kotlin/com/przunk/protracktor/player/FloatingControls.kt`. When false, the app does
+not offer the dock's floating-controls hold or its accessibility label, does not register the
+permission flow, and does not construct an overlay host or subscribe to its presentation state.
+The command gateway also ignores Show/Hide, and the service cannot show a missing host. Ordinary
+Play/Pause and all existing playback controls keep their normal behaviour. The optional manifest
+permission remains declared, but no enabled feature requests it.
+
+There is no Settings toggle, saved preference or remote activation for this experiment.
+Re-enabling it requires an explicit distribution decision, changing the constant and building
+again. The interaction and verification records below describe the retained enabled experiment.
+The historical pending-acceptance statements are superseded for this integration decision;
+they do not become evidence that every individual device scenario was tested.
+
+Gate verification and integration are in progress. Keep the full suite omitted for this
+iteration as requested; run focused disabled-entry and retained-component checks plus lint.
+
 ## Decision and scope — 2026-10-25
 
 Implement an Android trial on `feature/floating-playback-controls`, based on develop `b52a6d7`.
@@ -130,7 +156,7 @@ do not relabel this artifact.
 Develop, master, tag v1.4.0 and the prepared AAB are unchanged. The branch is unmerged.
 **Unchecked on a phone:** actual Maps touch-through, whole-panel drag feel, edge animation,
 drop target, file holds and permission-restriction resolution. Use the updated
-[phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
+[phone checklist](TESTING.md#b54-floating-controls--experimental-disabled-by-default).
 
 ## Verification and acceptance
 
@@ -244,7 +270,7 @@ merged, and no AAB or publishing key was used for this task.
 **Partially checked:** production panel presentation through host rendering and interaction tests.
 **Unchecked:** installation, actual overlay/Google Maps behaviour, physical gestures,
 rotation/cutouts, screen lock and permission revocation timing on a phone. Use the
-[phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending) before acceptance.
+[phone checklist](TESTING.md#b54-floating-controls--experimental-disabled-by-default) before acceptance.
 
 ## Platform references
 

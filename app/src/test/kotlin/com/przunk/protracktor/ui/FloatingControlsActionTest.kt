@@ -14,7 +14,6 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.player.FloatingControls
-import com.przunk.protracktor.player.PlaybackService
 import com.przunk.protracktor.player.PlayQueue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef
@@ -38,6 +37,7 @@ class FloatingControlsActionTest {
     @get:Rule val compose = createEmptyComposeRule()
     private lateinit var activity: ActivityController<ComponentActivity>
     private var playTaps = 0
+    private val panelRequests = mutableListOf<Boolean>()
     @Before fun start() {
         FloatingControls.setVisible(false)
         ShadowSettings.setCanDrawOverlays(false)
@@ -49,7 +49,7 @@ class FloatingControlsActionTest {
     }
     private fun show(available: Boolean = true, playing: Boolean = false, loading: Boolean = false) {
         activity.get().setContent { MaterialTheme {
-            val action = rememberFloatingControlsAction(available)
+            val action = rememberFloatingControlsPermission(available) { _, show -> panelRequests += show }
             PlayerDock(
                 PlayerUiState(queue = PlayQueue(listOf(TrackRef("song", "Song"))).startAt(0),
                     restored = available, playing = playing, loadingTrack = loading),
@@ -60,7 +60,7 @@ class FloatingControlsActionTest {
             )
         } }
     }
-    private fun requestedService() = shadowOf(activity.get().application).nextStartedService
+    private fun requestedPanel(): Boolean? = if (panelRequests.isEmpty()) null else panelRequests.removeAt(0)
     private fun holdPlay() = compose.onNodeWithContentDescription("Play")
         .performTouchInput { longClick() }
 
@@ -71,7 +71,7 @@ class FloatingControlsActionTest {
             .fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
         compose.onNodeWithContentDescription("Play").performTouchInput { click() }
         assertEquals(1, playTaps)
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         compose.onNodeWithText("Open settings").assertDoesNotExist()
     }
 
@@ -79,41 +79,39 @@ class FloatingControlsActionTest {
         ShadowSettings.setCanDrawOverlays(true)
         show(playing = true)
         compose.onNodeWithContentDescription("Pause").performTouchInput { longClick() }
-        assertEquals(FloatingControls.SHOW, requestedService()!!.action)
+        assertEquals(true, requestedPanel())
         assertEquals(0, playTaps)
         compose.onNodeWithContentDescription("Pause").performTouchInput { click() }
         assertEquals(1, playTaps)
-        assertNull(requestedService())
+        assertNull(requestedPanel())
     }
 
     @Test fun `loading cancellation remains a plain Stop tap`() {
         show(loading = true)
         compose.onNodeWithContentDescription("Stop loading").performTouchInput { click() }
         assertEquals(1, playTaps)
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         compose.onNodeWithText("Open settings").assertDoesNotExist()
     }
 
-    @Test fun `permission explanation and Cancel never start playback or a service`() {
+    @Test fun `permission explanation and Cancel never change playback or request activation`() {
         show()
         holdPlay()
         compose.onNodeWithText("Open settings").assertIsDisplayed()
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         compose.onNodeWithText("Cancel").performClick()
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         assertFalse(FloatingControls.visible.value)
     }
 
-    @Test fun `granted permission sends the explicit Show command to the existing playback service`() {
+    @Test fun `granted permission requests panel activation without changing playback`() {
         ShadowSettings.setCanDrawOverlays(true)
         show()
         holdPlay()
-        val intent = requestedService()!!
-        assertEquals(PlaybackService::class.java.name, intent.component!!.className)
-        assertEquals(FloatingControls.SHOW, intent.action)
+        assertEquals(true, requestedPanel())
         assertFalse(FloatingControls.visible.value)
         assertEquals(0, playTaps)
-        assertNull(requestedService())
+        assertNull(requestedPanel())
     }
 
     @Test fun `return from permission settings checks actual grant instead of result code`() {
@@ -125,7 +123,7 @@ class FloatingControlsActionTest {
         assertEquals("package:${activity.get().packageName}", request.intent.dataString)
         ShadowSettings.setCanDrawOverlays(true)
         compose.runOnIdle { activity.get().activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_CANCELED, Intent()) }
-        assertEquals(FloatingControls.SHOW, requestedService()!!.action)
+        assertEquals(true, requestedPanel())
     }
 
     @Test fun `denied grant explains restricted settings without changing playback`() {
@@ -136,7 +134,7 @@ class FloatingControlsActionTest {
         compose.runOnIdle { activity.get().activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_OK, Intent()) }
         compose.onNodeWithText("Allow restricted settings", substring = true)
             .assertIsDisplayed()
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         assertEquals(0, playTaps)
     }
 
@@ -144,7 +142,7 @@ class FloatingControlsActionTest {
         show(available = false)
         holdPlay()
         compose.onNodeWithText("Load a track to enable floating controls.").assertIsDisplayed()
-        assertNull(requestedService())
+        assertNull(requestedPanel())
         assertEquals(0, playTaps)
         compose.onNodeWithText("Close").performClick()
     }
@@ -153,9 +151,9 @@ class FloatingControlsActionTest {
         FloatingControls.setVisible(true)
         show()
         holdPlay()
-        assertEquals(FloatingControls.HIDE, requestedService()!!.action)
+        assertEquals(false, requestedPanel())
         assertEquals(0, playTaps)
-        assertNull(requestedService())
+        assertNull(requestedPanel())
     }
 
     @Test fun `pending permission result survives activity recreation`() {
@@ -168,6 +166,6 @@ class FloatingControlsActionTest {
         compose.waitForIdle()
         ShadowSettings.setCanDrawOverlays(true)
         compose.runOnIdle { activity.get().activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_CANCELED, Intent()) }
-        assertEquals(FloatingControls.SHOW, requestedService()!!.action)
+        assertEquals(true, requestedPanel())
     }
 }

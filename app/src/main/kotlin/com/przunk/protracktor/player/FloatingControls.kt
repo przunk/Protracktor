@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Session-only presentation state; an app restart must not enable an overlay. */
 internal object FloatingControls {
+    // Retain the phone trial without exposing it in distributed builds (2026-10-26).
+    const val ENABLED: Boolean = false
     const val SHOW = "com.przunk.protracktor.SHOW_FLOATING_CONTROLS"
     const val HIDE = "com.przunk.protracktor.HIDE_FLOATING_CONTROLS"
     private val active = MutableStateFlow(false)
@@ -22,6 +24,7 @@ internal object FloatingControls {
     fun setVisible(value: Boolean) { active.value = value }
 
     fun request(context: Context, show: Boolean) {
+        if (!ENABLED) return
         try {
             val intent = Intent(context, PlaybackService::class.java).setAction(if (show) SHOW else HIDE)
             if (show) ContextCompat.startForegroundService(context, intent)

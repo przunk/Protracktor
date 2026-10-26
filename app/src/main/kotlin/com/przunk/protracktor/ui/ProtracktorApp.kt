@@ -109,7 +109,7 @@ fun ProtracktorApp(
     onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // Keep the permission result registered even when Now Playing is closed.
+    // When enabled, keep the permission result registered even when Now Playing is closed.
     val floatingControls = rememberFloatingControlsAction(state.restored && state.current != null)
     val savedPlaces by viewModel.savedPlacesState.collectAsStateWithLifecycle()
     val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
@@ -370,8 +370,8 @@ fun ProtracktorApp(
                         onQueue = { showQueue = !showQueue },
                         onBrowse = openBrowse,
                         onPlayPause = viewModel::togglePlayPause,
-                        onLongPlayPause = floatingControls.onToggle,
-                        longPlayPauseLabel = floatingControls.label,
+                        onLongPlayPause = floatingControls?.onToggle,
+                        longPlayPauseLabel = floatingControls?.label,
                         onPrevious = viewModel::previous,
                     onPreviousFile = viewModel::previousFile,
                         onNext = viewModel::next,

@@ -3,9 +3,16 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
-## B54 Floating controls — phone acceptance pending
+## B54 Floating controls — experimental, disabled by default
 
-[Contract and host evidence](FLOATING_CONTROLS.md). Use branch release
+Practical phone operation was reported satisfactory on 2026-10-26, followed by approval to
+retain the experiment in develop with **`FloatingControls.ENABLED = false`**. The exact installed
+build and individual scenario outcomes were not separately supplied. Public availability is
+not approved. With the constant false, the checks below require a deliberately enabled trial
+build: ordinary builds expose no floating-controls action or permission flow. Gate verification
+and integration are in progress; the full suite is not repeated for this iteration, as requested.
+
+[Contract and host evidence](FLOATING_CONTROLS.md). Retained enabled trial release:
 **1.4.0 (1313), source 2497632**, recorded in [Status](STATUS.md); it adds whole-panel dragging,
 edge docking, drop-to-hide and file holds while retaining Play/Pause hold activation. Fifty-one
 focused checks, lint and independent APK inspection passed. The full suite was not repeated for this iteration, as requested; the initial
@@ -46,8 +53,9 @@ focused checks, lint and independent APK inspection passed. The full suite was n
    subsequent activation must explain the missing permission. Playback and ordinary notification
    controls remain usable. Some apps/system screens can suppress overlays by design.
 
-These device outcomes remain unchecked until reported. Host renders preview the production panel,
-not its composition over Google Maps or behaviour on an actual navigation device.
+Overall practical operation is accepted for the experiment; individual checklist outcomes remain
+unchecked unless separately reported. Host renders preview the production panel, not its
+composition over Google Maps or behaviour on an actual navigation device.
 
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 

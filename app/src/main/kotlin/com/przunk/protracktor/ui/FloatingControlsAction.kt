@@ -4,6 +4,7 @@
 package com.przunk.protracktor.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -28,11 +29,20 @@ import com.przunk.protracktor.player.FloatingControls
 internal data class FloatingControlsToggle(val onToggle: () -> Unit, val label: String)
 
 @Composable
-internal fun rememberFloatingControlsAction(available: Boolean): FloatingControlsToggle {
+internal fun rememberFloatingControlsAction(available: Boolean): FloatingControlsToggle? =
+    if (FloatingControls.ENABLED) rememberFloatingControlsPermission(available) else null
+
+/** Retained permission component; the app enters through the gated action above. */
+@Composable
+internal fun rememberFloatingControlsPermission(
+    available: Boolean,
+    request: (Context, Boolean) -> Unit = FloatingControls::request,
+): FloatingControlsToggle {
     val context = LocalContext.current
     val visible by FloatingControls.visible.collectAsState()
     val currentVisible by rememberUpdatedState(visible)
     val currentAvailable by rememberUpdatedState(available)
+    val currentRequest by rememberUpdatedState(request)
     var explain by rememberSaveable { mutableStateOf(false) }
     var waiting by rememberSaveable { mutableStateOf(false) }
     var problem by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -42,7 +52,7 @@ internal fun rememberFloatingControlsAction(available: Boolean): FloatingControl
             when {
                 !Settings.canDrawOverlays(context) -> problem = R.string.floating_permission_denied
                 !currentAvailable -> problem = R.string.floating_no_track
-                else -> FloatingControls.request(context, show = true)
+                else -> currentRequest(context, true)
             }
         }
     }
@@ -50,9 +60,9 @@ internal fun rememberFloatingControlsAction(available: Boolean): FloatingControl
         {
             when {
                 waiting -> Unit
-                currentVisible -> FloatingControls.request(context, show = false)
+                currentVisible -> currentRequest(context, false)
                 !currentAvailable -> problem = R.string.floating_no_track
-                Settings.canDrawOverlays(context) -> FloatingControls.request(context, show = true)
+                Settings.canDrawOverlays(context) -> currentRequest(context, true)
                 else -> explain = true
             }
         }

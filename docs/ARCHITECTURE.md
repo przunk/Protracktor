@@ -1,6 +1,11 @@
 # Architecture
 
-## B54 Floating controls — branch trial, 2026-10-25
+## B54 Floating controls — gated experiment, 2026-10-26
+
+The phone trial is accepted for experimental integration only. `FloatingControls.ENABLED`
+defaults to `false`: the dock action and permission flow are absent, service host construction
+and its observer are omitted, and the command gateway ignores activation. This is a compile-time
+decision, with no runtime preference. The following describes the retained enabled component.
 
 [Interaction, lifecycle and acceptance](FLOATING_CONTROLS.md). `PlaybackService` owns the optional
 `FloatingControlsWindow`; closing the window never pauses or replaces playback. Activation is
@@ -18,8 +23,9 @@ edge animation. Dropping on the indicator hides without changing playback; cance
 ends the drag. Previous/Next holds use the dock's file operations and availability projection.
 A hold on the dock Play/Pause control invokes the permission flow in the
 application shell; its result launcher remains registered independently of Now Playing visibility.
-EN/PL presentation follows the selected app language. Android/Maps behaviour still requires phone
-acceptance; host checks do not establish visibility over another app.
+EN/PL presentation follows the selected app language. Practical phone operation was reported
+satisfactory; detailed device cases were not separately enumerated. Host checks do not establish
+visibility over another app. Public availability remains deferred behind the disabled constant.
 
 ## Volume normalization — accepted and merged, 2026-10-23
 

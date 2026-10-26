@@ -7,7 +7,18 @@ versionCode is the source commit count; later documentation commits do not relab
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B54 Floating controls — branch APK ready for phone testing, 2026-10-25
+## B54 Floating controls — accepted experiment; distribution gate in progress, 2026-10-26
+
+The practical phone trial was reported satisfactory and integration was approved with
+**`FloatingControls.ENABLED = false`**. This retains the experiment in develop while withholding
+its dock action, permission flow and overlay activation from normal users. No runtime toggle is
+exposed. The exact installed build was not restated; the latest supplied enabled APK is
+1.4.0 (1313), source 2497632. Its identity stays unchanged. Gate verification and integration are
+in progress. Historical unmerged/pending notes below describe earlier stages, not a remaining
+requirement to approve the already accepted integration. Individual device cases were not
+separately reported. [Distribution decision](FLOATING_CONTROLS.md).
+
+### Historical implementation and trial handoffs
 
 Implemented on `feature/floating-playback-controls`, based on develop `b52a6d7`; unmerged and
 awaiting phone acceptance. Holding the dock Play/Pause control requests optional overlay permission
@@ -36,7 +47,7 @@ Host previews do not establish operation above Google Maps. Phone feedback below
 activation-button and permission-screen observations; the exact installed build was not separately
 reported. Panel/Maps behaviour remains **unchecked**; versionName remains 1.4.0, schema 23, release refs, prepared AAB and AMP
 are untouched. Develop remains `b52a6d7`; this feature is unmerged and nothing was pushed.
-[Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--phone-acceptance-pending).
+[Analysis and contract](FLOATING_CONTROLS.md), [phone checklist](TESTING.md#b54-floating-controls--experimental-disabled-by-default).
 
 **Follow-up, 2026-10-25:** the initial phone check found the activation button oversized and
 Android refused access to the overlay setting. Replace the button with a Play/Pause hold; keep
