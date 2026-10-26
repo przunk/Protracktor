@@ -688,6 +688,7 @@ function releaseYear(fields) {
  * address, the way the playlist row's second line already is.
  */
 function whereOf(entry) { return entry?.meta ?? (entry?.url ? sourceOf(entry.url) : ''); }
+/** Decoder names retain extensions even when a handoff supplies a different display title. */
 function fileOf(entry) { return entry?.file || (entry?.url ? entryFor(entry.url).name : entry?.name) || ''; }
 
 /**
@@ -1040,10 +1041,11 @@ async function playAt(next) {
   //
   // Only for the three names HVSC could possibly know. Hashing every file would cost a pass over a
   // five-megabyte MP3 to learn that a C64 database has never heard of it.
-  openLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+  const decoderName = fileOf(entry);
+  openLengths = await songLengthsFor(decoderName, bytes);
   openMetadata = await songMetadataFor(bytes);
 
-  node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
+  node.port.postMessage({ type: 'open', bytes, name: decoderName }, [bytes]);
   setPlaying(false);
   announceGesture();
 
@@ -1390,7 +1392,7 @@ async function informAbout(entry) {
       const timer = setTimeout(() => { describePending.delete(id); resolve(null); }, 10_000);
       describePending.set(id, (message) => { clearTimeout(timer); resolve(message); });
     });
-    node.port.postMessage({ type: 'describe', id, name: entry.file || entry.name, bytes }, [bytes]);
+    node.port.postMessage({ type: 'describe', id, name: fileOf(entry), bytes }, [bytes]);
     const described = await answer;
     if (!described) { status(t('the decoder took the file and never answered')); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
@@ -2331,7 +2333,7 @@ function recordPlay(entry, fields) {
     url: entry.url,
     name: fields.title || entry.name,
     meta: entry.meta ?? sourceOf(entry.url),
-    file: entry.file ?? entry.name,
+    file: fileOf(entry),
     replayable: !entry.data && !entry.local && /^https?:\/\//.test(entry.url),
   }).catch(() => {});
 }
@@ -4029,14 +4031,15 @@ async function shareAsAudio(entry) {
   try {
     const bytes = await bytesOf(entry);
     if (!bytes) { showNote(t('that one stayed on the phone — there is nothing here to save')); return; }
-    const knownLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+    const decoderName = fileOf(entry);
+    const knownLengths = await songLengthsFor(decoderName, bytes);
     // The subsong playing, when this is the tune that plays; else the one the file opens at.
     const subsong = entry === queue[index] ? currentSubsong : null;
     exportWorker ??= new Worker('./audio-export.js', { type: 'module' });
     const answer = await new Promise((resolve) => {
       exportWorker.onmessage = ({ data }) => resolve(data);
       exportWorker.onerror = (event) => resolve({ ok: false, reason: event.message || t('the worker failed') });
-      exportWorker.postMessage({ bytes, name: entry.file ?? entry.name, subsong, knownLengths, limitMinutes: shareMinutes }, [bytes]);
+      exportWorker.postMessage({ bytes, name: decoderName, subsong, knownLengths, limitMinutes: shareMinutes }, [bytes]);
     });
     if (!answer.ok) {
       showNote(t('Could not turn {name} into audio.', { name }));

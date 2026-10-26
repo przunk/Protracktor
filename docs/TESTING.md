@@ -3,6 +3,17 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## C121 WEB decoder filenames — browser trial pending
+
+On the corrected web build, open title-bearing links or saved entries for Modland's
+`Spectrum/Pro Tracker 3/Mr. Beeper/african.pt3` and ASMA's
+`Composers/Rogers_Charles/Quest_For_Cool.sap`. Playback and Information should use ZXTune and
+ASAP respectively while preserving the display titles. Replay from History and test audio
+export on a browser with AAC support. Check phone handoffs with an explicit filename, absent
+or empty filename fields and The Mod Archive's filename fragment. Preserve existing user data.
+Page-message checks and real-file WASM rendering passed on the host; browser/device output and
+AAC export remain unchecked. [Evidence and scope](WEB_DECODER_FILENAMES.md).
+
 ## B54 Floating controls — experimental, disabled by default
 
 Practical phone operation was reported satisfactory on 2026-10-26, followed by approval to

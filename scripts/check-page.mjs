@@ -186,7 +186,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -3213,6 +3213,61 @@ if (window.__api) {
         && !$('qr').children.length,
     'on a static host with no pairing service, the pairing sheet says so instead of showing a dead code');
   window.__staticHost = false;
+}
+
+// --- decoder filenames survive display titles (C121) --------------------------------------------
+if (window.__api) {
+  console.log('\ndecoder filenames:');
+  const api = window.__api;
+  const { played } = await import(path.resolve('web/src/store.js'));
+  const cases = [
+    { url: 'https://modland.com/pub/modules/Spectrum/Pro%20Tracker%203/Mr.%20Beeper/african.pt3',
+      name: '+AFRICAN SONG+', expected: 'african.pt3' },
+    { url: 'https://asma.atari.org/asma/Composers/Rogers_Charles/Quest_For_Cool.sap',
+      name: 'The Quest For Cool', expected: 'Quest_For_Cool.sap' },
+    { url: 'https://asma.atari.org/asma/Composers/Rogers_Charles/Quest_For_Cool.sap',
+      name: 'The Quest For Cool with an empty file field', file: '', expected: 'Quest_For_Cool.sap' },
+    { url: 'https://api.modarchive.org/downloads.php?moduleid=42#original%20file.mod',
+      name: 'Visible archive title', expected: 'original file.mod' },
+    { url: 'content://phone/document/42', name: 'Visible local title', file: 'original.sap',
+      data: new ArrayBuffer(64), expected: 'original.sap' },
+  ];
+  const OriginalWorker = window.Worker;
+  const exports = [];
+  window.Worker = class {
+    postMessage(message, transfer) {
+      exports.push(structuredClone(message, { transfer }));
+      this.onmessage({ data: { ok: false, reason: 'filename boundary check' } });
+    }
+  };
+  try {
+    for (const { expected, ...entry } of cases) {
+      api.setQueue([entry]);
+      window.__toWorklet.length = 0;
+      await api.playAt(0);
+      const opened = window.__toWorklet.find((message) => message.type === 'open');
+      check(opened?.name === expected, `playback uses ${expected} instead of the display title`);
+      check($('title').textContent === entry.name, `the display title stays visible for ${expected}`);
+      api.onWorklet({ type: 'opened', describe: `title\t${entry.name}`, duration: 30,
+        subsongs: 1, current: 0, preferredRate: 44100, rate: 44100, canSeek: true });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const recorded = (await played.recent()).find((row) => row.url === entry.url);
+      check(recorded?.file === expected, `History retains the decoder filename ${expected}`);
+
+      window.__toWorklet.length = 0;
+      const informing = api.informAbout(entry);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const described = window.__toWorklet.find((message) => message.type === 'describe');
+      check(described?.name === expected, `Information uses the decoder filename ${expected}`);
+      if (described) api.onWorklet({ type: 'described', id: described.id, ok: false, reason: 'filename boundary check' });
+      await informing;
+
+      await api.shareAsAudio(entry);
+      check(exports.at(-1)?.name === expected, `audio export uses the decoder filename ${expected}`);
+    }
+  } finally {
+    window.Worker = OriginalWorker;
+  }
 }
 
 // --- Browse as the phone draws it (W8) -------------------------------------------------------------

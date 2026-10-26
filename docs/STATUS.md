@@ -7,6 +7,20 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C121 WEB decoder filename lost when an entry has a display title
+
+User report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's
+`Quest_For_Cool.sap` by game-music-emu, although both play in the APK. The local WASM opens and
+renders both with their filenames; title-only opens reproduce the exact reported errors.
+
+Implemented on **`fix/web-decoder-selection`**, based on develop **`e581a25`**. Playback,
+Information, audio export, length lookup and History now share the existing URL/filename resolver
+instead of substituting the display title. No native/Android change or schema migration.
+Twenty-five new page checks expose sixteen failures before correction; the complete page suite
+passes **606 checks**, **33.2 s**, after it. Real-file host probes rendered finite, non-silent
+audio through ZXTune and ASAP. **Full gate/lint and web bundle pending; browser trial unchecked.**
+The branch is unmerged. [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
+
 ## Google Play production-access reapplication — 2026-10-26
 
 Submitted a new application after the [additional-testing decision recorded on 2026-10-06](letters/2026-10-06-google-play-production-access.md).
