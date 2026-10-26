@@ -29,6 +29,37 @@ every platform-specific behaviour.
 - [The earlier WEB parity plan](PLAN_WEB_PARITY.md) is historical. Its early descriptions of
   missing Polish, light theme and other subsequently implemented features are not current gaps.
 
+## Scope selected after the inventory — 2026-10-26
+
+Proceed with all twenty-five portable WEB scopes proposed after this comparison:
+
+- Independent playback context, the complete manual queue and return to its source.
+- Remembered Random, explicit dice reroll and platform/Modland Favourites filters.
+- Played-before marks, saved places and learned list titles.
+- Recent-search suggestions, live History search and catalogue/platform/playlist search scopes.
+- Playlist reorder and import/export, and bulk actions in Browse/Search/History.
+- Original/Narrow/Mono, optional volume normalization, compact dock, Browse/subsong position
+  handling and playback-mode/settings restoration.
+- Read-ahead controls, managed music cache and offline marks, complete offline ASMA, grouped
+  downloads and recovery of retained Modland URLs.
+- Language changes without interrupting playback and browser system playback controls,
+  including investigation of C104. This selection reopens the previously deferred WEB-control
+  work; it does not establish that the reported device problem is fixed.
+
+Implement independently reviewable feature commits on one task branch from develop. For every
+feature, inspect the current Android production code and tests, define corresponding scenarios
+and compare WEB results against them. Match functional semantics 1:1; identify browser-specific
+limits explicitly rather than silently narrowing the scope. Merge and deployment remain separate
+decisions. The execution checklist is maintained in the local, ignored GOAL.md; implementation
+has not started by recording this selection.
+
+Keep the Android local-folder scanner, current UADE/process integration, external replay routines
+and UADE-only durations outside the scope. Also exclude native Android service/permission/focus/
+wallpaper/haptic mechanisms, overlays, a copied native notification with its custom heart, and
+accounts/synchronization. A simple browser file picker or drag-and-drop remains undecided.
+UnExoticA/The Mod Archive integration, AMP and public GitHub Pages pairing are deferred rather
+than permanently rejected; existing individual links and self-hosted pairing remain supported.
+
 ## Features introduced between 1.0.0 and 1.4.0
 
 | Android release | Android feature | Missing or partial WEB behaviour |
@@ -215,5 +246,6 @@ The most noticeable parity work would be:
 2. Stereo modes and volume normalization, because they change the listening experience directly.
 3. Search improvements, including History search and recent-query suggestions.
 
-These are suggested priorities, not an approved implementation sequence. No feature was started
-as part of recording this analysis.
+These remain suggested priorities, not a fixed implementation sequence. The subsequent scope
+selection above includes all twenty-five agreed areas; no feature was started as part of
+recording this analysis or writing the execution checklist.

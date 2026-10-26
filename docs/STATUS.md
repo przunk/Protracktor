@@ -15,6 +15,13 @@ capabilities, platform-specific differences and features already present. This i
 analysis, not a browser/device verification run or authorization to implement the suggested work.
 Application code, release versions and deployment are unchanged.
 
+**Scope selected, 2026-10-26:** all twenty-five proposed portable WEB areas form the agreed
+implementation scope, with the [explicit exclusions and deferred integrations](WEB_ANDROID_PARITY_2026-10-26.md#scope-selected-after-the-inventory--2026-10-26).
+The local ignored GOAL.md now defines separate feature commits on `feature/web-feature-parity`,
+mandatory comparison with Android code/tests for each scope, regression gates and a final WEB
+bundle. Its previous contents are preserved under ignored `user/goals/`. Implementation has not
+started; no task branch, application build, merge or deployment was performed for this plan.
+
 ## C121 WEB decoder filename lost when an entry has a display title
 
 Direct web-testing report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's
