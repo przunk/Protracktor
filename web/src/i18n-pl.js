@@ -306,4 +306,9 @@ export const PL = {
   "{what} deleted": "Usunięto: {what}",
   "{what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.": "{what} — brak obok silnika strony. Uruchom scripts/stage-web-legal.mjs albo zbuduj silnik ponownie.",
   "⚠ this decoder wants {wanted} Hz and the page is running at {rate} Hz — it will play {ratio}× fast": "⚠ ten dekoder chce {wanted} Hz, a strona działa z {rate} Hz — zagra {ratio}× za szybko",
+  "Added to queue: {name}": "Dodano do kolejki: {name}",
+  "Add to queue": "Dodaj do kolejki",
+  "Queue is already clear.": "Kolejka jest już pusta.",
+  "Queue cleared": "Wyczyszczono kolejkę",
+  "Playback changed; this action can no longer be undone.": "Odtwarzanie się zmieniło; nie można już cofnąć tej akcji.",
 };

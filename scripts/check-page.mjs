@@ -165,7 +165,13 @@ const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export
 const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
   + fs.readFileSync('web/src/i18n.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').replace(/^export /gm, '');
+const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';",
+    `const { PlaybackSchedule, PlaybackPlan } = (() => { ${scheduleSource}; return { PlaybackSchedule, PlaybackPlan }; })();`)
+  .replace("import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';",
+    `const { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } = (() => { ${stepsSource}; return { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval }; })();`)
   .replace("import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';", playbackSource)
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
@@ -188,7 +194,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -607,8 +613,8 @@ if (window.__api) {
   // Select stands first: it is the way into ticking rows, which a mouse has no long press to
   // find. The rest are in a fixed order, and the four ways to share are one Share (2026-09-25).
   check(open.map((b) => b.textContent).join(',')
-        === 'Select,Add to playlist,Share,More from this author,Information',
-    'with every action the phone\'s row menu has, in the same order');
+        === 'Select,Information,Add to playlist,Add to queue,More from this author,Share',
+    'browser selection and the current Android track actions share one menu');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   // Share turns the menu into the four ways, the same list Now Playing's Share opens, with Back.
@@ -621,7 +627,7 @@ if (window.__api) {
   ways[0].click();
   await new Promise((r) => setTimeout(r, 20));
   check([...window.document.querySelectorAll('#menu button')].map((b) => b.textContent).join(',')
-        === 'Select,Add to playlist,Share,More from this author,Information',
+        === 'Select,Information,Add to playlist,Add to queue,More from this author,Share',
     'and Back is the row\'s menu again');
   [...window.document.querySelectorAll('#menu button')].find((b) => b.textContent === 'Share').click();
   await new Promise((r) => setTimeout(r, 20));
@@ -1074,7 +1080,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|More from this author|Share",
+        === "Add to another playlist|Add to queue|Information|More from this author|Share",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -1088,7 +1094,7 @@ if (window.__api) {
         === 'Back|Save the file|Share as audio|Copy a link|Share with Protracktor',
     'and its Share opens the same four ways as a playlist row\'s');
   $('menu').hidden = true;
-  menu[2].click();
+  menu.find((button) => button.textContent === 'More from this author').click();
   await settle();
   check($('browsetitle').textContent === 'Protracker / 4-Mat' && !$('browsesearch').value,
     'More from this author walks to their folder, out of the search');
@@ -2626,13 +2632,25 @@ if (window.__api) {
       await new Promise((r) => setTimeout(r, 20));
       rows()[Number(c.tapped)].click();
       await new Promise((r) => setTimeout(r, 20));
-      const firstBack = window.__api.beforeOf(Number(c.tapped));
-      const second = window.__api.afterOf(Number(c.tapped));
-      if (second != null) await window.__api.playAt(second);
-      const backToTapped = second == null || window.__api.beforeOf(second) === Number(c.tapped);
-      window.__api.afterOf(Number(c.tapped));   // stand on the tapped tune again for the walk
+      const tapTransport = async (id) => {
+        $(id).dispatchEvent(new window.Event('pointerdown'));
+        $(id).dispatchEvent(new window.Event('pointerup'));
+        $(id).click();
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      };
+      const firstBack = $('prev').disabled ? null : true;
+      const second = $('next').disabled ? null : true;
+      if (second != null) await tapTransport('next');
+      if (second != null) await tapTransport('prev');
+      const backToTapped = second == null || window.__api.indexNow() === Number(c.tapped);
+      // A new explicit start establishes the permutation being walked in this scenario.
+      rows()[Number(c.tapped)].click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
       const played = [Number(c.tapped)];
-      for (let next = window.__api.afterOf(played[0]); next != null && played.length < count * 3; next = window.__api.afterOf(next)) played.push(next);
+      while (!$('next').disabled && played.length < count * 3) {
+        await tapTransport('next');
+        played.push(window.__api.indexNow());
+      }
       const stops = played.length < count * 3;
       const ok = firstBack == null && backToTapped
         && (c.played === '-' ? !stops : stops && played.length === Number(c.played))
@@ -3625,6 +3643,8 @@ if (window.__api?.editorNow) {
     window.confirm = originalConfirm;
   }
 }
+
+await (await import('./check-page-manual-queue.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

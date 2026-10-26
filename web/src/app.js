@@ -3,10 +3,12 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
+import { nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
+import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
+import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -127,6 +129,179 @@ let selectionWrites = Promise.resolve();
 const playlistWrites = new Map();
 const writeVersions = new Map();
 const deletedPlaylists = new Set();
+let schedule = new PlaybackSchedule();
+let scheduleIntent = 0;
+let nextRandomSession = 0;
+let drawing = false;
+let undoAction = null;
+let noticeId = 0;
+
+const playbackPlan = () => new PlaybackPlan(workspace.context, schedule);
+const currentTrack = () => schedule.current?.track ?? workspace.context.current;
+const manualCurrent = () => schedule.current?.manual === true;
+const fromHistory = () => schedule.current?.fromHistory ?? workspace.context.fromHistory;
+
+function canNextFile() {
+  const context = workspace.context;
+  if (schedule.pending.length || context.source.kind === 'random') return true;
+  return ['playlist', 'collection'].includes(context.source.kind)
+    && context.finiteAvailable(true, (at) => !queue[at].local);
+}
+
+function canPreviousFile() {
+  const context = workspace.context;
+  if (manualCurrent() && context.currentAvailable && !context.current.local) return true;
+  if (context.source.kind === 'random') return context.visibleIndices.some((at) => at < index && !queue[at].local);
+  return ['playlist', 'collection'].includes(context.source.kind)
+    && context.finiteAvailable(false, (at) => !queue[at].local);
+}
+
+function adoptPlan(plan) {
+  workspace = workspace.activate(plan.context);
+  schedule = plan.schedule;
+  applyTransportOrder();
+}
+
+function activateContext(context, placement = 'replace', autoPlay = true) {
+  return executeStep({ kind: 'context', step: { kind: 'play', context }, placement }, autoPlay);
+}
+
+function playableStep(step, forward, completed = false) {
+  if (step.kind !== 'context') return step;
+  let action = step.step;
+  const bound = workspace.context.order.maxTraversalSteps;
+  for (let tries = 0; action.kind === 'play' && action.context.current?.local && tries < bound; tries++)
+    action = forward ? action.context.next() : action.context.previous();
+  if (action.kind === 'play' && action.context.current?.local)
+    action = { kind: completed ? 'stop' : 'unchanged' };
+  return { ...step, step: action };
+}
+
+function executeStep(step, autoPlay = true) {
+  const intent = ++scheduleIntent;
+  const result = applyPlaybackStep(playbackPlan(), step, { autoPlay });
+  return applyPlaybackResult(result, intent);
+}
+
+function applyPlaybackResult(result, intent = null) {
+  adoptPlan(result.plan);
+  const effect = result.effect;
+  intent ??= effect.kind === 'none' ? scheduleIntent : ++scheduleIntent;
+  let task;
+  switch (effect.kind) {
+    case 'select':
+      drawing = false;
+      remember();
+      task = openActualTrack(effect.track, { autoPlay: effect.autoPlay });
+      break;
+    case 'random-next': case 'random-previous': {
+      const forward = effect.kind === 'random-next';
+      const context = workspace.context;
+      const candidates = context.visibleIndices.filter((at) => !queue[at].local && (forward ? at > index : at < index));
+      const at = forward ? candidates[0] : candidates.at(-1);
+      if (at != null) task = activateContext(context.jump(at), effect.placement, effect.autoPlay);
+      else if (forward) task = rollRandom({ intent, placement: effect.placement, autoPlay: effect.autoPlay });
+      break;
+    }
+    case 'replay':
+      finished = false;
+      endedByClock = false;
+      node?.port.postMessage({ type: 'rewind' });
+      setPlaying(true);
+      break;
+    case 'stop':
+      node?.port.postMessage({ type: 'pause' });
+      finished = true;
+      setPlaying(false);
+      break;
+    case 'clear-current':
+      stopForLeaving();
+      rowState = null;
+      renderNothingPlaying();
+      $('title').textContent = t('Nothing playing');
+      $('sub').textContent = '—';
+      setPlaying(false);
+      break;
+    case 'none': break;
+    default: throw new TypeError(effect.kind);
+  }
+  render();
+  return task;
+}
+
+function enqueueTrack(entry, historyOrigin = false) {
+  if (!entry || entry.local) return false;
+  schedule = schedule.enqueue(entry, historyOrigin);
+  render();
+  setPlaying(playing);
+  showNote(t('Added to queue: {name}', { name: entry.name }));
+  return true;
+}
+
+function playManualRequest(id) {
+  if (schedule.current?.request?.id === id && !schedule.consumed) {
+    ++scheduleIntent;
+    openActualTrack(schedule.current.track);
+    return;
+  }
+  const step = schedule.playRequest(id, workspace.context);
+  if (step) executeStep(step);
+}
+
+function playSourceOccurrence(id, generation) {
+  const context = workspace.context;
+  if (generation !== schedule.generation || context.omitted.includes(id)) return;
+  const at = context.entryIds.indexOf(id);
+  if (at >= 0 && !context.order.tracks[at].local) activateContext(context.jump(at), 'append');
+}
+
+function removeQueueOccurrence(row, generation) {
+  const options = { autoPlay: playing || !!loading || drawing };
+  const result = row.kind === 'manual' ? removeManualRequest(playbackPlan(), row.request.id, options)
+    : removeSourceOccurrence(playbackPlan(), row.id, generation, options);
+  if (!result.undo) return;
+  applyPlaybackResult(result);
+  showUndo(t('Removed {name}', { name: row.track.name }), () => undoPlaybackQueue({ kind: 'remove', token: result.undo }));
+}
+
+function clearPlaybackQueue() {
+  const token = playbackPlan().clear();
+  if (!token) { showNote(t('Queue is already clear.')); return; }
+  ++scheduleIntent;
+  const runtime = { random, away };
+  if (random) {
+    random.generation = (random.generation ?? 0) + 1;
+    random.filling = null;
+    random.ahead = [];
+    random.bytes.clear();
+  }
+  if (drawing) { drawing = false; setPlaying(false); }
+  random = null;
+  away = null;
+  adoptPlan(token.after);
+  render();
+  setPlaying(playing);
+  showUndo(t('Queue cleared'), () => undoPlaybackQueue({ kind: 'clear', token, runtime }));
+}
+
+function undoPlaybackQueue(undo) {
+  if (!undo) return false;
+  let restored = undo.kind === 'clear' ? undo.token.undo(playbackPlan()) : undoQueueRemoval(playbackPlan(), undo.token);
+  hideUndo();
+  if (!restored) { showNote(t('Playback changed; this action can no longer be undone.')); return true; }
+  if (undo.kind === 'clear') {
+    random = undo.runtime.random;
+    away = undo.runtime.away;
+    if (restored.context.belongsTo(workspace.editor.id)) {
+      const order = workspace.editor.order.withRepeat(restored.context.order.repeat).withShuffle(restored.context.order.shuffle);
+      restored = new PlaybackPlan(restored.context.withOrder(order), restored.schedule);
+    }
+  }
+  adoptPlan(restored);
+  render();
+  setPlaying(playing);
+  return true;
+}
 
 function rememberEditorSelection(id) {
   selectionWrites = selectionWrites.catch(() => {}).then(() => settings.set('active', id));
@@ -140,27 +315,15 @@ function writePlaylist(id, write) {
   return operation;
 }
 
-function captureTransport() {
-  const source = random ? { kind: 'random', session: random.sessionId ?? 1 }
-    : away ? { kind: 'collection', origin: away.kind, query: away.query ?? '', path: away.path ?? '' }
-    : { kind: 'playlist', id: sourcePlaylistId, name: sourcePlaylistName };
-  const previous = workspace.context;
-  const unchanged = previous.order.tracks.length === queue.length
-    && previous.order.tracks.every((track, i) => track === queue[i]);
-  const actualHistory = history.length ? history : index >= 0 ? [index] : [];
-  const current = new PlayOrder({ tracks: unchanged ? previous.order.tracks : queue, shuffle, repeat,
-    indices: shuffle && order.length ? order : undefined, history: actualHistory,
-    cursor: actualHistory.lastIndexOf(index), random: randomSource });
-  const context = JSON.stringify(previous.source) === JSON.stringify(source)
-    ? previous.withOrder(current) : new PlaybackContext({ source, order: current });
-  workspace = workspace.activate(context);
-  return context;
+function captureTransport() { return workspace.context;
 }
 
 function editorTracks() { return workspace.editor.order.tracks; }
 function visibleTracks() { return editorShown ? editorTracks() : queue; }
 function editorOwnsPlayback() { return captureTransport().belongsTo(workspace.editor.id); }
-function visibleIndex() { return !editorShown || editorOwnsPlayback() ? index : -1; }
+function visibleIndex() {
+  return !editorShown || editorOwnsPlayback() ? schedule.sourcePlaybackIndex(workspace.context) ?? -1 : -1;
+}
 
 function editorStash() {
   const draft = workspace.editor;
@@ -181,6 +344,8 @@ function applyTransportOrder() {
   index = state.currentIndex ?? -1;
   history = [...state.history];
   order = [...state.indices];
+  shuffle = state.shuffle;
+  repeat = state.repeat;
 }
 
 function changeEditorTracks(tracks, { dirty = true } = {}) {
@@ -207,15 +372,13 @@ function showPlaybackList() {
 
 function playEditorAt(at) {
   if (!editorTracks()[at] || editorTracks()[at].local) return;
-  captureTransport();
   random = null;
   away = null;
   sourcePlaylistId = workspace.editor.id;
   sourcePlaylistName = workspace.editor.name;
-  workspace = workspace.playPlaylist(at);
-  applyTransportOrder();
+  const order = workspace.editor.order.withRepeat(repeat).withShuffle(shuffle).startAt(at);
   showSessionView(null);
-  playAt(at);
+  activateContext(new PlaybackContext({ source: { kind: 'playlist', id: sourcePlaylistId, name: sourcePlaylistName }, order }));
 }
 
 /** How many tunes are inside the open file, and which one is sounding. */
@@ -504,11 +667,11 @@ function onWorklet(message) {
       // own replays all arrive at this one message -- History's to be left out by `recordPlay`
       // (A56) -- so there is one recording path rather than one per list -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
-      recordPlay(queue[index], fields);
+      recordPlay(currentTrack(), fields);
       if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, subsongCount, currentSubsong);
-      publishToSystem(queue[index], fields);
+      publishToSystem(currentTrack(), fields);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
@@ -540,14 +703,18 @@ function onWorklet(message) {
     }
     case 'failed':
       loading = null;
+      delete $('seek').dataset.opened;
+      tuneCanSeek = false;
+      finished = false;
+      allowSeeking();
       clearTimeout(openWatchdog);
       // A fresh Random pick that will not open is walked past, as on the phone.
-      if (random && index === queue.length - 1 && skipFailedPick(message.reason)) break;
+      if (random && !manualCurrent() && index === queue.length - 1 && skipFailedPick(message.reason)) break;
       rowState = 'failed';
       render();
       // Errors stay above the transport. The status line moved into Now Playing because it is the
       // machine talking to itself; a decoder refusing a file is the machine talking to the listener.
-      $('error').textContent = explainFailure(message.reason, queue[index]);
+      $('error').textContent = explainFailure(message.reason, currentTrack());
       $('sub').textContent = '—';
       // **And Now Playing stops describing the last file that worked.** A refusal that leaves
       // the panel showing another track's fields reads as the wrong tune playing.
@@ -629,33 +796,10 @@ function onWorklet(message) {
  * The phone calls one `handleTrackEnded` for the same reason.
  */
 function trackEnded() {
-  // **The file before the queue**, when the listener asked for that. Repeat-one is checked
-  // first and deliberately: it means "this tune again", and a file's other tunes are not it.
-  const inside = nextSubsong({
-    playAll: playAllSubsongs, subsong: currentSubsong,
-    count: subsongCount, repeatOne: repeat === 'one',
-  });
-  if (inside != null) {
-    node?.port.postMessage({ type: 'subsong', index: inside });
-    return;
-  }
-  if (random) {
-    // Repeat-one first, as on the phone: the end of a tune under it plays the tune again. The
-    // next *button* does not ask -- on the phone it rolls on regardless.
-    if (repeat === 'one' && index >= 0) { playAt(index); return; }
-    const step = randomNext({ length: queue.length, at: index });
-    if (step === 'roll') rollRandom(); else playAt(step);
-    return;
-  }
-  // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
-  // takes the next of the permutation, repeat-all wraps, and off stops.
-  const next = afterCurrent();
-  if (next == null) {
-    // Nothing follows, so the button now means "again" rather than "resume".
-    finished = true;
-    setPlaying(false);
-  } else if (next === index && repeat === 'one') playAt(index);
-  else playAt(next);
+  const inside = nextSubsong({ playAll: playAllSubsongs, subsong: currentSubsong,
+    count: subsongCount, repeatOne: repeat === 'one' });
+  if (inside != null) { node?.port.postMessage({ type: 'subsong', index: inside }); return; }
+  executeStep(playableStep(schedule.next(workspace.context, true), true, true));
 }
 
 /**
@@ -840,7 +984,7 @@ function machineOf(entry) {
  * stands in for it rather than joining it, and with no machine either the format does -- "MOD ·
  * Amiga" would say one thing twice.
  */
-function describeLine(fields, entry = queue[index]) {
+function describeLine(fields, entry = currentTrack()) {
   const author = authorOf(entry, fields);
   const machine = machineOf(entry);
   return [author || machine || fields.format, author ? machine : '', releaseYear(fields)]
@@ -905,7 +1049,7 @@ function explainFailure(reason, entry) {
  * screen with nothing to say has to say that.
  */
 function renderNothingPlaying() {
-  $('np-title').textContent = queue[index]?.name || t('Nothing playing');
+  $('np-title').textContent = currentTrack()?.name || t('Nothing playing');
   $('np-message').hidden = true;
   $('np-names').replaceChildren();
   const list = $('fields');
@@ -919,7 +1063,7 @@ function renderNothingPlaying() {
   $('subsongbar').hidden = true;
 }
 
-function renderNowPlaying(fields, subsongs, current, entry = queue[index]) {
+function renderNowPlaying(fields, subsongs, current, entry = currentTrack()) {
   $('np-title').textContent = fields.title || entry?.name || t('Nothing playing');
   const list = $('fields');
   list.replaceChildren();
@@ -1002,8 +1146,38 @@ function nameTheTab(entry) {
   document.title = entry ? `${entry.name} — Protracktor` : 'Protracktor';
 }
 
-async function playAt(next) {
+function playAt(next) {
+  const context = workspace.context;
+  if (!context.order.tracks[next] || context.order.tracks[next].local) return;
+  return activateContext(new PlaybackContext({ source: context.source, order: context.order.startAt(next) }));
+}
+
+async function openActualTrack(entry, { autoPlay = true } = {}) {
+  if (!entry) return;
+  if (!autoPlay) {
+    stopForLeaving();
+    rowState = 'selected';
+    duration = 0;
+    endsAt = 0;
+    subsongCount = 1;
+    currentSubsong = 0;
+    dockFields = {};
+    renderNothingPlaying();
+    $('title').textContent = entry.name;
+    $('sub').textContent = t('press play');
+    $('seek').value = 0;
+    $('elapsed').textContent = clock(0);
+    $('remaining').textContent = barTotal();
+    setPlaying(false);
+    render();
+    return;
+  }
   const asked = ++playAsked;
+  delete $('seek').dataset.opened;
+  subsongCount = 1;
+  currentSubsong = 0;
+  tuneCanSeek = false;
+  allowSeeking();
   try {
     await start();
   } catch (error) {
@@ -1014,10 +1188,7 @@ async function playAt(next) {
     return;
   }
   if (asked !== playAsked) return;
-  index = next;
-  if (history[history.length - 1] !== next) history.push(next);
   remember();
-  const entry = queue[index];
   render();
   followPlaying();
   // **The bar starts again with the tune**, not when the engine first reports a position. The phone
@@ -1087,7 +1258,7 @@ async function playAt(next) {
     // about what it will do.
     if (loading === abort) { loading = null; setPlaying(false); }
     if (e.name === 'AbortError') { $('sub').textContent = t('stopped'); return; }
-    if (random && index === queue.length - 1 && skipFailedPick(e.message)) return;
+    if (random && !manualCurrent() && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
     $('error').textContent = t('could not fetch it: {reason}', { reason: e.message });
@@ -1173,10 +1344,10 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  */
 function followPlaying() {
   // Not while rows are being ticked: a list that moves under a working finger fights it.
-  if (!selected.size && (!editorShown || editorOwnsPlayback())) revealRow($('queue').children[index]);
+  if (!selected.size && visibleIndex() >= 0) revealRow($('queue').children[visibleIndex()]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
-  if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), queue[index]?.url));
+  if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), currentTrack()?.url));
 }
 
 /**
@@ -1197,7 +1368,7 @@ function revealRow(row) {
 
 /** The address of what is playing, or null. A tune only *selected* by the phone is not playing. */
 function playingUrl() {
-  return index >= 0 && rowState && rowState !== 'selected' ? queue[index]?.url ?? null : null;
+  return rowState && rowState !== 'selected' ? currentTrack()?.url ?? null : null;
 }
 
 /**
@@ -1223,28 +1394,28 @@ function setPlaying(on) {
   playing = on;
   // Offered for anything playing that is not the playlist: a dice pick, a Browse result, a tune
   // sent by link. Deciding to keep it is what you do after hearing it.
-  $('nowkeep').hidden = !(random || away) || !queue[index] || workspace.editor.id === PHONE;
+  $('nowkeep').hidden = (!manualCurrent() && editorOwnsPlayback()) || !currentTrack() || workspace.editor.id === PHONE;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
   // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
-  const stopping = loading && !firstTouch;
+  const stopping = (loading || drawing) && !firstTouch;
   $('playglyph').setAttribute('d', stopping ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
   $('playpause').title = stopping ? t('Stop loading') : on ? t('Pause') : t('Play');
-  $('playpause').disabled = queue.length === 0;
+  $('playpause').disabled = !currentTrack() && !schedule.pending.length && workspace.context.source.kind !== 'random';
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
-  $('prev').disabled = beforeCurrent() == null && !(playAllSubsongs && hasPreviousSubsong());
+  $('prev').disabled = !canPreviousFile() && !(playAllSubsongs && hasPreviousSubsong());
   // Available while the *file* has more in it too, not only the queue: with the switch on, that is
   // what the button will do.
-  $('next').disabled = afterCurrent() == null && !(playAllSubsongs && hasNextSubsong());
+  $('next').disabled = drawing || !canNextFile() && !(playAllSubsongs && hasNextSubsong());
   // Shut while the dice runs: shuffle reorders the playlist, and Random plays from neither.
-  $('shuffle').disabled = queue.length === 0 || !!random;
-  $('repeat').disabled = queue.length === 0;
+  $('shuffle').disabled = (!queue.length && !currentTrack()) || !!random;
+  $('repeat').disabled = !queue.length && !currentTrack();
   $('shuffle').classList.toggle('on', shuffle);
   $('repeat').classList.toggle('on', repeat !== 'off');
   // The panel's actions are about the track it is describing, so they go dead with it.
-  const entry = queue[index];
+  const entry = currentTrack();
   $('np-show').disabled = !entry;
   $('np-folder').disabled = !authorFolderOf(entry);
   // Dead only when nothing behind it can be done or explained -- a tune that stayed on the phone.
@@ -1351,7 +1522,7 @@ function render() {
         // and the ones before it never. And it is the first: back stops at it, since what played
         // before belonged to another order. The phone's `PlayQueue.startAt` does the same.
         if (editorShown) playEditorAt(i);
-        else { if (shuffle) { reshuffle(i); history = []; } playAt(i); }
+        else playAt(i);
       };
       holdToSelect(li, entry);
     }
@@ -1515,18 +1686,19 @@ const playable = (i) => i >= 0 && i < queue.length && !queue[i].local;
 function openRowMenu(entry, anchor) {
   const menu = $('menu');
   menu.replaceChildren();
+  const historyOrigin = !editorShown && workspace.context.fromHistory;
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
     [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
+    [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
     [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
-    // **One Share, and the four ways behind it** (the owner, 2026-09-25): the same list Now
-    // Playing's Share opens, so the two cannot drift apart again.
-    shareEntry(entry, anchor, () => openRowMenu(entry, anchor)),
+    [t('Add to queue'), () => enqueueTrack(entry, historyOrigin), !entry.local, ICON.playlistAdd],
     // On every list, as on the phone, not in Browse alone.
     [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
-    [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
+    // Share uses the same actions as Now Playing.
+    shareEntry(entry, anchor, () => openRowMenu(entry, anchor)),
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
   if (random && !editorShown) items.push([t('Remove from this list'), () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
@@ -1643,25 +1815,10 @@ async function saveQueue({ explicit = false } = {}) {
 }
 
 /** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
-function reshuffle(keep) {
-  // Rows that cannot play are not in the permutation at all, which is simpler and stricter than
-  // dealing them out and skipping them later.
-  order = queue.map((_, i) => i).filter(playable);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  if (keep != null) {
-    // What is playing keeps playing: reordering what comes next is not a reason to interrupt now.
-    order = [keep, ...order.filter((i) => i !== keep)];
-  }
-}
+
 
 /** The next row from [from] in [step] that can play, or null. Never wraps; the callers decide that. */
-function seek(from, step) {
-  for (let i = from; i >= 0 && i < queue.length; i += step) if (playable(i)) return i;
-  return null;
-}
+
 
 /**
  * Random, as the phone has it (`docs/PLAN_RANDOM.md`).
@@ -1734,25 +1891,23 @@ function enterRandomFromBrowse() {
  * inside a click -- and a pick has to be read from IndexedDB and fetched before it can play.
  */
 async function openRandom() {
-  captureTransport();
   const engine = start().catch(() => null);
-  // A change the playlist was still waiting to save is its own; written now, before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
-  // Entering again starts a new record but goes back to the same playlist when it ends.
-  const stash = editorStash();
+  stopForLeaving();
   away = null;
-  loading?.abort();
-  loading = null;
-  random = { stash, ahead: [], table: null, filling: null, advancing: false, bytes: new Map() };
-  queue = [];
-  index = -1;
-  history = [];
-  order = [];
+  random = { sessionId: ++nextRandomSession, stash: editorStash(), ahead: [], table: null,
+    filling: null, advancing: false, bytes: new Map() };
+  const context = new PlaybackContext({ source: { kind: 'random', session: random.sessionId },
+    order: new PlayOrder({ shuffle, repeat, random: randomSource }) });
+  adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   rowState = null;
   showRandomView(true);
+  renderNothingPlaying();
+  setPlaying(false);
   render();
+  const session = random;
   await engine;
-  await rollRandom();
+  if (random === session) await rollRandom();
 }
 
 /**
@@ -1762,27 +1917,29 @@ async function openRandom() {
 function fillAhead() {
   const r = random;
   if (!r) return Promise.resolve();
-  r.filling ??= (async () => {
+  if (r.filling) return r.filling;
+  const generation = r.generation ?? 0;
+  const current = () => random === r && (r.generation ?? 0) === generation;
+  const operation = (async () => {
     r.table ??= await archive.buildRandomTable();
-    while (random === r && r.ahead.length < RANDOM_AHEAD && r.table.total > 0) {
+    while (current() && r.ahead.length < RANDOM_AHEAD && r.table.total > 0) {
       const seen = new Set([...queue, ...r.ahead].map((entry) => entry.url));
       const drawn = [];
       for (let i = 0; i < RANDOM_DRAWS; i++) {
         const track = await archive.drawTrack(r.table, randomSource);
+        if (!current()) return;
         if (track) drawn.push(track);
       }
       if (!drawn.length) break;
       const url = freshPick({ drawn: drawn.map((track) => track.url), seen });
       const pick = drawn.find((track) => track.url === url);
       r.ahead.push(pick);
-      r.bytes.set(pick.url, fetch(pick.url)
-        .then((response) => (response.ok ? response.arrayBuffer() : null))
-        .catch(() => null));
+      r.bytes.set(pick.url, fetch(pick.url).then((response) => response.ok ? response.arrayBuffer() : null).catch(() => null));
     }
-  })().finally(() => { r.filling = null; });
-  return r.filling;
+  })().finally(() => { if (r.filling === operation) r.filling = null; });
+  r.filling = operation;
+  return operation;
 }
-
 /**
  * Adds a pick to the end of the record and plays it.
  *
@@ -1791,27 +1948,42 @@ function fillAhead() {
  * IndexedDB and a fetch. The flag is raised before the first `await`, so a second "ended" -- or a
  * second press of next -- finds a roll already under way and does nothing.
  */
-async function rollRandom() {
+async function rollRandom({ intent = ++scheduleIntent, placement = 'append', autoPlay = true } = {}) {
   const r = random;
-  if (!r || r.advancing) return;
+  if (!r || drawing && r.advanceIntent === intent) return;
+  r.advanceIntent = intent;
   r.advancing = true;
+  drawing = true;
+  schedule = schedule.finishCurrent();
+  stopForLeaving();
+  setPlaying(false);
   let pick;
   try {
     await fillAhead();
+    if (random !== r || scheduleIntent !== intent) return;
     pick = r.ahead.shift();
+  } catch (error) {
+    if (random === r && scheduleIntent === intent) showNote(t('could not read it: {reason}', { reason: error.message }));
+    return;
   } finally {
-    r.advancing = false;
+    if (r.advanceIntent === intent) {
+      r.advancing = false;
+      drawing = false;
+      setPlaying(playing);
+    }
   }
-  if (random !== r) return;   // left while it was deciding
+  if (random !== r || scheduleIntent !== intent) return;
   if (!pick) {
     $('randomnote').textContent = t('Nothing to pick from. Download the Modland index in Browse first.');
     $('randomnote').hidden = false;
+    setPlaying(false);
     return;
   }
-  queue.push(pick);
-  // The next picks are decided while this one plays.
+  const context = workspace.context;
+  const tracks = [...context.order.tracks, pick];
+  const order = context.order.copy({ tracks, indices: tracks.map((_, i) => i) }).jumpTo(tracks.length - 1);
   fillAhead().catch(() => {});
-  await playAt(queue.length - 1);
+  activateContext(context.withOrder(order), placement, autoPlay);
 }
 
 /**
@@ -1945,20 +2117,13 @@ function removeRows(ats) {
   const rows = editorTracks();
   const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < rows.length).sort((a, b) => a - b);
   if (!sorted.length) return;
-  const owns = editorOwnsPlayback();
+  const owns = editorOwnsPlayback() && !manualCurrent();
   const current = rows[workspace.editor.order.currentIndex];
   const removed = sorted.map((at) => ({ at, track: rows[at] }));
   const wasCurrent = owns && sorted.includes(index);
   changeEditorTracks(rows.filter((_, i) => !sorted.includes(i)));
   if (wasCurrent) {
-    stopForLeaving();
-    index = Math.min(sorted[0], queue.length - 1);
-    history = index >= 0 ? [index] : [];
-    rowState = 'selected';
-    captureTransport();
-    setPlaying(false);
-    $('title').textContent = queue[index]?.name ?? t('Nothing playing');
-    $('sub').textContent = queue[index] ? t('press play') : '—';
+    parkEditedSourceAt(Math.min(sorted[0], queue.length - 1));
   }
   lastRemoval = { removed, playlist: workspace.editor.id, wasCurrent, current };
   render();
@@ -1975,14 +2140,18 @@ function undoRemoval() {
   const owns = editorOwnsPlayback();
   changeEditorTracks(tracks);
   if (removal.wasCurrent && owns) {
-    index = queue.indexOf(removal.current);
-    history = index >= 0 ? [index] : [];
-    captureTransport();
-    rowState = 'selected';
-    $('title').textContent = removal.current?.name ?? t('Nothing playing');
-    $('sub').textContent = t('press play');
+    parkEditedSourceAt(queue.indexOf(removal.current));
   }
   render();
+}
+
+function parkEditedSourceAt(at) {
+  const context = workspace.context;
+  const order = at >= 0 ? context.order.startAt(at) : context.order.withoutPosition();
+  const parked = context.withOrder(order);
+  adoptPlan(new PlaybackPlan(parked, schedule.contextSelected(parked, 'append')));
+  if (currentTrack()) openActualTrack(currentTrack(), { autoPlay: false });
+  else applyPlaybackResult({ plan: playbackPlan(), effect: { kind: 'clear-current' } });
 }
 
 /**
@@ -2317,7 +2486,9 @@ async function renderSettings() {
 }
 
 /** Six seconds, the length of a Material snackbar with an action. */
-function showUndo(text) {
+function showUndo(text, action = undoRemoval) {
+  const id = ++noticeId;
+  undoAction = () => { if (id === noticeId) action(); };
   $('snacktext').textContent = text;
   $('snackundo').hidden = false;
   $('snacksend').hidden = true;
@@ -2333,6 +2504,7 @@ function showUndo(text) {
  * enough not to sit over the dock.
  */
 function showNote(text) {
+  hideUndo();
   $('snacktext').textContent = text;
   $('snackundo').hidden = true;
   $('snacksend').hidden = true;
@@ -2346,6 +2518,7 @@ function showNote(text) {
  * while, and it is the thing the person came for.
  */
 function showSend(text) {
+  hideUndo();
   $('snacktext').textContent = text;
   $('snackundo').hidden = true;
   $('snacksend').hidden = false;
@@ -2355,6 +2528,8 @@ function showSend(text) {
 }
 
 function hideUndo() {
+  ++noticeId;
+  undoAction = null;
   clearTimeout(undoTimer);
   lastRemoval = null;
   $('snackbar').hidden = true;
@@ -2380,8 +2555,8 @@ function skipFailedPick(reason) {
     status(t('Several picks in a row would not open. Stopping here.'));
     return false;
   }
-  const failed = queue.splice(index, 1)[0];
-  index--;
+  const failed = currentTrack();
+  removeRandomAt(index);
   rowState = index >= 0 ? 'selected' : null;
   render();
   status(t('skipped {name} — {reason}', { name: failed?.name ?? t('a pick'), reason }));
@@ -2397,10 +2572,14 @@ function skipFailedPick(reason) {
  */
 function removeRandomAt(at) {
   if (!random || at < 0 || at >= queue.length) return;
-  const wasPlaying = at === index;
-  queue.splice(at, 1);
-  if (at <= index) index--;
-  if (wasPlaying) rowState = 'selected';
+  const context = workspace.context;
+  const tracks = queue.filter((_, i) => i !== at);
+  const ids = context.entryIds.filter((_, i) => i !== at);
+  const parked = at <= index ? index - 1 : index;
+  let order = new PlayOrder({ tracks, shuffle, repeat, random: randomSource });
+  if (parked >= 0) order = order.startAt(parked);
+  adoptPlan(new PlaybackPlan(context.copy({ order, entryIds: ids,
+    omitted: context.omitted.filter((id) => ids.includes(id)) }), schedule));
   render();
 }
 
@@ -2414,7 +2593,7 @@ function removeRandomAt(at) {
 function recordPlay(entry, fields) {
   if (!entry?.url) return;
   // A play History itself started leaves History as it is (A56, `rules.recordsPlay`).
-  if (!recordsPlay({ walkingResults: away !== null, fromHistory: away?.kind === 'history' })) return;
+  if (fromHistory()) return;
   played.record({
     url: entry.url,
     name: fields.title || entry.name,
@@ -2433,28 +2612,16 @@ function recordPlay(entry, fields) {
 let away = null;
 
 function openAway(tracks, at, kind = 'history') {
-  captureTransport();
   if (!tracks.length) return;
-  // A change the playlist was still waiting to save is its own; written before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
-  const stash = editorStash();
-  // Retain the Random record separately; revealing it is not a request to activate it.
   const dice = random ? { session: random, queue, index, history, order } : away?.dice ?? null;
   const author = dice ? (away?.author ?? browsePath[2] ?? '') : null;
   random = null;
-  loading?.abort();
-  loading = null;
-  away = { stash, kind, dice, author };
-  queue = tracks.slice();
-  index = Math.min(Math.max(at, 0), queue.length - 1);
-  history = [index];
-  order = [];
-  if (shuffle) reshuffle(index);
-  rowState = 'selected';
+  away = { stash: editorStash(), kind, dice, author };
+  const sourceOrder = new PlayOrder({ tracks, shuffle, repeat, random: randomSource }).startAt(Math.min(Math.max(at, 0), tracks.length - 1));
   showSessionView(kind);
-  render();
-  // Called inside the click, so the `start()` inside it may make sound.
-  playAt(index);
+  activateContext(new PlaybackContext({ source: { kind: 'collection', origin: kind,
+    path: browsePath.join('/'), query: $('browsesearch').value }, order: sourceOrder }));
 }
 
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
@@ -2500,35 +2667,18 @@ function dropSession() {
  * which only this side has.
  */
 function afterCurrent() {
-  // Random answers with the next row or a roll, and ignores repeat and shuffle: repeat-one is checked
-  // where a tune *ends*, not here, and shuffle reorders a playlist the dice does not play from.
-  if (random) return randomNext({ length: queue.length, at: index });
-  if (repeat === 'one' && index >= 0) return index;
-  if (shuffle) {
-    const at = order.indexOf(index);
-    if (at >= 0 && at + 1 < order.length) return order[at + 1];
-    if (repeat === 'all') { reshuffle(null); return order[0] ?? null; }
-    return null;
-  }
-  const candidate = nextIndex({ tracks: queue.length, at: index, repeat });
-  if (candidate == null) return null;
-  const ahead = seek(candidate, 1);
-  return ahead ?? (repeat === 'all' ? seek(0, 1) : null);
+  if (schedule.pending.length) return 'manual';
+  const step = playableStep(schedule.next(workspace.context), true);
+  if (step.kind === 'select') return 'manual';
+  if (step.step.kind === 'random-next') return randomNext({ length: queue.length, at: index });
+  return step.step.kind === 'play' ? step.step.context.order.currentIndex : null;
 }
 
 /** What `previous` should play, or null. */
 function beforeCurrent() {
-  if (random) return randomPrevious({ at: index });
-  if (shuffle) {
-    // The history holds what was really played; the cursor is its end because the page only ever
-    // walks backwards from now.
-    const at = history.lastIndexOf(index);
-    return at > 0 ? history[at - 1] : null;
-  }
-  const candidate = previousIndex({ tracks: queue.length, at: index, repeat });
-  if (candidate == null) return null;
-  const back = seek(candidate, -1);
-  return back ?? (repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null);
+  const step = playableStep(schedule.previous(workspace.context), false);
+  if (step.step.kind === 'random-previous') return randomPrevious({ at: index });
+  return step.step.kind === 'play' ? step.step.context.order.currentIndex : null;
 }
 
 /**
@@ -2542,43 +2692,35 @@ function beforeCurrent() {
  */
 function setQueue(urls, at = 0) {
   ++editorAsked;
+  ++scheduleIntent;
+  drawing = false;
   stopForLeaving();
   const wasDirty = workspace.editor.dirty;
-  // An incoming handoff explicitly replaces playback; ordinary view changes use switchTo.
   dropSession();
   sourcePlaylistId = workspace.editor.id;
   sourcePlaylistName = workspace.editor.name;
-  // Another list arriving makes an undo for the last one meaningless.
   hideUndo();
-  delete $('seek').dataset.opened;
-  // Selected, not playing: the queue points here and nothing has started. A list with no mark at
-  // all leaves the dock naming a track the list does not admit to.
   rowState = 'selected';
-  // Entries already built keep their names; bare strings become entries here. The paste box gives
-  // strings, a link gives entries with the phone's own titles.
-  queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
-  index = queue.length ? Math.min(Math.max(at, 0), queue.length - 1) : -1;
-  // The phone's place in the list may be one of its own files. Selecting it would leave the dock
-  // naming something the page can never start, so the mark moves to the first row that can play.
-  if (index >= 0 && !playable(index)) index = seek(index, 1) ?? seek(0, 1) ?? -1;
-  history = index >= 0 ? [index] : [];
-  if (shuffle) reshuffle(index >= 0 ? index : null);
-  workspace = workspace.selectPlaylist({ id: workspace.editor.id, name: workspace.editor.name, tracks: queue });
-  captureTransport();
+  const tracks = urls.map((url) => typeof url === 'string' ? entryFor(url) : url);
+  let selected = tracks.length ? Math.min(Math.max(at, 0), tracks.length - 1) : -1;
+  if (selected >= 0 && tracks[selected].local) {
+    const ahead = tracks.findIndex((track, i) => i >= selected && !track.local);
+    selected = ahead >= 0 ? ahead : tracks.findIndex((track) => !track.local);
+  }
+  let order = new PlayOrder({ tracks, shuffle, repeat, random: randomSource });
+  if (selected >= 0) order = order.startAt(selected);
+  const context = new PlaybackContext({ source: { kind: 'playlist', id: sourcePlaylistId, name: sourcePlaylistName }, order });
+  adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   setDirty(wasDirty);
-  editorShown = true;
-  rememberEditorSelection(workspace.editor.id).catch((error) => {
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
-  });
+  showSessionView(null);
+  rememberEditorSelection(workspace.editor.id).catch((error) => showNote(t('could not save the playlist: {reason}', { reason: error.message })));
   render();
   setPlaying(false);
   remember();
-  const entry = queue[index];
-  if (entry) {
-    $('title').textContent = entry.name;
-    $('sub').textContent = t('press play');
-    nameTheTab(entry);
-  }
+  const entry = currentTrack();
+  $('title').textContent = entry?.name ?? t('Nothing playing');
+  $('sub').textContent = entry ? t('press play') : '—';
+  nameTheTab(entry);
 }
 
 /**
@@ -2982,8 +3124,10 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
 function openBrowseMenu(track, anchor, folder) {
+  const historyOrigin = browsePath[0] === 'history';
   const items = [
     [t('Add to another playlist'), () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
+    [t('Add to queue'), () => enqueueTrack(track, historyOrigin), true, ICON.playlistAdd],
     [t('Information'), () => informAbout(track), true, ICON.info],
   ];
   // Where the tune lives, and what else is there. Pointless from inside that very folder.
@@ -3445,7 +3589,7 @@ $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : n
 // Keeping what is playing, without leaving what it is playing from — the phone's `keepTransient`.
 $('nowkeep').onclick = (event) => {
   event.stopPropagation();
-  const entry = queue[index];
+  const entry = currentTrack();
   if (entry) addToShowing([plain(entry)]);
 };
 $('tab-settings').onclick = async () => {
@@ -3496,8 +3640,22 @@ $('playpause').onclick = async () => {
   if (firstTouch) { await firstTouch({ target: document.body }); return; }
   // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
   // gesture a browser insists on, and it is why a queue arriving does not play by itself.
-  if (!loading && !$('seek').dataset.opened && index >= 0 && !playing) {
-    playAt(index);
+  if (drawing) {
+    ++scheduleIntent;
+    drawing = false;
+    stopForLeaving();
+    setPlaying(false);
+    status(t('Stopped loading.'));
+    return;
+  }
+  if (workspace.context.source.kind === 'none' && schedule.consumed && schedule.pending.length) { nextFile(); return; }
+  if (!loading && !$('seek').dataset.opened && !playing) {
+    if (currentTrack()) { schedule = schedule.resumeCurrent(); openActualTrack(currentTrack()); }
+    else if (schedule.pending.length || random) nextFile();
+    else {
+      const at = workspace.context.visibleIndices.find((i) => !queue[i].local);
+      if (at != null) activateContext(workspace.context.jump(at), 'append');
+    }
     return;
   }
   // **It reached the end and nothing followed, so this press means "again".** The bytes are still
@@ -3546,18 +3704,16 @@ function goToSubsong(index) {
 
 /** The next file, past whatever is left inside this one. What a long press means. */
 function nextFile() {
-  const n = afterCurrent();
-  if (n === 'roll') rollRandom();
-  else if (n != null) playAt(n);
+  if (drawing) return;
+  executeStep(playableStep(schedule.next(workspace.context), true));
 }
 
 function previousFile() {
-  const p = beforeCurrent();
-  if (p != null) playAt(p);
+  executeStep(playableStep(schedule.previous(workspace.context), false));
 }
 
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
-$('snackundo').onclick = () => undoRemoval();
+$('snackundo').onclick = () => undoAction?.();
 $('tab-save').onclick = () => saveEdits();
 $('sel-add').onclick = () => openAddTo();
 $('sel-share').onclick = () => {
@@ -3684,14 +3840,18 @@ const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h
 const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
 
 $('shuffle').onclick = () => {
-  shuffle = !shuffle;
-  if (shuffle) reshuffle(index >= 0 ? index : null);
+  const context = workspace.context.withOrder(workspace.context.order.withShuffle(!shuffle));
+  workspace = workspace.copy({ editor: { ...workspace.editor,
+    order: workspace.editor.order.withShuffle(context.order.shuffle) } });
+  adoptPlan(new PlaybackPlan(context, schedule));
   setPlaying(playing);
   status(shuffle ? t('Shuffle on') : t('Shuffle off'));
 };
 
 $('repeat').onclick = () => {
-  repeat = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+  const mode = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+  workspace = workspace.copy({ editor: { ...workspace.editor, order: workspace.editor.order.withRepeat(mode) } });
+  adoptPlan(new PlaybackPlan(workspace.context.withOrder(workspace.context.order.withRepeat(mode)), schedule));
   // **The shape carries the mode, not just the tint**, so it survives being read without colour --
   // the same rule the dock follows on the phone (AGENTS.md §8).
   $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
@@ -3756,11 +3916,11 @@ applyVolume();
 
 // The panel's actions act on whatever is playing, which is the one thing the panel is about.
 $('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
-$('np-folder').onclick = () => showAuthorFolder(queue[index]);
+$('np-folder').onclick = () => showAuthorFolder(currentTrack());
 $('np-share').onclick = (event) => {
   // Kept from the page's click-away, which would otherwise close the menu this opens.
   event.stopPropagation();
-  const e = queue[index];
+  const e = currentTrack();
   if (e) showMenu(shareItems(e), $('np-share'));
 };
 $('snacksend').onclick = () => sendAudio();
@@ -4113,7 +4273,7 @@ async function shareAsAudio(entry) {
     const decoderName = fileOf(entry);
     const knownLengths = await songLengthsFor(decoderName, bytes);
     // The subsong playing, when this is the tune that plays; else the one the file opens at.
-    const subsong = entry === queue[index] ? currentSubsong : null;
+    const subsong = entry === currentTrack() ? currentSubsong : null;
     exportWorker ??= new Worker('./audio-export.js', { type: 'module' });
     const answer = await new Promise((resolve) => {
       exportWorker.onmessage = ({ data }) => resolve(data);

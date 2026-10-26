@@ -39,8 +39,8 @@ evidence and final integrated checks. A model-only substage does not complete a 
 
 | Scope | Feature | State |
 | --- | --- | --- |
-| W01 | Independent playback context and selected playlist | Core integration checked; shared Add availability retained for W02 |
-| W02 | Full manual queue and list interactions | Schedule/Clear model checked; playback and list integration pending |
+| W01 | Independent playback context and selected playlist | Core/shared Add host guards pass; next integrated full gate pending |
+| W02 | Full manual queue and list interactions | Model/transport connected; focused checks pass; panel/gestures and full gate pending |
 | W03 | Return to playback source | Pending |
 | W04 | Remembered Random and deliberate reroll | Pending |
 | W05 | Random platform/Favourites filters | Pending |
@@ -181,10 +181,10 @@ Fresh lint analysis: **zero errors / 79 warnings**, 85.5 s. All thirteen input h
 `w01-final-w02-model-candidate.json` match. Complete evidence is retained under ignored
 `w01-final-w02-model-full-gate/`.
 
-Core editor/source separation is checked on the host. The dock's existing Add visibility still
-uses the old Random/collection predicate; W02's actual-occurrence integration must also offer it
-when playlist A plays while selected playlist B is visible, matching Android `awayFromPlaylist`.
-Keep that shared-control case open rather than claiming all W01 presentation is complete. Layout,
+Core editor/source separation is checked on the host. At that checkpoint the dock's Add visibility
+still used the old Random/collection predicate. W02's integration now offers it when playlist A
+plays while selected playlist B is visible, matching Android `awayFromPlaylist`; the actual dock-
+click regression passes. The next integrated full gate is required before closing W01. Layout,
 touch, real audio and background behaviour remain **unchecked in a real browser/device**. No bundle
 is handed off and no merge or deployment occurs.
 
@@ -231,6 +231,43 @@ Still required: playback integration including subsong/end/failure/cancellation 
 above the shared dock, stable/animated row updates, labelled
 menu/keyboard equivalents, directional gestures and pending-only reorder with Android's vertical
 priority. W02 remains open until those substages and their integrated checks are complete.
+
+### W02 transport integration checkpoint — 2026-10-27
+
+The page now publishes immutable source contexts instead of reconstructing shuffle history from
+mutable UI arrays. Those arrays are presentation mirrors only. `playback-steps.js` ports Android's
+state/effect boundary; opening the actual file is separate from advancing its parked source.
+The current occurrence supplies decoder bytes/filename, dock, metadata, sharing, History origin
+and retries. Explicit Next/Previous and natural completion route through the schedule. Existing
+all-subsong controls remain ahead of file advancement; Repeat One rewinds the actual subsong.
+
+Main/Browse/History track menus enqueue one-shot duplicates. Enqueue does not play or dirty a
+playlist. The common dock Add targets the selected editor even while a different playlist plays.
+Clear/Undo and removal preserve actual loading/paused intent, retain live linked-editor edits
+and invalidate speculative Random work independently of the actual open job. A failed manual
+file over Random is retained for explicit retry rather than discarded as a failed random draw.
+Undo callbacks are bound to their snackbar generation and cannot execute after a newer notice.
+The Queue panel, gestures and physical grip are the following presentation substage.
+
+An integration regression found that inspecting Next could deal a repeat-all shuffle lap and
+consume RNG state. The new read-only availability guard first failed (76 draws versus 4 at the
+checkpoint); availability is now pure and only actual advancement deals the next permutation.
+The old shuffle harness used a decoder helper as if it were Next. It now traverses through actual
+Next/Previous button events while retaining the same shared fixture expectations.
+
+**Partly checked:** focused host checks pass **666 page assertions**, **67 context cases**, **29
+schedule cases**, **14 state/effect cases** and 14 runner fixtures. Fresh reference execution of
+`ActiveQueueTest`, `PlaybackScheduleTest`, `PlaybackPlanTest`, `ManualQueueControllerTest` and
+`ManualPlaybackStateTest` passes **81 tests / 5 suites**, zero failures/errors/skips, 116 s.
+The new page cases exercise actual menu/dock/transport controls and real IndexedDB; they cover
+duplicate FIFO, Previous anchor, Repeat One, History origin, Clear's snackbar Undo, manual-only
+exhaustion and failed manual retry over Random. Disconnecting enqueue and substituting the source
+cursor for the actual occurrence each fails its intended page guard. Logs and reference XML are
+retained under ignored `user/web-parity-verification/`.
+
+This checkpoint is **not** a complete W02 feature or a fresh full-gate claim. Full tests/lint are
+still required on the integrated panel/gesture candidate, along with actual interaction guards.
+Device/browser rendering, gesture feel, audio output and background controls remain unchecked.
 
 ## Deferred or blocked work
 

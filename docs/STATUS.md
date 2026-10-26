@@ -52,13 +52,15 @@ transport fixtures. Page integration is prepared on the branch, with independent
 document-write ordering and obsolete-load/reply guards. Its forced integration gate passed
 **1218 tests / 160 suites**, 643 page checks, 52 engine/worklet checks and all companions in 610 s,
 recorded 2026-10-27. Fresh lint: zero errors / 79 warnings. A separately reproduced phone-document
-selection persistence regression is corrected. W01 core separation is checked; its shared Add
-visibility case is retained for W02 actual-occurrence integration. Real-browser behaviour is
+selection persistence regression is corrected. W01's shared Add case now passes its actual dock
+guard in the W02 transport checkpoint; its next integrated full gate is pending. Real-browser behaviour is
 unchecked. The model substage passed **1218 tests / 160
 suites**, 66 new domain checks and all existing companions; lint analysis was up to date, with
 zero errors / 79 warnings. W02's production schedule/Clear model passes 29 Android-derived cases
-and is registered in the full gate; its application/list integration is pending. The additional
-14 controller state/effect cases remain an ignored draft. Other scopes have not been declared complete.
+and is registered in the full gate. W02 transport is connected: 666 page, 67 context, 29 schedule
+and 14 state/effect checks pass; fresh Android reference execution passes 81 tests / 5 suites.
+This is partly checked: the Queue panel/gestures and their integrated full tests/lint remain pending.
+Other scopes have not been declared complete.
 Android production code and schema are unchanged.
 
 ## WEB and Android parity inventory — 2026-10-26

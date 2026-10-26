@@ -292,5 +292,20 @@ test('all returned order lists and ownership snapshots resist accidental mutatio
   assert.throws(() => { before.context.source.id = 'B'; }, TypeError);
 });
 
+test('transport availability does not consume randomness or deal a new lap during rendering', () => {
+  let calls = 0;
+  const draw = () => { calls++; return 0.41; };
+  const list = new PlayOrder({ tracks, random: draw }).withShuffle(true).withRepeat('all');
+  const shuffled = list.startAt(0);
+  const last = shuffled.copy({ history: [shuffled.indices.at(-1)], cursor: 0 });
+  const active = new PlaybackContext({ source: { kind: 'playlist', id: 'A' }, order: last });
+  const before = calls;
+  for (let i = 0; i < 12; i++) { assert.equal(last.hasNext, true); assert.equal(active.hasNext, true); }
+  assert.equal(calls, before);
+  const next = active.next();
+  assert.equal(next.kind, 'play');
+  assert.ok(calls > before, 'the real advance, rather than a view read, deals the new lap');
+});
+
 assert.ok(checks > 0);
 console.log(`${checks} playback-context checks passed.`);

@@ -43,7 +43,11 @@ export class PlayOrder {
   get currentIndex() { return this.history[this.cursor] ?? null; }
   get current() { return this.tracks[this.currentIndex] ?? null; }
   get maxTraversalSteps() { return this.history.length + this.tracks.length + 1; }
-  get hasNext() { return this.advanced() !== null; }
+  get hasNext() {
+    return this.tracks.length > 0 && (this.currentIndex == null
+      || this.shuffle && this.cursor < this.history.length - 1
+      || this.indices.indexOf(this.currentIndex) + 1 < this.indices.length || this.repeat === 'all');
+  }
   get hasPrevious() { return this.previousOrder() !== null; }
 
   appended(index) {
@@ -161,18 +165,32 @@ export class PlaybackContext {
     if (!this.visibleIndices.length) return null;
     let order = this.order;
     for (let tried = 0; tried < this.order.maxTraversalSteps; tried++) {
-      if (!(forward ? order.hasNext : order.hasPrevious)) return null;
-      order = forward ? order.next() : order.previous();
+      order = forward ? order.advanced() : order.previousOrder();
+      if (!order) return null;
       if (!this.omitted.includes(this.entryIds[order.currentIndex])) return this.copy({ order });
     }
     return null;
+  }
+
+  finiteAvailable(forward, accepts = () => true) {
+    if (!this.visibleIndices.some(accepts)) return false;
+    const order = this.order;
+    const available = (index) => !this.omitted.includes(this.entryIds[index]) && accepts(index);
+    if (order.currentIndex == null) return forward;
+    if (order.shuffle) {
+      if (!forward) return order.history.slice(0, order.cursor).some(available);
+      if (order.history.slice(order.cursor + 1).some(available)) return true;
+    }
+    const at = order.indices.indexOf(order.currentIndex);
+    return (forward ? order.indices.slice(at + 1) : order.indices.slice(0, at)).some(available)
+      || order.repeat === 'all';
   }
 
   get hasNext() {
     switch (this.source.kind) {
       case 'random': return true;
       case 'none': case 'external': return false;
-      case 'playlist': case 'collection': return this.finiteMove(true) !== null;
+      case 'playlist': case 'collection': return this.finiteAvailable(true);
     }
   }
 
@@ -180,7 +198,7 @@ export class PlaybackContext {
     switch (this.source.kind) {
       case 'random': return this.order.tracks.some((_, index) => index < this.order.currentIndex && !this.omitted.includes(this.entryIds[index]));
       case 'none': case 'external': return false;
-      case 'playlist': case 'collection': return this.finiteMove(false) !== null;
+      case 'playlist': case 'collection': return this.finiteAvailable(false);
     }
   }
 
