@@ -3,6 +3,34 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## AMP rebase — phone checks pending, 2026-10-26
+
+`feature/amp-catalogue` now includes develop through `e581a25`. **No new APK has been built for
+this rebase.** All scenarios below remain unchecked on a phone; the original positive AMP trial
+does not verify its interaction with the current unified queue. Retain existing app data.
+
+1. Check **Settings → Online catalogues → AMP catalogue (experimental)** in EN/PL. The initial
+   default remains On; a previously saved choice survives restart. Browse the retained AMP index,
+   search, open an author and replay a cached track without redownloading the index.
+2. While another source plays, enqueue AMP, another file and the same AMP file again. Verify
+   FIFO order, separate occurrences, tap/Next/Previous, swipe/Undo and return to source. Mere
+   queue admission must not fetch AMP music or change the current source.
+3. Turn AMP Off while its manual occurrence plays or loads. Playback stops, its parked source
+   and other waiting requests remain, and no late transfer starts. A new disabled AMP enqueue
+   explains the block. Existing playlist/History/bookmark data remains. Next can reach another
+   source; re-enabling does not start audio until explicitly requested.
+4. Repeat Off/On with AMP playing directly from an author or Random, and with a non-AMP manual
+   track over an AMP source. The actual current track decides what stops. Verify paused resume
+   and queue identity after re-enabling, rather than resuming an unrelated saved playlist.
+5. Recheck disabling during index/file downloads, rapid Off/On, offline cached playback, Random
+   history and no speculative AMP prefetch using the original AMP checklist below. Recheck a
+   previously repaired legacy/nested Modland download with the new combined transport.
+6. Verify normalization, dock/Queue navigation, notification controls and Bluetooth with the
+   combined build. Floating controls remain default Off and should have no activation shortcut.
+
+[Host evidence and limits](PR_AMP_CATALOGUE.md#rebase-verification--2026-10-26).
+Maintainer permission and an explicit integration decision remain separate requirements.
+
 ## B54 Floating controls — experimental, disabled by default
 
 Practical phone operation was reported satisfactory on 2026-10-26, followed by approval to

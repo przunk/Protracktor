@@ -1,8 +1,22 @@
 # AMP catalogue trial
 
-Owner-selected implementation, 2026-10-18. Branch `feature/amp-catalogue`, from develop `a421afc`.
-This branch must **not merge before explicit AMP maintainer approval**, even if the owner accepts
-its phone behaviour. No public release, push, maintainer message or automatic merge is authorized.
+Implementation selected 2026-10-18. Branch `feature/amp-catalogue`, originally from develop `a421afc`.
+This branch must **not merge before explicit AMP maintainer approval**, independently of phone
+acceptance. Public release and integration remain on hold.
+
+## Rebase — 2026-10-26
+
+Rebased the seven trial commits onto develop **`e581a25`**. The original branch is retained as
+`backup/amp-before-rebase-20261026-8e92002`. The trial now inherits **versionName 1.4.0**, the
+unified/manual playback queue, normalization and Modland path recovery. Schema remains **23**;
+the AMP switch still defaults on when its saved preference is absent. Floating controls remain
+disabled by default, as in develop.
+
+AMP's transfer guards and gzip reader are combined with current Modland recovery. The retained
+AMP-reference guard now follows catalogue availability; it must allow enabled AMP into the
+manual queue. Current occurrence, source-context and failed-manual-request rules remain owned
+by the current queue implementation. No reply or permission from AMP has been received as of
+this rebase. [Current verification](PR_AMP_CATALOGUE.md#rebase-verification--2026-10-26).
 
 ## Contract
 
@@ -60,7 +74,7 @@ permission remain pending. The local draft is retained in ignored
 `docs/letters/2026-10-18-amp-permission-draft.md`; the final sent wording was not supplied.
 Correspondence is not part of the public branch.
 
-Progress: stages 1–4 complete for the agent handoff. Clean source `64c7dcc` passed the forced
+Initial handoff, 2026-10-18: stages 1–4 complete. Clean source `64c7dcc` passed the forced
 full gate: 952 tests / 127 suites, zero failures/errors/skips; lint zero errors / 73 warnings.
 The minified test APK 1.2.0 (1221) is prepared and its signature/assets are verified.
 The owner reported on 2026-10-18 that AMP works well in phone testing; individual checklist

@@ -8,7 +8,9 @@ installed system-wide, and no build here writes to another project's state.
 `feature/amp-catalogue` defaults its persistent AMP switch on for private testing. Build its
 minified test-signed APK with the normal `scripts/build-release.sh`; do not run a store release,
 merge it or publish it before AMP maintainer permission and the owner's phone acceptance.
-The trial keeps release name 1.2.0; versionCode and source SHA identify each test APK.
+After the 2026-10-26 rebase the trial inherits release name **1.4.0** from develop; versionCode
+remains commit-derived and schema remains 23. The original **1.2.0 (1221)** APK retains its
+historical identity. No new APK was built as part of the rebase.
 [Verified build and asset-packaging retry](PR_AMP_CATALOGUE.md), [phone checklist](TESTING.md).
 
 ## Prerequisites

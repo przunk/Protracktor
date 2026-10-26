@@ -7,6 +7,32 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## AMP rebase — host checks passed, phone verification pending, 2026-10-26
+
+Rebased `feature/amp-catalogue` onto develop **`e581a25`**. All seven original trial commits
+remain represented; the original **`8e92002`** is retained in
+`backup/amp-before-rebase-20261026-8e92002`. AMP stays default On when no preference is stored,
+versionName now follows develop at **1.4.0**, schema remains **23**, and floating controls stay
+default Off. Develop, master and release tags were preserved.
+
+The rebase combines AMP's access guards with the current manual queue and Modland path
+recovery. Availability-aware reference blocking allows enabled AMP requests without exposing
+disabled ones; current queue resume and failed-manual-request rules are retained. The removed
+Random `diceWaiting` property was caught by compilation and replaced with current context ownership.
+
+Application candidate **`f21e3b2`**: **99 focused tests / 10 suites**, zero failures/errors/skips,
+**216.5 s**. A deliberate return to the old AMP block failed the new controller test as expected;
+it was restored before the full gate. **Full forced gate passed: 1242 tests / 162 suites**, zero
+failures/errors/skips, **761 s** overall; unit execution **565.9 s**. All companion checks passed.
+Fresh lint: **zero errors / 81 warnings**, **93.8 s**. Application/native/script/web/store trees
+remain identical to the tested candidate; closeout changes only documentation. Logs and XML are
+retained in ignored `user/amp-rebase-20261026/`. The agent performed no new live AMP probe or
+phone test and built no APK. The original positive AMP phone result does not establish the
+new integration's device behaviour.
+
+The maintainer reply and permission are still pending. The branch remains unmerged and is
+not selected for public release. [Rebase evidence](PR_AMP_CATALOGUE.md#rebase-verification--2026-10-26).
+
 ## Google Play production-access reapplication — 2026-10-26
 
 Submitted a new application after the [additional-testing decision recorded on 2026-10-06](letters/2026-10-06-google-play-production-access.md).

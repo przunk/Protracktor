@@ -225,6 +225,12 @@ This distinction prevents the startup prune from deleting a temporarily disabled
 Search/count/Random SQL share `catalogueVisibility`; direct catalogue reads reject disabled IDs.
 The setting is restored before controller stores start and persists through `Appearance`.
 
+After the 2026-10-26 rebase, `CatalogueRetention.blocksReference` follows runtime catalogue
+availability instead of rejecting every AMP reference. The unified queue can therefore accept
+enabled AMP requests while still rejecting disabled ones with the AMP-specific explanation.
+Search, counts, Random and playable totals share the same `catalogueVisibility` rule. Manual
+occurrence identity, FIFO order and source continuation remain the current queue's responsibility.
+
 `AmpAccess` owns an enable/disable epoch and active HTTP disconnect callbacks. Network/cache
 delivery and `TrackFiles` reads validate that epoch, so an off/on cycle cannot adopt old bytes.
 `LibraryDownloads` also checks it before replacing an index and always retires progress. Catalogue

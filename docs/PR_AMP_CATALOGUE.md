@@ -1,8 +1,51 @@
 # AMP catalogue trial — implementation and evidence
 
-Owner-selected 2026-10-18. Branch `feature/amp-catalogue`, base develop `a421afc`.
-**Not merged. AMP maintainer permission is not obtained; merge/publication must wait for it and
-the owner's device acceptance.** The default-on switch is for this isolated test branch only.
+Selected 2026-10-18. Branch `feature/amp-catalogue`, original base develop `a421afc`;
+rebased onto **`e581a25`** on 2026-10-26.
+**Not merged. AMP maintainer permission is not obtained; merge/publication remains on hold.**
+The default-on switch is for this isolated test branch only.
+
+## Rebase verification — 2026-10-26
+
+Current application candidate: **`f21e3b2`**. The seven original commits were replayed onto
+develop; the original head **`8e92002`** remains under
+`backup/amp-before-rebase-20261026-8e92002`. Develop, master and release tags were preserved.
+
+Conflict resolution retains current queue transport, the default-Off floating-controls gate,
+normalization and Modland's legacy/nested unknown-author recovery. AMP access epochs and gzip
+validation remain active. Removed unconditional AMP-retention SQL filters now use the shared
+runtime catalogue visibility rule; reference blocking follows actual catalogue availability.
+The old `diceWaiting` API is replaced by the current Random source-context check.
+
+The agent ran **99 focused tests / 10 suites**, zero failures/errors/skips, in **216.5 s**.
+They include Modland recovery and controlled HTTP/cache cases, retained AMP data, availability,
+read-ahead, settings and the real controller with preset host playback state. New controller
+checks cover FIFO admission, duplicates, disabled enqueue feedback and stopping a current AMP
+manual occurrence while preserving its source and waiting requests.
+
+A temporary return to the unconditional AMP-reference block caused the new controller test
+to fail with the expected missing manual request: **one test, one assertion failure**, zero
+errors/skips, **93.0 s**. The original guard was restored before the full gate. The initial
+compile attempt exposed the removed `diceWaiting` property and is not counted as passing evidence.
+
+**Full forced gate: passed**, **1242 tests / 162 suites**, zero failures/errors/skips, in
+**761 s** overall; unit execution took **565.9 s**. All companion checks passed: store metadata,
+runner/release fixtures, web page/engine, SAP measurement, web database upgrade, native audio,
+icons, PWA and local server. Fresh lint analysis completed in **93.8 s** with **zero errors /
+81 warnings**. Evidence is retained in ignored `user/amp-rebase-20261026/`, including JUnit XML,
+lint XML, negative-control results and complete logs. No new AMP request or live archive probe
+was made for this rebase. Subsequent closeout changes only documentation; application, native,
+script, web and store trees match the tested candidate.
+
+**Phone behaviour after rebase: unchecked. No new APK was built.** The original positive phone
+result and APK below remain evidence for their original sources. VersionName is now **1.4.0**,
+versionCode remains commit-derived and schema remains **23**; the old 1.2.0 APK is not relabelled.
+Use the [new integration checklist](TESTING.md#amp-rebase--phone-checks-pending-2026-10-26)
+for a later phone trial. Maintainer permission is still pending.
+
+## Initial implementation and verification — 2026-10-18
+
+The following records the original implementation, test run and APK. Rebase evidence is above.
 
 ## Implementation
 
