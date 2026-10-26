@@ -2,7 +2,8 @@
 
 ## B54 Floating controls — gated experiment, 2026-10-26
 
-The phone trial is accepted for experimental integration only. `FloatingControls.ENABLED`
+The phone trial was accepted for experimental integration only and merged as **afab610**, 2026-10-26.
+`FloatingControls.ENABLED`
 defaults to `false`: the dock action and permission flow are absent, service host construction
 and its observer are omitted, and the command gateway ignores activation. This is a compile-time
 decision, with no runtime preference. The following describes the retained enabled component.

@@ -9,8 +9,12 @@ Practical phone operation was reported satisfactory on 2026-10-26, followed by a
 retain the experiment in develop with **`FloatingControls.ENABLED = false`**. The exact installed
 build and individual scenario outcomes were not separately supplied. Public availability is
 not approved. With the constant false, the checks below require a deliberately enabled trial
-build: ordinary builds expose no floating-controls action or permission flow. Gate verification
-and integration are in progress; the full suite is not repeated for this iteration, as requested.
+build: ordinary builds expose no floating-controls action or permission flow. Merged as
+**afab610**, matching checked candidate **0e9d361**: 54 focused checks / 7 suites, zero
+failures/errors/skips, fresh lint 0 errors / 79 warnings, and independently inspected minified
+Off build **1.4.0 (1315)**. The activation regression failed before the gate. The full suite was
+not repeated, as requested. Default-off behaviour has host evidence, not a separate phone test;
+overall enabled-trial acceptance does not individually confirm every scenario below.
 
 [Contract and host evidence](FLOATING_CONTROLS.md). Retained enabled trial release:
 **1.4.0 (1313), source 2497632**, recorded in [Status](STATUS.md); it adds whole-panel dragging,

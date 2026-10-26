@@ -1,22 +1,44 @@
 # Status
 
-Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; latest branch test APK 1.4.0 (1313), source 2497632, includes unmerged B54 with whole-panel drag, edge docking and file holds; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
+Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 The last recorded Google response requested additional closed testing; later production access is not confirmed.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B54 Floating controls — accepted experiment; distribution gate in progress, 2026-10-26
+## B54 Floating controls — merged experiment, disabled by default, 2026-10-26
 
 The practical phone trial was reported satisfactory and integration was approved with
 **`FloatingControls.ENABLED = false`**. This retains the experiment in develop while withholding
 its dock action, permission flow and overlay activation from normal users. No runtime toggle is
 exposed. The exact installed build was not restated; the latest supplied enabled APK is
-1.4.0 (1313), source 2497632. Its identity stays unchanged. Gate verification and integration are
-in progress. Historical unmerged/pending notes below describe earlier stages, not a remaining
+1.4.0 (1313), source 2497632. Its identity stays unchanged. Merged as
+**afab610c3e53bd442f1ed17a548468262ff4d27c**, with the exact tree of checked candidate
+**0e9d3617cd70b164b2de5b3adda7b2e6bd5bf49d**. Historical unmerged/pending notes below describe earlier stages, not a remaining
 requirement to approve the already accepted integration. Individual device cases were not
 separately reported. [Distribution decision](FLOATING_CONTROLS.md).
+
+The agent ran **54 focused checks / 7 suites**, zero failures/errors/skips, and fresh lint
+**0 errors / 79 warnings** in **222.8 s** together. Default UI/gateway tests verify absence of
+the shortcut and permission flow, normal Play, and blocked service requests despite an existing
+overlay grant. The activation regression failed before the guard. Retained permission/gesture/
+window components remain covered separately. The full suite was **not repeated**, as requested.
+
+Verification-only minified release **1.4.0 (1315)** with the flag Off:
+[protracktor-release-1.4.0-1315-0e9d361-20261026-201452.apk](../dist/protracktor-release-1.4.0-1315-0e9d361-20261026-201452.apk),
+**11,973,003 bytes**, SHA-256
+`4644b6f63a3a07860ab57a803ce1b545f484240493e2d633c8c57cb5446adc7f`.
+The supervised build took **197.9 s**; R8 executed. Signature/source/manifest, CRC, 16 KB alignment
+and all three native ABIs passed independent inspection. R8 mapping retains no overlay
+implementation class declarations. Evidence is retained in ignored
+`user/floating-controls-verification/disabled-integration/`. Artifact identities remain tied to
+their source commits, not the later merge/documentation commits.
+
+The enabled trial is accepted for experimental integration; the disabled build has **not been
+tested separately on a phone**. Public availability and feature announcements remain deferred
+until an explicit new decision. Master, release tags and the prepared AAB are unchanged; no push
+or publication was performed.
 
 ### Historical implementation and trial handoffs
 

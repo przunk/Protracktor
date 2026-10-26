@@ -23,8 +23,33 @@ again. The interaction and verification records below describe the retained enab
 The historical pending-acceptance statements are superseded for this integration decision;
 they do not become evidence that every individual device scenario was tested.
 
-Gate verification and integration are in progress. Keep the full suite omitted for this
-iteration as requested; run focused disabled-entry and retained-component checks plus lint.
+Merged into develop as **afab610c3e53bd442f1ed17a548468262ff4d27c** on 2026-10-26. The merge
+tree exactly matches checked candidate **0e9d3617cd70b164b2de5b3adda7b2e6bd5bf49d**. Keep the
+experiment out of store/GitHub feature announcements while the constant is false; a release must
+not enable it automatically.
+
+The agent verified **54 focused checks / 7 suites**, zero failures/errors/skips, and fresh lint
+**0 errors / 79 warnings** in **222.8 s** together. The default application hook is tested with
+the real disabled constant: no dock hold/accessibility action or permission launch, normal Play
+still works, and granted overlay permission cannot make the command gateway start a service.
+The retained permission component is tested separately with recorded activation requests;
+there is no runtime override of the production constant. Its default gateway, service host
+construction and observation all remain gated. The new activation regression failed before
+the guard because an actual Show service intent was recorded. The full test suite was **not
+repeated**, as requested. The enabled phone trial is accepted; the disabled build was checked
+on the host, not separately installed and tested on a phone.
+
+Verification-only minified, test-signed release **1.4.0 (1315)**, feature Off, source **0e9d361**:
+[protracktor-release-1.4.0-1315-0e9d361-20261026-201452.apk](../dist/protracktor-release-1.4.0-1315-0e9d361-20261026-201452.apk),
+**11,973,003 bytes**, SHA-256
+`4644b6f63a3a07860ab57a803ce1b545f484240493e2d633c8c57cb5446adc7f`.
+The supervised build took **197.9 s** and executed R8. Independent inspection confirms the
+existing v2 test signature, embedded source/version/code, non-debuggable manifest, ZIP CRCs,
+16 KB alignment and all three native ABIs. The checked R8 mapping has no retained overlay
+implementation class declarations. Evidence is in ignored
+`user/floating-controls-verification/disabled-integration/`. This artifact does not replace the
+retained enabled trial APK 1313. Merge/documentation commits do not relabel either artifact.
+Master, release tags and the prepared AAB remain unchanged; nothing was pushed or published.
 
 ## Decision and scope — 2026-10-25
 

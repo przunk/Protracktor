@@ -14,7 +14,8 @@ been overtaken by work already done, it says so.
 
 Decision, 2026-10-26: retain the satisfactory phone trial in develop with
 `FloatingControls.ENABLED = false`. This is experimental integration only; public availability
-requires a later explicit decision. Gate verification and merging are in progress. The latest
+requires a later explicit decision. Merged as **afab610** after 54 focused checks/lint and a
+verified minified Off build, source 0e9d361; the full suite was not repeated. The latest
 enabled trial APK remains 1.4.0 (1313), source 2497632; individual device scenarios were not
 separately reported. The description below applies when the experiment is compiled On.
 
