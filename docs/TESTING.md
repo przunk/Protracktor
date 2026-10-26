@@ -5,7 +5,9 @@ APK numbers identify the original handoff, not a recommendation to install an ol
 
 ## C121 WEB decoder filenames — browser trial pending
 
-On the corrected web build, open title-bearing links or saved entries for Modland's
+Use [the corrected web test bundle](../dist/protracktor-web-20261026-224832.tar.gz), source
+`3bfa0ea`. For an installed PWA, close its windows and reopen after updating the files so its
+new worker can activate, preserving existing app data. Open title-bearing links or saved entries for Modland's
 `Spectrum/Pro Tracker 3/Mr. Beeper/african.pt3` and ASMA's
 `Composers/Rogers_Charles/Quest_For_Cool.sap`. Playback and Information should use ZXTune and
 ASAP respectively while preserving the display titles. Replay from History and test audio

@@ -51,8 +51,31 @@ a filename fragment and a local transfer. **Sixteen assertions failed before the
 the provided-filename and display-title controls passed. After correction the complete page
 suite passed **606 checks** in **33.2 s**.
 
-Full project gate/lint and the distributable web bundle are pending. Browser/PWA playback,
-Information and actual AAC export remain unchecked until a browser trial.
+The full project gate passed on **`3bfa0eabfa75c067a461d43c1370814ce058e57f`** in **701 s**:
+**1217 tests / 159 suites**, zero failures/errors/skips, with fresh unit execution in **493.9 s**.
+All companion checks passed, including the repeated **606 page checks**, **49 WASM checks**,
+SAP measurement, native audio, web database upgrade, icons, PWA and server checks. Fresh lint
+completed in **100.3 s** with **zero errors / 79 warnings**. This is the verified candidate;
+the later verification record changes documentation only.
+
+## Test bundle
+
+| Field | Value |
+| --- | --- |
+| File | [protracktor-web-20261026-224832.tar.gz](../dist/protracktor-web-20261026-224832.tar.gz) |
+| Size | 1,489,871 bytes |
+| SHA-256 | `85b25a9fca25bd85dcc8ec1fb72bcb71091dd400a64e9d86a6fa05f78eddb8c1` |
+| Source | `3bfa0eabfa75c067a461d43c1370814ce058e57f` |
+| WASM SHA-256 | `ef14ae1a028aa36ca35c9425f7f2f3cee8c2fbdd5e298e715241377a814259ef` |
+| PWA revision | `d58e4103e43535fcad6de6085ef13efc28ecceedac36779bc99b4f5d623ad506` |
+
+The archive's JavaScript matches the committed fix, its WASM matches the real-file probe, and
+the legal build record identifies the exact source commit. The staged worker matches its
+calculated revision and 46 startup assets. No music fixtures or nested archives are bundled.
+SHA-256 and build metadata sidecars are beside the archive in `dist/`; inspection records are
+retained with the local test evidence. No APK, remote deployment or merge was performed.
+
+Browser/PWA playback, Information and actual AAC export remain **unchecked** until a browser trial.
 
 ## Browser trial
 
@@ -61,3 +84,5 @@ Play both reported files, inspect their Information and replay from History. Kee
 visible while playback chooses ZXTune for PT3 and ASAP for SAP. Also check an explicit filename
 from phone handoff, a Mod Archive filename fragment and audio export where the browser supports
 AAC encoding. Existing playlists and indexes should be retained throughout the update.
+For an installed PWA, close its windows and reopen after updating the files so the new worker
+can activate; preserve the browser's existing app data.

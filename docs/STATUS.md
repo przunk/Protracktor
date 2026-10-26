@@ -9,7 +9,7 @@ Historical dated checks below describe their own builds; they are not current te
 
 ## C121 WEB decoder filename lost when an entry has a display title
 
-User report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's
+Direct web-testing report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's
 `Quest_For_Cool.sap` by game-music-emu, although both play in the APK. The local WASM opens and
 renders both with their filenames; title-only opens reproduce the exact reported errors.
 
@@ -18,8 +18,14 @@ Information, audio export, length lookup and History now share the existing URL/
 instead of substituting the display title. No native/Android change or schema migration.
 Twenty-five new page checks expose sixteen failures before correction; the complete page suite
 passes **606 checks**, **33.2 s**, after it. Real-file host probes rendered finite, non-silent
-audio through ZXTune and ASAP. **Full gate/lint and web bundle pending; browser trial unchecked.**
-The branch is unmerged. [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
+audio through ZXTune and ASAP. Source **`3bfa0ea`** passed the full gate: **1217 tests / 159 suites**,
+zero failures/errors/skips, **701 s**; all companion checks passed, including 606 page and 49
+engine checks. Fresh lint: **zero errors / 79 warnings**, **100.3 s**.
+
+Verified [web test bundle](../dist/protracktor-web-20261026-224832.tar.gz): **1,489,871 bytes**,
+SHA-256 `85b25a9fca25bd85dcc8ec1fb72bcb71091dd400a64e9d86a6fa05f78eddb8c1`.
+Packed JavaScript, WASM, source metadata and PWA revision were checked. No APK or remote deployment.
+**Browser trial unchecked; unmerged.** [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
 
 ## Google Play production-access reapplication — 2026-10-26
 
