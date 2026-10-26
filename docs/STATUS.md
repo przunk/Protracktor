@@ -42,6 +42,18 @@ VersionName 1.4.0 and schema 23 are retained. The merge tree equals branch 691f8
 application inputs match checked source fbf2958; this is a source comparison, not another run.
 Master/tags, frozen WEB work and AMP are unchanged; no push, build or publication for integration.
 
+## WEB feature implementation — in progress, 2026-10-26
+
+Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.
+All twenty-five selected scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md),
+with mandatory Android production-code/test comparison and a final retry of any skipped point.
+No merge or deployment is authorized. W01 currently has a domain-model substage and shared
+Kotlin/JavaScript transport fixtures; the model is not yet connected to the page. Browser/UI
+behaviour and completion of W01 are unchecked. The model substage passed **1218 tests / 160
+suites**, 66 new domain checks and all existing companions; lint analysis was up to date, with
+zero errors / 79 warnings. Page integration is in progress; other scopes have not been declared
+complete. Android production code and schema are unchanged.
+
 ## WEB and Android parity inventory — 2026-10-26
 
 Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop
