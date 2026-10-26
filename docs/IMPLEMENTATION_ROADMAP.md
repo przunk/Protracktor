@@ -164,6 +164,11 @@ See [Format plan](PLAN_FORMATS.md), [Catalogue plan](PLAN_CATALOGUES.md) and
 [Web library plan](PLAN_WEB_LIBRARY.md). Historical headings may precede later implementations;
 do not plan SAP, SID, AHX/HVL, ZXTune or UADE integration again merely from an old heading.
 
+The [WEB and Android parity inventory dated 2026-10-26](WEB_ANDROID_PARITY_2026-10-26.md)
+records source-level differences, especially features from 1.0.0 through 1.4.0. It separates
+missing functionality, partial/platform integration and existing WEB capabilities; its suggested
+priorities are not an approved implementation sequence.
+
 - **C81(b):** support NSF/FDS rips loading below `$8000`; the truthful unsupported-file error is
   implemented, not the FDS memory model.
 - **C80:** play BASIC RSID; the explicit refusal is implemented, while the ROM decision remains.

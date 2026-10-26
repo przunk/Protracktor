@@ -7,6 +7,14 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## WEB and Android parity inventory — 2026-10-26
+
+Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop
+`67769b7` and release tags 1.0.0–1.4.0. It covers missing and partial WEB features, older Android
+capabilities, platform-specific differences and features already present. This is agent source
+analysis, not a browser/device verification run or authorization to implement the suggested work.
+Application code, release versions and deployment are unchanged.
+
 ## C121 WEB decoder filename lost when an entry has a display title
 
 Direct web-testing report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's
