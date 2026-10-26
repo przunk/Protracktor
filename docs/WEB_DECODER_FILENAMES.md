@@ -1,6 +1,18 @@
 # C121 — decoder filenames in the web player
 
 Reported and implemented 2026-10-26 on `fix/web-decoder-selection`, from develop `e581a25`.
+
+## Integration — 2026-10-26
+
+Integrated on request as **`188db10ad0c5b7eeda129b969923671d42da852c`**. The merge tree equals
+branch `4cd637f`, and application/native/script/web/store sources match tested candidate
+`3bfa0ea`. The agent checked those identities; no new test run or APK build was needed for the
+unchanged sources. The retained test bundle keeps its original source and checksums. A separate
+browser-trial result was not supplied; the checklist below remains available for verification.
+Local GitHub Pages preparation and the subsequent manual push are separate publication steps.
+
+## Report
+
 The two files play in the APK but were refused by the web player:
 
 - [african.pt3](https://modland.com/pub/modules/Spectrum/Pro%20Tracker%203/Mr.%20Beeper/african.pt3):

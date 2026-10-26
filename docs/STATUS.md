@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -25,7 +25,11 @@ engine checks. Fresh lint: **zero errors / 79 warnings**, **100.3 s**.
 Verified [web test bundle](../dist/protracktor-web-20261026-224832.tar.gz): **1,489,871 bytes**,
 SHA-256 `85b25a9fca25bd85dcc8ec1fb72bcb71091dd400a64e9d86a6fa05f78eddb8c1`.
 Packed JavaScript, WASM, source metadata and PWA revision were checked. No APK or remote deployment.
-**Browser trial unchecked; unmerged.** [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
+**~~C121 pending integration~~ — merged as `188db10`, 2026-10-26**, following the explicit merge
+request. The merge tree matches branch `4cd637f`; application/native/script/web/store sources
+match checked candidate `3bfa0ea`. These are source comparisons, not another test run. No separate
+browser-trial result was supplied; browser audio and AAC export remain unchecked. GitHub Pages
+preparation is the next step; no remote push was performed. [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
 
 ## Google Play production-access reapplication — 2026-10-26
 
