@@ -10,6 +10,12 @@ branch `4cd637f`, and application/native/script/web/store sources match tested c
 unchanged sources. The retained test bundle keeps its original source and checksums. A separate
 browser-trial result was not supplied; the checklist below remains available for verification.
 Local GitHub Pages preparation and the subsequent manual push are separate publication steps.
+Site commit **`b6a3c5384c557b9e39baefb720e38962943e2ab3`** was prepared from source
+**`e1a428127f6517712699accc4ae98066c883b8c8`**. Its 50 files include the checked JavaScript and
+WASM, exact source metadata, the root redirect and a valid worker for 46 cached startup assets.
+The site revision is `6b7828441432848524f34f032131ff4dd78709f9232ce0644d6357c2f04498ce`.
+No remote push or deployment has been performed; push source and site together with
+`./scripts/push-protracktor.sh develop gh-pages`.
 
 ## Report
 
@@ -85,7 +91,8 @@ The archive's JavaScript matches the committed fix, its WASM matches the real-fi
 the legal build record identifies the exact source commit. The staged worker matches its
 calculated revision and 46 startup assets. No music fixtures or nested archives are bundled.
 SHA-256 and build metadata sidecars are beside the archive in `dist/`; inspection records are
-retained with the local test evidence. No APK, remote deployment or merge was performed.
+retained with the local test evidence. Test-bundle preparation did not build an APK, deploy
+remotely or merge the branch; the subsequent integration is recorded above.
 
 Browser/PWA playback, Information and actual AAC export remain **unchecked** until a browser trial.
 

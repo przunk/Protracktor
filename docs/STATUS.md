@@ -28,8 +28,12 @@ Packed JavaScript, WASM, source metadata and PWA revision were checked. No APK o
 **~~C121 pending integration~~ — merged as `188db10`, 2026-10-26**, following the explicit merge
 request. The merge tree matches branch `4cd637f`; application/native/script/web/store sources
 match checked candidate `3bfa0ea`. These are source comparisons, not another test run. No separate
-browser-trial result was supplied; browser audio and AAC export remain unchecked. GitHub Pages
-preparation is the next step; no remote push was performed. [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
+browser-trial result was supplied; browser audio and AAC export remain unchecked. Local GitHub
+Pages snapshot **`b6a3c53`** is prepared from source **`e1a4281`**: 50 files, with 46 cached startup
+assets. Its JavaScript and WASM match the checked payload; source metadata and PWA revision were
+verified. **Remote push/deployment pending.** Push both source and site with
+`./scripts/push-protracktor.sh develop gh-pages`.
+[Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
 
 ## Google Play production-access reapplication — 2026-10-26
 
