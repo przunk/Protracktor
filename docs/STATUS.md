@@ -1,11 +1,31 @@
 # Status
 
 Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
-The signed AAB is prepared; upload to Play and publication are not confirmed.
+Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
-The last recorded Google response requested additional closed testing; later production access is not confirmed.
+Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Google Play production-access reapplication — 2026-10-26
+
+Submitted a new application after the [additional-testing decision recorded on 2026-10-06](letters/2026-10-06-google-play-production-access.md).
+Play Console confirmed receipt at **9:06 PM (21:06)** and states that review usually takes seven
+days or less, occasionally longer. The confirmation was supplied after manual submission;
+the agent did not submit the form or inspect Play Console. Version **1.4.0** was confirmed as
+the current closed-test release. Receipt does not establish production access or public rollout.
+
+The complete internal application record is retained in ignored
+`user/play-console/2026-10-26-production-access-application.md`: all ten questions, eight prepared
+text answers and the confirmation. Both selections were confirmed after submission: neutral
+recruitment difficulty and **0–10,000 expected first-year installs**. No completed-form export
+was supplied, so the text answers remain recorded as prepared wording rather than a verified
+copy of the submitted fields.
+
+Continue development while awaiting the decision. If access is refused again, review the
+reasons, arrange self-service tester recruitment through a Google Group and relevant forums,
+and run another 14-day closed-testing round. No tester-list migration, new build or new test
+run was performed for this application record.
 
 ## B54 Floating controls — merged experiment, disabled by default, 2026-10-26
 
