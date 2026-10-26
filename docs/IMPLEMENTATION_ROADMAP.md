@@ -1,10 +1,12 @@
 # Implementation roadmap
 
-Updated: 2026-10-25. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-26. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
-The latest prepared tagged AAB is **1.4.0 (1304)**; upload and Play publication are unconfirmed.
-[Current release record](RELEASE_NOTES_1.4.0.md). Pre-correction historical IDs/SHAs below refer to
+The latest prepared tagged AAB is **1.4.0 (1304)**. Version 1.4.0 is confirmed in Google Play
+closed testing; the production-access reapplication is awaiting review as of 2026-10-26.
+[Prepared artifact record](RELEASE_NOTES_1.4.0.md), [current distribution status](STATUS.md#google-play-production-access-reapplication--2026-10-26).
+Pre-correction historical IDs/SHAs below refer to
 the archived original graph, not newly built artifacts. [Commit map and validation](VERSION_HISTORY_REWRITE.md).
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.
@@ -83,7 +85,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C120 | Same song heard twice consecutively with playlist shuffle | Observation recorded 2026-10-25; potential defect, not reproduced or diagnosed. Build, playlist contents, repeat mode and transition details remain unknown; verify the shuffle contract before deciding on a fix. [Report](STATUS.md#c120-same-song-heard-twice-consecutively-with-playlist-shuffle). |
+| ~~C120~~ | ~~Same song heard twice consecutively with playlist shuffle~~ | Closed as a false alarm, 2026-10-26. Follow-up listening identified two similar subsongs in `Forbiddencolours2.1`; a possible loudness difference was not measured. No shuffle fix required. [Report](STATUS.md#c120-same-song-heard-twice-consecutively-with-playlist-shuffle). |
 | ~~C119~~ | ~~Nested Modland legacy unknown-author folders are outside C109's recovery rule~~ | Accepted after satisfactory phone playback and merged **0a7bcc0**, 2026-10-22. Exact-directory recovery at variable depth without ID/cache changes; failing-before-fix regressions, real non-silent host decode, forced 1119-test full gate and fresh lint passed. APK **1.3.0 (1285)**, source **657f4da**, unchanged. Detailed phone scenarios not individually reported. [Report](STATUS.md#c119-nested-modland-legacy-unknown-author-paths-still-fail-to-download). |
 | C118 | Open History does not reflect newly recorded playback until leaving and reopening it | User report, 2026-10-21. Open, not implemented or independently reproduced. Reconcile live updates with A56's stable History ordering and no self-recording policy. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open). |
 | ~~C116~~ | ~~Queue briefly flashes after Next scrolls below the viewport~~ | Accepted and merged **3bc5a98**, 2026-10-21. Surviving-row opacity regression failed before correction; disappearance/placement retained. Overall trial accepted; granular phone results not enumerated. [Evidence](QUEUE_AUTO_FOLLOW.md). |

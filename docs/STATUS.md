@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 potential consecutive shuffle repeat recorded; schema 23.
+Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -138,15 +138,17 @@ push, release-ref movement or AAB change. [Contract and checks](FLOATING_CONTROL
 
 ## C120 Same song heard twice consecutively with playlist shuffle
 
-Playback observation recorded 2026-10-25: with shuffle enabled on a playlist, the same song
-played twice in succession. **Potential defect; not independently reproduced or diagnosed.**
-The installed build, playlist size and entries, repeat mode, and whether the transition was
-automatic or requested with Next were not supplied.
+**~~Suspected consecutive shuffle repeat~~ — closed as a false alarm, 2026-10-26.**
 
-Before deciding whether this violates the shuffle contract, distinguish a repeated playlist
-entry from duplicate entries for the same file, a shuffle-cycle boundary, subsongs and manual
-queue requests. These are investigation questions, not established explanations. No code
-analysis, test, fix or behaviour change has been performed for this report.
+The original listening observation, recorded 2026-10-25, suggested that playlist shuffle played
+the same song twice consecutively. Follow-up listening identified **`Forbiddencolours2.1`** as a
+file with two subsongs playing the same music. They may differ in loudness; that remains a
+listening impression, with no measured levels supplied.
+
+The report is resolved by distinguishing the subsongs. No shuffle defect was established and
+no playback change was required. The agent did not inspect the file, independently compare its
+subsongs or run playback tests for this closeout. Retain the record to avoid reopening the same
+observation as a shuffle bug.
 
 ## Prepared 1.4.0 release — 2026-10-24
 
