@@ -544,6 +544,20 @@ export async function buildRandomTable() {
   return { entries, total };
 }
 
+/** Android randomSample returns a uniform batch without replacement, bounded by the pool size. */
+export async function sampleRandom(table, count, random = Math.random, signal) {
+  const total = table?.total ?? 0, swaps = new Map(), picks = [];
+  for (let left = total; left > 0 && picks.length < count && !signal?.aborted; left--) {
+    const slot = Math.min(left - 1, Math.floor(random() * left));
+    const index = swaps.get(slot) ?? slot;
+    swaps.set(slot, swaps.get(left - 1) ?? left - 1);
+    swaps.delete(left - 1);
+    const track = await drawTrack(table, () => (index + 0.5) / total);
+    if (track) picks.push(track);
+  }
+  return picks;
+}
+
 /**
  * One tune, every tune in [table] equally likely.
  *

@@ -156,11 +156,13 @@ run_check "Playback context" playback-context node scripts/check-playback-contex
 run_check "Playback schedule" playback-schedule node scripts/check-playback-schedule.mjs
 run_check "Playback effects" playback-effects node scripts/check-playback-steps.mjs
 run_check "Source navigation" source-navigation node scripts/check-source-navigation.mjs
+run_check "Random history" random-history node scripts/check-random-history.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
+    run_check "Random dice" random-dice node scripts/check-random-dice.mjs
     run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
     run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
     run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs

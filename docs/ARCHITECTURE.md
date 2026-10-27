@@ -12,7 +12,7 @@ unreported. It adds no global decoder boost or WEB parity implementation.
 
 ## WEB playback ownership — branch implementation, 2026-10-27
 
-W01-W02 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
+W01-W02 and W04 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
 remain separate. [Scope and host evidence](WEB_IMPLEMENTATION.md).
 
 `PlaybackWorkspace` owns the selected editor and an independent immutable `PlaybackContext`.
@@ -35,7 +35,7 @@ cancel additional pointers and suppress abandoned click/context-menu events. Men
 actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move
 without a whole-list appearance animation. Exact visual/gesture behaviour still needs a browser.
 
-This adds no Android production/schema/native changes or dependencies. The later W03-W25 scopes
+This adds no Android production/schema/native changes or dependencies. W03 still needs W10/W11 route wiring; W05-W25
 remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
 
 W03 adds `source-navigation.js` and an immutable route on `PlaybackContext`. The route holds
@@ -44,8 +44,18 @@ Header navigation follows the parked source, never its manual interruption. Guar
 preserve the active order; Discard authorizes abandoning a draft after destination validation,
 rather than erasing it before an asynchronous read. Source, panel and editor generations retire
 old completions. Browse result closures bind their original query, and older reads cannot append
-to a restored route. This scoped checkpoint has focused host coverage; the combined navigation
-gate and W10/W11 query/scope wiring remain pending. [Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
+to a restored route. This checkpoint passes the combined navigation
+host gate; W10/W11 query/scope wiring remains pending. [Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
+
+W04 separates the remembered Random record/view from the active source. DOM-free `RandomHistory`
+ports the native heard boundary, cursor, serial sampling and generation/cancellation rules;
+unheard preparation cannot enter the visible record. The active context remains transport owner
+when another view is opened. Explicit row selection and a deliberate dice reset activate Random.
+The shared source cursor is synchronized when Queue selects a heard occurrence. A reset retains
+manual FIFO requests; Clear retains heard history and an already adopted byte promise while
+retiring speculation. `random-dice.js` owns pointer/accessibility activation and reduced-motion
+rotation only. Browse detours depend on the visited route rather than the audio source.
+The combined navigation host gate passes; actual browser acceptance remains unchecked.
 
 ## B54 Floating controls — gated experiment, 2026-10-26
 

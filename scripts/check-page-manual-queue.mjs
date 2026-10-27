@@ -146,7 +146,7 @@ export default async function checkManualQueue({ window, check }) {
   await catalogue.putAll(records.records);
   await catalogue.putAll([{ key: 'modland:meta', tracks: records.tracks, total: records.tracks,
     phoneOnly: 0, buckets: records.buckets, formats: records.formats, fingerprint: 'manual-test' }]);
-  await api.openRandom(); await settle(); opened('Random source');
+  await api.rerollRandom(); await settle(); opened('Random source');
   const heard = api.queueNow().join();
   api.endSession(); add(1); await tap('next');
   const failedOpen = command();

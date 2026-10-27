@@ -218,6 +218,8 @@
                         font-size: var(--body-medium); color: var(--on-surface); }
   .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
                            border-color: transparent; }
+  #random-dice { touch-action: manipulation; flex: none; }
+  #randomhint { padding: 0 16px; margin: 0 0 10px; }
   #randomnote { padding: 0 16px; }
   .emptystate { padding: 40px 24px; text-align: center; }
   .emptystate .sheetbuttons { justify-content: center; }
@@ -872,6 +874,10 @@
       playlist -- so every row keeps the actions and the marking every other row has.
     -->
     <div id="randomhead" class="randomhead" hidden>
+      <button id="random-dice" class="action" aria-label="Start a new Random list" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2v14h14V5H5zm3 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>
+        New list
+      </button>
       <svg viewBox="0 0 24 24" id="sessionicon"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
       <div class="text">
         <div class="title" id="sessiontitle" tabindex="-1">Playing at random</div>
@@ -886,6 +892,7 @@
         Playlist
       </button>
     </div>
+    <p id="randomhint" class="note" hidden>Double-tap the dice to reroll the list</p>
     <div id="randomfilter" class="randomfilter" hidden>
       <span class="chip on">Everything</span>
       <span class="meta">The phone can narrow this to one machine or to Modland's favourites. The browser

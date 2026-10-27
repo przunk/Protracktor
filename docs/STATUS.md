@@ -54,15 +54,22 @@ menu/swipe/grip/keyboard callbacks preserve occurrence identity, source continua
 writes. The panel keeps the shared dock, departure animations and current-row following. Outside-row
 additional pointers cancel gestures, and handled long presses suppress an extra browser menu.
 
-The final forced gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **570 s**;
-31 unit-stage tasks executed. All companions pass, including **695 page assertions**, **52 engine
-checks**, 67 context, 29 schedule, 14 effects, 16 swipe, 9 grip and 7 keyed-presentation cases.
-Lint: **0 errors / 79 warnings**, analysis up to date after the prior fresh scan. Exact source-input
-hashes and reports are retained in ignored `user/web-parity-verification/w02-panel-final-full-gate/`.
+**W04 remembered Random implemented on the branch, 2026-10-27:** first entry starts; later
+entry reveals the retained heard record without replacing author/playlist/History playback.
+Double-tap rerolls a session, preserves manual requests and keeps global History. Hidden prepared
+picks, source ownership, positional duplicates, Clear/Undo and the accessible dice action follow
+the native rules. Batches are sampled without replacement; returning to Browse no longer borrows
+an unrelated active author's detour presentation.
+
+The combined forced context/navigation gate passes **1218 tests / 160 suites**, zero failures,
+errors or skips, **777 s**; all 31 unit tasks executed. All companions pass, including **760 page
+assertions**, **52 engine checks**, 67 context, 29 schedule, 14 effects, 9 source-navigation,
+17 Random-history, 9 dice, 16 swipe, 9 grip and 7 keyed-presentation cases. Fresh lint:
+**0 errors / 79 warnings**, 94.7 s. Exact source-input hashes and reports are retained in ignored
+`user/web-parity-verification/w04-context-navigation-full-gate/`.
 **Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
-bundle is handed off. W03-W25 remain open. W03 destination/route restoration is now connected on
-the branch and passes focused host checks; full-gate readiness and future search-scope integration
-remain pending.
+bundle is handed off. W03's source destinations pass the combined gate, but its future W10/W11
+History-query/Search-scope wiring remains pending. W05-W25 remain open.
 Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
 
 ## WEB and Android parity inventory — 2026-10-26

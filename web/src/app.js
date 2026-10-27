@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
+import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
@@ -12,6 +12,8 @@ import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQue
 import { QueueView } from './queue-view.js';
 import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
 import { bindTrackGestures } from './row-gestures.js';
+import { RandomHistory } from './random-history.js';
+import { bindRandomDice } from './random-dice.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -168,6 +170,12 @@ function adoptPlan(plan) {
   workspace = workspace.activate(plan.context);
   schedule = plan.schedule;
   applyTransportOrder();
+  const source = plan.context.source;
+  random = source.kind === 'random' && rememberedRandom?.sessionId === source.session ? rememberedRandom : null;
+  if (random) {
+    const at = plan.context.order.currentIndex ?? -1;
+    if (at >= 0 && random.history.cursor !== at) random.history.select(at);
+  }
 }
 
 function activateContext(context, placement = 'replace', autoPlay = true) {
@@ -201,6 +209,7 @@ function applyPlaybackResult(result, intent = null) {
       drawing = false;
       remember();
       task = openActualTrack(effect.track, { autoPlay: effect.autoPlay });
+      if (random) fillAhead(random).catch(() => {});
       break;
     case 'random-next': case 'random-previous': {
       const forward = effect.kind === 'random-next';
@@ -278,10 +287,7 @@ function clearPlaybackQueue() {
   ++scheduleIntent;
   const runtime = { random, away };
   if (random) {
-    random.generation = (random.generation ?? 0) + 1;
-    random.filling = null;
-    random.ahead = [];
-    random.bytes.clear();
+    invalidateRandomWork(random);
   }
   if (drawing) { drawing = false; setPlaying(false); }
   random = null;
@@ -327,9 +333,11 @@ function captureTransport() { return workspace.context;
 }
 
 function editorTracks() { return workspace.editor.order.tracks; }
-function visibleTracks() { return editorShown ? editorTracks() : queue; }
+function visibleTracks() { return editorShown ? editorTracks() : randomView ? randomView.history.playedPicks : queue; }
+function visibleFromHistory() { return !editorShown && !randomView && workspace.context.fromHistory; }
 function editorOwnsPlayback() { return captureTransport().belongsTo(workspace.editor.id); }
 function visibleIndex() {
+  if (randomView && (!random || randomView !== random)) return -1;
   return !editorShown || editorOwnsPlayback() ? schedule.sourcePlaybackIndex(workspace.context) ?? -1 : -1;
 }
 
@@ -804,6 +812,7 @@ function onWorklet(message) {
  * The phone calls one `handleTrackEnded` for the same reason.
  */
 function trackEnded() {
+  if (drawing) return;
   const inside = nextSubsong({ playAll: playAllSubsongs, subsong: currentSubsong,
     count: subsongCount, repeatOne: repeat === 'one' });
   if (inside != null) { node?.port.postMessage({ type: 'subsong', index: inside }); return; }
@@ -1181,6 +1190,9 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     render();
     return;
   }
+  // The selected load owns this promise before awaiting startup. Clear only drops speculation.
+  const ready = !entry.data ? random?.bytes.get(entry.url) : null;
+  if (ready) random.bytes.delete(entry.url);
   const asked = ++playAsked;
   delete $('seek').dataset.opened;
   subsongCount = 1;
@@ -1249,8 +1261,6 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     } else {
       // A Random pick read ahead was fetched while the tune before it played, which is the point of
       // reading ahead: a pick that has not been fetched is a gap between tracks. Used once.
-      const ready = random?.bytes.get(entry.url);
-      if (ready) random.bytes.delete(entry.url);
       bytes = ready ? await ready : null;
       if (!bytes) {
         $('sub').textContent = t('fetching…');
@@ -1518,7 +1528,7 @@ function render() {
     menu.setAttribute('aria-label', t('More for {name}', { name: entry.name }));
     menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
     // Stopped here, or opening the menu would also start the track underneath it.
-    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu); };
+    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu, i); };
 
     li.append(n, text, menu);
     if (!entry.local) {
@@ -1531,6 +1541,7 @@ function render() {
         // and the ones before it never. And it is the first: back stops at it, since what played
         // before belonged to another order. The phone's `PlayQueue.startAt` does the same.
         if (editorShown) playEditorAt(i);
+        else if (randomView) playRememberedRandomAt(i, randomView, tracks);
         else playAt(i);
       };
       holdToSelect(li, entry);
@@ -1541,15 +1552,16 @@ function render() {
   $('count').textContent = tracks.length
     ? tn(tracks.length, '{n} track', '{n} tracks')
     : t('nothing yet');
-  if (random && !editorShown) $('count').textContent = tn(queue.length, '{n} played at random', '{n} played at random');
+  if (randomView) $('count').textContent = tn(tracks.length, '{n} played at random', '{n} played at random');
   // What the session is, not always History's words: a tune sent here said "1 from your history".
-  if (away && !editorShown) {
+  if (away && !editorShown && !randomView) {
     $('count').textContent = {
       history: tn(queue.length, '{n} from your history', '{n} from your history'),
       browse: tn(queue.length, '{n} from Browse', '{n} from Browse'),
       link: tn(queue.length, '{n} sent to you', '{n} sent to you'),
     }[away.kind] ?? String(queue.length);
   }
+  if (randomView) renderRandomHeading();
   queueView?.render(playbackPlan());
   if (queueView) renderQueueSourceAction();
 }
@@ -1694,10 +1706,11 @@ const playable = (i) => i >= 0 && i < queue.length && !queue[i].local;
  * them: there is no file to save, no address to copy and nothing to read. A menu that offers three
  * things and does none of them is worse than one with three things greyed.
  */
-function openRowMenu(entry, anchor) {
+function openRowMenu(entry, anchor, at = visibleTracks().indexOf(entry)) {
   const menu = $('menu');
   menu.replaceChildren();
-  const historyOrigin = !editorShown && workspace.context.fromHistory;
+  const historyOrigin = visibleFromHistory();
+  const record = randomView, tracks = visibleTracks();
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
     [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
@@ -1709,10 +1722,10 @@ function openRowMenu(entry, anchor) {
     // On every list, as on the phone, not in Browse alone.
     [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
     // Share uses the same actions as Now Playing.
-    shareEntry(entry, anchor, () => openRowMenu(entry, anchor)),
+    shareEntry(entry, anchor, () => openRowMenu(entry, anchor, at)),
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
-  if (random && !editorShown) items.push([t('Remove from this list'), () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
+  if (record) items.push([t('Remove from this list'), () => removeRememberedRandomAt(at, record, tracks), true, ICON.remove]);
   // **A playlist of the user's own can lose a row**, as on the phone. "From the phone" is what
   // the phone sent and is never edited here; a session's list is not a playlist.
   if (editorShown && workspace.editor.id !== PHONE) {
@@ -1831,22 +1844,13 @@ async function saveQueue({ explicit = false } = {}) {
 /** The next row from [from] in [step] that can play, or null. Never wraps; the callers decide that. */
 
 
-/**
- * Random, as the phone has it (`docs/PLAN_RANDOM.md`).
- *
- * **A second queue, explicitly transient.** The page plays from `queue`, so while the dice runs
- * `queue` *is* the record -- which lets every row keep the actions, the marking and item 2's
- * scrolling that the playlist has -- and the playlist that was showing waits in `stash` until the
- * session ends. `remember()` refuses to write while this is set, so no playlist ever receives a pick.
- *
- * The record is what has played. Three picks are decided and fetched ahead of it and not shown: a
- * fetching strategy, not a promise.
- */
+/** Retained Random is a viewable heard record, even while another source owns transport. */
 let random = null;
-const RANDOM_AHEAD = 3;   // the phone's READ_AHEAD
-const RANDOM_DRAWS = 4;   // the phone's OVERDRAW: drawn wide, repeats dropped
-const RANDOM_FAILURES = 8; // the phone's maxFailedRandomPicks
-/** Replaceable so the checks can roll a known sequence; the page always uses `Math.random`. */
+let rememberedRandom = null;
+let randomView = null;
+const RANDOM_AHEAD = 3;   // Android READ_AHEAD
+const RANDOM_DRAWS = 4;   // Android OVERDRAW
+const RANDOM_FAILURES = 8;
 let randomSource = Math.random;
 
 /**
@@ -1865,6 +1869,7 @@ const SESSION = {
 
 function showSessionView(kind) {
   editorShown = !kind;
+  randomView = kind === 'random' ? rememberedRandom : null;
   $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
   $('randomnote').hidden = true;
@@ -1876,7 +1881,10 @@ function showSessionView(kind) {
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
-  $('random-leave').innerHTML = browseFromSource && kind === 'random'
+  $('sessionicon').hidden = kind === 'random';
+  $('random-dice').hidden = kind !== 'random';
+  $('randomhint').hidden = kind !== 'random';
+  $('random-leave').innerHTML = kind === 'random'
     ? iconSvg(ICON.cloud) + t('Browse') : iconSvg(ICON.playlist) + t('Playlist');
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
@@ -1896,20 +1904,47 @@ function enterRandomFromBrowse() {
   openRandom();
 }
 
-/**
- * Opens a session: a new record, and a tune playing with no second press.
- *
- * **The engine is started before anything is awaited**, because a browser allows sound only from
- * inside a click -- and a pick has to be read from IndexedDB and fetched before it can play.
- */
+/** First entry starts inside the user gesture; later entries only reveal the remembered record. */
 async function openRandom() {
+  if (rememberedRandom) {
+    showRandomView(true);
+    render();
+    setPlaying(playing);
+    return;
+  }
+  return rerollRandom();
+}
+
+function renderRandomHeading() {
+  const r = randomView;
+  if (!r) return;
+  $('sessiontitle').textContent = random === r && !manualCurrent() ? t('Playing at random') : t('Random');
+  const empty = !r.history.playedPicks.length;
+  $('randomnote').hidden = !empty;
+  if (empty) $('randomnote').textContent = random === r && drawing ? t('Picking a tune…')
+    : r.exhausted ? t('Nothing to pick from. Download the Modland index in Browse first.')
+    : t('No tracks in this Random list yet.');
+}
+
+function invalidateRandomWork(r) {
+  r.history.changeScope();
+  r.fillController.abort();
+  r.fillController = new AbortController();
+  r.bytes.clear();
+}
+
+/** Dice resets the session, unlike RandomHistory.reroll, which only prepares a fresh tail. */
+async function rerollRandom() {
   const engine = start().catch(() => null);
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
+  if (rememberedRandom) invalidateRandomWork(rememberedRandom);
+  ++scheduleIntent;
+  drawing = false;
   stopForLeaving();
   away = null;
-  random = { sessionId: ++nextRandomSession, stash: editorStash(), ahead: [], table: null,
-    filling: null, advancing: false, bytes: new Map() };
-  const context = new PlaybackContext({ source: { kind: 'random', session: random.sessionId },
+  const r = rememberedRandom = { sessionId: ++nextRandomSession, stash: editorStash(), history: new RandomHistory(),
+    table: null, bytes: new Map(), fillController: new AbortController(), exhausted: false };
+  const context = new PlaybackContext({ source: { kind: 'random', session: r.sessionId },
     order: new PlayOrder({ shuffle, repeat, random: randomSource }) });
   adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   rowState = null;
@@ -1917,85 +1952,83 @@ async function openRandom() {
   renderNothingPlaying();
   setPlaying(false);
   render();
-  const session = random;
+  const intent = scheduleIntent;
   await engine;
-  if (random === session) await rollRandom();
+  if (random === r && intent === scheduleIntent) await rollRandom();
 }
 
-/**
- * Tops the picks read ahead up to three: drawn uniformly over tunes, a tune the session has had
- * passed over unless the pool has run out, and each one's bytes fetched as soon as it is decided.
- */
-function fillAhead() {
-  const r = random;
-  if (!r) return Promise.resolve();
-  if (r.filling) return r.filling;
-  const generation = r.generation ?? 0;
-  const current = () => random === r && (r.generation ?? 0) === generation;
-  const operation = (async () => {
-    r.table ??= await archive.buildRandomTable();
-    while (current() && r.ahead.length < RANDOM_AHEAD && r.table.total > 0) {
-      const seen = new Set([...queue, ...r.ahead].map((entry) => entry.url));
-      const drawn = [];
-      for (let i = 0; i < RANDOM_DRAWS; i++) {
-        const track = await archive.drawTrack(r.table, randomSource);
-        if (!current()) return;
-        if (track) drawn.push(track);
-      }
-      if (!drawn.length) break;
-      const url = freshPick({ drawn: drawn.map((track) => track.url), seen });
-      const pick = drawn.find((track) => track.url === url);
-      r.ahead.push(pick);
-      r.bytes.set(pick.url, fetch(pick.url).then((response) => response.ok ? response.arrayBuffer() : null).catch(() => null));
-    }
-  })().finally(() => { if (r.filling === operation) r.filling = null; });
-  r.filling = operation;
-  return operation;
+async function fillRandom(r, ahead) {
+  const signal = r.fillController.signal;
+  await r.history.fill(ahead, RANDOM_DRAWS, async (count) => {
+    const table = r.table ?? await archive.buildRandomTable();
+    if (signal.aborted) return [];
+    r.table = table;
+    return archive.sampleRandom(table, count, randomSource, signal);
+  }, { signal });
 }
-/**
- * Adds a pick to the end of the record and plays it.
- *
- * **The C35 lesson, in the first line.** On the phone a track's end could be acted on once per poll
- * tick while the next pick was being chosen, and five picks went by in a second. Here the gap is
- * IndexedDB and a fetch. The flag is raised before the first `await`, so a second "ended" -- or a
- * second press of next -- finds a roll already under way and does nothing.
- */
+
+/** The heard record is never extended by speculation. Inactive views do not fetch music. */
+async function fillAhead(r = random) {
+  if (!r) return;
+  const generation = r.history.generation;
+  await fillRandom(r, RANDOM_AHEAD);
+  if (random !== r || generation !== r.history.generation) return;
+  const upcoming = r.history.upcoming(RANDOM_AHEAD);
+  const keep = new Set([...upcoming.map((track) => track.url), currentTrack()?.url]);
+  for (const url of r.bytes.keys()) if (!keep.has(url)) r.bytes.delete(url);
+  for (const track of upcoming) if (!r.bytes.has(track.url)) {
+    r.bytes.set(track.url, fetch(track.url).then((response) => response.ok ? response.arrayBuffer() : null).catch(() => null));
+  }
+}
+
+function playRememberedRandomAt(at, r, tracks) {
+  if (r !== rememberedRandom || r.history.playedPicks !== tracks) {
+    showNote(t('This Random list has changed. Try again.')); return;
+  }
+  if (!r.history.select(at)) return;
+  away = null;
+  const order = new PlayOrder({ tracks, shuffle, repeat, random: randomSource }).startAt(at);
+  activateContext(new PlaybackContext({ source: { kind: 'random', session: r.sessionId }, order }));
+}
+
+/** Foreground Next adopts one heard occurrence; repeated completion cannot launch another draw. */
 async function rollRandom({ intent = ++scheduleIntent, placement = 'append', autoPlay = true } = {}) {
   const r = random;
   if (!r || drawing && r.advanceIntent === intent) return;
+  const generation = r.history.generation;
   r.advanceIntent = intent;
-  r.advancing = true;
   drawing = true;
   schedule = schedule.finishCurrent();
   stopForLeaving();
   setPlaying(false);
+  render();
   let pick;
   try {
-    await fillAhead();
-    if (random !== r || scheduleIntent !== intent) return;
-    pick = r.ahead.shift();
+    // Keep completion coalescing asynchronous even when the prepared pick is already available.
+    await (r.history.hasNext ? Promise.resolve() : fillRandom(r, 1));
+    if (random !== r || scheduleIntent !== intent || r.history.generation !== generation) return;
+    const context = workspace.context;
+    do { pick = r.history.advance(); }
+    while (pick && context.omitted.includes(context.entryIds[r.history.cursor]));
+    if (!pick) {
+      r.exhausted = true;
+      return;
+    }
+    r.exhausted = false;
+    const tracks = r.history.playedPicks;
+    const order = context.order.copy({ tracks, indices: tracks.map((_, i) => i) }).jumpTo(r.history.cursor);
+    return activateContext(context.withOrder(order), placement, autoPlay);
   } catch (error) {
-    if (random === r && scheduleIntent === intent) showNote(t('could not read it: {reason}', { reason: error.message }));
-    return;
+    if (random === r && scheduleIntent === intent && error.name !== 'AbortError')
+      showNote(t('could not read it: {reason}', { reason: error.message }));
   } finally {
-    if (r.advanceIntent === intent) {
-      r.advancing = false;
+    // An old session must not dismiss a newer foreground draw's busy state.
+    if (random === r && (scheduleIntent === intent || !drawing)) {
       drawing = false;
       setPlaying(playing);
+      render();
     }
   }
-  if (random !== r || scheduleIntent !== intent) return;
-  if (!pick) {
-    $('randomnote').textContent = t('Nothing to pick from. Download the Modland index in Browse first.');
-    $('randomnote').hidden = false;
-    setPlaying(false);
-    return;
-  }
-  const context = workspace.context;
-  const tracks = [...context.order.tracks, pick];
-  const order = context.order.copy({ tracks, indices: tracks.map((_, i) => i) }).jumpTo(tracks.length - 1);
-  fillAhead().catch(() => {});
-  activateContext(context.withOrder(order), placement, autoPlay);
 }
 
 /**
@@ -2191,7 +2224,7 @@ let swallowRowClick = false;
 function holdToSelect(row, entry) {
   row.addEventListener('pointerdown', () => { swallowRowClick = false; });
   bindTrackGestures(row, {
-    onAdd: () => enqueueTrack(entry, !editorShown && fromHistory()),
+    onAdd: () => enqueueTrack(entry, visibleFromHistory()),
     onLongPress: () => { swallowRowClick = true; startSelecting(entry); },
     canSwipe: () => selected.size === 0,
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue'),
@@ -2574,12 +2607,12 @@ function skipFailedPick(reason) {
     return false;
   }
   const failed = currentTrack();
-  removeRandomAt(index);
+  removeRandomAt(index, r);
   rowState = index >= 0 ? 'selected' : null;
   render();
   status(t('skipped {name} — {reason}', { name: failed?.name ?? t('a pick'), reason }));
   $('error').textContent = '';
-  rollRandom();
+  nextFile();
   return true;
 }
 
@@ -2588,16 +2621,26 @@ function skipFailedPick(reason) {
  * the rest. The one playing may go and goes on playing; the cursor row then says "selected" rather
  * than claim a tune that is no longer in the list.
  */
-function removeRandomAt(at) {
-  if (!random || at < 0 || at >= queue.length) return;
-  const context = workspace.context;
-  const tracks = queue.filter((_, i) => i !== at);
-  const ids = context.entryIds.filter((_, i) => i !== at);
-  const parked = at <= index ? index - 1 : index;
-  let order = new PlayOrder({ tracks, shuffle, repeat, random: randomSource });
-  if (parked >= 0) order = order.startAt(parked);
-  adoptPlan(new PlaybackPlan(context.copy({ order, entryIds: ids,
-    omitted: context.omitted.filter((id) => ids.includes(id)) }), schedule));
+function removeRememberedRandomAt(at, r, tracks) {
+  if (r !== rememberedRandom || tracks !== r.history.playedPicks) {
+    showNote(t('This Random list has changed. Try again.')); return;
+  }
+  removeRandomAt(at, r);
+}
+
+function removeRandomAt(at, r = randomView ?? random) {
+  if (!r || at < 0 || at >= r.history.playedPicks.length) return;
+  r.history.remove(at);
+  if (random === r) {
+    const context = workspace.context;
+    const tracks = r.history.playedPicks;
+    const ids = context.entryIds.filter((_, i) => i !== at);
+    let order = new PlayOrder({ tracks, shuffle, repeat, random: randomSource });
+    if (r.history.cursor >= 0) order = order.startAt(r.history.cursor);
+    adoptPlan(new PlaybackPlan(context.copy({ order, entryIds: ids,
+      omitted: context.omitted.filter((id) => ids.includes(id)) }), schedule));
+    fillAhead(r).catch(() => {});
+  }
   render();
 }
 
@@ -2655,7 +2698,7 @@ function stopForLeaving() {
 
 /** Returning to the editor does not replace its independently playing source. */
 function endRandom() {
-  if (random) showEditor();
+  if (randomView || random) showEditor();
 }
 
 function endAway() {
@@ -2663,7 +2706,7 @@ function endAway() {
 }
 
 /** The heading's way back, whichever session it is heading. */
-function endSession() { if (random) endRandom(); else endAway(); }
+function endSession() { if (randomView || random) endRandom(); else endAway(); }
 
 /** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
 function dropSession() {
@@ -3059,8 +3102,9 @@ async function renderBrowse() {
   // swaps the whole list at once when it has what to draw. Every other level starts empty.
   const inPlace = browsePath[0] === 'catalogues';
   if (!inPlace) list.replaceChildren();
-  $('browsedigression').hidden = browseFromSource || !away?.dice;
-  if (!browseFromSource && away?.dice) {
+  const digressing = !browseFromSource && !!away?.dice && arrivedByJump();
+  $('browsedigression').hidden = !digressing;
+  if (digressing) {
     $('browsedigression').innerHTML = iconSvg(ICON.detour)
       + '<div class="text"><div class="title"></div><div class="meta"></div></div>';
     $('browsedigression').querySelector('.title').textContent = t('Browsing author');
@@ -3073,8 +3117,8 @@ async function renderBrowse() {
   // the one that leads back to the dice.
   // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
-  $('browsesearch').hidden = !browseFromSource && !!away?.dice || browsePath[0] !== 'search';
-  $('browseclose').hidden = !browseFromSource && !!away?.dice;
+  $('browsesearch').hidden = digressing || browsePath[0] !== 'search';
+  $('browseclose').hidden = digressing;
   $('historypager').hidden = true;
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
@@ -3679,7 +3723,7 @@ $('browseback').onclick = async () => {
   // a digression came from** (`docs/BACKLOG.md` A41): there the way back is the dice, not the
   // archive, which is what "one level of digression" means.
   if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else if (
-    !browseFromSource && away?.dice && browsePath.length <= 3
+    !browseFromSource && away?.dice && arrivedByJump()
   ) {
     showPanel(null);
     return;
@@ -3873,6 +3917,7 @@ function previousFile() {
   executeStep(playableStep(schedule.previous(workspace.context), false));
 }
 
+bindRandomDice($('random-dice'), { onReroll: () => rerollRandom(), canReroll: () => !!randomView && !$('queue').closest('main').hidden });
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
 $('snackundo').onclick = () => undoAction?.();
 $('tab-save').onclick = () => saveEdits();
@@ -3905,7 +3950,7 @@ addEventListener('beforeunload', (event) => {
   event.returnValue = '';
 });
 $('random-leave').onclick = async () => {
-  if (browseFromSource && !editorShown && random) {
+  if (randomView) {
     showEditor(); browsePath = []; browseFromSource = false; sourceBrowseRoute = null;
     showPanel('browse'); await renderBrowse();
   } else endSession();

@@ -35,8 +35,8 @@ are still in progress and no intermediate APK/bundle is supplied here.
 
 ## WEB W03 source return — focused host checkpoint, browser checks pending
 
-The source label now navigates through production handlers; the context/navigation gate and
-W10/W11 scope/filter integration remain pending. Do not treat this as a packaged handoff.
+The source label navigates through production handlers and passes the combined context/navigation
+host gate; W10/W11 scope/filter integration remains pending. Do not treat this as a packaged handoff.
 
 - [ ] While A plays and B is selected, open Queue and activate its source label. Reveal A without
   restarting, resuming a paused file or changing pending manual requests. Repeat during a manual
@@ -48,6 +48,23 @@ W10/W11 scope/filter integration remain pending. Do not treat this as a packaged
   History starts at its top; Search keeps its query; Random return never rerolls.
 - [ ] Check the inline name/arrow, full accessible description and destination focus in EN/PL,
   narrow/large-text layouts and both themes. A manual-only/shared-link source is a plain label.
+
+## WEB W04 remembered Random — host integration, browser checks pending
+
+- [ ] Enter Random for the first time: one pick starts, with three hidden prepared picks. Leave
+  and return: the same heard list remains, even if a different playlist/author/History is playing.
+  Global transport controls follow that actual source; only tapping a Random row activates it.
+- [ ] Use ordinary Back and Queue's source return. Random goes back one level to Browse without
+  stale author headings, hidden Close controls or a second Back to the playlist.
+- [ ] Double-click/double-tap the dice: one new list, same filter, retained manual requests and
+  independent global History. A single pointer tap does nothing. Check keyboard activation,
+  visible hint, 360-degree rotation, reduced motion, drags, holds and a second finger.
+- [ ] Walk an earlier heard row with Next, then pass the heard boundary. One new row appears per
+  advance. During manual playback no Random row is highlighted; Previous returns to its anchor.
+  Clear/Undo preserves the audible file and remembered record, also while a draw/download waits.
+- [ ] Try empty/unavailable indexes and a very small pool. Revisiting an empty session does not
+  silently retry; deliberate reroll does. Repeated files have separate positions; pruning one
+  never removes another occurrence or changes another active source.
 
 ## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
 

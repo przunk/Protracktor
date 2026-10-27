@@ -71,7 +71,7 @@ export default async function checkSourceRoutes({ window, check }) {
     'Back from a restored Everywhere search returns to Browse root in one action');
 
   await seed();
-  await api.openRandom(); await settle();
+  await api.rerollRandom(); await settle();
   const opened = window.__toWorklet.filter((message) => message.type === 'open').at(-1);
   api.onWorklet({ type: 'opened', requestId: opened.requestId, describe: 'title\tRemembered source', duration: 90,
     rate: 44100, subsongs: 1, current: 0, canSeek: true });

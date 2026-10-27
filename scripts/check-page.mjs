@@ -171,7 +171,13 @@ const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replac
 const reorderSource = fs.readFileSync('web/src/queue-reorder.js', 'utf8').replace(/^export /gm, '');
 const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const sourceNavigationSource = fs.readFileSync('web/src/source-navigation.js', 'utf8').replace(/^export /gm, '');
+const randomHistorySource = fs.readFileSync('web/src/random-history.js', 'utf8').replace(/^export /gm, '');
+const randomDiceSource = fs.readFileSync('web/src/random-dice.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { RandomHistory } from './random-history.js';",
+    `const { RandomHistory } = (() => { ${randomHistorySource}; return { RandomHistory }; })();`)
+  .replace("import { bindRandomDice } from './random-dice.js';",
+    `const { bindRandomDice } = (() => { ${randomDiceSource}; return { bindRandomDice }; })();`)
   .replace("import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';",
     `const { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } = (() => { ${sourceNavigationSource}; return { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute }; })();`)
   .replace("import { bindTrackGestures } from './row-gestures.js';",
@@ -197,7 +203,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
-    + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
+    + 'buildRandomTable, drawTrack, sampleRandom, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
     + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex, modlandFormatOf }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
@@ -205,7 +211,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2262,7 +2268,7 @@ if (window.__api) {
   if ($('shuffle').classList.contains('on')) $('shuffle').click();
   for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
   api.useRandomSource(() => 0.1);
-  await api.openRandom();
+  await api.rerollRandom();
   await settle();
   const record = api.queueNow();
   const cursor = api.indexNow();
@@ -3661,6 +3667,7 @@ await (await import('./check-page-queue-load.mjs')).default({ window, check });
 await (await import('./check-page-source-navigation.mjs')).default({ window, check });
 await (await import('./check-page-source-save.mjs')).default({ window, check });
 await (await import('./check-page-source-routes.mjs')).default({ window, check });
+await (await import('./check-page-random.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

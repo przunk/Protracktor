@@ -41,8 +41,8 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | --- | --- | --- |
 | W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
 | W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
-| W03 | Return to playback source | Destination/route integration passes focused host checks; final gate and W11 search-scope integration pending |
-| W04 | Remembered Random and deliberate reroll | Pending |
+| W03 | Return to playback source | Destination/route integration passes combined full host gate; W10/W11 query/scope wiring remains pending |
+| W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Pending |
 | W06 | Qualified played-before marks | Pending |
 | W07 | Saved catalogue places | Pending |
@@ -353,11 +353,64 @@ write; subsequent project-local write/fsync/read, prepared-source comparisons, s
 and successful reruns confirmed that the files were accessible again. No environment repair or Java/toolchain change occurred.
 
 This is a scoped implementation checkpoint, **not full-gate readiness or browser acceptance**.
-The current complete gate still identifies W02's candidate. Integrate remembered Random in W04,
-then validate the context/navigation phase together. W03's captured search-scope slot must be
+At this checkpoint the current complete gate identified W02's candidate. The W04 checkpoint below
+subsequently validates the integrated context/navigation phase. W03's captured search-scope slot must be
 connected to the real W11 scopes, and its History-query slot to W10; those later integrations
 remain explicit requirements. Source snapshots are session-only. No Android production/schema,
 dependency, APK, merge, push or deployment change.
+
+## W04 remembered Random checkpoint — 2026-10-27
+
+Reference: Android `RandomHistory`, its fifteen tests, `RandomIsNotSearchTest`, `RandomScreen`,
+`RandomDice` and the controller's open/reset/selection/removal/read-ahead paths. First entry starts
+Random; subsequent entry, even into an exhausted empty session, is navigation only. Choosing a
+remembered row activates its session. Next/Previous always follow the actual source, including
+an author playing while the remembered Random list is visible. Manual playback has no borrowed
+Random highlight. All Random Back actions return to Browse root.
+
+`RandomHistory` owns the immutable heard snapshot, independent cursor/heard boundary and hidden
+prepared tail. A serialized fill uses generation checks after both initial sampling and small-pool
+fallback. Cancelled producers cannot append late data or release another waiter's lock. Fill(1)
+serves foreground draws; fill(3) prepares the invisible tail. Only active Random fetches upcoming
+bytes. Clear invalidates speculation but retains the heard record and the actual adopted file
+promise, including a Clear in the microtask gap before engine startup returns.
+
+The page separates active `random`, retained `rememberedRandom` and visible `randomView`.
+Visible row actions use that record and its positional snapshot, never an unrelated active source
+or History origin. Duplicate files retain distinct source occurrence IDs. Source/Queue selection
+synchronizes the Random cursor. Existing WEB failed-pick pruning is preserved. Read-ahead can
+complete while inactive, but it cannot transfer transport ownership or make hidden rows visible.
+
+The labelled dice uses double mouse/touch activation; keyboard/accessibility has one equivalent
+action. Pointer compatibility events do not double-activate it. The icon rotates 360 degrees over
+500 ms; reduced motion omits rotation. A reset creates a new session/heard list, retains waiting
+manual requests and does not clear global History. It deliberately does not call the different
+`RandomHistory.reroll` model operation. The visible hint uses the accepted Android wording.
+
+Integration found three mechanisms: a synchronously adopted prepared pick could accept duplicate
+completion signals, and Browse presentation still inferred an author detour from the active audio
+source. Also, independent draws within a WEB batch allowed duplicates that native SQL sampling
+without replacement does not. The sampler now uses a bounded partial shuffle of pool positions.
+Completion coalescing stays asynchronous and blocks a second draw; author presentation is
+now bound to the actual navigation jump. Their actual page guards fail before correction, including a fixed-RNG batch test.
+
+**Checked on the host:** the combined forced gate passes **1218 tests / 160 suites**, zero
+failures/errors/skips, **777 s**, with all 31 unit tasks executed (544.2 s). All companions pass,
+including **760 page assertions** (28 new Random action/MessagePort checks), **52 engine/worklet**,
+**67 context**, **29 schedule**, **14 effects**, **9 source-navigation**, **17 Random-history**,
+**9 dice**, **16 swipe**, **9 grip** and **7 keyed-presentation** cases. Fresh lint reports
+**0 errors / 79 warnings**, 94.7 s. The final 33 input hashes, complete logs, JUnit and lint reports
+are archived under ignored `user/web-parity-verification/w04-context-navigation-full-gate/`,
+based on `164311f`. WEB inputs were frozen before their companion stages; native sources remained
+unchanged throughout the fresh run.
+
+Disconnecting the real dice callback, starting on remembered navigation, leaking History origin
+into a visible Random request and dropping an adopted prefetch each fails its specific page
+assertion; the restored candidate passes. Mutations of the heard-boundary and fallback-generation
+checks fail the ported native model scenarios. W04 is technically implemented. The W03 destinations
+now share a passing integrated gate, while W10/W11 query/scope wiring remains required.
+**Real browser appearance, physical touch and sound remain unchecked.**
+No Android production/schema/native/dependency change, intermediate bundle, APK, merge or deployment.
 
 ## Deferred or blocked work
 

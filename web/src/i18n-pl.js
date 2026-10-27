@@ -7,6 +7,12 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Start a new Random list": "Rozpocznij nową listę Random",
+  "New list": "Nowa lista",
+  "Double-tap the dice to reroll the list": "Dotknij dwukrotnie kostki, aby wylosować nową listę",
+  "Picking a tune…": "Losowanie utworu…",
+  "No tracks in this Random list yet.": "Ta lista Random jest jeszcze pusta.",
+  "This Random list has changed. Try again.": "Ta lista Random się zmieniła. Spróbuj ponownie.",
   "Newer": "Nowsze",
   "Older": "Starsze",
   "{first}–{last} of {total}": "{first}–{last} z {total}",
