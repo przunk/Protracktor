@@ -84,14 +84,17 @@ composition over Google Maps or behaviour on an actual navigation device.
 
 The branch changes the target from -23 to -18 LUFS while preserving boost caps and sample-peak
 protection. [Host measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
-Release APK and full verification are pending; no listening outcome is inferred from host checks.
+Clean source fbf2958 passed 1217 tests/full gate/lint and 54 sanitized native/DSP checks.
+Minified test APK [1.4.0 (1330)](../dist/protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk)
+is ready; no listening outcome is inferred from host checks.
 
 1. Use the same output device, system-volume step, stereo mode and subsong. Enable **Volume
    normalization** in Settings; an existing preference is retained. Compare the same passages
    in Studium Fałszu (Jakim), Lotus 3 Space ninja and several quiet/loud Random selections.
-2. Compare with the previous APK's normalization On, then with this APK's normalization Off.
-   Record the installed build, track/subsong and stereo mode. Off should preserve the original
-   signal; the trial does not add a global boost to that path.
+2. Compare this APK's normalization Off and On over the same passages, and with the other player
+   if available. Keep its processing settings consistent. Record the installed build,
+   track/subsong and stereo mode. Earlier listening notes can provide the -23 LUFS baseline;
+   this check does not require installing an older APK. Off preserves the original signal.
 3. Listen for loudness jumps, distortion, changes to attacks, quiet intros and fade-outs.
    A higher target can increase first-play differences because quiet tracks still hit the
    partial +6 dB cap. Repeat after longer listening to check measurement reuse.

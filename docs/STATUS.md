@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-27 — C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-27 — B52 -18 LUFS trial ready on unmerged feature/louder-normalization, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -14,8 +14,19 @@ comparison before accepting a policy change. The fixed target is -18 LUFS instea
 -23 LUFS; existing gain caps, sample-peak protection and the default-Off preference are retained.
 41 native Player/analysis and 13 DSP checks pass after reproducing the old target with failing
 assertions. Real stored-PCM prefixes confirm that loudness increases only when gain/peak limits
-permit it; their first-play spread increases from 2.57 to 7.57 LU. Full gate/lint and a release
-test APK are pending. Actual Android sound and acceptance remain **unchecked**.
+permit it; their partial-prefix spread increases from 2.57 to 7.57 LU. Fresh complete offline
+measurements of Studium Fałszu and Lotus 3 Space Ninja both reach -18 LUFS; a whole-track
+simulation with only twenty-second preparation leaves a 1.29 LU difference.
+
+Clean source **fbf2958** passed the forced full gate: **1217 tests / 159 suites**, zero
+failures/errors/skips, **652 s**, all companion checks passed. Fresh lint: **0 errors / 79
+warnings**, **90.2 s**. All 54 native/DSP cases also pass ASan/UBSan. Minified, test-signed
+release **1.4.0 (1330)** built in **190 s**:
+[protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk](../dist/protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk),
+**11,973,003 bytes**, SHA-256
+`00d0d4cc9aa7dc5e37ac9705bfdabe705b495fa5fe1d0a7a2ad2161607655b1e`.
+Signature, embedded revision, version, ZIP/native alignment, R8 and packaged native outputs
+were checked. Actual Android sound and acceptance remain **unchecked**.
 [Trial, measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
 VersionName 1.4.0 and schema 23 are retained. Develop, master/tags, the frozen WEB work and AMP
 are unchanged; no merge, push or publication.
