@@ -150,9 +150,21 @@ establishing that language alone caused the reported appearance.
 The proposed direction is consistent adaptive widths and alignment within related action groups,
 rather than one fixed width across all toolbars. Preserve Polish/English labels, narrow-screen
 layout, larger-font support and touch targets. Do not rescale all icons based solely on differently
-sized button backgrounds. No layout change has been implemented or checked on either phone.
+sized button backgrounds. The candidate below implements this direction; its appearance on
+either phone remains unchecked.
 
 ## Verification state
+
+### C124 candidate — 2026-10-28
+
+On the same unmerged branch, playlist action widths follow the longest localized caption, capped
+by available row space divided in physical pixels. Browse and Settings keep opposite edges.
+The return-to-playlist action is shared between Browse and Random; it and Random Filter use one
+measured width. Glyph size, height policy, callbacks and theme selection stay unchanged.
+
+The Polish production-bar test failed before the change (139 versus 112 px). Five rendered
+geometry/touch checks now pass: English/Polish playlist groups, a five-action 320dp row at 2x text,
+and English/Polish Random/return widths. This is host layout evidence, not MIUI confirmation.
 
 ### C123 candidate — 2026-10-28
 

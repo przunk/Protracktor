@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
@@ -58,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -325,9 +327,7 @@ fun ProtracktorApp(
                                 // four presses even when it is behaving correctly. This is one, from anywhere.
                                 // Labelled as well as drawn, because an icon alone does not say where it goes.
                                 if (showBrowse && !showQueue) {
-                                    LabelledAction(
-                                        icon = PlayerIcons.Playlist,
-                                        label = stringResource(R.string.action_to_playlist),
+                                    PlaylistReturnAction(
                                         // **Out, not back.** During a digression both screens count
                                         // themselves showing, so without this condition the button is drawn
                                         // twice. There is one: Back returns to whatever sent you here — the
@@ -337,21 +337,13 @@ fun ProtracktorApp(
                                             showRandom = false
                                             showBrowse = false
                                         },
-                                        haptic = null,
-                                        slim = true,
                                         modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                                     )
                                 }
                                 // Return to the selected playlist view without stopping audio.
                                 if (showRandom && !showBrowse && !showQueue) {
-                                    LabelledAction(
-                                        icon = PlayerIcons.Playlist,
-                                        label = stringResource(R.string.action_to_playlist),
+                                    PlaylistReturnAction(
                                         onClick = { viewModel.returnToPlaylist(); showRandom = false },
-                                        haptic = null,
-                                        // **The same pill as Filter, one row below it.** See
-                                        // `TOP_BAR_ACTION_EDGE`.
-                                        slim = true,
                                         modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                                     )
                                 }
@@ -762,15 +754,7 @@ private fun PlaylistSheet(
     }
 }
 
-/**
- * The playlist screen's top bar: the chip, and the actions, wrapping when they must.
- *
- * **A row that cannot wrap has to take the space from something**, and what it took was the
- * playlist's name: with Save and Discard showing, the chip and five pills come to about 450dp on a
- * screen some 360dp wide, so "Favorites" became "Favo…" (`docs/STATUS.md` C48). A `TopAppBar` is one
- * fixed-height row and cannot answer that, which is why this is not one. The actions flow onto a
- * second line instead, and only while there is something to save.
- */
+/** Playlist name above equal-width actions; their width adapts to labels and available space. */
 @Composable
 internal fun PlaylistTopBar(
     state: PlayerUiState,
@@ -784,6 +768,11 @@ internal fun PlaylistTopBar(
     onSettings: () -> Unit,
 ) {
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
+    val preferredActionWidth = slimActionWidth(
+        stringResource(R.string.action_browse), stringResource(R.string.action_discard),
+        stringResource(R.string.action_save), stringResource(R.string.action_send_to_browser),
+        stringResource(R.string.settings_title),
+    )
     Surface(color = MaterialTheme.colorScheme.surface) {
         Column(
             verticalArrangement = Arrangement.spacedBy(TOP_BAR_SEAM),
@@ -837,61 +826,70 @@ internal fun PlaylistTopBar(
                 }
             }
 
-            // **Sides, not a queue.** Browse is where you go for more music and it stays at the left
-            // edge; Settings is the app's own and stays at the right. Save and Discard appear beside
-            // them when there is something to save, growing into the gap in the middle so nothing
-            // that was already on the bar moves (`docs/STATUS.md` C48).
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                LabelledAction(
-                    icon = PlayerIcons.Cloud,
-                    label = stringResource(R.string.action_browse),
-                    onClick = onBrowse,
-                    // Arriving at Browse buzzes; pressing the way in as well would be two for one.
-                    haptic = null,
-                    slim = true,
-                )
-                Spacer(Modifier.weight(1f))
-                // Only while there is something to save. A permanently lit Save teaches nothing
-                // about whether the list on screen is the list on disk.
-                if (state.dirty) {
+            // Keep Browse left and Settings right. When all actions cannot fit at their preferred
+            // width, shrink the group evenly rather than clipping the final button.
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val actionCount = 2 + (if (state.dirty) 2 else 0) + (if (state.queue.tracks.isNotEmpty()) 1 else 0)
+                // Divide physical pixels first so rounding cannot steal width from the last action.
+                val availableActionWidth = with(LocalDensity.current) { (constraints.maxWidth / actionCount).toDp() }
+                val actionWidth = minOf(preferredActionWidth, availableActionWidth)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     LabelledAction(
-                        icon = PlayerIcons.Discard,
-                        label = stringResource(R.string.action_discard),
-                        onClick = onDiscard,
+                        icon = PlayerIcons.Cloud,
+                        label = stringResource(R.string.action_browse),
+                        onClick = onBrowse,
+                        // Arriving at Browse buzzes; pressing the way in as well would be two for one.
+                        haptic = null,
                         slim = true,
+                        modifier = Modifier.width(actionWidth),
                     )
+                    Spacer(Modifier.weight(1f))
+                    // Only while there is something to save. A permanently lit Save teaches nothing
+                    // about whether the list on screen is the list on disk.
+                    if (state.dirty) {
+                        LabelledAction(
+                            icon = PlayerIcons.Discard,
+                            label = stringResource(R.string.action_discard),
+                            onClick = onDiscard,
+                            slim = true,
+                            modifier = Modifier.width(actionWidth),
+                        )
+                        LabelledAction(
+                            icon = PlayerIcons.Save,
+                            label = stringResource(R.string.action_save),
+                            onClick = onSave,
+                            slim = true,
+                            modifier = Modifier.width(actionWidth),
+                        )
+                    }
+                    // It acts on the whole playlist, so it sits with the app's own actions rather than
+                    // in a row menu. Only while there is a list to send.
+                    if (state.queue.tracks.isNotEmpty()) {
+                        LabelledAction(
+                            // **The icon says which of the two things a press will do.** With nobody
+                            // paired it opens the camera, so it is a code; paired, it sends, so it is a
+                            // link.
+                            icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
+                            label = stringResource(R.string.action_send_to_browser),
+                            onClick = onSendToBrowser,
+                            onLongClick = onRescan,
+                            longClickLabel = stringResource(R.string.action_pair_again),
+                            slim = true,
+                            modifier = Modifier.width(actionWidth),
+                        )
+                    }
                     LabelledAction(
-                        icon = PlayerIcons.Save,
-                        label = stringResource(R.string.action_save),
-                        onClick = onSave,
+                        icon = PlayerIcons.Settings,
+                        label = stringResource(R.string.settings_title),
+                        onClick = onSettings,
+                        haptic = null,
                         slim = true,
+                        modifier = Modifier.width(actionWidth),
                     )
                 }
-                // It acts on the whole playlist, so it sits with the app's own actions rather than
-                // in a row menu. Only while there is a list to send.
-                if (state.queue.tracks.isNotEmpty()) {
-                    LabelledAction(
-                        // **The icon says which of the two things a press will do.** With nobody
-                        // paired it opens the camera, so it is a code; paired, it sends, so it is a
-                        // link.
-                        icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
-                        label = stringResource(R.string.action_send_to_browser),
-                        onClick = onSendToBrowser,
-                        onLongClick = onRescan,
-                        longClickLabel = stringResource(R.string.action_pair_again),
-                        slim = true,
-                    )
-                }
-                LabelledAction(
-                    icon = PlayerIcons.Settings,
-                    label = stringResource(R.string.settings_title),
-                    onClick = onSettings,
-                    haptic = null,
-                    slim = true,
-                )
             }
         }
     }
@@ -914,32 +912,7 @@ private val TOP_BAR_SEAM = 6.dp
 /** The inset between the last control and the edge of the screen. Not a seam; a margin. */
 private val TOP_BAR_EDGE = 8.dp
 
-/**
- * Where an action in the app bar puts its **visible** right edge, so it lines up with the action in
- * the header underneath.
- *
- * Filter, in the header, and the playlist action in the bar above it have to match. Three separate
- * things make them differ:
- *
- * - **Height.** The bar's action was a full pill, 72dp, which a 64dp `TopAppBar` then clipped;
- *   Filter is slim at 46dp. Both are slim now.
- * - **Width.** A full pill's floor is 48dp and a slim one's is `SLIM_MIN_WIDTH` = 56dp, and neither
- *   label needs more than that — so as full pills they were 51dp and 56dp, and as slim ones they
- *   are both exactly 56dp.
- * - **The right edge**, which is what this constant is for.
- *
- * Three paddings stack up before a pill's background starts: this one, `LabelledAction`'s own
- * [ACTION_SEAM], and `TopAppBar`'s internal 4dp. The heading below adds [SESSION_HEADER_EDGE] and
- * the same seam — so the seam cancels, and what is left is the heading's edge less what the bar
- * already adds. **Derived rather than written down**, so that moving the heading moves this too.
- *
- * Measured rather than assumed: before this, the two pills stood 32px and 40px from the edge of an
- * 864px screen at 2.1x, which is 15dp and 19dp — and 19dp is what `SESSION_HEADER_EDGE +
- * ACTION_SEAM` comes to.
- *
- * `TOP_BAR_EDGE` stays 8dp for the playlist bar, whose actions that bar lays out itself rather than
- * `TopAppBar`, so they never had the extra 4dp to account for.
- */
+/** The top app bar adds 4dp beyond the action's seam; cancel it to match the session header. */
 private val TOP_APP_BAR_ACTION_PADDING = 4.dp
 private val TOP_BAR_ACTION_EDGE = SESSION_HEADER_EDGE - TOP_APP_BAR_ACTION_PADDING
 

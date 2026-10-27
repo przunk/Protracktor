@@ -117,6 +117,14 @@ minimum, not an equal-width group contract. Consistent adaptive sizing within re
 is proposed; no code fix or device verification has been performed. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
 
+**Candidate prepared 2026-10-28, unmerged `fix/redmi-theme-action-alignment`:** size playlist
+actions from their longest localized caption and constrain the group to the available row width.
+Random Filter and the return-to-playlist action share one measured width. Divide the available
+physical pixels before converting to dp so rounding cannot narrow the last of five actions.
+The rendered Polish playlist test failed before the change (139 versus 112 px); five geometry
+and touch tests now pass, including English/Polish and five actions at 320dp with 2x text.
+Phone appearance and MIUI behaviour remain unverified; C124 stays open until device testing.
+
 ## C121 WEB decoder filename lost when an entry has a display title
 
 Direct web-testing report recorded 2026-10-26: `african.pt3` from Modland is refused by libopenmpt, and ASMA's

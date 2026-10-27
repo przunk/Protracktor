@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -182,6 +183,7 @@ private fun RandomHeader(
             // The header's own size, not the full pill: a 72dp button makes this row half again
             // as tall as the digression's, and the two sit one tap apart.
             slim = true,
+            modifier = Modifier.width(sessionActionWidth()),
         )
     }
 }
