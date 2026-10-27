@@ -39,13 +39,16 @@ int main() {
         m.process(quiet.data(),quiet.size()/2,48000);
         require(std::abs(m.profile().lufs-before.lufs)<.4,"relative gate included the quiet section");
     });
-    test("known trim equalises quiet and loud copies without changing dynamics",[] {
-        double final[2]; int i=0;
-        for (float amplitude:{.04f,.5f}) { auto a=tone(48000,4,amplitude); LoudnessMeter m;
-            m.process(a.data(),a.size()/2,48000); VolumeNormalizer n; n.configure(true,m.profile(true));
-            n.process(a.data(),a.size()/2,48000); LoudnessMeter output; output.process(a.data(),a.size()/2,48000);
-            final[i++]=output.profile().lufs; }
-        require(std::abs(final[0]-final[1])<.2,"track copies were not equalised");
+    test("known trim equalises quiet and loud copies at -18 LUFS",[] {
+        for (int rate:{44100,48000}) {
+            double final[2]; int i=0;
+            for (float amplitude:{.04f,.5f}) { auto a=tone(rate,4,amplitude); LoudnessMeter m;
+                m.process(a.data(),a.size()/2,rate); VolumeNormalizer n; n.configure(true,m.profile(true));
+                n.process(a.data(),a.size()/2,rate); LoudnessMeter output; output.process(a.data(),a.size()/2,rate);
+                final[i++]=output.profile().lufs; }
+            require(std::abs(final[0]-final[1])<.2,"track copies were not equalised");
+            for (double lufs:final) require(std::abs(lufs+18)<.15,"output missed the -18 LUFS target");
+        }
     });
     test("Off is an exact bypass even for unusual sample values",[] {
         VolumeNormalizer n; auto a=tone(48000,1,1.2f), expected=a; n.process(a.data(),a.size()/2,48000);
@@ -58,8 +61,15 @@ int main() {
         require(std::abs(a[0]/a[1]-2)<1e-5,"independent channel limiting shifted stereo");
     });
     test("partial profiles have a conservative boost cap",[] {
-        require(VolumeNormalizer::gainFor({20,-50,.001,false})<=2.0001,"partial boost exceeds 6 dB");
-        require(VolumeNormalizer::gainFor({20,-50,.001,true})<=4.0001,"complete boost exceeds 12 dB");
+        const float partial=VolumeNormalizer::gainFor({20,-30,.01,false});
+        const float complete=VolumeNormalizer::gainFor({20,-30,.01,true});
+        require(std::abs(20*std::log10(partial)-6)<.001,"partial boost differs from the 6 dB cap");
+        require(std::abs(20*std::log10(complete)-12)<.001,"complete boost differs from the 12 dB cap");
+    });
+    test("sample-peak headroom takes precedence over the louder target",[] {
+        const float gain=VolumeNormalizer::gainFor({20,-30,.4,true});
+        require(std::abs(gain*.4-VolumeNormalizer::ceiling)<1e-6,"measured peak headroom was not respected");
+        require(-30+20*std::log10(gain)<-18,"peak-limited profile incorrectly reached the target");
     });
     test("non-finite input cannot poison following samples",[] {
         VolumeNormalizer n; n.configure(true); std::vector<float> a{NAN,INFINITY,.1f,-.1f};

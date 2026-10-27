@@ -2,8 +2,85 @@
 
 Selected 2026-10-22 after Queue-source acceptance, implemented on `feature/volume-normalization`
 from develop 9c44fc9, and retained for develop on 2026-10-23. Integrated as **4aab46e**.
-Prepared release [1.4.0 (1304)](RELEASE_NOTES_1.4.0.md) retains this playback policy. Earlier
+Prepared release [1.4.0 (1304)](RELEASE_NOTES_1.4.0.md) retains the original -23 LUFS policy. Earlier
 integration/build checkpoints below preserve their original 1.3.0 version and Git states.
+
+## Louder target trial — 2026-10-27, unmerged
+
+Try **-18 LUFS** on `feature/louder-normalization`, from develop `141a084`, before deciding
+whether to replace the released -23 LUFS policy. Listening feedback reports that another player
+sounds substantially louder; with normalization Off, Protracktor was estimated to remain
+10–15% quieter. This is a subjective comparison, not a measured gain ratio. The other player,
+its processing and exact test material have not been identified.
+
+Change only the normalization target. Keep the existing Off/On preference, default Off,
++6 dB partial/+12 dB complete boost caps, -2 dBFS sample-peak headroom, fixed trim, ramps,
+focus ducking and export behaviour. No global gain or additional Settings control is introduced.
+Existing profiles hold input measurements, not output gain, so they remain valid and use the
+new target when playback configures normalization. There is no schema/cache-format change.
+
+The target increase requests up to 5 dB more gain than the released policy; a gain cap or measured
+peak can prevent that increase. Reused 20-second decoded prefixes measured through the actual
+native meter/normalizer show the following. These are host DSP measurements of stored PCM,
+not a fresh Android decoder run or phone listening results:
+
+| Prefix | Input LUFS | Released -23 target, partial | Trial -18 target, partial |
+| --- | ---: | ---: | ---: |
+| IT, battle of honour | -26.25 | -23.00 | -20.25 |
+| SPC, top gear 2 title | -10.43 | -23.00 | -18.00 |
+| AdLib S3M, totally nuts | -18.55 | -23.00 | -18.00 |
+| Megadrive VGZ, ending theme | -31.57 | -25.57 | -25.57 |
+
+Partial-profile spread grows from 2.57 to 7.57 LU for this small sample. The two quiet prefixes
+reach the unchanged +6 dB cap; no measurement here justifies raising it. A separate **synthetic
+complete-profile check of the same prefixes**, not an assertion that their full tracks were
+measured, produces -18 LUFS for IT/SPC/S3M and -19.94 LUFS for VGZ, where peak headroom wins.
+All measured output sample peaks remain at or below the existing ceiling.
+
+Fresh downloads of [Studium Fałszu](https://modland.com/pub/modules/Fasttracker%202/Jakim/studium%20falszu.xm)
+and [Lotus 3 Space Ninja](https://modland.com/pub/modules/Protracker/Patrick%20Phelan/l3_cd4-spaceninja.mod)
+were decoded to natural EOF through the existing WASM/libopenmpt engine, then processed by the
+production native DSP. Both open subsong 0, Original stereo, at 48 kHz. These identify the current
+Modland files, not necessarily the exact bytes used in earlier listening feedback.
+
+| Reference | Raw whole-song LUFS | Trial output for its 20-second prefix | Trial output with a complete whole-song profile |
+| --- | ---: | ---: | ---: |
+| Studium Fałszu, 206.412 s | -23.64 | -19.44 | -18.00 |
+| Space Ninja, 153.700 s | -10.64 | -18.00 | -18.00 |
+
+A further first-play simulation processes each whole track using only its 20-second partial
+profile, in callback-sized blocks. Trial output measures -17.64/-16.35 LUFS respectively,
+versus -21.21/-21.35 with the released policy. The trial pair differs by 1.29 LU; measured peaks
+remain within the ceiling. A fixed prefix can overestimate or underestimate the whole track,
+and the app's cooperative preparation budget may yield less than twenty seconds. Complete
+offline profiles above do not establish that the app has already cached such measurements.
+None of these host results establishes Android output or listening quality.
+
+Before the target change, strengthened DSP tests fail on the requested output level/complete
+gain, and a production JNI/Player assertion fails on the final ducked sample. After the change,
+41 Player/analysis and 13 DSP checks pass, including both sample rates, unchanged caps,
+peak protection, Off bypass, mix transitions and route recovery. All 54 also pass ASan/UBSan.
+
+Clean candidate **fbf2958883af4e94a80ad2a338534ea7dc336293** passed the forced full gate in
+**652 s**: **1217 tests / 159 suites**, zero failures/errors/skips. All 31 unit-stage tasks
+executed, **459.4 s**; all companion checks passed. Fresh lint ran in **90.2 s**, with
+**0 errors / 79 warnings**. All 603 tracked non-document input hashes matched before APK creation.
+
+Minified, test-signed release **1.4.0 (1330)**, built from that clean candidate in **190 s**:
+[protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk](../dist/protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk),
+**11,973,003 bytes**, SHA-256
+`00d0d4cc9aa7dc5e37ac9705bfdabe705b495fa5fe1d0a7a2ad2161607655b1e`.
+Independent inspection checked the package version, embedded source SHA, v2 test signature,
+non-debuggable manifest, ZIP CRCs, 16 KiB alignment and the three packaged engine libraries
+against the newly built stripped outputs. R8 executed; its mapping is retained.
+
+**Checked:** host evidence and artifact properties above. **Unchecked:** device sound,
+interaction and acceptance. No merge or publication. Local measurements, provenance, failure
+logs and full verification reports remain ignored under `user/louder-normalization-verification/`.
+
+For this trial, [EBU R 128 s2](https://tech.ebu.ch/docs/r/r128s2.pdf) provides context for adapting
+playback levels to mobile conditions. This implementation's existing sample-peak protection is
+not the true-peak limiter described there, and no standard-compliance claim is made.
 
 ## Acceptance and integration — 2026-10-23
 
@@ -33,7 +110,7 @@ Earlier checkpoint records below retain their original pre-acceptance and unmerg
 - Settings offers Off/On, default Off. Schema stays 23; versionName follows the release procedure.
 - Measure perceived stereo loudness using BS.1770 K weighting and gated 400 ms blocks. Use
   a bounded 0.1-LU histogram, not an unbounded allocation in the audio callback.
-- Use a fixed -23 LUFS target. Apply one measured trim per subsong, with at most
+- Use a fixed -18 LUFS target on this trial branch; the released policy is -23 LUFS. Apply one measured trim per subsong, with at most
   +6 dB for partial analysis and +12 dB for complete analysis; peak headroom may reduce either.
 - A disposable measurement cache is independent of History and playlists. Identity includes
   source content, companion content, subsong, stereo mode and algorithm/decoder revision.
