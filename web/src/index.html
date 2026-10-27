@@ -277,6 +277,15 @@
     text-align: right;
   }
   li.track .text { min-width: 0; flex: 1; }
+  .track-leading, li.track .n.track-leading {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 0 0 28px; min-width: 28px; height: 40px; gap: 2px;
+  }
+  .leading-primary { min-height: 24px; line-height: 24px; }
+  .played-before { height: 12px; line-height: 12px; font-size: 12px; color: var(--on-surface-variant); }
+  .track-leading::after { content: ''; height: 12px; }
+  .track-leading:has(.played-before:not([hidden]))::after { display: none; }
+  #np-played { color: var(--on-surface-variant); font-size: var(--body-small); }
   li.track .title {
     font-size: var(--title-medium);
     font-weight: 500;
@@ -982,6 +991,7 @@
           <span>Share</span>
         </button>
       </div>
+      <p id="np-played" hidden></p>
       <dl id="fields"></dl>
       <!-- The module's message: where the scene put its greetings, and half the reason these files are kept. -->
       <div id="np-message" class="np-message" hidden>

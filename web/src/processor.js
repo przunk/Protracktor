@@ -175,6 +175,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         break;
       case 'subsong':
         if (this.handle) {
+          const previousSeconds = e._pt_position(this.handle);
           e._pt_select_subsong(this.handle, message.index);
           this.ended = false;
           this.playing = true;
@@ -184,6 +185,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           // `selectSubsong` fixed on the phone.
           this.reply({
             type: 'subsong',
+            previousSeconds,
             index: e._pt_current_subsong(this.handle),
             duration: e._pt_duration(this.handle),
             describe: e.UTF8ToString(e._pt_describe(this.handle)),
@@ -268,7 +270,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
 
     if (rendered < frames) {
       this.ended = true;
-      this.reply({ type: 'ended' });
+      this.reply({ type: 'ended', seconds: e._pt_position(this.handle) });
       return true;
     }
 

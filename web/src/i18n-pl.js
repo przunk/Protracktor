@@ -7,6 +7,11 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Played before": "Już odsłuchane",
+  "Could not read History: {reason}": "Nie udało się odczytać historii: {reason}",
+  "Could not clear History: {reason}": "Nie udało się wyczyścić historii: {reason}",
+  "Could not save History: {reason}": "Nie udało się zapisać historii: {reason}",
+  "Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.": "Odtwarzano przez co najmniej 5 sekund albo do końca bez przewijania lub utwór był w historii przed dodaniem tej funkcji. Wyczyszczenie historii usuwa to oznaczenie.",
   "Platforms with no indexed, playable music are unavailable.": "Platformy bez zaindeksowanych, obsługiwanych utworów są niedostępne.",
   "Favourites": "Ulubionych",
   "Retry": "Ponów",

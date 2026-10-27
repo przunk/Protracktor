@@ -12,19 +12,24 @@
 // Everything here is promises over the callback API, in one place, because the alternative is
 // callbacks in the page.
 
+import { HistoryWrites } from './history-writes.js';
+
 const DB = 'protracktor';
-const VERSION = 4;
+const VERSION = 5;
 
 /** The playlist that is not a document: replaced wholesale by every handoff, never deleted. */
 export const PHONE = 'phone';
 
 let opening = null;
+let connection = null;
 
 function open() {
   if (opening) return opening;
-  opening = new Promise((resolve, reject) => {
+  const attempt = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB, VERSION);
-    request.onupgradeneeded = () => {
+    let abandoned = false;
+    request.onupgradeneeded = (event) => {
+      if (abandoned) { request.transaction.abort(); return; }
       const db = request.result;
       // `playlists` holds both kinds -- the phone's and the browser's own. One store, because they
       // differ in who writes them and in nothing else the page does with them.
@@ -47,14 +52,38 @@ function open() {
       // Version 4: in the order it was played, so History reads its page and not the whole store
       // (`docs/review-2026-09-28.md` F2) -- the phone's `idx_play_history_recent`.
       if (!played.indexNames.contains('playedAt')) played.createIndex('playedAt', 'playedAt');
+      // Existing History is the accepted first-install seed; later records must earn their mark.
+      if (event.oldVersion > 0 && event.oldVersion < 5) {
+        played.openCursor().onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (!cursor) return;
+          cursor.update({ ...cursor.value, listened: true });
+          cursor.continue();
+        };
+      }
+      if (!db.objectStoreNames.contains('bookmarks')) db.createObjectStore('bookmarks', { keyPath: 'key' });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (abandoned) { db.close(); return; }
+      connection = db;
+      db.onversionchange = () => {
+        db.close();
+        if (connection === db) { connection = null; opening = null; }
+      };
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
     // A second tab holding an older version open. Nothing to do but say so; the page works without
     // storage and a silent hang is the worse failure.
-    request.onblocked = () => reject(new Error('another tab is holding the database open'));
+    request.onblocked = () => {
+      abandoned = true;
+      reject(new Error('another tab is holding the database open'));
+    };
   });
-  return opening;
+  opening = attempt.catch((error) => { if (opening === pending) opening = null; throw error; });
+  const pending = opening;
+  return pending;
 }
 
 async function tx(store, mode, run) {
@@ -63,6 +92,7 @@ async function tx(store, mode, run) {
     const transaction = db.transaction(store, mode);
     const request = run(transaction.objectStore(store));
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error ?? new DOMException('Aborted', 'AbortError'));
     transaction.oncomplete = () => resolve(request?.result);
   });
 }
@@ -273,6 +303,42 @@ export const catalogue = {
  */
 let lastStamp = 0;
 
+/** Keep read/modify/write atomic, including another tab's replay and synchronous quota failures. */
+async function changeHistory(url, change) {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('played', 'readwrite');
+    const store = transaction.objectStore('played'), request = store.get(url);
+    let failure;
+    request.onsuccess = () => {
+      try {
+        const after = change(request.result);
+        if (after) store.put(after);
+      } catch (error) { failure = error; transaction.abort(); }
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Aborted', 'AbortError'));
+    transaction.onerror = () => {};
+  });
+}
+
+function recordHistory(entry) {
+  return changeHistory(entry.url, (before) => {
+    lastStamp = Math.max(Date.now(), lastStamp + 1, (before?.playedAt ?? 0) + 1);
+    return { ...before, ...entry, listened: before?.listened === true,
+      playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1 };
+  });
+}
+
+function qualifyHistory(url) {
+  return changeHistory(url, (before) => before && !before.listened ? { ...before, listened: true } : null);
+}
+
+const historyFailures = new Set();
+const historyWrites = new HistoryWrites({ record: recordHistory, qualify: qualifyHistory,
+  erase: () => tx('played', 'readwrite', (store) => store.clear()),
+  failed: (error) => { for (const listener of historyFailures) listener(error); } });
+
 /**
  * What has been played, with the phone's rules (`data/HistoryStore.kt`).
  *
@@ -282,13 +348,35 @@ let lastStamp = 0;
  * it has been opened, and afterwards under the name it gives itself.
  */
 export const played = {
-  // **Nothing is forgotten** (the owner, 2026-09-26): it used to keep the last 500, as the phone did.
-  async record(entry) {
-    lastStamp = Math.max(Date.now(), lastStamp + 1);
-    const before = await tx('played', 'readonly', (s) => s.get(entry.url));
-    await tx('played', 'readwrite', (s) => s.put({
-      ...before, ...entry, playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1,
-    }));
+  get generation() { return historyWrites.generation; },
+  get revision() { return historyWrites.revision; },
+  subscribe(listener) { return historyWrites.subscribe(listener); },
+  onFailure(listener) { historyFailures.add(listener); return () => historyFailures.delete(listener); },
+  record(entry, ticket = historyWrites.generation) { return historyWrites.record({ ...entry }, ticket); },
+  qualify(result) { return historyWrites.qualify(result); },
+
+  /** Only visible IDs, in bounded transactions; missing rows are never synthesized. */
+  async presentationAmong(ids, signal) {
+    const wanted = [...new Set(ids)], found = new Map();
+    for (let i = 0; i < wanted.length; i += 500) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      const db = await open();
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction('played', 'readonly'), store = transaction.objectStore('played');
+        for (const id of wanted.slice(i, i + 500)) {
+          const request = store.get(id);
+          request.onsuccess = () => {
+            const row = request.result;
+            if (row) found.set(id, Object.freeze({ name: row.name?.trim() !== row.file ? row.name?.trim() ?? '' : '', listened: row.listened === true }));
+          };
+        }
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(transaction.error ?? new DOMException('Aborted', 'AbortError'));
+        transaction.onerror = () => {};
+      });
+    }
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    return found;
   },
 
   /**
@@ -323,7 +411,7 @@ export const played = {
     return all.sort((a, b) => b.playedAt - a.playedAt);
   },
 
-  clear() { return tx('played', 'readwrite', (s) => s.clear()); },
+  clear() { return historyWrites.clear(); },
 };
 
 export const settings = {
@@ -335,4 +423,4 @@ export const settings = {
 };
 
 /** For the checks, which need a clean database per run and no leftovers between them. */
-export function forget() { opening = null; }
+export function forget() { connection?.close(); connection = null; opening = null; }

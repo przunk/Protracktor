@@ -82,6 +82,16 @@ retained in ignored `user/web-parity-verification/w05-random-filters-full-gate/`
 **Real-browser acceptance remains unchecked.** No bundle, APK, Android production/schema/native
 change, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w05-random-filters-checkpoint--2026-10-27).
 
+**W06 implemented on the branch, 2026-10-27:** earned playback time/natural end, ordered History
+Clear, existing-History migration and discreet played-before marks match Android. IndexedDB v5
+preserves user data and adds an empty bookmark store for W07; Android schema remains 23.
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **744 s**, all
+31 unit tasks executed; **818 page assertions**, 16 listening, 10 write/read ownership, 14 storage/
+migration and 3 worklet boundary cases pass with all existing companions. Fresh lint: **0 errors /
+79 warnings**, 94.3 s. Source hashes/reports: ignored
+`user/web-parity-verification/w06-played-before-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w06-played-before-checkpoint--2026-10-27).
+
 ## WEB and Android parity inventory — 2026-10-26
 
 Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop

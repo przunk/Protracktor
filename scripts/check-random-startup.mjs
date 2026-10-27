@@ -15,10 +15,10 @@ try {
   for(const held of [false,true]) {
     let source=prefix;
     if(held) {
-      const original="const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');";
+      const original=", storeSource)";
       const override="\nconst originalScopeGet = settings.get.bind(settings); settings.get = (key, fallback) => key === 'randomScope' ? new Promise((resolve) => { window.__releaseScopeRead = () => resolve('platform:pc'); }) : originalScopeGet(key, fallback);\n";
       if(!source.includes(original)) throw Error('The production page harness store loader changed');
-      source=source.replace(original,original.slice(0,-1)+' + '+JSON.stringify(override)+';');
+      source=source.replace(original,', storeSource + '+JSON.stringify(override)+')');
     } else {
       source=source.replace("console.log('page:');","await (await import(pathToSettings)).settings.set('randomScope','platform:pc');\nconsole.log('page:');")
         .replace("const failures = [];",`const pathToSettings = ${JSON.stringify(pathToFileURL(path.join(root,'web/src/store.js')).href)};\nconst failures = [];`);

@@ -62,6 +62,7 @@ window.AudioWorkletNode = class {
         transfer ? structuredClone(message, { transfer }) : message,
       ),
     };
+    window.__workletPort = this.port;
   }
   connect() {}
 };
@@ -159,7 +160,9 @@ window.navigator.storage ??= { persist: async () => true, persisted: async () =>
 const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
-const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
+const historyWritesSource = fs.readFileSync('web/src/history-writes.js', 'utf8').replace(/^export /gm, '');
+const storeSource = `const { HistoryWrites } = (() => { ${historyWritesSource}; return { HistoryWrites }; })();`
+  + fs.readFileSync('web/src/store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 // The language module and its Polish table, inlined as the others are (W6). The table first: the
 // module's own import of it is the line that goes.
 const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
@@ -178,6 +181,10 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { ListeningSession } from './listening-session.js';",
+    `const { ListeningSession } = (() => { ${fs.readFileSync('web/src/listening-session.js', 'utf8').replace(/^export /gm, '')}; return { ListeningSession }; })();`)
+  .replace("import { HistoryPresentationReads } from './history-presentation.js';",
+    `const { HistoryPresentationReads } = (() => { ${fs.readFileSync('web/src/history-presentation.js', 'utf8').replace(/^export /gm, '')}; return { HistoryPresentationReads }; })();`)
   .replace("import { RandomFilterState, storedRandomScope, platformById } from './random-scope.js';",
     `const { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites } = (() => { ${platformDataSource}; ${randomScopeSource}; return { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites }; })();`)
   .replace("import * as randomCatalogue from './random-catalogue.js';",
@@ -221,7 +228,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -3679,6 +3686,7 @@ await (await import('./check-page-source-save.mjs')).default({ window, check });
 await (await import('./check-page-source-routes.mjs')).default({ window, check });
 await (await import('./check-page-random.mjs')).default({ window, check });
 await (await import('./check-page-random-filters.mjs')).default({ window, check });
+await (await import('./check-page-played-before.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

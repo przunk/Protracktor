@@ -15,9 +15,9 @@ tests for each scope; port their actual scenarios and expected results to WEB ch
 fixtures are preferred where they express the same rule. Existing historical plans can describe
 earlier states; current accepted code/tests govern behaviour unless an actual defect is recorded.
 
-The current browser database is version 4. Reserve version 5 on this branch for the coordinated
-discovery/History/bookmark upgrade and version 6 for retained remote music/ASMA storage, if those
-schema changes are needed. Reservations are not migrations already implemented. Existing user
+The browser database on develop is version 4. W06 implements the coordinated version 5 upgrade
+for listened History flags and the empty W07 bookmarks store. Version 6 remains reserved for
+retained remote music/ASMA storage if needed. Only version 5 is implemented so far. Existing user
 stores, URL identities, playlist ownership and the phone-handoff byte lifetime must survive.
 Android schema remains 23. No other worktree or shared toolchain is changed.
 
@@ -44,7 +44,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W03 | Return to playback source | Destination/route integration passes combined full host gate; W10/W11 query/scope wiring remains pending |
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
-| W06 | Qualified played-before marks | Pending |
+| W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
 | W07 | Saved catalogue places | Pending |
 | W08 | Learned list titles | Pending |
 | W09 | Recent-search suggestions | Pending |
@@ -467,6 +467,54 @@ lint reports are archived under ignored `user/web-parity-verification/w05-random
 based on `e9959c2`. W05 is technically implemented.
 Real-browser appearance, physical gestures, audio and background behaviour remain unchecked.
 No Android production/schema/native/dependency change, merge, deployment or intermediate bundle.
+
+## W06 played-before checkpoint — 2026-10-27
+
+Android references: `ListeningSession` and its 16 tests; `HistoryWrites` and
+`HistoryPresentationReads` with their ordering/late-read tests; `HistoryStore`, listened/migration
+checks, `PlayedBefore`/`TrackLeadingStatus` and controller open, pause, seek, subsong, replay and
+Clear paths. There is no new Random exclusion or settings toggle.
+
+Qualification uses the same lesser of monotonic elapsed time and progressing audio position:
+five earned seconds, or a confirmed natural end with positive earned time and no seek. Loading,
+stalls, pause, failure, empty EOF and unknown-length timeout do not prove listening. Decoder EOF
+now carries its real final position, including files shorter than a progress report. A subsong
+reply carries the old position before resetting it so the file retains its earned listening time.
+
+One ordered History writer owns record/qualification/Clear. Clear synchronously retires pending
+generation tickets and presentation reads; active old writes finish before erase, then new plays
+can persist. Capturing the ticket before loading prevents a late opened callback from recreating
+cleared rows. Queue Clear retains the audible listening candidate. Explicit replay after History
+Clear may start a new candidate; History-origin playback still leaves recency/count unchanged.
+
+IndexedDB v5 backfills only existing pre-v5 History rows and preserves their counts, timestamps
+and metadata. Fresh records start unqualified; qualification updates only existing rows and never
+recency. Empty History stays empty, and later opens never seed it again. Other user stores survive.
+Blocked/failed opens can retry, abandoned upgrades cannot leave a hidden connection behind,
+version changes close old connections and newer schemas are refused without deleting data.
+Read/modify/write is atomic across tabs and synchronous quota failures roll back cleanly.
+
+Browse/search/History and Random reserve a small lower leading slot; qualification repaints that
+slot without rebuilding list rows. Playlist rows and playlist-row Information opt out. Browse and
+Queue Information can explain the known mark and the effect of History Clear. Labels and the
+explanation are English/Polish; the mark has a shape and an accessible name as well as colour.
+Learned-title payloads remain internal until W08; W06 does not change displayed titles.
+
+Focused host checks currently cover the clock, serialized writes, late-read ownership, real
+fake-indexedDB upgrades/rollback/retry/preservation, and actual page controls/MessagePort callbacks.
+Deliberately broken copies verify threshold, Clear and playlist opt-out assertions; the old EOF
+callback fails the short-file final-position assertion before the fix.
+
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **744 s**; all
+31 unit tasks executed. All companions pass, including **818 page assertions**, **16 listening**,
+**10 write/read-ownership**, **14 real storage/migration** and **3 worklet boundary** cases, plus
+the retained context/queue/Random/engine/PWA checks. Fresh lint: **0 errors / 79 warnings**,
+94.3 s. The 72 source-input hashes and reports are retained in ignored
+`user/web-parity-verification/w06-played-before-full-gate/`. Two WEB inputs were completed during
+the unchanged Android unit-test stage, before their WEB companions started; the archived
+candidate records that revision, and all final hashes match. A separate documentation-only
+commit records the Redmi reports and does not change checked application inputs.
+Actual browser appearance, audio timing, touch feel and background behaviour remain unchecked.
 
 ## Deferred or blocked work
 

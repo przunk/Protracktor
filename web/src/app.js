@@ -17,6 +17,8 @@ import { bindRandomDice } from './random-dice.js';
 import { RandomFilterState, storedRandomScope, platformById } from './random-scope.js';
 import * as randomCatalogue from './random-catalogue.js';
 import { RandomFiltersView } from './random-filters-view.js';
+import { ListeningSession } from './listening-session.js';
+import { HistoryPresentationReads } from './history-presentation.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -118,6 +120,87 @@ function holdBarLabels() {
 }
 let playing = false;
 let seeking = false;
+const listening = new ListeningSession(() => performance.now());
+let audioPosition = 0;
+let listeningTrack = null;
+let openingHistoryTicket = 0;
+let historyPresentation = new Map();
+let historyRefreshQueued = false;
+let infoPresentation = null;
+const historyReads = new HistoryPresentationReads({
+  query: (ids, signal) => played.presentationAmong(ids, signal),
+  currentRevision: () => played.revision,
+  show: (rows) => { historyPresentation = rows; repaintPlayedBefore(); },
+  failed: (error) => status(t('Could not read History: {reason}', { reason: error.message })),
+});
+
+function sampleListening(completed = false) {
+  const running = playing && !seeking && !seekPending;
+  const qualified = listening.sample(audioPosition, running, { completed: completed && running });
+  if (qualified) played.qualify(qualified);
+}
+
+function beginListeningAgain() {
+  const entry = listeningTrack ?? currentTrack();
+  if (!entry) return;
+  const ticket = played.generation;
+  if (!listeningTrack) recordPlay(entry, dockFields, ticket);
+  listeningTrack = entry;
+  audioPosition = 0;
+  listening.begin(entry.url, ticket, 0, true);
+}
+
+/** Clear retires the audible candidate before queuing the erase; playback itself continues. */
+async function clearHistory() {
+  listening.forget();
+  listeningTrack = null;
+  const clear = played.clear();
+  sourceBrowseRoute = null;
+  try { await clear; await renderBrowse(); }
+  catch (error) { showNote(t('Could not clear History: {reason}', { reason: error.message })); }
+}
+
+function requestHistoryPresentation() {
+  if (historyRefreshQueued) return;
+  historyRefreshQueued = true;
+  queueMicrotask(() => {
+    historyRefreshQueued = false;
+    const ids = new Set(rememberedRandom?.history.playedPicks.map((entry) => entry.url) ?? []);
+    for (const row of $('browselist').querySelectorAll('[data-url]')) ids.add(row.dataset.url);
+    if (infoPresentation) ids.add(infoPresentation.url);
+    repaintPlayedBefore();
+    historyReads.refresh(ids, played.revision);
+  });
+}
+
+function playedBadge() {
+  const badge = document.createElement('span');
+  badge.className = 'played-before';
+  badge.hidden = true;
+  badge.setAttribute('role', 'img');
+  badge.setAttribute('aria-label', t('Played before'));
+  badge.title = t('Played before');
+  badge.textContent = '✓';
+  return badge;
+}
+
+function browseLeading(url) {
+  const leading = document.createElement('span'); leading.className = 'track-leading';
+  const primary = document.createElement('span'); primary.className = 'leading-primary';
+  const badge = playedBadge(); badge.dataset.playedUrl = url;
+  leading.append(primary, badge);
+  return leading;
+}
+
+function repaintPlayedBefore() {
+  const clearing = played.revision.clearing;
+  for (const badge of document.querySelectorAll('[data-played-url]')) {
+    badge.hidden = clearing || historyPresentation.get(badge.dataset.playedUrl)?.listened !== true;
+  }
+  const note = $('np-played');
+  note.hidden = clearing || !infoPresentation || historyPresentation.get(infoPresentation.url)?.listened !== true;
+  if (!note.hidden) note.textContent = t('Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.');
+}
 /**
  * Which playlist the queue on screen belongs to.
  *
@@ -226,6 +309,7 @@ function applyPlaybackResult(result, intent = null) {
     case 'replay':
       finished = false;
       endedByClock = false;
+      beginListeningAgain();
       node?.port.postMessage({ type: 'rewind' });
       setPlaying(true);
       break;
@@ -686,7 +770,12 @@ function onWorklet(message) {
       // own replays all arrive at this one message -- History's to be left out by `recordPlay`
       // (A56) -- so there is one recording path rather than one per list -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
-      recordPlay(currentTrack(), fields);
+      audioPosition = 0;
+      recordPlay(currentTrack(), fields, openingHistoryTicket);
+      if (openingHistoryTicket === played.generation && currentTrack()) {
+        listeningTrack = currentTrack();
+        listening.begin(listeningTrack.url, openingHistoryTicket, 0, false);
+      } else { listening.forget(); listeningTrack = null; }
       if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, subsongCount, currentSubsong);
@@ -721,6 +810,8 @@ function onWorklet(message) {
       break;
     }
     case 'failed':
+      listening.forget();
+      listeningTrack = null;
       loading = null;
       delete $('seek').dataset.opened;
       tuneCanSeek = false;
@@ -748,11 +839,15 @@ function onWorklet(message) {
         break;
       }
       seekLanded();
+      audioPosition = message.seconds;
+      listening.baseline(audioPosition, playing);
       $('elapsed').textContent = clock(message.seconds);
       break;
     case 'position':
       // Not while a seek is under way: a position sent before it landed would pull the bar back.
       if (!seeking && !seekPending) {
+        audioPosition = message.seconds;
+        sampleListening();
         const range = bar().seconds;
         $('seek').value = range > 0 ? Math.round((message.seconds / range) * 1000) : 0;
         paint($('seek'));
@@ -770,13 +865,19 @@ function onWorklet(message) {
       // The engine's own length still wins over the fallback; what changed is that a known length
       // is now a reason to stop rather than a reason not to look.
       const limit = duration > 0 ? duration : fallbackSeconds;
-      if (limit > 0 && !endedByClock && message.seconds >= limit) {
+      if (!seeking && !seekPending && limit > 0 && !endedByClock && message.seconds >= limit) {
         endedByClock = true;
-        trackEnded();
+        trackEnded(duration > 0);
       }
       break;
     // A subsong is a different tune: its own length, often its own title.
     case 'subsong': {
+      if (Number.isFinite(message.previousSeconds) && !seeking && !seekPending) {
+        audioPosition = message.previousSeconds;
+        sampleListening();
+      }
+      audioPosition = 0;
+      listening.baseline(0, playing);
       finished = false;
       endedByClock = false;
       currentSubsong = message.index;
@@ -800,7 +901,8 @@ function onWorklet(message) {
       break;
     }
     case 'ended':
-      trackEnded();
+      if (Number.isFinite(message.seconds) && !seeking && !seekPending) audioPosition = message.seconds;
+      trackEnded(true);
       break;
   }
 }
@@ -814,8 +916,9 @@ function onWorklet(message) {
  * this, and a copy is where repeat, shuffle, subsongs and Random start to disagree with each other.
  * The phone calls one `handleTrackEnded` for the same reason.
  */
-function trackEnded() {
+function trackEnded(confirmedEnd = false) {
   if (drawing) return;
+  sampleListening(confirmedEnd);
   const inside = nextSubsong({ playAll: playAllSubsongs, subsong: currentSubsong,
     count: subsongCount, repeatOne: repeat === 'one' });
   if (inside != null) { node?.port.postMessage({ type: 'subsong', index: inside }); return; }
@@ -1069,6 +1172,8 @@ function explainFailure(reason, entry) {
  * screen with nothing to say has to say that.
  */
 function renderNothingPlaying() {
+  infoPresentation = null;
+  repaintPlayedBefore();
   $('np-title').textContent = currentTrack()?.name || t('Nothing playing');
   $('np-message').hidden = true;
   $('np-names').replaceChildren();
@@ -1083,7 +1188,9 @@ function renderNothingPlaying() {
   $('subsongbar').hidden = true;
 }
 
-function renderNowPlaying(fields, subsongs, current, entry = currentTrack()) {
+function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { playedBefore = false } = {}) {
+  infoPresentation = playedBefore ? entry : null;
+  requestHistoryPresentation();
   $('np-title').textContent = fields.title || entry?.name || t('Nothing playing');
   const list = $('fields');
   list.replaceChildren();
@@ -1174,6 +1281,9 @@ function playAt(next) {
 
 async function openActualTrack(entry, { autoPlay = true } = {}) {
   if (!entry) return;
+  sampleListening();
+  listening.forget();
+  listeningTrack = null;
   if (!autoPlay) {
     stopForLeaving();
     rowState = 'selected';
@@ -1196,6 +1306,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   const ready = !entry.data ? random?.bytes.get(entry.url) : null;
   if (ready) random.bytes.delete(entry.url);
   const asked = ++playAsked;
+  openingHistoryTicket = played.generation;
   delete $('seek').dataset.opened;
   subsongCount = 1;
   currentSubsong = 0;
@@ -1412,6 +1523,10 @@ function markPlayingIn(list, url = playingUrl()) {
 }
 
 function setPlaying(on) {
+  if (on !== playing) {
+    sampleListening();
+    listening.baseline(audioPosition, on && !seeking && !seekPending);
+  }
   playing = on;
   // Offered for anything playing that is not the playlist: a dice pick, a Browse result, a tune
   // sent by link. Deciding to keep it is what you do after hearing it.
@@ -1481,6 +1596,7 @@ async function renderEmpty() {
 }
 
 function render() {
+  requestHistoryPresentation();
   captureTransport();
   renderEmpty();
   const tracks = visibleTracks();
@@ -1511,6 +1627,13 @@ function render() {
       tick.checked = selected.has(entry);
       tick.setAttribute('aria-label', t('Select {name}', { name: entry.name }));
       n.replaceChildren(tick);
+    }
+    if (randomView && !selected.size) {
+      n.classList.add('track-leading');
+      const primary = document.createElement('span');
+      primary.className = 'leading-primary'; primary.textContent = String(i + 1);
+      const badge = playedBadge(); badge.dataset.playedUrl = entry.url;
+      n.replaceChildren(primary, badge);
     }
     li.classList.toggle('ticked', selected.has(entry));
 
@@ -1649,7 +1772,10 @@ function showInPlaylist(i) {
  */
 let describeAsk = 0;
 const describePending = new Map();
-async function informAbout(entry) {
+async function informAbout(entry, { playedBefore = true } = {}) {
+  infoPresentation = playedBefore ? entry : null;
+  requestHistoryPresentation();
+  repaintPlayedBefore();
   showPanel('nowplaying');
   $('np-title').textContent = entry.name;
   $('fields').replaceChildren();
@@ -1670,7 +1796,7 @@ async function informAbout(entry) {
     const described = await answer;
     if (!described) { status(t('the decoder took the file and never answered')); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
-    renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry);
+    renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry, { playedBefore });
     $('np-title').textContent = describeFields(described.describe).title || entry.name;
     status(t('{name} — not playing, just described', { name: entry.name }));
   } catch (e) {
@@ -1717,7 +1843,7 @@ function openRowMenu(entry, anchor, at = visibleTracks().indexOf(entry)) {
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
     [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
-    [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
+    [t('Information'), () => informAbout(entry, { playedBefore: !!randomView }), !entry.local, ICON.info],
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
     [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
@@ -2740,7 +2866,7 @@ function removeRandomAt(at, r = randomView ?? random) {
  * never kept (`saveQueue` says why). It is recorded anyway, so "what was that" still has an answer,
  * and marked, so History does not offer a replay it cannot deliver.
  */
-function recordPlay(entry, fields) {
+function recordPlay(entry, fields, ticket = played.generation) {
   if (!entry?.url) return;
   // A play History itself started leaves History as it is (A56, `rules.recordsPlay`).
   if (fromHistory()) return;
@@ -2749,8 +2875,9 @@ function recordPlay(entry, fields) {
     name: fields.title || entry.name,
     meta: entry.meta ?? sourceOf(entry.url),
     file: fileOf(entry),
+    author: authorOf(entry, fields),
     replayable: !entry.data && !entry.local && /^https?:\/\//.test(entry.url),
-  }).catch(() => {});
+  }, ticket).catch(() => {});
 }
 
 /**
@@ -2776,6 +2903,9 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
 
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
 function stopForLeaving() {
+  sampleListening();
+  listening.forget();
+  listeningTrack = null;
   playAsked++;
   loading?.abort();
   loading = null;
@@ -2963,11 +3093,13 @@ function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
     else {
       row(entry.name, entry.playCount > 1 ? `×${entry.playCount}` : '', null);
       const node = list.lastElementChild; node.dataset.url = entry.url; node.classList.add('gone');
+      node.prepend(browseLeading(entry.url));
       node.title = t("Played from the phone's copy — the page does not keep those");
     }
   }
   markPlayingIn(list);
-  row(t('Clear the history'), null, async () => { sourceBrowseRoute = null; await played.clear(); await renderBrowse(); }, ICON.remove);
+  requestHistoryPresentation();
+  row(t('Clear the history'), null, clearHistory, ICON.remove);
 }
 
 /** Capture route fields only; transport and live index/cache/download ownership stay separate. */
@@ -3395,9 +3527,10 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
     event.stopPropagation();
     openBrowseMenu(track, more, folder);
   };
-  li.append(text, add, more);
+  li.append(browseLeading(track.url), text, add, more);
   li.onclick = onplay;
   list.append(li);
+  requestHistoryPresentation();
   const historyOrigin = browsePath[0] === 'history';
   bindTrackGestures(li, { onAdd: () => enqueueTrack(track, historyOrigin),
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue') });
@@ -3960,6 +4093,7 @@ $('playpause').onclick = async () => {
   if (shouldRestart({ engineFinished: finished, position: 0, duration: 0 })) {
     finished = false;
     if (context?.state === 'suspended') await context.resume();
+    beginListeningAgain();
     node?.port.postMessage({ type: 'rewind' });
     setPlaying(true);
     return;
@@ -4276,8 +4410,9 @@ const refitLines = () => { fitLine($('title'), true); fitLine($('sub'), true); }
 window.addEventListener('resize', refitLines);
 reducedMotion?.addEventListener?.('change', refitLines);
 
-$('seek').oninput = () => { seeking = true; paint($('seek')); };
+$('seek').oninput = () => { sampleListening(); listening.seeking(audioPosition); seeking = true; paint($('seek')); };
 $('seek').onchange = () => {
+  if (!seeking) { sampleListening(); listening.seeking(audioPosition); }
   seeking = false;
   // **The bar stays where it was let go** until the worklet says the seek has landed, and a seek
   // that takes long enough to be seen waiting shows a spinner in place of the elapsed time -- the
@@ -4836,6 +4971,13 @@ $('queue-help').onclick = () => {
   $('queue-instructions').hidden = !$('queue-instructions').hidden;
   $('queue-help').setAttribute('aria-expanded', String(!$('queue-instructions').hidden));
 };
+
+played.subscribe(() => {
+  if (played.revision.clearing) historyPresentation = new Map();
+  repaintPlayedBefore();
+  requestHistoryPresentation();
+});
+played.onFailure((error) => status(t('Could not save History: {reason}', { reason: error.message })));
 
 renderNothingPlaying();
 holdBarLabels();
