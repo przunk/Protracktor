@@ -38,6 +38,15 @@ without a whole-list appearance animation. Exact visual/gesture behaviour still 
 This adds no Android production/schema/native changes or dependencies. The later W03-W25 scopes
 remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
 
+W03 adds `source-navigation.js` and an immutable route on `PlaybackContext`. The route holds
+view/query/result fields, separately from actual decoder jobs and live catalogue/storage owners.
+Header navigation follows the parked source, never its manual interruption. Guarded editor reads
+preserve the active order; Discard authorizes abandoning a draft after destination validation,
+rather than erasing it before an asynchronous read. Source, panel and editor generations retire
+old completions. Browse result closures bind their original query, and older reads cannot append
+to a restored route. This scoped checkpoint has focused host coverage; the combined navigation
+gate and W10/W11 query/scope wiring remain pending. [Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
+
 ## B54 Floating controls — gated experiment, 2026-10-26
 
 The phone trial was accepted for experimental integration only and merged as **afab610**, 2026-10-26.

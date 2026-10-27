@@ -119,10 +119,11 @@ const step = (kind, context) => Object.freeze(context ? { kind, context } : { ki
 /** A deliberate playback source; selecting a different editor does not replace it. */
 export class PlaybackContext {
   constructor({ source = { kind: 'none' }, order = new PlayOrder(), entryIds,
-    nextEntryId = order.tracks.length, omitted = [] } = {}) {
+    nextEntryId = order.tracks.length, omitted = [], route = null } = {}) {
     if (!sourceKinds.has(source.kind)) throw new TypeError(`Unknown playback source: ${source.kind}`);
     this.source = Object.freeze({ ...source });
     this.order = order;
+    this.route = route;
     this.entryIds = frozen(entryIds ?? order.tracks.map((_, index) => index));
     this.nextEntryId = nextEntryId;
     this.omitted = frozen(omitted);

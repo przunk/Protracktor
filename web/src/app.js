@@ -10,6 +10,7 @@ import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-contex
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { QueueView } from './queue-view.js';
+import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
 import { bindTrackGestures } from './row-gestures.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
@@ -139,6 +140,9 @@ let undoAction = null;
 let noticeId = 0;
 let queueView = null;
 let queueUnderlying = null;
+let sourceNavigationAsked = 0;
+let sourceBrowseRoute = null;
+let browseFromSource = false;
 
 const playbackPlan = () => new PlaybackPlan(workspace.context, schedule);
 const currentTrack = () => schedule.current?.track ?? workspace.context.current;
@@ -968,6 +972,7 @@ let jumpedTo = null;
 const arrivedByJump = () => !!jumpedTo && jumpedTo.join('\u0000') === browsePath.join('\u0000');
 
 async function showAuthorFolder(entry) {
+  browseFromSource = false; sourceBrowseRoute = null;
   const folder = authorFolderOf(entry);
   if (!folder) return;
   $('browsesearch').value = '';
@@ -1546,6 +1551,7 @@ function render() {
     }[away.kind] ?? String(queue.length);
   }
   queueView?.render(playbackPlan());
+  if (queueView) renderQueueSourceAction();
 }
 
 /**
@@ -1870,7 +1876,8 @@ function showSessionView(kind) {
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
-  $('random-leave').innerHTML = iconSvg(ICON.playlist) + t('Playlist');
+  $('random-leave').innerHTML = browseFromSource && kind === 'random'
+    ? iconSvg(ICON.cloud) + t('Browse') : iconSvg(ICON.playlist) + t('Playlist');
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
   if (digressing) $('randomscope').textContent = away.author;
@@ -2003,6 +2010,7 @@ async function rollRandom({ intent = ++scheduleIntent, placement = 'append', aut
  */
 
 let unsavedAnswer = null;
+let discardUnsaved = () => discardEdits();
 let unsavedPending = null;
 
 function setDirty(value) {
@@ -2045,11 +2053,12 @@ async function discardEdits() {
  * True at once when there is nothing unsaved. Otherwise the phone's dialog: Save them or Discard
  * them, both of which go on; closing it keeps editing, which does not.
  */
-function settleUnsaved() {
+function settleUnsaved({ discard = () => discardEdits() } = {}) {
   if (!workspace.editor.dirty) return Promise.resolve(true);
-  unsavedPending ??= new Promise((resolve) => {
-    unsavedAnswer = resolve;
-  });
+  if (!unsavedPending) {
+    discardUnsaved = discard;
+    unsavedPending = new Promise((resolve) => { unsavedAnswer = resolve; });
+  }
   $('unsaved').hidden = false;
   return unsavedPending;
 }
@@ -2059,6 +2068,7 @@ function answerUnsaved(go) {
   const resolve = unsavedAnswer;
   unsavedAnswer = null;
   unsavedPending = null;
+  discardUnsaved = () => discardEdits();
   resolve?.(go);
 }
 
@@ -2619,7 +2629,7 @@ function recordPlay(entry, fields) {
  */
 let away = null;
 
-function openAway(tracks, at, kind = 'history') {
+function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tracks)) {
   if (!tracks.length) return;
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
   const dice = random ? { session: random, queue, index, history, order } : away?.dice ?? null;
@@ -2628,8 +2638,8 @@ function openAway(tracks, at, kind = 'history') {
   away = { stash: editorStash(), kind, dice, author };
   const sourceOrder = new PlayOrder({ tracks, shuffle, repeat, random: randomSource }).startAt(Math.min(Math.max(at, 0), tracks.length - 1));
   showSessionView(kind);
-  activateContext(new PlaybackContext({ source: { kind: 'collection', origin: kind,
-    path: browsePath.join('/'), query: $('browsesearch').value }, order: sourceOrder }));
+  const source = { kind: 'collection', origin: kind, path: snapshot.path.join('/'), query: snapshot.query };
+  activateContext(new PlaybackContext({ source, route: captureSourceRoute(source, snapshot), order: sourceOrder }));
 }
 
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
@@ -2769,12 +2779,14 @@ function openPlaybackQueue() {
   document.querySelector('main').hidden = true;
   $('showqueue').setAttribute('aria-pressed', 'true');
   queueView.render(playbackPlan());
+  renderQueueSourceAction();
   queueView.revealCurrent();
   ($('playback-list').querySelector('[aria-current="true"] .text') ?? $('queue-title')).focus({ preventScroll: true });
 }
 
 function closePlaybackQueue({ focus = false } = {}) {
   if ($('playback-panel').hidden) return;
+  ++sourceNavigationAsked;
   $('playback-panel').hidden = true;
   $('browse').hidden = queueUnderlying !== 'browse';
   document.querySelector('main').hidden = queueUnderlying === 'browse';
@@ -2784,11 +2796,104 @@ function closePlaybackQueue({ focus = false } = {}) {
   if (focus) $('showqueue').focus();
 }
 
+
+function renderQueueSourceAction() {
+  const source = workspace.context.source;
+  const navigable = hasSourceView(source);
+  $('queue-source').hidden = !navigable;
+  $('queue-source-plain').hidden = navigable;
+  $('queue-source-plain').textContent = playbackSourceLabel(source);
+  $('queue-source').setAttribute('aria-label', t('Go to source: {name}', { name: playbackSourceLabel(source) }));
+}
+
+/** One History presenter is shared by a live page and a captured playback-source view. */
+function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
+  $('browsetitle').textContent = t('History');
+  if (!total && !rows.length) { note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.'); return; }
+  note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+  if (historyPageCount(total) > 1) {
+    const { first, last } = historyPageRange(historyPage, total);
+    $('historypager').hidden = false;
+    $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() });
+    $('history-newer').disabled = historyPage === 0;
+    $('history-older').disabled = historyPage >= historyPageCount(total) - 1;
+  }
+  const tracks = rows.filter((entry) => entry.replayable).map(({ url, name, meta, file }) => ({ url, name, meta, file }));
+  const route = savedRoute ?? captureBrowseRoute(tracks, { historyRows: rows, historyTotal: total });
+  for (const entry of rows) {
+    const at = tracks.findIndex((track) => track.url === entry.url);
+    if (at >= 0) trackRow(list, tracks[at], [entry.meta?.replace('Modland/', ''),
+      entry.playCount > 1 ? tn(entry.playCount, 'played {n} time', 'played {n} times') : ''].filter(Boolean).join(' · '),
+      () => playFromBrowse(tracks, at, 'history', route));
+    else {
+      row(entry.name, entry.playCount > 1 ? `×${entry.playCount}` : '', null);
+      const node = list.lastElementChild; node.dataset.url = entry.url; node.classList.add('gone');
+      node.title = t("Played from the phone's copy — the page does not keep those");
+    }
+  }
+  markPlayingIn(list);
+  row(t('Clear the history'), null, async () => { sourceBrowseRoute = null; await played.clear(); await renderBrowse(); }, ICON.remove);
+}
+
+/** Capture route fields only; transport and live index/cache/download ownership stay separate. */
+function captureBrowseRoute(results, extra = {}) {
+  return Object.freeze({ path: Object.freeze([...browsePath]), query: browsePath[0] === 'search' ? $('browsesearch').value : '',
+    historyPage, results: Object.freeze([...results]), title: $('browsetitle').textContent,
+    note: $('browsenote').textContent, ...extra });
+}
+
+async function openQueueSource() {
+  const expected = workspace.context.source;
+  if (!hasSourceView(expected)) return;
+  const request = ++sourceNavigationAsked;
+  const current = () => request === sourceNavigationAsked && !$('playback-panel').hidden
+    && sameSourceView(workspace.context.source, expected);
+  const unavailable = () => { if (current()) showNote(t('The playback source is no longer available.')); };
+  if (expected.kind === 'playlist') {
+    let known;
+    try { known = await playlists.get(expected.id); }
+    catch (error) { if (current()) showNote(t('could not read it: {reason}', { reason: error.message })); return; }
+    if (!current()) return;
+    const ids = known ? [known.id] : expected.id === PHONE ? [PHONE] : [];
+    if (sourceDestination(expected, { playlistIds: ids }) !== 'playlist') { unavailable(); return; }
+    if (workspace.editor.id !== expected.id) {
+      // Discard authorizes abandoning this draft; do not erase it before a guarded destination read.
+      if (!(await settleUnsaved({ discard: () => Promise.resolve(true) })) || !current()) return;
+      const opened = await switchTo(expected.id, { preservePlayback: true, requireExisting: true, canActivate: current, onMissing: unavailable });
+      if (!current()) return;
+      if (!opened) return;
+    }
+    showEditor();
+    showPanel(null);
+    $('playlistchip').focus({ preventScroll: true });
+    return;
+  }
+  const destination = sourceDestination(expected, { randomSession: random?.sessionId ?? 0, snapshot: workspace.context.route });
+  if (!destination) { unavailable(); return; }
+  clearTimeout(searchTimer); ++searchAsked; jumpedTo = null; browseFromSource = true;
+  if (destination === 'random') {
+    browsePath = []; $('browsesearch').value = ''; sourceBrowseRoute = null;
+    showPlaybackList();
+    showPanel(null);
+    $('sessiontitle').focus({ preventScroll: true });
+    return;
+  }
+  sourceBrowseRoute = restoreSourceRoute(workspace.context.route, { navigationVisit: searchAsked });
+  browsePath = [...sourceBrowseRoute.path]; historyPage = sourceBrowseRoute.historyPage;
+  $('browsesearch').value = sourceBrowseRoute.query;
+  const restoredRoute = sourceBrowseRoute;
+  showPanel('browse');
+  if (browsePath[0] === 'history') $('browselist').scrollTop = 0;
+  await renderBrowse();
+  if (!$('browse').hidden && sourceBrowseRoute === restoredRoute) $('browsetitle').focus({ preventScroll: true });
+}
+
 function playbackSourceLabel(source) {
   switch (source.kind) {
-    case 'playlist': return source.name;
+    case 'playlist': return source.id === workspace.editor.id ? workspace.editor.name
+      : source.id === sourcePlaylistId ? sourcePlaylistName : source.name;
     case 'random': return t('Random');
-    case 'collection': return source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
+    case 'collection': return source.origin === 'link' ? t('Sent to you') : source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
     case 'external': return t('Sent to you');
     default: return t('Manually queued');
   }
@@ -2903,7 +3008,7 @@ async function choosePlaylist(id) {
 }
 
 /** Load a selected editor while retaining the independently playing source and cursor. */
-async function switchTo(id, { preservePlayback = false } = {}) {
+async function switchTo(id, { preservePlayback = false, requireExisting = false, canActivate = () => true, onMissing = () => {} } = {}) {
   const asked = ++editorAsked;
   let playlist;
   try { playlist = await playlists.get(id); }
@@ -2911,7 +3016,8 @@ async function switchTo(id, { preservePlayback = false } = {}) {
     if (asked === editorAsked) showNote(t('could not read it: {reason}', { reason: error.message }));
     return false;
   }
-  if (asked !== editorAsked) return false;
+  if (asked !== editorAsked || !canActivate()) return false;
+  if (requireExisting && !playlist && id !== PHONE) { onMissing(); return false; }
   captureTransport();
   workspace = workspace.selectPlaylist({ id, name: id === PHONE ? t('From the phone')
     : playlist?.name ?? t('Playlist'), tracks: playlist?.tracks ?? [] }, { preservePlayback });
@@ -2941,7 +3047,10 @@ const SEARCH_LIMIT = 300;
 
 async function renderBrowse() {
   // Whatever a search still running would draw is no longer wanted.
-  searchAsked++;
+  const visit = ++searchAsked;
+  if (sourceBrowseRoute && (JSON.stringify(sourceBrowseRoute.path) !== JSON.stringify(browsePath)
+      || browsePath[0] === 'search' && sourceBrowseRoute.query !== $('browsesearch').value
+      || browsePath[0] === 'history' && sourceBrowseRoute.historyPage !== historyPage)) sourceBrowseRoute = null;
   const list = $('browselist');
   const note = $('browsenote');
   // **The catalogues redraw in place** (the owner, 2026-09-23): every download starting and ending
@@ -2950,8 +3059,8 @@ async function renderBrowse() {
   // swaps the whole list at once when it has what to draw. Every other level starts empty.
   const inPlace = browsePath[0] === 'catalogues';
   if (!inPlace) list.replaceChildren();
-  $('browsedigression').hidden = !away?.dice;
-  if (away?.dice) {
+  $('browsedigression').hidden = browseFromSource || !away?.dice;
+  if (!browseFromSource && away?.dice) {
     $('browsedigression').innerHTML = iconSvg(ICON.detour)
       + '<div class="text"><div class="title"></div><div class="meta"></div></div>';
     $('browsedigression').querySelector('.title').textContent = t('Browsing author');
@@ -2964,8 +3073,8 @@ async function renderBrowse() {
   // the one that leads back to the dice.
   // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
-  $('browsesearch').hidden = !!away?.dice || browsePath[0] !== 'search';
-  $('browseclose').hidden = !!away?.dice;
+  $('browsesearch').hidden = !browseFromSource && !!away?.dice || browsePath[0] !== 'search';
+  $('browseclose').hidden = !browseFromSource && !!away?.dice;
   $('historypager').hidden = true;
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
@@ -3005,6 +3114,19 @@ async function renderBrowse() {
     list.append(li);
   };
 
+  if (sourceBrowseRoute) {
+    const route = sourceBrowseRoute;
+    if (browsePath[0] === 'history') renderHistoryRows(list, note, route.historyRows ?? route.results.map((track) => ({ ...track, replayable: true })), route.historyTotal, row, route);
+    else {
+      $('browsetitle').textContent = browsePath[0] === 'search' ? t('Search') : route.title;
+      note.textContent = route.note;
+      route.results.forEach((track, at) => trackRow(list, track, track.meta ?? sourceOf(track.url),
+        () => playFromBrowse(route.results, at, 'browse', route), { folder: browsePath[0] === 'search' }));
+      markPlayingIn(list);
+    }
+    return;
+  }
+
   if (browsePath.length === 0) {
     // **The phone's Browse** (W8): where the music is, then the two ways through it that are not
     // places -- the dice and the record of what played -- then search. No local folders: a browser
@@ -3026,7 +3148,7 @@ async function renderBrowse() {
   }
 
   if (browsePath[0] === 'catalogues') {
-    await renderCatalogues(list, note);
+    await renderCatalogues(list, note, () => visit === searchAsked);
     return;
   }
 
@@ -3039,42 +3161,12 @@ async function renderBrowse() {
   }
 
   if (browsePath[0] === 'history') {
-    $('browsetitle').textContent = t('History');
-    // **A count and one page, not the whole store** (review F2): History keeps every tune now, and
-    // a read of all of it on every visit only grows. The phone's `PLAY_HISTORY_PAGE`.
     const total = await played.count();
-    if (!total) {
-      note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.');
-      return;
-    }
-    note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
-    // **Every tune, a hundred at a time** (the owner, 2026-09-26): it used to keep the last 500.
+    if (visit !== searchAsked) return;
     historyPage = historyPageClamp(historyPage, total);
-    const rows = await played.page(historyPage * HISTORY_PAGE, HISTORY_PAGE);
-    if (historyPageCount(total) > 1) {
-      const { first, last } = historyPageRange(historyPage, total);
-      $('historypager').hidden = false;
-      $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() });
-      $('history-newer').disabled = historyPage === 0;
-      $('history-older').disabled = historyPage >= historyPageCount(total) - 1;
-    }
-    const tracks = rows.filter((r) => r.replayable)
-      .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
-    for (const r of rows) {
-      const at = tracks.findIndex((t) => t.url === r.url);
-      if (at >= 0) {
-        trackRow(list, tracks[at], [r.meta?.replace('Modland/', ''), r.playCount > 1 ? tn(r.playCount, 'played {n} time', 'played {n} times') : '']
-          .filter(Boolean).join(' · '), () => playFromBrowse(tracks, at, 'history'));
-        continue;
-      }
-      row(r.name, r.playCount > 1 ? `×${r.playCount}` : '', null);
-      const li = list.lastElementChild;
-      li.dataset.url = r.url;
-      li.classList.add('gone');
-      li.title = t("Played from the phone's copy — the page does not keep those");
-    }
-    markPlayingIn(list);
-    row(t('Clear the history'), null, async () => { await played.clear(); await renderBrowse(); }, ICON.remove);
+    const rows = total ? await played.page(historyPage * HISTORY_PAGE, HISTORY_PAGE) : [];
+    if (visit !== searchAsked) return;
+    renderHistoryRows(list, note, rows, total, row);
     return;
   }
 
@@ -3082,7 +3174,9 @@ async function renderBrowse() {
   const source = browsePath[0];
   if (browsePath.length === 1) {
     $('browsetitle').textContent = archive.sourceName(source);
-    for (const { name, count } of await archive.formats(source)) {
+    const formats = await archive.formats(source);
+    if (visit !== searchAsked) return;
+    for (const { name, count } of formats) {
       row(name, count, async () => { browsePath = [source, name]; await renderBrowse(); });
     }
     return;
@@ -3091,7 +3185,9 @@ async function renderBrowse() {
   if (browsePath.length === 2) {
     const format = browsePath[1];
     $('browsetitle').textContent = format;
-    for (const { name, count } of await archive.authors(format, source)) {
+    const authors = await archive.authors(format, source);
+    if (visit !== searchAsked) return;
+    for (const { name, count } of authors) {
       row(name || t('(no author)'), count, async () => {
         browsePath = [source, format, name];
         await renderBrowse();
@@ -3103,10 +3199,12 @@ async function renderBrowse() {
   const [, format, author] = browsePath;
   $('browsetitle').textContent = `${format} / ${author || t('(no author)')}`;
   const tracks = await archive.tracksIn(format, author, source);
+  if (visit !== searchAsked) return;
+  const route = captureBrowseRoute(tracks);
   tracks.forEach((track, i) => {
     // **The whole author is what next and previous walk**, which is what the phone does: a person
     // who opened a folder and pressed a tune meant that folder, not that one file.
-    trackRow(list, track, `${Math.round(track.size / 1024).toLocaleString()} KB`, () => playFromBrowse(tracks, i), { folder: false });
+    trackRow(list, track, `${Math.round(track.size / 1024).toLocaleString()} KB`, () => playFromBrowse(tracks, i, 'browse', route), { folder: false });
   });
   markPlayingIn(list);
 }
@@ -3203,8 +3301,8 @@ $('history-older').onclick = async () => { historyPage += 1; await renderBrowse(
  * what next and previous walk while you are in it; Browse stays open so the next tune
  * can be tried, and Add is how anything gets kept. The phone's `playFromResults`.
  */
-function playFromBrowse(tracks, at, kind = 'browse') {
-  openAway(tracks.map(plain), at, kind);
+function playFromBrowse(tracks, at, kind = 'browse', route = captureBrowseRoute(tracks)) {
+  openAway(tracks.map(plain), at, kind, route);
 }
 
 /**
@@ -3422,7 +3520,7 @@ function heldRow(list, { name, detail, warning = '', held, key, label, ondownloa
   return li;
 }
 
-async function renderCatalogues(list, note) {
+async function renderCatalogues(list, note, canRender = () => true) {
   $('browsetitle').textContent = t('Online catalogues');
   // Everything is read first, then drawn at once: no row appears and then changes its mind.
   const held = {};
@@ -3431,7 +3529,7 @@ async function renderCatalogues(list, note) {
   const metadata = await archive.songMetadataMeta();
   // Read before anything is drawn too, so no row waits in the middle of the list for it.
   const stale = await staleSentence(held.modland);
-  if (browsePath[0] !== 'catalogues') return;
+  if (browsePath[0] !== 'catalogues' || !canRender()) return;
   // Built aside and put in place at once: the list is never seen empty or half drawn.
   const rows = document.createDocumentFragment();
 
@@ -3504,6 +3602,7 @@ async function runSearch(query) {
     const known = await archive.meta(source);
     if (known?.tracks) held.push({ source, ...known });
   }
+  if (asked !== searchAsked) return;
   if (!held.length) { note.textContent = t('Download an index first.'); return; }
 
   note.textContent = t('searching…');
@@ -3529,8 +3628,9 @@ async function runSearch(query) {
   $('browsetitle').textContent = t('Search');
   $('browseback').hidden = false;
   list.replaceChildren();
+  let route;
   found.forEach((track, i) => {
-    trackRow(list, track, track.meta.replace('Modland/', ''), () => playFromBrowse(found, i));
+    trackRow(list, track, track.meta.replace('Modland/', ''), () => playFromBrowse(found, i, 'browse', route));
   });
   markPlayingIn(list);
 
@@ -3548,6 +3648,7 @@ async function runSearch(query) {
       + ' ' + (held.some(({ complete }) => complete)
         ? t('Formats this build cannot open are indexed but not offered.')
         : t('Formats it cannot play are not in an index built before this browser kept everything.'));
+  route = captureBrowseRoute(found, { query });
 }
 
 $('browsesearch').oninput = () => {
@@ -3559,16 +3660,26 @@ $('browsesearch').oninput = () => {
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }
   browsePath = [];
+  browseFromSource = false; sourceBrowseRoute = null;
   jumpedTo = null;
   showPanel('browse');
   await renderBrowse();
 };
 $('browseback').onclick = async () => {
+  if (browseFromSource && browsePath[0] === 'search') {
+    // Native BrowseWorkflow leaves an Everywhere search without destroying its query/results.
+    clearTimeout(searchTimer);
+    sourceBrowseRoute = null;
+    browsePath = [];
+    jumpedTo = null;
+    await renderBrowse();
+    return;
+  }
   // Out of a search, back to where it was typed; otherwise one level up. **Except above the folder
   // a digression came from** (`docs/BACKLOG.md` A41): there the way back is the dice, not the
   // archive, which is what "one level of digression" means.
   if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else if (
-    away?.dice && browsePath.length <= 3
+    !browseFromSource && away?.dice && browsePath.length <= 3
   ) {
     showPanel(null);
     return;
@@ -3656,12 +3767,14 @@ $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 for (const overlay of document.querySelectorAll('.overlay')) {
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay || event.target.hasAttribute('data-close')) {
-      if (overlay.id === 'addto') closeAddTo(); else showPanel(null);
+      if (overlay.id === 'unsaved') answerUnsaved(false);
+      else if (overlay.id === 'addto') closeAddTo(); else showPanel(null);
     }
   });
 }
 addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (!$('unsaved').hidden) { answerUnsaved(false); return; }
   if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
   if (!$('addto').hidden) closeAddTo(); else showPanel(null);
 });
@@ -3783,7 +3896,7 @@ $('addto-new').onclick = async () => {
 addEventListener('keydown', (event) => { if (event.key === 'Escape' && selected.size) clearSelection(); });
 $('tab-discard').onclick = () => discardEdits();
 $('unsaved-save').onclick = async () => { if (await saveEdits()) answerUnsaved(true); };
-$('unsaved-discard').onclick = async () => { if (await discardEdits()) answerUnsaved(true); };
+$('unsaved-discard').onclick = async () => { if (await discardUnsaved()) answerUnsaved(true); };
 // **Closing the tab** is the one switch the page cannot ask about in its own words; the browser's
 // question is the only one available, and losing edits silently is worse than a plain dialog.
 addEventListener('beforeunload', (event) => {
@@ -3791,7 +3904,12 @@ addEventListener('beforeunload', (event) => {
   event.preventDefault();
   event.returnValue = '';
 });
-$('random-leave').onclick = () => endSession();
+$('random-leave').onclick = async () => {
+  if (browseFromSource && !editorShown && random) {
+    showEditor(); browsePath = []; browseFromSource = false; sourceBrowseRoute = null;
+    showPanel('browse'); await renderBrowse();
+  } else endSession();
+};
 
 $('next').onclick = () => {
   if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }
@@ -4557,6 +4675,7 @@ queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'),
     [label, action, enabled, ICON[icon]]), anchor),
 });
 $('showqueue').onclick = openPlaybackQueue;
+$('queue-source').onclick = () => openQueueSource();
 $('queue-close').onclick = () => closePlaybackQueue({ focus: true });
 $('queue-clear').onclick = clearPlaybackQueue;
 $('queue-help').onclick = () => {

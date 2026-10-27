@@ -822,6 +822,9 @@
   .queue-grip:active { cursor: grabbing; }
   .queue-track .text:focus-visible, .queue-grip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .swipe-surface, .queue-track.reorder-preview { transition: none; } }
+  .queue-source { display: flex; align-items: center; gap: 4px; max-width: 100%; color: inherit; background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer; }
+  .queue-source span { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .queue-source svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
   /* Last as well as important: the host DOM cascade and browsers both hide every hidden panel. */
   [hidden] { display: none !important; }
 </style>
@@ -871,7 +874,7 @@
     <div id="randomhead" class="randomhead" hidden>
       <svg viewBox="0 0 24 24" id="sessionicon"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
       <div class="text">
-        <div class="title" id="sessiontitle">Playing at random</div>
+        <div class="title" id="sessiontitle" tabindex="-1">Playing at random</div>
         <div class="meta" id="randomscope">Everything</div>
       </div>
       <button class="action" id="random-filter">
@@ -913,7 +916,7 @@
   <section id="browse" class="browseview" hidden>
     <div class="browsehead">
       <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
-      <h2 id="browsetitle">Browse</h2>
+      <h2 id="browsetitle" tabindex="-1">Browse</h2>
       <button class="plain" id="browseclose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
     </div>
     <!-- Whose folder this is, while the dice waits under it: the session heading, in this screen. -->
@@ -931,7 +934,7 @@
 
   <section id="playback-panel" class="playbackview" aria-labelledby="queue-title" hidden>
     <div class="queue-head">
-      <div class="text"><h2 id="queue-title" tabindex="-1">Queue</h2><div class="meta" id="playback-source"></div></div>
+      <div class="text"><h2 id="queue-title" tabindex="-1">Queue</h2><div class="meta"><button id="queue-source" class="queue-source"><span id="playback-source"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-1.4 1.4L13.2 12l-5.6 5.6L9 19l7-7-7-7z"/></svg></button><span id="queue-source-plain" hidden></span></div></div>
       <button class="action" id="queue-clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6zm2 4h14v2H5v-2zm2 4h10v2H7v-2zm2 4h6v2H9v-2z"/></svg>Clear</button>
       <button class="action" id="queue-help" aria-expanded="false" aria-controls="queue-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm1.2-6.2-1.1 1c-.8.7-1.1 1.2-1.1 2.2h-2c0-1.5.5-2.3 1.5-3.2l1.4-1.2c.5-.4.7-.8.7-1.3a1.6 1.6 0 0 0-3.2 0h-2a3.6 3.6 0 0 1 7.2 0c0 1-.5 1.8-1.4 2.5z"/></svg>Help</button>
       <button class="action" id="queue-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>

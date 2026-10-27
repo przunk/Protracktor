@@ -41,7 +41,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | --- | --- | --- |
 | W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
 | W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
-| W03 | Return to playback source | Pending |
+| W03 | Return to playback source | Destination/route integration passes focused host checks; final gate and W11 search-scope integration pending |
 | W04 | Remembered Random and deliberate reroll | Pending |
 | W05 | Random platform/Favourites filters | Pending |
 | W06 | Qualified played-before marks | Pending |
@@ -317,6 +317,47 @@ and background operation remain unchecked**. No real browser executable was avai
 geometry and animation hooks are not screenshots. Android production/schema/native/dependencies
 are unchanged. No intermediate bundle, APK, merge, push or deployment is part of this checkpoint.
 W03-W25 remain required. W03 currently has source analysis and an ignored domain/page draft only.
+
+## W03 source navigation checkpoint — 2026-10-27
+
+Reference: baseline Android `QueueSourceNavigation.kt`, `PlaybackController.openQueueSource`,
+`QueueSourceNavigationRulesTest`, actual `QueueSourceNavigationTest` shell actions,
+`QueueSourceHeaderTest` and `BrowseWorkflow` Back. The existing source label is an inline labelled
+button; None and external sources retain a plain label. The browser's existing multi-track shared
+links remain finite collection playback without a fabricated destination. The permanent PHONE
+document is not a user-deletable playlist.
+
+Header activation follows the parked source while a manual occurrence plays. Playlist return
+settles the selected draft and uses guarded `preservePlayback` loading. Cancel/failure retains
+Queue; Discard authorizes abandoning a draft only when its destination is actually read. A
+deleted source is not recreated. A completed Save still persists its selected document when a
+new source supersedes navigation, without then selecting an obsolete playlist or reporting a
+false failure. Captured membership differing from disk is revealed as an unsaved draft;
+metadata-only differences do not dirty it or overwrite newer stored titles.
+
+An immutable context route retains exact folder components, submitted query/results and History
+page/rows. It does not capture index/storage/download owners. Restoring a route invalidates older
+Browse reads and search timers, retires author-jump detours and preserves current resource facts.
+Result callbacks capture the query that produced their rows, not pending text typed later.
+History starts a fresh top scroll visit. Search Back follows the current Everywhere native rule
+without deleting the query; Random Back returns to Browse root. Focus moves to the visible
+destination without focusing the Search input.
+
+**Partly checked:** **732 page assertions** and **9 Android-derived/domain cases** pass on the
+host. Actual header, Save/Discard/Cancel, paused/manual playback, missing sources, obsolete reads,
+delayed successful Save, captured folder/History/Search results and Random-session destinations
+are exercised through production handlers/store/MessagePort. Missing History scroll reset and
+Search Back first fail their dedicated guards. Disconnecting the header or removing source/read
+ownership checks fails its intended page assertion. Input/output errors interrupted one new-file
+write; subsequent project-local write/fsync/read, prepared-source comparisons, syntax/diff checks
+and successful reruns confirmed that the files were accessible again. No environment repair or Java/toolchain change occurred.
+
+This is a scoped implementation checkpoint, **not full-gate readiness or browser acceptance**.
+The current complete gate still identifies W02's candidate. Integrate remembered Random in W04,
+then validate the context/navigation phase together. W03's captured search-scope slot must be
+connected to the real W11 scopes, and its History-query slot to W10; those later integrations
+remain explicit requirements. Source snapshots are session-only. No Android production/schema,
+dependency, APK, merge, push or deployment change.
 
 ## Deferred or blocked work
 

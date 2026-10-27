@@ -155,6 +155,7 @@ run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.s
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs
 run_check "Playback schedule" playback-schedule node scripts/check-playback-schedule.mjs
 run_check "Playback effects" playback-effects node scripts/check-playback-steps.mjs
+run_check "Source navigation" source-navigation node scripts/check-source-navigation.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because

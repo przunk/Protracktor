@@ -60,7 +60,9 @@ checks**, 67 context, 29 schedule, 14 effects, 16 swipe, 9 grip and 7 keyed-pres
 Lint: **0 errors / 79 warnings**, analysis up to date after the prior fresh scan. Exact source-input
 hashes and reports are retained in ignored `user/web-parity-verification/w02-panel-final-full-gate/`.
 **Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
-bundle is handed off. W03-W25 remain open; W03 analysis/drafts are not production implementation.
+bundle is handed off. W03-W25 remain open. W03 destination/route restoration is now connected on
+the branch and passes focused host checks; full-gate readiness and future search-scope integration
+remain pending.
 Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
 
 ## WEB and Android parity inventory — 2026-10-26

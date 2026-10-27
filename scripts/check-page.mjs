@@ -170,7 +170,10 @@ const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace
 const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^export /gm, '');
 const reorderSource = fs.readFileSync('web/src/queue-reorder.js', 'utf8').replace(/^export /gm, '');
 const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const sourceNavigationSource = fs.readFileSync('web/src/source-navigation.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';",
+    `const { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } = (() => { ${sourceNavigationSource}; return { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute }; })();`)
   .replace("import { bindTrackGestures } from './row-gestures.js';",
     `const { bindTrackGestures } = (() => { ${gesturesSource}; return { bindTrackGestures }; })();`)
   .replace("import { QueueView } from './queue-view.js';",
@@ -3655,6 +3658,9 @@ if (window.__api?.editorNow) {
 await (await import('./check-page-manual-queue.mjs')).default({ window, check });
 await (await import('./check-page-queue-view.mjs')).default({ window, check });
 await (await import('./check-page-queue-load.mjs')).default({ window, check });
+await (await import('./check-page-source-navigation.mjs')).default({ window, check });
+await (await import('./check-page-source-save.mjs')).default({ window, check });
+await (await import('./check-page-source-routes.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

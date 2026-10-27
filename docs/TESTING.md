@@ -33,6 +33,22 @@ are still in progress and no intermediate APK/bundle is supplied here.
 - [ ] Check reduced motion, EN/PL, both themes, narrow/wide viewports, larger text and accessible
   action names. Verify full-width manual highlights and stable dock height.
 
+## WEB W03 source return — focused host checkpoint, browser checks pending
+
+The source label now navigates through production handlers; the context/navigation gate and
+W10/W11 scope/filter integration remain pending. Do not treat this as a packaged handoff.
+
+- [ ] While A plays and B is selected, open Queue and activate its source label. Reveal A without
+  restarting, resuming a paused file or changing pending manual requests. Repeat during a manual
+  interruption; the label still follows its parked source.
+- [ ] Repeat with dirty B: Cancel leaves Queue/draft intact; Save persists B before switching;
+  Discard abandons it when the destination is available. A missing source gives feedback.
+- [ ] Return to folder, Search, History and Random. Restore the captured route/list, not an
+  unrelated author jump; retain live download/cache facts. Back follows the source hierarchy.
+  History starts at its top; Search keeps its query; Random return never rerolls.
+- [ ] Check the inline name/arrow, full accessible description and destination focus in EN/PL,
+  narrow/large-text layouts and both themes. A manual-only/shared-link source is a plain label.
+
 ## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
 
 2026-10-26 feedback reports playback working in a private window while the normal session
