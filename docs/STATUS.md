@@ -69,8 +69,18 @@ assertions**, **52 engine checks**, 67 context, 29 schedule, 14 effects, 9 sourc
 `user/web-parity-verification/w04-context-navigation-full-gate/`.
 **Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
 bundle is handed off. W03's source destinations pass the combined gate, but its future W10/W11
-History-query/Search-scope wiring remains pending. W05-W25 remain open.
+History-query/Search-scope wiring remains pending. W06-W25 remain open; W05 is recorded below.
 Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
+
+**W05 implemented on the branch, 2026-10-27:** platform/Favourites filters preserve Random history,
+use actual-index availability, retain curated paths and persist one scope. Dataset replacement is
+atomic and guarded against obsolete playability rebuilds. The full forced gate passes **1218 tests /
+160 suites**, zero failures/errors/skips, **695 s**, all 31 unit tasks executed. Companions pass,
+including **787 page assertions**, **24 scope/platform cases**, **12 catalogue/storage cases** and
+**4 startup checks**. Fresh lint: **0 errors / 79 warnings**, 84.8 s. Final input hashes/reports are
+retained in ignored `user/web-parity-verification/w05-random-filters-full-gate/`.
+**Real-browser acceptance remains unchecked.** No bundle, APK, Android production/schema/native
+change, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w05-random-filters-checkpoint--2026-10-27).
 
 ## WEB and Android parity inventory — 2026-10-26
 

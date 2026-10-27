@@ -66,6 +66,23 @@ host gate; W10/W11 scope/filter integration remains pending. Do not treat this a
   silently retry; deliberate reroll does. Repeated files have separate positions; pruning one
   never removes another occurrence or changes another active source.
 
+## WEB W05 filters — integrated host checks, browser acceptance pending
+
+- [ ] Open Random/Filter with no indexes, a legacy index and current Modland/ASMA indexes.
+  Cold checks explain unknown counts; warm reopening keeps usable chips. Everything remains
+  available; platforms with no playable indexed files are disabled with an explanation.
+- [ ] Download Favourites while the panel stays open. Distinguish the absent list, a retained list
+  without a matching Modland index, and playable matches. All chips refresh together; Retry
+  preserves known counters after a failed read. Deleting an index blocks stale availability.
+- [ ] Build ten heard picks, select the fifth and change platform. The entire heard record remains;
+  Next walks its suffix, then appends one new pick from the selected pool. Check the same choice
+  while an author owns playback: neither its current file nor Next changes to Random.
+- [ ] Reload and verify the selected scope. Check a prompt explicit choice during slow startup,
+  a failed save, empty/unsupported pools and an index update during an older read.
+- [ ] Check all chips, the selected shape, explanations and Retry/Download in EN/PL, themes,
+  narrow/wide layouts, zoom and keyboard/screen-reader navigation. The inline panel should remain
+  scrollable with the shared player dock available.
+
 ## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
 
 2026-10-26 feedback reports playback working in a private window while the normal session

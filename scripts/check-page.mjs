@@ -173,7 +173,17 @@ const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace
 const sourceNavigationSource = fs.readFileSync('web/src/source-navigation.js', 'utf8').replace(/^export /gm, '');
 const randomHistorySource = fs.readFileSync('web/src/random-history.js', 'utf8').replace(/^export /gm, '');
 const randomDiceSource = fs.readFileSync('web/src/random-dice.js', 'utf8').replace(/^export /gm, '');
+const randomScopeSource = fs.readFileSync('web/src/random-scope.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').replace(/^export /gm, '');
+const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { RandomFilterState, storedRandomScope, platformById } from './random-scope.js';",
+    `const { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites } = (() => { ${platformDataSource}; ${randomScopeSource}; return { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites }; })();`)
+  .replace("import * as randomCatalogue from './random-catalogue.js';",
+    `const randomCatalogue = (() => { ${randomCatalogueSource}; return { randomAvailability, scopedRandomTable, downloadFavourites, clearFavourites, favouritesMeta }; })();`)
+  .replace("import { RandomFiltersView } from './random-filters-view.js';",
+    `const { RandomFiltersView } = (() => { ${randomFiltersViewSource}; return { RandomFiltersView }; })();`)
   .replace("import { RandomHistory } from './random-history.js';",
     `const { RandomHistory } = (() => { ${randomHistorySource}; return { RandomHistory }; })();`)
   .replace("import { bindRandomDice } from './random-dice.js';",
@@ -211,7 +221,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2706,7 +2716,7 @@ if (window.__api) {
     ];
     for (const [[choice, list], want, what] of cases) check(i18n.resolveLanguage(choice, list) === want, what);
 
-    const appSource = ['web/src/app.js', 'web/src/queue-view.js'].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+    const appSource = ['web/src/app.js', 'web/src/queue-view.js', 'web/src/random-filters-view.js'].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
     const keys = new Set();
     for (const m of appSource.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
     for (const m of appSource.matchAll(/\btn\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
@@ -3668,6 +3678,7 @@ await (await import('./check-page-source-navigation.mjs')).default({ window, che
 await (await import('./check-page-source-save.mjs')).default({ window, check });
 await (await import('./check-page-source-routes.mjs')).default({ window, check });
 await (await import('./check-page-random.mjs')).default({ window, check });
+await (await import('./check-page-random-filters.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

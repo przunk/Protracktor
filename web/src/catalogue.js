@@ -16,6 +16,7 @@ import { catalogue } from './store.js';
 import { md5, parseSongLengths } from './songlengths.js';
 import { parseSongDbMetadata, songDbKey } from './songdb.js';
 import { searchTerms, searchable } from './rules.js';
+import { countPlatformBucket, PLATFORM_FINGERPRINT } from './random-scope.js';
 
 const MODLAND = 'modland';
 const ASMA = 'asma';
@@ -322,7 +323,9 @@ export function toRecords(text, source = MODLAND, isPlayable = () => true) {
       .sort((a, b) => collator.compare(a.name, b.name)),
   });
 
-  return { records, tracks, total, buckets: buckets.size, formats: formats.size };
+  const platformCounts = {};
+  for (const record of records) countPlatformBucket(platformCounts, source, record);
+  return { records, tracks, total, buckets: buckets.size, formats: formats.size, platformCounts };
 }
 
 /**
@@ -345,16 +348,16 @@ export async function downloadModland({
   const text = await unzipOnly(bytes);
 
   onProgress?.({ stage: 'sorting' });
-  const { records, tracks, total, buckets, formats } = toRecords(text, MODLAND, isPlayable);
+  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(text, MODLAND, isPlayable);
   const key = keyFor(MODLAND);
 
-  await catalogue.clear(`${MODLAND}:`);
-  await catalogue.putAll(records, 2000, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{
+  onProgress?.({ stage: 'storing', done: 0, total: records.length });
+  await catalogue.replacePrefix(`${MODLAND}:`, [...records, {
     // **`complete`, the way the phone's `catalogues` row records it.** An index written before step
     // 0 holds only what an older build accepted, so a format added afterwards genuinely is missing
     // rows here and no local pass can supply them. One written since holds the archive.
     key: key.meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
+    platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
   }]);
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
@@ -425,11 +428,11 @@ export async function downloadAsma({ fingerprint = '', isPlayable = () => true, 
   }
 
   onProgress?.({ stage: 'sorting' });
-  const { records, tracks, total, buckets, formats } = toRecords(lines.join('\n'), ASMA, isPlayable);
-  await catalogue.clear(`${ASMA}:`);
-  await catalogue.putAll(records, 2000, (done, all) => onProgress?.({ stage: 'storing', done, total: all }));
-  await catalogue.putAll([{
+  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(lines.join('\n'), ASMA, isPlayable);
+  onProgress?.({ stage: 'storing', done: 0, total: records.length });
+  await catalogue.replacePrefix(`${ASMA}:`, [...records, {
     key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
+    platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
   }]);
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
@@ -528,13 +531,19 @@ export async function authors(format, source = MODLAND) {
  * format and none per bucket. Held by the caller for the session; a roll is then a random number
  * and a binary search.
  */
-export async function buildRandomTable() {
+export async function buildRandomTable({ signal } = {}) {
+  const check = () => { if (signal?.aborted) throw new DOMException('Aborted', 'AbortError'); };
+  check();
   const entries = [];
   let total = 0;
   // Every archive held, one pool: a tune from ASMA is as likely as any tune from Modland.
   for (const source of sources()) {
-    for (const { name: format } of await formats(source)) {
-      for (const { name: author, count } of await authors(format, source)) {
+    const available = await formats(source);
+    check();
+    for (const { name: format } of available) {
+      const buckets = await authors(format, source);
+      check();
+      for (const { name: author, count } of buckets) {
         if (!count) continue;
         total += count;
         entries.push({ source, format, author, end: total });
@@ -567,6 +576,7 @@ export async function sampleRandom(table, count, random = Math.random, signal) {
 export async function drawTrack(table, random = Math.random) {
   if (!table?.total) return null;
   const r = Math.min(table.total - 1, Math.floor(random() * table.total));
+  if (table.tracks) return table.tracks[r] ?? null;
   let lo = 0;
   let hi = table.entries.length - 1;
   while (lo < hi) {
@@ -576,7 +586,7 @@ export async function drawTrack(table, random = Math.random) {
   const bucket = table.entries[lo];
   const start = lo ? table.entries[lo - 1].end : 0;
   const tracks = await tracksIn(bucket.format, bucket.author, bucket.source);
-  return tracks[r - start] ?? tracks[0] ?? null;
+  return tracks[bucket.indices?.[r - start] ?? r - start] ?? null;
 }
 
 /** One bucket, as tracks the queue understands. */
@@ -612,7 +622,7 @@ export async function tracksIn(format, author, source = MODLAND) {
  *
  * @returns how many tunes are offered afterwards, or null when there was nothing to do.
  */
-export async function refreshPlayable(source = MODLAND, isPlayable = () => true) {
+export async function refreshPlayable(source = MODLAND, isPlayable = () => true, { fingerprint } = {}) {
   const key = keyFor(source);
   const held = await catalogue.get(key.meta);
   if (!held?.complete) return null;
@@ -667,18 +677,19 @@ export async function refreshPlayable(source = MODLAND, isPlayable = () => true)
   // **The old derived records go first.** A format removed leaves a title shard and an author list
   // that this pass never rebuilds, and writing over the survivors would leave the rest standing --
   // tunes findable in search that Browse no longer lists.
-  await catalogue.clear(`${source}:titles:`);
-  await catalogue.clear(`${source}:authors:`);
-  await catalogue.putAll(records, 2000);
-  await catalogue.putAll([{ ...held, tracks, total, formats: formats.size, at: Date.now() }]);
-  return tracks;
+  const platformCounts = {};
+  for (const record of records) countPlatformBucket(platformCounts, source, record);
+  const applied = await catalogue.replacePrefix(`${source}:`, [...records, { ...held, tracks, total, formats: formats.size,
+    at: Date.now(), platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
+    fingerprint: fingerprint ?? held.fingerprint }], { expected: { key: key.meta, value: held } });
+  return applied ? tracks : null;
 }
 
 /**
  * Records which format list judged this index, so the judging is not repeated every time.
  *
- * Separate from `refreshPlayable` because the two answer to different things: that one rebuilds
- * what is offered, this one remembers that it was rebuilt.
+ * Retained for maintenance tools. Production refresh writes its stamp in the guarded transaction,
+ * so a newer index cannot receive an older rebuild's capability fingerprint.
  */
 export async function stampIndex(source = MODLAND, fingerprint = '') {
   const held = await catalogue.get(keyFor(source).meta);

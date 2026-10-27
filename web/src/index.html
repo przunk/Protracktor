@@ -212,12 +212,16 @@
   .randomhead .text { flex: 1; min-width: 0; }
   .randomhead .title { font-size: var(--title-medium); font-weight: 500; }
   .randomhead .meta { font-size: var(--body-small); color: var(--on-surface-variant); }
-  .randomfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 16px 10px;
-                  font-size: var(--body-small); color: var(--on-surface-variant); }
-  .randomfilter .chip { border: 1px solid var(--outline); border-radius: 8px; padding: 4px 12px;
-                        font-size: var(--body-medium); color: var(--on-surface); }
-  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
-                           border-color: transparent; }
+  .randomfilter { padding: 0 16px 10px; font-size: var(--body-small); color: var(--on-surface-variant); }
+  .randomchips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .randomfilter .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+    padding: 4px 12px; border: 1px solid var(--outline); border-radius: 8px; background: transparent;
+    font: inherit; color: var(--on-surface); cursor: pointer; }
+  .randomfilter .chip svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
+  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .randomfilter .chip:disabled { opacity: .45; cursor: default; }
+  .random-filter-explanation { display: flex; align-items: center; gap: 12px; }
+  .random-filter-explanation p { flex: 1; margin: 8px 0 0; }
   #random-dice { touch-action: manipulation; flex: none; }
   #randomhint { padding: 0 16px; margin: 0 0 10px; }
   #randomnote { padding: 0 16px; }
@@ -883,7 +887,7 @@
         <div class="title" id="sessiontitle" tabindex="-1">Playing at random</div>
         <div class="meta" id="randomscope">Everything</div>
       </div>
-      <button class="action" id="random-filter">
+      <button class="action" id="random-filter" aria-expanded="false" aria-controls="randomfilter">
         <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zM6 11h12v2H6zM10 16h4v2h-4z"/></svg>
         Filter
       </button>
@@ -893,11 +897,7 @@
       </button>
     </div>
     <p id="randomhint" class="note" hidden>Double-tap the dice to reroll the list</p>
-    <div id="randomfilter" class="randomfilter" hidden>
-      <span class="chip on">Everything</span>
-      <span class="meta">The phone can narrow this to one machine or to Modland's favourites. The browser
-        picks from everything it can play, for now.</span>
-    </div>
+    <div id="randomfilter" class="randomfilter" hidden></div>
     <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
     <!--

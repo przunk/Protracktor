@@ -14,6 +14,9 @@ import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, r
 import { bindTrackGestures } from './row-gestures.js';
 import { RandomHistory } from './random-history.js';
 import { bindRandomDice } from './random-dice.js';
+import { RandomFilterState, storedRandomScope, platformById } from './random-scope.js';
+import * as randomCatalogue from './random-catalogue.js';
+import { RandomFiltersView } from './random-filters-view.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -841,8 +844,7 @@ async function reconsiderStoredIndexes() {
     for (const source of archive.sources()) {
       const held = await archive.meta(source);
       if (!held?.complete || held.fingerprint === current) continue;
-      await archive.refreshPlayable(source, isPlayable);
-      await archive.stampIndex(source, current);
+      await archive.refreshPlayable(source, isPlayable, { fingerprint: current });
     }
     if (!$('browse').hidden) await renderBrowse();
   } catch { /* no index, or no engine yet; either way there is nothing to reconsider */ }
@@ -1564,6 +1566,7 @@ function render() {
   if (randomView) renderRandomHeading();
   queueView?.render(playbackPlan());
   if (queueView) renderQueueSourceAction();
+  if (randomFiltersView) requestRandomFilterRefresh();
 }
 
 /**
@@ -1848,6 +1851,69 @@ async function saveQueue({ explicit = false } = {}) {
 let random = null;
 let rememberedRandom = null;
 let randomView = null;
+let randomScope = 'everything';
+let randomScopeAsked = 0;
+let randomScopeWrites = Promise.resolve();
+let randomResourcesVersion = 0;
+let randomFiltersView = null;
+let randomFilterRefreshQueued = false;
+const deletingCatalogues = new Set();
+const randomFiltersState = new RandomFilterState();
+const randomScopeReady = settings.get('randomScope', 'everything').then((saved) => {
+  if (randomScopeAsked === 0) randomScope = storedRandomScope(saved);
+  if (randomView) renderRandomHeading();
+  renderRandomFilters();
+}).catch(() => {});
+
+function randomScopeLabel() {
+  if (randomScope === 'favourites') return t('Favourites');
+  return platformById(randomScope.slice(9))?.name ?? t('Everything');
+}
+function renderRandomFilters() {
+  randomFiltersView?.render(randomScope, randomFiltersState.state, downloading.has('modland-favourites'));
+  $('random-filter').setAttribute('aria-expanded', String(!$('randomfilter').hidden));
+}
+function refreshRandomAvailability(force = false) {
+  const active = !!randomView && !document.querySelector('main').hidden;
+  const key = JSON.stringify([randomResourcesVersion, [...downloading].sort(), [...deletingCatalogues].sort()]);
+  return randomFiltersState.refresh({ active, blocked: deletingCatalogues.size > 0, key, force },
+    (signal) => randomCatalogue.randomAvailability({ signal }), renderRandomFilters);
+}
+function requestRandomFilterRefresh() {
+  if (randomFilterRefreshQueued) return;
+  randomFilterRefreshQueued = true;
+  queueMicrotask(() => { randomFilterRefreshQueued = false; refreshRandomAvailability(); });
+}
+function prepareChangedRandom() {
+  const r = rememberedRandom;
+  if (!r) return;
+  const wasDrawing = drawing && random === r;
+  invalidateRandomWork(r);
+  r.table = null;
+  if (random === r) {
+    if (wasDrawing) { ++scheduleIntent; drawing = false; rollRandom(); }
+    else fillAhead(r).catch(() => {});
+  }
+}
+function setRandomScope(value) {
+  const next = storedRandomScope(value);
+  const changed = next !== randomScope;
+  const asked = ++randomScopeAsked;
+  randomScope = next;
+  if (changed) prepareChangedRandom();
+  if (randomView) renderRandomHeading();
+  renderRandomFilters();
+  randomScopeWrites = randomScopeWrites.catch(() => {}).then(() => settings.set('randomScope', next))
+    .catch((error) => { if (asked === randomScopeAsked) showNote(t('Could not save the Random filter: {reason}', { reason: error.message })); });
+}
+async function downloadRandomFavourites() {
+  if (downloading.has('modland-favourites')) return;
+  await downloadStarted('modland-favourites');
+  try { await randomCatalogue.downloadFavourites(); }
+  catch (error) { showNote(t('Could not download Modland favourites: {reason}', { reason: error.message })); }
+  finally { await downloadEnded('modland-favourites'); }
+}
+
 const RANDOM_AHEAD = 3;   // Android READ_AHEAD
 const RANDOM_DRAWS = 4;   // Android OVERDRAW
 const RANDOM_FAILURES = 8;
@@ -1872,6 +1938,7 @@ function showSessionView(kind) {
   randomView = kind === 'random' ? rememberedRandom : null;
   $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
+  $('random-filter').setAttribute('aria-expanded', 'false');
   $('randomnote').hidden = true;
   // Keep the author's name visible after an explicit choice from its folder.
   const digressing = kind === 'browse' && !!away?.dice;
@@ -1919,10 +1986,11 @@ function renderRandomHeading() {
   const r = randomView;
   if (!r) return;
   $('sessiontitle').textContent = random === r && !manualCurrent() ? t('Playing at random') : t('Random');
+  $('randomscope').textContent = randomScopeLabel();
   const empty = !r.history.playedPicks.length;
   $('randomnote').hidden = !empty;
   if (empty) $('randomnote').textContent = random === r && drawing ? t('Picking a tune…')
-    : r.exhausted ? t('Nothing to pick from. Download the Modland index in Browse first.')
+    : r.exhausted ? t('Nothing to pick from. Index a catalogue, or widen the filter.')
     : t('No tracks in this Random list yet.');
 }
 
@@ -1949,18 +2017,21 @@ async function rerollRandom() {
   adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   rowState = null;
   showRandomView(true);
+  drawing = true;
   renderNothingPlaying();
   setPlaying(false);
   render();
   const intent = scheduleIntent;
   await engine;
+  await randomScopeReady;
   if (random === r && intent === scheduleIntent) await rollRandom();
 }
 
 async function fillRandom(r, ahead) {
   const signal = r.fillController.signal;
+  const scope = randomScope;
   await r.history.fill(ahead, RANDOM_DRAWS, async (count) => {
-    const table = r.table ?? await archive.buildRandomTable();
+    const table = r.table ?? await randomCatalogue.scopedRandomTable(scope, { signal });
     if (signal.aborted) return [];
     r.table = table;
     return archive.sampleRandom(table, count, randomSource, signal);
@@ -2489,6 +2560,7 @@ async function renderSettings() {
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
     sets.push({
+      key: source,
       label: t('{source} index', { source: archive.sourceName(source) }),
       held: held?.tracks ? tn(held.tracks, '{count} tune', '{count} tunes', { count: held.tracks.toLocaleString() }) : null,
       absent: t('not downloaded — Browse offers it'),
@@ -2496,10 +2568,18 @@ async function renderSettings() {
       remove: () => archive.forgetIndex(source),
     });
   }
+  const favourites = await randomCatalogue.favouritesMeta();
+  sets.push({ key: 'modland-favourites', label: t('Modland favourites'),
+    held: favourites?.listed ? tn(favourites.listed, '{count} tune', '{count} tunes', { count: favourites.listed.toLocaleString() }) : null,
+    absent: t('not downloaded — Random offers it'),
+    consequence: t('It can be downloaded again from Random. Until then the Favourites filter is unavailable.'),
+    remove: async () => { await randomCatalogue.clearFavourites(); if (randomScope === 'favourites') setRandomScope('everything'); },
+  });
   const lengths = await archive.songLengthsMeta();
   const metadata = await archive.songMetadataMeta();
   const songTunes = (lengths?.tunes ?? 0) + (metadata?.tunes ?? 0);
   sets.push({
+    key: 'song-metadata',
     label: t('Song metadata'),
     held: songTunes ? tn(songTunes, '{count} tune', '{count} tunes', { count: songTunes.toLocaleString() }) : null,
     absent: t('not downloaded — Browse offers it; until then a SID stops at the length below'),
@@ -2519,9 +2599,18 @@ async function renderSettings() {
       remove.onclick = async () => {
         if (!confirm(`${t('Delete the {what}?', { what: set.label })}\n\n${set.consequence}`)) return;
         dd.textContent = t('deleting…');
-        await set.remove();
-        showNote(t('{what} deleted', { what: set.label }));
-        await renderSettings();
+        deletingCatalogues.add(set.key);
+        refreshRandomAvailability();
+        try {
+          await set.remove();
+          showNote(t('{what} deleted', { what: set.label }));
+        } catch (error) {
+          showNote(t('Could not delete {what}: {reason}', { what: set.label, reason: error.message }));
+        } finally {
+          deletingCatalogues.delete(set.key);
+          refreshRandomAvailability();
+          await renderSettings();
+        }
       };
       dd.append(remove);
     } else {
@@ -2810,6 +2899,7 @@ function showPanel(which) {
   if (which === 'paste') $('urls').focus();
   // Back to the list: a download made meanwhile may have changed what the empty list offers.
   if (!which) renderEmpty();
+  if (randomFiltersView) requestRandomFilterRefresh();
 }
 
 function openPlaybackQueue() {
@@ -2823,6 +2913,7 @@ function openPlaybackQueue() {
   $('showqueue').setAttribute('aria-pressed', 'true');
   queueView.render(playbackPlan());
   renderQueueSourceAction();
+  requestRandomFilterRefresh();
   queueView.revealCurrent();
   ($('playback-list').querySelector('[aria-current="true"] .text') ?? $('queue-title')).focus({ preventScroll: true });
 }
@@ -2837,6 +2928,7 @@ function closePlaybackQueue({ focus = false } = {}) {
   $('showqueue').setAttribute('aria-pressed', 'false');
   queueUnderlying = null;
   if (focus) $('showqueue').focus();
+  requestRandomFilterRefresh();
 }
 
 
@@ -3493,8 +3585,8 @@ const downloading = new Set();
 async function redrawCatalogues() {
   if (!$('browse').hidden && browsePath[0] === 'catalogues') await renderBrowse();
 }
-async function downloadStarted(key) { downloading.add(key); await redrawCatalogues(); }
-async function downloadEnded(key) { downloading.delete(key); await redrawCatalogues(); }
+async function downloadStarted(key) { downloading.add(key); requestRandomFilterRefresh(); await redrawCatalogues(); }
+async function downloadEnded(key) { downloading.delete(key); requestRandomFilterRefresh(); await redrawCatalogues(); }
 
 /**
  * Whether a downloadable set is here, as the row's first mark: a tick in a disc, in the accent
@@ -3918,7 +4010,11 @@ function previousFile() {
 }
 
 bindRandomDice($('random-dice'), { onReroll: () => rerollRandom(), canReroll: () => !!randomView && !$('queue').closest('main').hidden });
-$('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
+$('random-filter').onclick = () => {
+  $('randomfilter').hidden = !$('randomfilter').hidden;
+  renderRandomFilters();
+  requestRandomFilterRefresh();
+};
 $('snackundo').onclick = () => undoAction?.();
 $('tab-save').onclick = () => saveEdits();
 $('sel-add').onclick = () => openAddTo();
@@ -4719,6 +4815,19 @@ queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'),
   onMenu: (items, anchor) => showMenu(items.map(([label, action, enabled, icon]) =>
     [label, action, enabled, ICON[icon]]), anchor),
 });
+randomFiltersView = new RandomFiltersView($('randomfilter'), {
+  icon: (kind) => iconSvg(ICON[kind]),
+  onPick: (scope) => { setRandomScope(scope); $('randomfilter').hidden = true; renderRandomFilters(); },
+  onRetry: () => refreshRandomAvailability(true), onDownload: downloadRandomFavourites,
+});
+renderRandomFilters();
+catalogue.subscribe(({ prefixes }) => {
+  if (!prefixes.some((prefix) => ['modland:', 'asma:', 'modland-favourites:'].includes(prefix))) return;
+  ++randomResourcesVersion;
+  if (prefixes.some((prefix) => prefix !== 'modland-favourites:') || randomScope === 'favourites') prepareChangedRandom();
+  requestRandomFilterRefresh();
+});
+addEventListener('focus', () => { if (randomView) refreshRandomAvailability(true); });
 $('showqueue').onclick = openPlaybackQueue;
 $('queue-source').onclick = () => openQueueSource();
 $('queue-close').onclick = () => closePlaybackQueue({ focus: true });

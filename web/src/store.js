@@ -115,8 +115,84 @@ export const playlists = {
   },
 };
 
+let catalogueRevision = 0;
+const catalogueListeners = new Set();
+const datasetRevisions = new Map();
+function catalogueChanged(prefixes) {
+  const change = Object.freeze({ revision: ++catalogueRevision, prefixes: Object.freeze([...new Set(prefixes)]) });
+  for (const prefix of change.prefixes) datasetRevisions.set(prefix, catalogueRevision);
+  for (const listener of catalogueListeners) queueMicrotask(() => listener(change));
+}
+const datasetPrefix = (key) => key.slice(0, key.indexOf(':') + 1);
+
 export const catalogue = {
+  get revision() { return catalogueRevision; },
+  revisionOf(prefix) { return datasetRevisions.get(datasetPrefix(prefix)) ?? 0; },
+  subscribe(listener) { catalogueListeners.add(listener); return () => catalogueListeners.delete(listener); },
   get(key) { return tx('catalogue', 'readonly', (s) => s.get(key)); },
+
+  /** Atomic replacement; an optional metadata guard protects newer installs from stale rebuilds. */
+  async replacePrefix(prefix, records, { signal, expected } = {}) {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('catalogue', 'readwrite');
+      const abort = () => { try { transaction.abort(); } catch { /* already completed or aborted */ } };
+      let applied = false;
+      const finish = (done) => () => { signal?.removeEventListener('abort', abort); done(); };
+      transaction.oncomplete = finish(() => {
+        if (applied) catalogueChanged([datasetPrefix(prefix)]);
+        resolve(applied);
+      });
+      transaction.onabort = finish(() => reject(transaction.error ?? new DOMException('Aborted', 'AbortError')));
+      transaction.onerror = () => {}; // onabort owns failure and listener cleanup.
+      const fail = (error) => { transaction.onabort = finish(() => reject(error)); abort(); };
+      const store = transaction.objectStore('catalogue');
+      const write = () => {
+        try {
+          store.delete(IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+          for (const record of records) {
+            if (!record.key?.startsWith(prefix)) throw new Error('A dataset record lies outside its prefix');
+            store.put(record);
+          }
+          applied = true;
+        } catch (error) { fail(error); }
+      };
+      try {
+        if (signal?.aborted) { abort(); return; }
+        signal?.addEventListener('abort', abort, { once: true });
+        if (expected) {
+          if (!expected.key?.startsWith(prefix)) throw new Error('The dataset guard lies outside its prefix');
+          const request = store.get(expected.key);
+          request.onsuccess = () => {
+            if (JSON.stringify(request.result) === JSON.stringify(expected.value)) write();
+          };
+        } else {
+          write();
+        }
+      } catch (error) { fail(error); }
+    });
+  },
+
+  /** Bounded batches avoid materializing the full archive when deriving old index summaries. */
+  async visitPrefix(prefix, visit, { signal, batch = 512 } = {}) {
+    if (!Number.isInteger(batch) || batch < 1 || batch > 512) throw new RangeError('Invalid catalogue read batch');
+    const db = await open();
+    let after = null;
+    while (true) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      const found = await new Promise((resolve, reject) => {
+        const transaction = db.transaction('catalogue', 'readonly');
+        const range = IDBKeyRange.bound(after ?? prefix, `${prefix}\uffff`, after !== null);
+        const request = transaction.objectStore('catalogue').getAll(range, batch);
+        transaction.oncomplete = () => resolve(request.result);
+        transaction.onabort = () => reject(transaction.error);
+        transaction.onerror = () => {};
+      });
+      for (const record of found) visit(record);
+      if (found.length < batch) return;
+      after = found.at(-1).key;
+    }
+  },
 
   /**
    * Writes many at once, in one transaction per batch.
@@ -136,6 +212,7 @@ export const catalogue = {
       });
       onProgress?.(Math.min(i + batch, records.length), records.length);
     }
+    if (records.length) catalogueChanged(records.map((record) => datasetPrefix(record.key)));
   },
 
   /**
@@ -184,7 +261,7 @@ export const catalogue = {
       const transaction = db.transaction('catalogue', 'readwrite');
       const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
       transaction.objectStore('catalogue').delete(range);
-      transaction.oncomplete = resolve;
+      transaction.oncomplete = () => { catalogueChanged([datasetPrefix(prefix)]); resolve(); };
       transaction.onerror = () => reject(transaction.error);
     });
   },

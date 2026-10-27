@@ -82,6 +82,19 @@ from the current files when requested. For manual static hosting, run
 `node scripts/stage-web-pwa.mjs` after staging the engine and legal files, and copy `sw.js` alongside
 `src/`, `lib/` and `vendor/`. `node scripts/check-pwa.mjs` checks the manifest paths and worker policy.
 
+## Development platform data
+
+The WEB Random/search platform table is projected from Android's `Platforms.kt`. After changing
+its declarations, regenerate on the development checkout:
+
+```
+node scripts/generate-web-platforms.mjs
+node scripts/generate-web-platforms.mjs --check
+```
+
+The normal project test gate checks this projection and the corresponding classification rules.
+Serving the packaged player needs no generator or Android source files.
+
 ## server.json
 
 ```json

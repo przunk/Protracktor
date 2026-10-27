@@ -12,7 +12,7 @@ unreported. It adds no global decoder boost or WEB parity implementation.
 
 ## WEB playback ownership — branch implementation, 2026-10-27
 
-W01-W02 and W04 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
+W01-W02 and W04-W05 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
 remain separate. [Scope and host evidence](WEB_IMPLEMENTATION.md).
 
 `PlaybackWorkspace` owns the selected editor and an independent immutable `PlaybackContext`.
@@ -35,7 +35,7 @@ cancel additional pointers and suppress abandoned click/context-menu events. Men
 actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move
 without a whole-list appearance animation. Exact visual/gesture behaviour still needs a browser.
 
-This adds no Android production/schema/native changes or dependencies. W03 still needs W10/W11 route wiring; W05-W25
+This adds no Android production/schema/native changes or dependencies. W03 still needs W10/W11 route wiring; W06-W25
 remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
 
 W03 adds `source-navigation.js` and an immutable route on `PlaybackContext`. The route holds
@@ -56,6 +56,16 @@ manual FIFO requests; Clear retains heard history and an already adopted byte pr
 retiring speculation. `random-dice.js` owns pointer/accessibility activation and reduced-motion
 rotation only. Browse detours depend on the visited route rather than the audio source.
 The combined navigation host gate passes; actual browser acceptance remains unchecked.
+
+W05 adds the screen-owned `RandomFilterState` and a separate `RandomFiltersView`. Native platform
+data is generated and checked against `Platforms.kt`; classification is shared by summaries and
+scoped sampling. `random-catalogue.js` joins curated Modland paths with retained playable buckets,
+keeps listed/matching counts separate, and keys availability to actual dataset identities.
+`catalogue.replacePrefix` commits records and summaries together, optionally against a metadata
+snapshot; playability stamps share that guarded write. Committed mutation notifications invalidate
+availability/read-ahead without replacing the current playback job. Old indexes use bounded scans;
+new indexes carry summaries. Scope preference/read/save ownership is independent of playback/view
+ownership. This checkpoint passes the combined host gate; browser acceptance remains unchecked.
 
 ## B54 Floating controls — gated experiment, 2026-10-26
 

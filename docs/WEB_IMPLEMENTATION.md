@@ -43,7 +43,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
 | W03 | Return to playback source | Destination/route integration passes combined full host gate; W10/W11 query/scope wiring remains pending |
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
-| W05 | Random platform/Favourites filters | Pending |
+| W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
 | W06 | Qualified played-before marks | Pending |
 | W07 | Saved catalogue places | Pending |
 | W08 | Learned list titles | Pending |
@@ -411,6 +411,62 @@ checks fail the ported native model scenarios. W04 is technically implemented. T
 now share a passing integrated gate, while W10/W11 query/scope wiring remains required.
 **Real browser appearance, physical touch and sound remain unchecked.**
 No Android production/schema/native/dependency change, intermediate bundle, APK, merge or deployment.
+
+## W05 Random filters checkpoint — 2026-10-27
+
+Reference: native `RandomScope`, `RandomFilterState`, `RandomScopeSheet`, `Platforms`,
+`ModlandFavourites`, `FavouriteStore`, catalogue sampling and the controller's scope-change paths.
+`RandomScopeSheetTest` supplies the cold/warm/preloaded/inactive/deleting/error/retry and obsolete-
+read cases. The screen owns verified availability independently of the disposable filter panel.
+Everything stays selectable; platforms/Favourites need actual retained playable rows. Unknown
+counts show checking, never a guessed missing-list message. Warm refresh/error keeps verified
+chips usable. Resource changes while inactive invalidate old counters before the next entry.
+
+The native platform declarations produce checked `web/src/platforms.js`; regenerate with
+`node scripts/generate-web-platforms.mjs` after changing `Platforms.kt`. The normal gate compares
+all declarations, names, directory mappings and chip order against the native source. Classification
+is archive, directory, then filename; ASMA is Atari 8-bit regardless of its author sections.
+Parentheses inside a directory name are parsed as string data, including `FM Sound Driver (FMP)`.
+New indexes retain compact platform summaries; old bucket indexes are counted in batches of at
+most 512 records. Dataset-specific revisions and metadata identities avoid repeated scans of
+unchanged resources and retire obsolete reads. No catalogue array of half a million tracks is built.
+
+Scope is one persisted native string: Everything, one platform, or Modland's curated Favourites.
+Favourites never means playlist membership. Its eleven-column parser rejects shorter subsong rows;
+listed paths and their playable Modland intersection have separate counts and missing/unindexed
+explanations. Download/Retry remain in the same panel. Native proper names and EN/PL text are used,
+with shape plus colour/accessible state for the single choice. Enabled actions do not inherit
+hidden unavailable descriptions. Selecting a scope preserves heard rows/cursor/audio and replaces
+only hidden preparation. New draws respect the new pool after the heard suffix; inactive Random
+cannot take an author's playback. A late initial preference cannot replace an explicit choice,
+including choosing the already displayed Everything. Only the latest failed save reports feedback.
+
+Index installation and playability rebuild now replace data/summary atomically. A quota/clone/
+cancellation failure retains the old index and unrelated playlists, History and settings. A metadata
+snapshot guards a delayed rebuild from replacing a newer complete install; the capability stamp is
+written in that same transaction. Mutation notifications describe committed datasets only. Deletion
+blocks derived availability until it completes and restores it on failure. None of these changes
+adds a store or raises IndexedDB version 4; reserved versions 5/6 remain for later scopes.
+
+**Checked on the host:** **787 page assertions**, **24 scope/platform/availability cases**, **12 catalogue/
+storage cases** and **4 startup/ownership checks** pass. Actual chips, pool playback, ten-row C97
+continuation, same-panel Favourites download, Retry, deletion, inactive refresh, obsolete reads and
+Polish presentation are exercised. Disconnecting chip/Retry routes or erasing heard history fails
+its exact page assertion. Guards also fail before the hidden-description, initial-Everything,
+parenthesized-platform, cancellation and stale-index-write corrections. The pre-atomic production
+ASMA path loses its old index after the controlled real IndexedDB failure; the corrected path keeps it.
+
+A separate host fetch verified the native public Favourites endpoint: HTTP 200, cross-origin
+response enabled, 141,821 bytes and 991 distinct parsed paths. Its response and source SHA-256
+are retained with the ignored host evidence. This is transport/parser evidence, not a browser
+network/UI acceptance result. The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **695 s**;
+all 31 unit tasks executed (434.5 s). All companions ran and passed, including the new scope,
+storage and startup checks, 52 engine checks and the existing context/queue/source/gesture checks.
+Fresh lint: **0 errors / 79 warnings**, 84.8 s. The final 44 input hashes, complete logs, JUnit and
+lint reports are archived under ignored `user/web-parity-verification/w05-random-filters-full-gate/`,
+based on `e9959c2`. W05 is technically implemented.
+Real-browser appearance, physical gestures, audio and background behaviour remain unchecked.
+No Android production/schema/native/dependency change, merge, deployment or intermediate bundle.
 
 ## Deferred or blocked work
 

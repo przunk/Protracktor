@@ -7,6 +7,24 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Platforms with no indexed, playable music are unavailable.": "Platformy bez zaindeksowanych, obsługiwanych utworów są niedostępne.",
+  "Favourites": "Ulubionych",
+  "Retry": "Ponów",
+  "Choose what Random picks from": "Losuj z",
+  "Checking available filters…": "Sprawdzanie dostępnych filtrów…",
+  "Could not check available filters. Try again.": "Nie udało się sprawdzić dostępnych filtrów. Spróbuj ponownie.",
+  "None of the favourites are in your Modland index. Index Modland first.": "Żadnego z ulubionych nie ma w twoim indeksie Modlandu. Najpierw zaindeksuj Modland.",
+  "Favourites needs Modland's own list — 142 KB, downloaded once.": "Ulubione wymagają listy Modlandu — 142 KB, pobierane raz.",
+  "Download": "Pobierz",
+  "Downloading…": "Pobieranie…",
+  "Nothing to pick from. Index a catalogue, or widen the filter.": "Nie ma z czego losować. Zaindeksuj katalog albo poszerz filtr.",
+  "Could not save the Random filter: {reason}": "Nie udało się zapisać filtra Random: {reason}",
+  "Could not download Modland favourites: {reason}": "Nie udało się pobrać ulubionych Modlandu: {reason}",
+  "Modland favourites": "Ulubione Modlandu",
+  "not downloaded — Random offers it": "niepobrane — dostępne w Random",
+  "It can be downloaded again from Random. Until then the Favourites filter is unavailable.": "Można pobrać ponownie z Random. Do tego czasu filtr ulubionych jest niedostępny.",
+  "Could not delete {what}: {reason}": "Nie udało się usunąć: {what}. {reason}",
+
   "Start a new Random list": "Rozpocznij nową listę Random",
   "New list": "Nowa lista",
   "Double-tap the dice to reroll the list": "Dotknij dwukrotnie kostki, aby wylosować nową listę",
