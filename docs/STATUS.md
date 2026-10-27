@@ -7,6 +7,15 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## B52 Slider experiment parked — 2026-10-28
+
+Keep the fixed **-18 LUFS** policy on develop. The slider trial did not provide the intended
+comparison of higher target levels: retained boost and sample-peak constraints often produced
+the same gain across much of its upper range. Do not add a limit indicator or extend the trial.
+Retain **`feature/normalization-target-slider` at `141780a`**, unmerged and without deletion,
+until a further decision. The source checkout returned to develop; no replacement APK or change
+to the installed application was made for this step. [Decision](VOLUME_NORMALIZATION.md#slider-experiment-disposition--2026-10-28).
+
 ## B52 Louder normalization target — accepted and merged, 2026-10-27
 
 Implemented on `feature/louder-normalization`, from develop `141a084`, and merged as **641b875**

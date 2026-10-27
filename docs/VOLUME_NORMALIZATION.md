@@ -14,8 +14,21 @@ The general listening outcome supports retaining -18 LUFS; the installed build a
 regression/quality cases were not separately confirmed. Merge sources match the checked trial;
 no additional build/test run or store release was performed for this integration.
 
-A separate disposable slider experiment is authorized, from -40 to -5 LUFS, step 1, default -18.
-Its code must remain unmerged and its findings recorded before returning to a fixed-target build.
+A separate disposable slider experiment was authorized, from -40 to -5 LUFS, step 1, default -18.
+Its subsequent disposition is recorded below.
+
+## Slider experiment disposition — 2026-10-28
+
+Retain the fixed -18 LUFS policy. The trial did not answer the intended listening question about
+higher targets: conservative boost caps and available peak headroom frequently prevented any
+further gain increase. For the retained twenty-second Studium Fałszu measurement, requested
+targets -18, -12 and -5 LUFS all computed the same +6 dB gain. This is host evidence for that
+profile, not an identification of every track or setting used on the phone.
+
+Park the experiment without adding a limit indicator, changing the gain caps or introducing
+new dynamics processing. Keep `feature/normalization-target-slider` at `141780a`, unmerged;
+do not delete it. Return the working checkout to develop. This changes source selection only;
+the installed test APK is unaffected and no replacement build is requested for this step.
 
 ## Louder target trial — 2026-10-27, unmerged
 
