@@ -1,10 +1,10 @@
 # Status
 
 Updated: 2026-10-27 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
-Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
+Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
-Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
+Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
 ## B52 Louder normalization target — accepted and merged, 2026-10-27
@@ -127,6 +127,21 @@ state were not supplied. An older cached application is consistent with this rep
 worker's policy of waiting for all existing player windows to close, but that browser cache was
 not inspected. Normal-session activation, Information and actual AAC export remain unchecked.
 [Mechanism, fixture identity and trial](WEB_DECODER_FILENAMES.md).
+
+## Google Play production access refused again — 2026-10-27
+
+Google declined the 2026-10-26 reapplication. The supplied Play Console message displays
+**Reviewed today, 11:08 PM (23:08)**, with no UTC offset. The separately supplied email explicitly
+requires **an additional 14 days of closed testing with real testers before applying again**.
+It names tester engagement and testing/feedback practices as possible reasons, without identifying
+a confirmed app-specific cause or defect. No testing-window start/end dates are stated.
+
+Both messages and their evidence limits are retained in ignored
+`user/play-console/2026-10-27-production-access-refused.md`; the submission record now reflects
+the refusal. The agent recorded the supplied messages without accessing either service.
+The previously selected fallback is Google Group recruitment and relevant-community invitations;
+no tester configuration or public communication was changed for this record. The existing
+closed-test release and ongoing development are unchanged by recording the decision.
 
 ## Google Play production-access reapplication — 2026-10-26
 
