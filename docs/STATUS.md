@@ -96,6 +96,14 @@ not an established cause. A Pixel 7 on stock Android 16 with English labels look
 reported use; those multiple differences do not isolate a cause. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No code fix or device verification is claimed.
 
+**Candidate prepared 2026-10-28, unmerged `fix/redmi-theme-action-alignment`:** explicitly disable
+platform Force Dark in the production theme and opt out of MIUI inversion with Xiaomi's documented
+`force_dark_google=true` application metadata. Keep the app's Light/Dark/System selection.
+The packaged-metadata regression test failed before this change on API 29; both resource checks
+then passed on API 29/30 (four cases). Full verification and a release APK are being prepared.
+The cause and effectiveness on the affected Redmi remain
+unconfirmed until device testing, planned for Thursday. C123 remains open.
+
 ## C124 Icons are uneven on Redmi Note 8 Pro
 
 **Open — real user report received 2026-10-27; complaint clarified 2026-10-28.**

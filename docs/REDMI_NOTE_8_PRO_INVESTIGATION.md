@@ -154,8 +154,19 @@ sized button backgrounds. No layout change has been implemented or checked on ei
 
 ## Verification state
 
+### C123 candidate — 2026-10-28
+
+Implementation authorized on `fix/redmi-theme-action-alignment`; retain it unmerged until phone
+testing. The existing window theme now explicitly sets `android:forceDarkAllowed=false`, and
+application metadata sets Xiaomi's documented `force_dark_google=true`. The latter value means
+opt out of MIUI inversion, despite its name. No platform theme migration, dependency or app theme
+selection change is included. The packaged-metadata regression test failed on the old manifest
+on API 29; resource tests also cover the production theme on API 29/30. These cannot exercise MIUI
+and do not establish the original cause or prove a phone fix. Verification results follow below.
+
 **Checked:** Git/tag source comparison, startup call-path inspection, both supplied screenshots,
 and primary Android/Xiaomi documentation. The 2026-10-28 configuration and complaint clarification
 are user-reported evidence. **Unchecked:** crash reproduction, actual cause, exact MIUI
 configuration, runtime colour values, and any fix on either phone.
-Only documentation changed; no application tests, APK build, code fix, merge, push or release.
+The initial discussion changed documentation only. The candidate above changes resources and
+configuration; its device result is still unverified. No merge, push or release publication.

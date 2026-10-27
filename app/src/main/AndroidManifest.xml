@@ -43,6 +43,9 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Protracktor">
 
+        <!-- Xiaomi's documented true value preserves app-managed colours instead of MIUI inversion. -->
+        <meta-data android:name="force_dark_google" android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
