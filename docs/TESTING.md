@@ -3,6 +3,36 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W01-W02 — browser checklist, not yet a bundle handoff
+
+2026-10-27: host checks pass on `feature/web-feature-parity`, including the production
+DOM/MessagePort/IndexedDB paths. They do not establish appearance, real touch, sound or background
+operation. Keep these checks open until the completed WEB parity candidate is packaged; W03-W25
+are still in progress and no intermediate APK/bundle is supplied here.
+
+- [ ] Play playlist A, view/edit B and open Browse. Playback, Next/Previous and metadata remain
+  owned by A; Save writes B. Explicitly playing B transfers the source.
+- [ ] Add repeated files from main/Browse/History menus and right swipes. Verify independent FIFO
+  occurrences, unchanged playlist documents and History replay-origin behaviour.
+- [ ] Open Queue from its separate dock button. The shared dock remains reachable, the current row
+  is revealed, and Close/Escape restores the prior view. Keyboard focus enters the current row and
+  returns to the toggle on close; Help starts collapsed.
+- [ ] Advance through manual requests. Played rows depart smoothly without a whole-list blink;
+  Previous returns to the parked source and consumed requests do not reappear. Test Repeat One,
+  explicit file Next, shuffle and subsong controls.
+- [ ] Swipe left on manual/source rows and Undo. Only that occurrence/session row changes. Check
+  named green/red reveals, vertical/diagonal scrolling priority, short/reversed drags, cancellation
+  and a second finger elsewhere on screen.
+- [ ] Drag pending grips in both directions and near viewport edges. They stay under the finger,
+  above neighbours and inside the manual block. Source/current rows have no grip. Try keyboard
+  arrows, the grip menu and a membership change during drag.
+- [ ] Hold a Queue row for Information. It must not play, open a second browser context menu or
+  swallow the next button press. Check right-click and keyboard row actions too.
+- [ ] Clear while playing, paused and downloading. Keep the actual file/position/job, remove extra
+  indentation and allow guarded Undo without a decoder restart or rollback of newer editor edits.
+- [ ] Check reduced motion, EN/PL, both themes, narrow/wide viewports, larger text and accessible
+  action names. Verify full-width manual highlights and stable dock height.
+
 ## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
 
 2026-10-26 feedback reports playback working in a private window while the normal session

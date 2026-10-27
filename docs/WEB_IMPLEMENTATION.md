@@ -39,8 +39,8 @@ evidence and final integrated checks. A model-only substage does not complete a 
 
 | Scope | Feature | State |
 | --- | --- | --- |
-| W01 | Independent playback context and selected playlist | Core/shared Add host guards pass; next integrated full gate pending |
-| W02 | Full manual queue and list interactions | Model/transport connected; focused checks pass; panel/gestures and full gate pending |
+| W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
+| W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
 | W03 | Return to playback source | Pending |
 | W04 | Remembered Random and deliberate reroll | Pending |
 | W05 | Random platform/Favourites filters | Pending |
@@ -184,7 +184,8 @@ Fresh lint analysis: **zero errors / 79 warnings**, 85.5 s. All thirteen input h
 Core editor/source separation is checked on the host. At that checkpoint the dock's Add visibility
 still used the old Random/collection predicate. W02's integration now offers it when playlist A
 plays while selected playlist B is visible, matching Android `awayFromPlaylist`; the actual dock-
-click regression passes. The next integrated full gate is required before closing W01. Layout,
+click regression passes. The final W02 integrated gate below subsequently covers this case and
+closes W01's host implementation checks. Layout,
 touch, real audio and background behaviour remain **unchecked in a real browser/device**. No bundle
 is handed off and no merge or deployment occurs.
 
@@ -214,7 +215,8 @@ An ignored draft first ported the production schedule/clear model and **29 Andro
 The model now lives in `web/src/playback-schedule.js`, with the ported cases in
 `scripts/check-playback-schedule.mjs`, registered in the full gate. It supplies one-shot scheduling,
 stable source/manual row projection, pending-only reorder/removal/Undo, origin-aware occurrences
-and Clear's guarded snapshot. It does not yet supply the application's manual-queue UI.
+and Clear's guarded snapshot. This model-only substage did not supply the application's manual-queue UI;
+the later transport/panel checkpoints do.
 
 All 29 production-model cases pass. A production-model mutation replacing Previous-to-anchor with
 ordinary source Previous fails its specific guard; restored code passes. The model/check inputs
@@ -222,15 +224,15 @@ are part of the thirteen-file candidate and the forced **1218-test / 160-suite**
 above. No Android production/schema/native/dependency change is introduced. This checked model
 substage must not be reported as a completed W02 feature.
 
-A separate ignored draft ports controller state-to-effect handling and removal intent; **14
-controller-derived cases** pass, including paused removal, actual History origin and deferred
-Random draws. Forcing autoplay on paused removal fails its exact guard. That draft is not in the
-production page or full-gate input set, and does not prove a DOM-to-audio path.
+A separate ignored draft first ported controller state-to-effect handling and removal intent,
+including paused removal, actual History origin and deferred Random draws. Forcing autoplay on
+paused removal failed its exact guard. That draft was subsequently promoted to production with
+**14 controller-derived cases** in transport checkpoint `3d3c8d9`, described below.
 
-Still required: playback integration including subsong/end/failure/cancellation paths, one panel
+At that model checkpoint, remaining work was playback integration including subsong/end/failure/cancellation paths, one panel
 above the shared dock, stable/animated row updates, labelled
 menu/keyboard equivalents, directional gestures and pending-only reorder with Android's vertical
-priority. W02 remains open until those substages and their integrated checks are complete.
+priority. The following checkpoints record those substages and their integrated checks.
 
 ### W02 transport integration checkpoint — 2026-10-27
 
@@ -268,6 +270,53 @@ retained under ignored `user/web-parity-verification/`.
 This checkpoint is **not** a complete W02 feature or a fresh full-gate claim. Full tests/lint are
 still required on the integrated panel/gesture candidate, along with actual interaction guards.
 Device/browser rendering, gesture feel, audio output and background controls remain unchecked.
+
+### W02 panel and interaction checkpoint — 2026-10-27
+
+Queue now replaces list content above the shared dock. Its labelled toggle stays outside the
+Now Playing card; opening reveals/focuses the current row, and Close/Escape restores the underlying
+Browse or playlist view without a transport command. Help is collapsed initially. One keyed list
+projects the source and one-shot occurrences, with a manual mark and insertion-only indentation.
+Clear preserves the actual row without that indentation. Current rows own their full-width colour.
+
+All replayable main/Browse/History rows support right-add. Queue additionally supports left-remove,
+row tap, long-press Information and mouse/keyboard menus. Pending grips have pointer, arrow-key
+and menu equivalents. Preview stays within pending boundaries, swaps after a full row as in
+Android and scrolls at 480 logical pixels/s near a 48-pixel edge. Generation/membership changes,
+capture loss and additional pointers cancel it. Source/current rows have no grip.
+
+Shared swipe arbitration waits for max(24 logical pixels, twice slop), requires 2:1 horizontal
+dominance and latches vertical intent. It suppresses abandoned taps, handles reversed releases,
+cancels an additional pointer anywhere and preserves later button/keyboard actions. A handled
+long press suppresses the browser's extra context menu. Reveals use named icons/text with green
+add and red remove backgrounds. Departures fade for 160 ms; remaining placement moves for 220 ms,
+with no whole-list appearance fade. Reduced motion removes departures immediately. Exiting rows
+are inert, not focusable/current; Undo can revive their node without an obsolete completion
+removing it.
+
+Reference comparison includes `QueueSwipeIntentTest`, `QueueSwipeRowTest`,
+`ManualQueueReorderUiTest`, `QueueFollowUiTest`, `QueueClearUiTest` and the schedule/controller
+tests already listed. Host guards enter real page callbacks, MessagePort and IndexedDB. A missing
+panel, wrong grip activation distance, abandoned tap, outside-row second finger, extra context
+menu and exit accessibility first failed their respective guards. Disconnecting the actual
+right-add or physical-grip callbacks fails its page assertion while independent routes remain.
+Clear during a controlled current download preserves its signal/job; completion and subsequent
+Undo neither reattach a cleared source prematurely nor reopen the decoder.
+
+**Checked on the host:** the final forced full gate passes **1218 tests / 160 suites**, zero
+failures/errors/skips, **570 s**; all 31 unit-stage tasks executed (430.4 s). Companions include
+**695 page assertions**, **52 engine/worklet checks**, **67 context**, **29 schedule**, **14 effects**,
+**16 swipe**, **9 grip** and **7 keyed-presentation** cases. Lint reports **0 errors / 79 warnings**;
+analysis was up to date (7.4 s), following fresh analysis in the first panel gate (86.0 s).
+That earlier 652 s gate preceded the pointer/focus/load-race corrections and is retained separately.
+The final thirteen application/test input hashes, logs, JUnit and lint reports are archived under
+ignored `user/web-parity-verification/w02-panel-final-full-gate/`, based on `3d3c8d9`.
+
+W01 and W02 are technically implemented; **real-browser layout, scrolling, touch feel, audio output
+and background operation remain unchecked**. No real browser executable was available; host
+geometry and animation hooks are not screenshots. Android production/schema/native/dependencies
+are unchanged. No intermediate bundle, APK, merge, push or deployment is part of this checkpoint.
+W03-W25 remain required. W03 currently has source analysis and an ignored domain/page draft only.
 
 ## Deferred or blocked work
 

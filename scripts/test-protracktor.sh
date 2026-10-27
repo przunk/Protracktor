@@ -160,6 +160,9 @@ run_check "Playback effects" playback-effects node scripts/check-playback-steps.
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
+    run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
+    run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
+    run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs
     run_check "Web page" page node scripts/check-page.mjs
     page_output="$(<"$PROTRACKTOR_LOG_PREFIX-page.log")"
     page_checks=$(echo "$page_output" | grep -c '✓' || true)

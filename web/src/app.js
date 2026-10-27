@@ -9,6 +9,8 @@ import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
+import { QueueView } from './queue-view.js';
+import { bindTrackGestures } from './row-gestures.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -135,6 +137,8 @@ let nextRandomSession = 0;
 let drawing = false;
 let undoAction = null;
 let noticeId = 0;
+let queueView = null;
+let queueUnderlying = null;
 
 const playbackPlan = () => new PlaybackPlan(workspace.context, schedule);
 const currentTrack = () => schedule.current?.track ?? workspace.context.current;
@@ -1541,6 +1545,7 @@ function render() {
       link: tn(queue.length, '{n} sent to you', '{n} sent to you'),
     }[away.kind] ?? String(queue.length);
   }
+  queueView?.render(playbackPlan());
 }
 
 /**
@@ -2079,6 +2084,10 @@ const ICON = {
   playlist: 'M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z',
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  grip: 'M4 7h16v2H4V7zm0 8h16v2H4v-2z',
+  up: 'M4 12l1.4 1.4L11 7.8V21h2V7.8l5.6 5.6L20 12l-8-8-8 8z',
+  down: 'M4 12l1.4-1.4 5.6 5.6V3h2v13.2l5.6-5.6L20 12l-8 8-8-8z',
+  play: 'M8 5v14l11-7L8 5z',
   check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
   // A tick in a disc: this set is here. The phone's `Downloaded`.
@@ -2170,14 +2179,13 @@ let pendingAdd = null;
 let swallowRowClick = false;
 
 function holdToSelect(row, entry) {
-  let timer = null;
-  row.addEventListener('pointerdown', () => {
-    swallowRowClick = false;
-    timer = setTimeout(() => { swallowRowClick = true; startSelecting(entry); }, 500);
+  row.addEventListener('pointerdown', () => { swallowRowClick = false; });
+  bindTrackGestures(row, {
+    onAdd: () => enqueueTrack(entry, !editorShown && fromHistory()),
+    onLongPress: () => { swallowRowClick = true; startSelecting(entry); },
+    canSwipe: () => selected.size === 0,
+    icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue'),
   });
-  for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
-    row.addEventListener(event, () => clearTimeout(timer));
-  }
 }
 
 function startSelecting(entry) {
@@ -2730,6 +2738,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  closePlaybackQueue();
   if (!$('unsaved').hidden) answerUnsaved(false);
   $('browse').hidden = which !== 'browse';
   // Browse stands where the list stands, with the dock still under it.
@@ -2748,6 +2757,41 @@ function showPanel(which) {
   if (which === 'paste') $('urls').focus();
   // Back to the list: a download made meanwhile may have changed what the empty list offers.
   if (!which) renderEmpty();
+}
+
+function openPlaybackQueue() {
+  if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
+  const underlying = !$('browse').hidden ? 'browse' : null;
+  showPanel(null);
+  queueUnderlying = underlying;
+  $('playback-panel').hidden = false;
+  $('browse').hidden = true;
+  document.querySelector('main').hidden = true;
+  $('showqueue').setAttribute('aria-pressed', 'true');
+  queueView.render(playbackPlan());
+  queueView.revealCurrent();
+  ($('playback-list').querySelector('[aria-current="true"] .text') ?? $('queue-title')).focus({ preventScroll: true });
+}
+
+function closePlaybackQueue({ focus = false } = {}) {
+  if ($('playback-panel').hidden) return;
+  $('playback-panel').hidden = true;
+  $('browse').hidden = queueUnderlying !== 'browse';
+  document.querySelector('main').hidden = queueUnderlying === 'browse';
+  $('tab-browse').setAttribute('aria-pressed', String(queueUnderlying === 'browse'));
+  $('showqueue').setAttribute('aria-pressed', 'false');
+  queueUnderlying = null;
+  if (focus) $('showqueue').focus();
+}
+
+function playbackSourceLabel(source) {
+  switch (source.kind) {
+    case 'playlist': return source.name;
+    case 'random': return t('Random');
+    case 'collection': return source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
+    case 'external': return t('Sent to you');
+    default: return t('Manually queued');
+  }
 }
 /**
  * The playlist sheet: what there is, which one is showing, and what may be done to it.
@@ -3120,6 +3164,9 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   li.append(text, add, more);
   li.onclick = onplay;
   list.append(li);
+  const historyOrigin = browsePath[0] === 'history';
+  bindTrackGestures(li, { onAdd: () => enqueueTrack(track, historyOrigin),
+    icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue') });
 }
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
@@ -3615,6 +3662,7 @@ for (const overlay of document.querySelectorAll('.overlay')) {
 }
 addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
   if (!$('addto').hidden) closeAddTo(); else showPanel(null);
 });
 
@@ -4498,6 +4546,24 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 // **Not when the page was opened by a link.** A link is the queue already arriving, and the code
 // would sit in the middle of the screen while it did -- the hash is read after an await, so the
 // first thing anybody opening a tune sent to them would see is a QR code meant for somebody else.
+queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'), source: $('playback-source'),
+  empty: $('queue-empty'), repeatNote: $('queue-repeat-note'),
+  icon: (kind) => iconSvg(ICON[kind === 'source' ? 'playlist' : kind]),
+  sourceLabel: playbackSourceLabel, subtitle: (track) => track.meta ?? sourceOf(track.url),
+  onPlaySource: playSourceOccurrence, onPlayManual: playManualRequest, onAdd: enqueueTrack,
+  onRemove: removeQueueOccurrence, onInfo: informAbout,
+  onMove: (id, target) => { schedule = schedule.moveRequest(id, target); render(); setPlaying(playing); },
+  onMenu: (items, anchor) => showMenu(items.map(([label, action, enabled, icon]) =>
+    [label, action, enabled, ICON[icon]]), anchor),
+});
+$('showqueue').onclick = openPlaybackQueue;
+$('queue-close').onclick = () => closePlaybackQueue({ focus: true });
+$('queue-clear').onclick = clearPlaybackQueue;
+$('queue-help').onclick = () => {
+  $('queue-instructions').hidden = !$('queue-instructions').hidden;
+  $('queue-help').setAttribute('aria-expanded', String(!$('queue-instructions').hidden));
+};
+
 renderNothingPlaying();
 holdBarLabels();
 document.fonts?.ready.then(holdBarLabels);

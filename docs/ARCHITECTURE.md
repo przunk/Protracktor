@@ -10,6 +10,34 @@ an accepted Android playback policy, with general listening approval and per-cas
 unreported. It adds no global decoder boost or WEB parity implementation.
 [Measurements and acceptance limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
 
+## WEB playback ownership — branch implementation, 2026-10-27
+
+W01-W02 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
+remain separate. [Scope and host evidence](WEB_IMPLEMENTATION.md).
+
+`PlaybackWorkspace` owns the selected editor and an independent immutable `PlaybackContext`.
+`PlayOrder` owns finite traversal, modes and actual shuffle history. `PlaybackSchedule` adds
+one-shot, origin-aware manual occurrences without editing that source or its playlist document.
+`PlaybackPlan` combines them; `playback-steps.js` interprets a domain step into state plus an
+explicit decoder effect. Only the current occurrence supplies audio, metadata, History and retry
+identity. Read-only transport availability cannot consume RNG state. Playlist persistence reads
+the selected editor, with serialized document writes and content/revision guards.
+
+`app.js` owns runtime jobs and executes effects; its legacy queue/index arrays are presentation
+mirrors. Actual open-job ownership is distinct from schedule/speculative-Random ownership, so
+Clear can preserve a loading file while retiring old speculation. Undo restores content/context,
+retains live editor changes and never rewinds audio.
+
+`QueueView` owns keyed DOM presentation only. `PendingReorder` previews within the pending block
+and commits an occurrence-ID move on release; it never moves source/current rows or owns transport.
+Shared row gestures arbitrate horizontal intent before consumption, preserve vertical scrolling,
+cancel additional pointers and suppress abandoned click/context-menu events. Menus and keyboard
+actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move
+without a whole-list appearance animation. Exact visual/gesture behaviour still needs a browser.
+
+This adds no Android production/schema/native changes or dependencies. The later W03-W25 scopes
+remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
+
 ## B54 Floating controls — gated experiment, 2026-10-26
 
 The phone trial was accepted for experimental integration only and merged as **afab610**, 2026-10-26.

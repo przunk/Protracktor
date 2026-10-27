@@ -769,15 +769,6 @@
     font-variant-numeric: tabular-nums;
   }
   .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
-  /* **`hidden` wins, everywhere, and it is last on purpose.** The page used to restore it element
-     by element -- `.panel[hidden]`, `.overlay[hidden]` and so on, each beside a `display` of its
-     own. Round 8's Random heading (`display: flex`) got no such line and showed over every panel
-     whether or not Random was running (`docs/STATUS.md` C38). `!important` is what wins in a
-     browser; standing last is what wins in jsdom, whose cascade takes the last matching rule and
-     does not read `!important` -- so here both agree, and the page check can see what a browser
-     would show. */
-  [hidden] { display: none !important; }
-
     /* The settings sheet's one interactive row. Full width so the slider is easy to hit on a
        phone, which is where this page is most often read. */
     .setting { margin: 18px 0 4px; }
@@ -788,6 +779,51 @@
     .setting.choice > label { display: inline-flex; align-items: center; gap: 6px; margin: 6px 16px 0 0; min-height: 32px; }
     .setting.choice input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; }
     .setting > input[type=range] { width: 100%; }
+  /* The Queue replaces list content while the shared dock remains available. */
+  .playbackview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .playbackview[hidden] { display: none; }
+  .queue-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .queue-head .text { flex: 1; min-width: 0; }
+  .queue-head h2 { margin: 0; font-size: var(--title-medium); }
+  .queue-head .meta { color: var(--on-surface-variant); font-size: var(--body-small); overflow-wrap: anywhere; }
+  .queue-head .action { min-width: 48px; padding: 6px; }
+  #playback-list { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-x: hidden; }
+  #queue-instructions, #queue-repeat-note, #queue-empty { padding: 0 18px; }
+  .dock-summary { display: flex; gap: 6px; margin: 4px 12px 0; height: 64px; }
+  .dock-summary .nowcard { flex: 1; min-width: 0; margin: 0; }
+  .dock-summary > .action { flex: none; align-self: center; min-width: 48px; }
+  /* pan-y must be set before pointerdown; changing it after intent locks is too late. */
+  li.swipe-row, #browselist li.swipe-row { position: relative; display: block; padding: 0; overflow: hidden; touch-action: pan-y; }
+  .swipe-surface { position: relative; display: flex; align-items: center; gap: 14px; padding: 13px 18px;
+    background: var(--bg); transition: transform 160ms ease-out; }
+  #browselist .swipe-surface { gap: 10px; padding: 6px 4px 6px 12px; min-height: 48px; }
+  .swiping > .swipe-surface { transition: none; }
+  .swipe-row:hover > .swipe-surface { background: color-mix(in srgb, var(--on-surface) 7%, var(--bg)); }
+  .swipe-row.playing > .swipe-surface { background: color-mix(in srgb, var(--primary) 16%, var(--bg)); }
+  .swipe-row.selected > .swipe-surface { background: color-mix(in srgb, var(--primary) 9%, var(--bg)); }
+  .swipe-row.ticked > .swipe-surface { background: color-mix(in srgb, var(--primary) 10%, var(--bg)); }
+  .swipe-row.loading > .swipe-surface { background: color-mix(in srgb, var(--primary) 8%, var(--bg)); }
+  .swipe-reveal { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 18px; color: white; font-size: var(--label-small); font-weight: 600; }
+  .swipe-reveal.add { background: #23643D; }
+  .swipe-reveal.remove { background: #A52332; justify-content: flex-end; }
+  .swipe-reveal[hidden] { display: none; }
+  .swipe-reveal svg, .queue-origin svg, .queue-grip svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+  .queue-origin { display: flex; gap: 2px; color: var(--on-surface-variant); width: 24px; flex: none; }
+  .queue-origin svg { width: 16px; height: 16px; }
+  .queue-origin svg + svg { width: 12px; margin-left: -6px; align-self: end; }
+  .queue-track.inserted > .swipe-surface { padding-left: 34px; }
+  .queue-track.playing .title { font-weight: 700; }
+  .queue-track.dragging { z-index: 3; box-shadow: 0 4px 12px #0006; }
+  .queue-track.reorder-preview { transition: transform 160ms ease-out; }
+  .queue-grip { display: flex; flex-direction: column; align-items: center; border: 0; background: none;
+    color: var(--on-surface-variant); padding: 6px; min-width: 48px; font: inherit;
+    font-size: var(--label-small); cursor: grab; touch-action: none; flex: none; }
+  .queue-grip:active { cursor: grabbing; }
+  .queue-track .text:focus-visible, .queue-grip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .swipe-surface, .queue-track.reorder-preview { transition: none; } }
+  /* Last as well as important: the host DOM cascade and browsers both hide every hidden panel. */
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -893,6 +929,19 @@
     <ol id="browselist"></ol>
   </section>
 
+  <section id="playback-panel" class="playbackview" aria-labelledby="queue-title" hidden>
+    <div class="queue-head">
+      <div class="text"><h2 id="queue-title" tabindex="-1">Queue</h2><div class="meta" id="playback-source"></div></div>
+      <button class="action" id="queue-clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6zm2 4h14v2H5v-2zm2 4h10v2H7v-2zm2 4h6v2H9v-2z"/></svg>Clear</button>
+      <button class="action" id="queue-help" aria-expanded="false" aria-controls="queue-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm1.2-6.2-1.1 1c-.8.7-1.1 1.2-1.1 2.2h-2c0-1.5.5-2.3 1.5-3.2l1.4-1.2c.5-.4.7-.8.7-1.3a1.6 1.6 0 0 0-3.2 0h-2a3.6 3.6 0 0 1 7.2 0c0 1-.5 1.8-1.4 2.5z"/></svg>Help</button>
+      <button class="action" id="queue-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+    </div>
+    <p id="queue-instructions" class="note" hidden>Tap to play. Hold for Information. Swipe right to add, left to remove. Drag a Reorder handle, or focus it and use the arrow keys. Right-click a row for all actions.</p>
+    <p id="queue-repeat-note" class="note" hidden>Repeat one is on. Next still plays the next queued track.</p>
+    <p id="queue-empty" class="note" hidden>No tracks in the queue. Add tracks from any list.</p>
+    <ol id="playback-list" aria-label="Queue"></ol>
+  </section>
+
   <footer>
     <!--
       Now Playing, and **it belongs to the dock**. On the phone it expands upward from the dock over
@@ -982,6 +1031,7 @@
       <span id="remaining">0:00</span>
     </div>
 
+    <div class="dock-summary">
     <div class="nowcard" id="nowcard">
       <div class="text">
         <div class="title" id="title">Nothing playing</div>
@@ -996,6 +1046,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       </button>
       <svg viewBox="0 0 24 24" id="expand"><path d="m7.4 15.4-1.4-1.4 6-6 6 6-1.4 1.4-4.6-4.6z"/></svg>
+    </div>
+    <button class="action" id="showqueue" aria-pressed="false" aria-controls="playback-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h14v2H3V5zm0 4h14v2H3V9zm0 4h8v2H3v-2zm12-1v8l6-4-6-4z"/></svg>Queue</button>
     </div>
 
     <div class="transport">

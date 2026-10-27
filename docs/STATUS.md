@@ -45,23 +45,23 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 ## WEB feature implementation — in progress, 2026-10-26
 
 Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.
-All twenty-five selected scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md),
-with mandatory Android production-code/test comparison and a final retry of any skipped point.
-No merge or deployment is authorized. W01 has a domain-model substage and shared Kotlin/JavaScript
-transport fixtures. Page integration is prepared on the branch, with independent editor/transport,
-document-write ordering and obsolete-load/reply guards. Its forced integration gate passed
-**1218 tests / 160 suites**, 643 page checks, 52 engine/worklet checks and all companions in 610 s,
-recorded 2026-10-27. Fresh lint: zero errors / 79 warnings. A separately reproduced phone-document
-selection persistence regression is corrected. W01's shared Add case now passes its actual dock
-guard in the W02 transport checkpoint; its next integrated full gate is pending. Real-browser behaviour is
-unchecked. The model substage passed **1218 tests / 160
-suites**, 66 new domain checks and all existing companions; lint analysis was up to date, with
-zero errors / 79 warnings. W02's production schedule/Clear model passes 29 Android-derived cases
-and is registered in the full gate. W02 transport is connected: 666 page, 67 context, 29 schedule
-and 14 state/effect checks pass; fresh Android reference execution passes 81 tests / 5 suites.
-This is partly checked: the Queue panel/gestures and their integrated full tests/lint remain pending.
-Other scopes have not been declared complete.
-Android production code and schema are unchanged.
+All twenty-five scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md), with mandatory
+Android code/test comparison and a final retry of skipped items. No merge/deployment is authorized.
+
+**W01-W02 implemented on the branch, 2026-10-27:** selected-editor ownership is independent of
+actual playback; manual FIFO, Clear/Undo and a unified keyed Queue panel are connected. Real
+menu/swipe/grip/keyboard callbacks preserve occurrence identity, source continuation and playlist
+writes. The panel keeps the shared dock, departure animations and current-row following. Outside-row
+additional pointers cancel gestures, and handled long presses suppress an extra browser menu.
+
+The final forced gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **570 s**;
+31 unit-stage tasks executed. All companions pass, including **695 page assertions**, **52 engine
+checks**, 67 context, 29 schedule, 14 effects, 16 swipe, 9 grip and 7 keyed-presentation cases.
+Lint: **0 errors / 79 warnings**, analysis up to date after the prior fresh scan. Exact source-input
+hashes and reports are retained in ignored `user/web-parity-verification/w02-panel-final-full-gate/`.
+**Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
+bundle is handed off. W03-W25 remain open; W03 analysis/drafts are not production implementation.
+Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
 
 ## WEB and Android parity inventory — 2026-10-26
 

@@ -167,7 +167,15 @@ const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^expor
 const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').replace(/^export /gm, '');
 const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^export /gm, '');
+const reorderSource = fs.readFileSync('web/src/queue-reorder.js', 'utf8').replace(/^export /gm, '');
+const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { bindTrackGestures } from './row-gestures.js';",
+    `const { bindTrackGestures } = (() => { ${gesturesSource}; return { bindTrackGestures }; })();`)
+  .replace("import { QueueView } from './queue-view.js';",
+    `const { PendingReorder } = (() => { ${reorderSource}; return { PendingReorder }; })();
+     const { QueueView } = (() => { ${queueViewSource}; return { QueueView }; })();`)
   .replace("import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';",
     `const { PlaybackSchedule, PlaybackPlan } = (() => { ${scheduleSource}; return { PlaybackSchedule, PlaybackPlan }; })();`)
   .replace("import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';",
@@ -2689,7 +2697,7 @@ if (window.__api) {
     ];
     for (const [[choice, list], want, what] of cases) check(i18n.resolveLanguage(choice, list) === want, what);
 
-    const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+    const appSource = ['web/src/app.js', 'web/src/queue-view.js'].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
     const keys = new Set();
     for (const m of appSource.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
     for (const m of appSource.matchAll(/\btn\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
@@ -2697,7 +2705,7 @@ if (window.__api) {
     }
     const untranslated = [...keys].filter((k) => !i18n.hasPolish(k));
     check(keys.size > 150 && untranslated.length === 0,
-      `every one of app.js's ${keys.size} texts has its Polish` + (untranslated.length ? ` -- missing: ${untranslated.slice(0, 5).join(' | ')}` : ''));
+      `every one of the page modules' ${keys.size} texts has its Polish` + (untranslated.length ? ` -- missing: ${untranslated.slice(0, 5).join(' | ')}` : ''));
 
     const markup = new JSDOM(fs.readFileSync('web/src/index.html', 'utf8')).window.document;
     // Names that are names in both languages, and so have no entry to find.
@@ -3645,6 +3653,8 @@ if (window.__api?.editorNow) {
 }
 
 await (await import('./check-page-manual-queue.mjs')).default({ window, check });
+await (await import('./check-page-queue-view.mjs')).default({ window, check });
+await (await import('./check-page-queue-load.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);
