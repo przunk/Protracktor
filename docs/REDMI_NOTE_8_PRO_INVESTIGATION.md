@@ -40,12 +40,22 @@ establish any hypothesis.
 The agent inspected both supplied 738 × 1600 screenshots under ignored `user/bug/`:
 `IMG-20261027-WA0001.jpg` shows Playlist; `IMG-20261027-WA0002.jpg` shows Random. Near-white titles,
 captions and dock text have inadequate contrast on light surfaces. Several icons and the Playlist
-selector remain dark. This is direct visual evidence of C123; the images do not establish the
-system's dark-mode configuration or reproduce the rendering on a test device.
+selector remain dark. This is direct visual evidence of C123, not a reproduction on a test device.
 
 Different action-pill widths are visible, including Playlist and Filter on the right of Random.
-The screenshots do not identify which icons, dimensions or alignments C124 specifically concerns.
 The original images remain outside Git; no screenshot or personal device data is published.
+
+### Appearance follow-up — 2026-10-28
+
+The reported configuration is **system Dark mode with app Light**, with Polish labels in the
+screenshots. Several configurations were tried, but their individual results, exact MIUI settings
+and the installed build were not supplied. System recolouring is suspected; the report does not
+establish whether the app switched themes or MIUI transformed selected colours after rendering.
+
+The comparison phone is a Pixel 7 running Android 16, stock Android and English labels; its
+buttons and colours look correct in the reported use. Screen dimensions, OS, manufacturer and
+language all differ, so this is not a controlled comparison isolating one cause. C124 concerns
+the visible icons/buttons; no particular glyph was identified as malformed.
 
 ## C122: what the startup path actually does
 
@@ -108,6 +118,8 @@ by restoring a selected track. No specific Android 11 incompatibility has been i
 `LabelledAction` explicitly gives its icon and caption the same `LocalContentColor`, derived from
 `onSecondaryContainer`; those elements nevertheless differ in the supplied screenshots. This
 supports checking rendering-time recolouring, as well as inherited text styles and text colours.
+The confirmed system-Dark/app-Light configuration strengthens the MIUI recolouring hypothesis
+without proving it. Dynamic-colour differences between the phones do not justify unreadable text.
 
 The activity's XML theme is `android:Theme.Material.NoActionBar`. It has no explicit Force Dark
 opt-out; the manifest also lacks Xiaomi's documented opt-out metadata. Standard Android Force Dark
@@ -130,13 +142,20 @@ height through a shared function, but its width is only a minimum: longer Polish
 make a pill wider than its neighbour. Random's Filter and the top-bar Playlist action do not
 share an equal-width measurement contract. Glyph ink bounds can also differ within equal boxes.
 
-Clarify the affected controls before deciding whether to equalize action widths, align control
-bounds or adjust a particular glyph. Preserve larger-font support and touch targets. Do not
-rescale all icons based solely on differently sized button backgrounds.
+The follow-up confirms that the complaint concerns the visible icons/buttons. The Playlist and
+Filter buttons share a right edge but have different centre axes; WEB and Settings also have
+different widths. Label-dependent sizing explains how such differences can occur, without
+establishing that language alone caused the reported appearance.
+
+The proposed direction is consistent adaptive widths and alignment within related action groups,
+rather than one fixed width across all toolbars. Preserve Polish/English labels, narrow-screen
+layout, larger-font support and touch targets. Do not rescale all icons based solely on differently
+sized button backgrounds. No layout change has been implemented or checked on either phone.
 
 ## Verification state
 
 **Checked:** Git/tag source comparison, startup call-path inspection, both supplied screenshots,
-and primary Android/Xiaomi documentation. **Unchecked:** crash reproduction, actual cause, MIUI
-configuration, runtime colour values, the exact C124 complaint, and any fix on either phone.
+and primary Android/Xiaomi documentation. The 2026-10-28 configuration and complaint clarification
+are user-reported evidence. **Unchecked:** crash reproduction, actual cause, exact MIUI
+configuration, runtime colour values, and any fix on either phone.
 Only documentation changed; no application tests, APK build, code fix, merge, push or release.

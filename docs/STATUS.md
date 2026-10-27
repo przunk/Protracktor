@@ -84,24 +84,29 @@ See [retained findings and limits](REDMI_NOTE_8_PRO_INVESTIGATION.md#current-dis
 
 ## C123 Light-theme colours are incorrect on Redmi Note 8 Pro
 
-**Open — real user report received 2026-10-27; screenshot discussion and analysis deferred.**
+**Open — real user report received 2026-10-27; configuration clarified 2026-10-28.**
 User B from C122 reports incorrect colours in light mode on the fresh installation, Android 10
-(SDK 29), Redmi Note 8 Pro. The affected controls/colours and exact build have not yet been
-specified. The agent inspected the two supplied screenshots on 2026-10-27: near-white titles, action
+(SDK 29), Redmi Note 8 Pro. System Dark mode with app Light and Polish labels is confirmed;
+the exact build and MIUI settings remain unknown. The agent inspected the two supplied
+screenshots on 2026-10-27: near-white titles, action
 captions and dock text appear on light backgrounds while several icons and the playlist header
 remain dark. Source images remain ignored under `user/bug/`. MIUI forced darkening is a
-source-supported hypothesis requiring a device comparison, not an established cause. See
+source-supported hypothesis strengthened by this configuration, requiring a device comparison,
+not an established cause. A Pixel 7 on stock Android 16 with English labels looks correct in
+reported use; those multiple differences do not isolate a cause. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No code fix or device verification is claimed.
 
 ## C124 Icons are uneven on Redmi Note 8 Pro
 
-**Open — real user report received 2026-10-27; screenshot discussion and analysis deferred.**
-The same user B reports uneven icons. The exact icons, screens and whether the difference is
-size, alignment or spacing remain to be identified from the available screenshots. This is
-recorded separately from C123 because the colour and icon defects may need independent fixes.
+**Open — real user report received 2026-10-27; complaint clarified 2026-10-28.**
+The same user B reports uneven visible icons/buttons, confirmed in the follow-up. No specific
+glyph was identified as malformed. This is recorded separately from C123 because the colour
+and geometry defects may need independent fixes.
 The agent inspected both screenshots on 2026-10-27. Different action-pill widths are visible
-(e.g. Playlist versus Filter); the precise icon/alignment complaint is still unconfirmed. This
-is not yet a reproduced layout defect or a code fix. See
+(e.g. Playlist versus Filter), shifting their centre axes despite a shared right edge.
+Polish label lengths and available layout width are relevant candidates: button width has a
+minimum, not an equal-width group contract. Consistent adaptive sizing within related groups
+is proposed; no code fix or device verification has been performed. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
 
 ## C121 WEB decoder filename lost when an entry has a display title
