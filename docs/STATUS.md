@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-26 — prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-27 — C122 startup crash, C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -21,6 +21,45 @@ The local ignored GOAL.md now defines separate feature commits on `feature/web-f
 mandatory comparison with Android code/tests for each scope, regression gates and a final WEB
 bundle. Its previous contents are preserved under ignored `user/goals/`. Implementation has not
 started; no task branch, application build, merge or deployment was performed for this plan.
+
+## C122 Redmi Note 8 Pro crashes at startup after a previously working installation
+
+**Open — real user report received 2026-10-27; investigation pending.** Two users have the same
+phone model, with different Android versions and installation histories:
+
+| User | Device | Android | Installation history | Reported result |
+| --- | --- | --- | --- | --- |
+| A | Redmi Note 8 Pro | Android 11, SDK 30 | Previously used a working 1.2.0 or 1.3.0 installation; exact previous version uncertain | The current installation crashes when the app starts |
+| B | Redmi Note 8 Pro | Android 10, SDK 29 | Fresh installation | Starts successfully; no startup crash reported |
+
+The exact currently installed version/build and a crash trace have not been supplied. This
+comparison does not isolate the cause: both Android version and prior installation state differ.
+No migration, Android-11-wide or device-model-wide cause is established. The agent has not
+reproduced the crash or changed application code for this report. Source analysis and next
+diagnostic steps are recorded in [the Redmi investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
+No stack trace can currently be collected; this is not a prerequisite for continuing analysis.
+
+## C123 Light-theme colours are incorrect on Redmi Note 8 Pro
+
+**Open — real user report received 2026-10-27; screenshot discussion and analysis deferred.**
+User B from C122 reports incorrect colours in light mode on the fresh installation, Android 10
+(SDK 29), Redmi Note 8 Pro. The affected controls/colours and exact build have not yet been
+specified. The agent inspected the two supplied screenshots on 2026-10-27: near-white titles, action
+captions and dock text appear on light backgrounds while several icons and the playlist header
+remain dark. Source images remain ignored under `user/bug/`. MIUI forced darkening is a
+source-supported hypothesis requiring a device comparison, not an established cause. See
+[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No code fix or device verification is claimed.
+
+## C124 Icons are uneven on Redmi Note 8 Pro
+
+**Open — real user report received 2026-10-27; screenshot discussion and analysis deferred.**
+The same user B reports uneven icons. The exact icons, screens and whether the difference is
+size, alignment or spacing remain to be identified from the available screenshots. This is
+recorded separately from C123 because the colour and icon defects may need independent fixes.
+The agent inspected both screenshots on 2026-10-27. Different action-pill widths are visible
+(e.g. Playlist versus Filter); the precise icon/alignment complaint is still unconfirmed. This
+is not yet a reproduced layout defect or a code fix. See
+[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
 
 ## C121 WEB decoder filename lost when an entry has a display title
 
