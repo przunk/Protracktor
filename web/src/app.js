@@ -22,6 +22,7 @@ import { HistoryPresentationReads } from './history-presentation.js';
 import { SavedPlaces, saveablePlace, savedPlaceId } from './saved-places.js';
 import { SavedPlacesView } from './saved-places-view.js';
 import * as savedCatalogue from './saved-places-catalogue.js';
+import { learnedDisplay, learnedSourceLine } from './learned-titles.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -128,12 +129,17 @@ let audioPosition = 0;
 let listeningTrack = null;
 let openingHistoryTicket = 0;
 let historyPresentation = new Map();
+let learnedTitles = new Map();
 let historyRefreshQueued = false;
 let infoPresentation = null;
 const historyReads = new HistoryPresentationReads({
   query: (ids, signal) => played.presentationAmong(ids, signal),
   currentRevision: () => played.revision,
-  show: (rows) => { historyPresentation = rows; repaintPlayedBefore(); },
+  show: (rows) => {
+    historyPresentation = rows;
+    learnedTitles = new Map([...rows].flatMap(([id, row]) => row.name?.trim() ? [[id, row.name.trim()]] : []));
+    repaintHistoryPresentation();
+  },
   failed: (error) => status(t('Could not read History: {reason}', { reason: error.message })),
 });
 
@@ -171,7 +177,7 @@ function requestHistoryPresentation() {
     const ids = new Set(rememberedRandom?.history.playedPicks.map((entry) => entry.url) ?? []);
     for (const row of $('browselist').querySelectorAll('[data-url]')) ids.add(row.dataset.url);
     if (infoPresentation) ids.add(infoPresentation.url);
-    repaintPlayedBefore();
+    repaintHistoryPresentation();
     historyReads.refresh(ids, played.revision);
   });
 }
@@ -195,7 +201,11 @@ function browseLeading(url) {
   return leading;
 }
 
-function repaintPlayedBefore() {
+const displayTrack = (track) => learnedDisplay(track, learnedTitles, fileOf(track));
+const mainDisplay = (track) => editorShown ? track : displayTrack(track);
+const displaySourceLine = (track) => learnedSourceLine({ ...track, meta: whereOf(track), file: fileOf(track) });
+
+function repaintHistoryPresentation() {
   const clearing = played.revision.clearing;
   for (const badge of document.querySelectorAll('[data-played-url]')) {
     badge.hidden = clearing || historyPresentation.get(badge.dataset.playedUrl)?.listened !== true;
@@ -203,6 +213,8 @@ function repaintPlayedBefore() {
   const note = $('np-played');
   note.hidden = clearing || !infoPresentation || historyPresentation.get(infoPresentation.url)?.listened !== true;
   if (!note.hidden) note.textContent = t('Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.');
+  for (const row of [...$('queue').children, ...$('browselist').children]) row.repaintTitle?.();
+  if (queueView && !$('playback-panel').hidden) queueView.render(playbackPlan());
 }
 /**
  * Which playlist the queue on screen belongs to.
@@ -1178,7 +1190,7 @@ function explainFailure(reason, entry) {
  */
 function renderNothingPlaying() {
   infoPresentation = null;
-  repaintPlayedBefore();
+  repaintHistoryPresentation();
   $('np-title').textContent = currentTrack()?.name || t('Nothing playing');
   $('np-message').hidden = true;
   $('np-names').replaceChildren();
@@ -1660,6 +1672,16 @@ function render() {
     // Stopped here, or opening the menu would also start the track underneath it.
     menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu, i); };
 
+    const transient = !editorShown;
+    li.repaintTitle = () => {
+      const shown = transient ? displayTrack(entry) : entry;
+      if (title.textContent !== shown.name) title.textContent = shown.name;
+      const source = transient ? displaySourceLine(shown) : whereOf(entry);
+      if (meta.textContent !== source) meta.textContent = source;
+      menu.setAttribute('aria-label', t('More for {name}', { name: shown.name }));
+    };
+    li.repaintTitle();
+
     li.append(n, text, menu);
     if (!entry.local) {
       li.onclick = () => {
@@ -1780,7 +1802,7 @@ const describePending = new Map();
 async function informAbout(entry, { playedBefore = true } = {}) {
   infoPresentation = playedBefore ? entry : null;
   requestHistoryPresentation();
-  repaintPlayedBefore();
+  repaintHistoryPresentation();
   showPanel('nowplaying');
   $('np-title').textContent = entry.name;
   $('fields').replaceChildren();
@@ -1848,15 +1870,15 @@ function openRowMenu(entry, anchor, at = visibleTracks().indexOf(entry)) {
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
     [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
-    [t('Information'), () => informAbout(entry, { playedBefore: !!randomView }), !entry.local, ICON.info],
+    [t('Information'), () => informAbout(mainDisplay(entry), { playedBefore: !!randomView }), !entry.local, ICON.info],
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
-    [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
-    [t('Add to queue'), () => enqueueTrack(entry, historyOrigin), !entry.local, ICON.playlistAdd],
+    [t('Add to playlist'), () => openAddTo([plain(mainDisplay(entry))]), !entry.local, ICON.playlistAdd],
+    [t('Add to queue'), () => enqueueTrack(mainDisplay(entry), historyOrigin), !entry.local, ICON.playlistAdd],
     // On every list, as on the phone, not in Browse alone.
     [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
     // Share uses the same actions as Now Playing.
-    shareEntry(entry, anchor, () => openRowMenu(entry, anchor, at)),
+    shareEntry(() => mainDisplay(entry), anchor, () => openRowMenu(entry, anchor, at)),
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
   if (record) items.push([t('Remove from this list'), () => removeRememberedRandomAt(at, record, tracks), true, ICON.remove]);
@@ -2428,7 +2450,7 @@ let swallowRowClick = false;
 function holdToSelect(row, entry) {
   row.addEventListener('pointerdown', () => { swallowRowClick = false; });
   bindTrackGestures(row, {
-    onAdd: () => enqueueTrack(entry, visibleFromHistory()),
+    onAdd: () => enqueueTrack(mainDisplay(entry), visibleFromHistory()),
     onLongPress: () => { swallowRowClick = true; startSelecting(entry); },
     canSwipe: () => selected.size === 0,
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue'),
@@ -2465,7 +2487,7 @@ function updateSelectBar() {
  * rows by default; Browse passes the tune it was asked about, and is gone back to afterwards.
  */
 let addFromBrowse = false;
-async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has(entry) && !entry.local), { browse = false } = {}) {
+async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has(entry) && !entry.local).map(mainDisplay), { browse = false } = {}) {
   if (!tracks.length) return;
   pendingAdd = tracks;
   addFromBrowse = browse;
@@ -3537,12 +3559,11 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   name.className = 'bname';
   name.textContent = track.name;
   text.append(name);
-  if (meta) {
-    const where = document.createElement('div');
-    where.className = 'bmeta';
-    where.textContent = meta;
-    text.append(where);
-  }
+  const where = document.createElement('div');
+  where.className = 'bmeta';
+  text.append(where);
+  const historyOrigin = browsePath[0] === 'history';
+  const shown = () => historyOrigin ? track : displayTrack(track);
   const add = document.createElement('button');
   add.className = 'badd';
   const paintAdd = () => {
@@ -3558,8 +3579,8 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   li.repaintAdd = paintAdd;
   add.onclick = (event) => {
     event.stopPropagation();
-    if (workspace.editor.id === PHONE) { openAddTo([plain(track)], { browse: true }); return; }
-    addToShowing([track]);
+    if (workspace.editor.id === PHONE) { openAddTo([plain(shown())], { browse: true }); return; }
+    addToShowing([shown()]);
     paintAdd();
   };
   const more = document.createElement('button');
@@ -3568,30 +3589,38 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   more.setAttribute('aria-label', t('More for {name}', { name: track.name }));
   more.onclick = (event) => {
     event.stopPropagation();
-    openBrowseMenu(track, more, folder);
+    openBrowseMenu(track, more, folder, shown);
   };
+  li.repaintTitle = () => {
+    const display = shown();
+    if (name.textContent !== display.name) name.textContent = display.name;
+    const source = !historyOrigin && learnedTitles.has(track.url) ? displaySourceLine(display) : meta ?? '';
+    if (where.textContent !== source) where.textContent = source;
+    where.hidden = !source;
+    more.setAttribute('aria-label', t('More for {name}', { name: display.name }));
+  };
+  li.repaintTitle();
   li.append(browseLeading(track.url), text, add, more);
   li.onclick = onplay;
   list.append(li);
   requestHistoryPresentation();
-  const historyOrigin = browsePath[0] === 'history';
-  bindTrackGestures(li, { onAdd: () => enqueueTrack(track, historyOrigin),
+  bindTrackGestures(li, { onAdd: () => enqueueTrack(shown(), historyOrigin),
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue') });
 }
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
-function openBrowseMenu(track, anchor, folder) {
+function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track)) {
   const historyOrigin = browsePath[0] === 'history';
   const items = [
-    [t('Add to another playlist'), () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
-    [t('Add to queue'), () => enqueueTrack(track, historyOrigin), true, ICON.playlistAdd],
-    [t('Information'), () => informAbout(track), true, ICON.info],
+    [t('Add to another playlist'), () => openAddTo([plain(shown())], { browse: true }), true, ICON.playlistAdd],
+    [t('Add to queue'), () => enqueueTrack(shown(), historyOrigin), true, ICON.playlistAdd],
+    [t('Information'), () => informAbout(shown()), true, ICON.info],
   ];
   // Where the tune lives, and what else is there. Pointless from inside that very folder.
   if (folder && authorFolderOf(track)) {
     items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
-  items.push(shareEntry(track, anchor, () => openBrowseMenu(track, anchor, folder)));
+  items.push(shareEntry(shown, anchor, () => openBrowseMenu(track, anchor, folder, shown)));
   showMenu(items, anchor);
 }
 
@@ -4744,12 +4773,13 @@ function shareItems(entry, back = null) {
  * the rest. Live while any of the four can be done or explained.
  */
 function shareEntry(entry, anchor, reopen) {
-  const ways = shareItems(entry);
+  const shown = typeof entry === 'function' ? entry : () => entry;
+  const ways = shareItems(shown());
   const live = ways.some(([, , enabled, , refusal]) => enabled || refusal?.());
   // Drawn on the next turn: the press that chose Share is still on its way up to the page's
   // click-away, which would close a menu drawn now under a button that is no longer in it.
   const next = (draw) => () => setTimeout(draw);
-  return [t('Share'), next(() => showMenu(shareItems(entry, next(reopen)), anchor)), live, ICON.share];
+  return [t('Share'), next(() => showMenu(shareItems(shown(), next(reopen)), anchor)), live, ICON.share];
 }
 
 async function shareAsAudio(entry) {
@@ -4763,7 +4793,7 @@ async function shareAsAudio(entry) {
     const decoderName = fileOf(entry);
     const knownLengths = await songLengthsFor(decoderName, bytes);
     // The subsong playing, when this is the tune that plays; else the one the file opens at.
-    const subsong = entry === currentTrack() ? currentSubsong : null;
+    const subsong = entry.url && entry.url === currentTrack()?.url ? currentSubsong : null;
     exportWorker ??= new Worker('./audio-export.js', { type: 'module' });
     const answer = await new Promise((resolve) => {
       exportWorker.onmessage = ({ data }) => resolve(data);
@@ -4991,7 +5021,7 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'), source: $('playback-source'),
   empty: $('queue-empty'), repeatNote: $('queue-repeat-note'),
   icon: (kind) => iconSvg(ICON[kind === 'source' ? 'playlist' : kind]),
-  sourceLabel: playbackSourceLabel, subtitle: (track) => track.meta ?? sourceOf(track.url),
+  sourceLabel: playbackSourceLabel, displayTrack, subtitle: displaySourceLine,
   onPlaySource: playSourceOccurrence, onPlayManual: playManualRequest, onAdd: enqueueTrack,
   onRemove: removeQueueOccurrence, onInfo: informAbout,
   onMove: (id, target) => { schedule = schedule.moveRequest(id, target); render(); setPlaying(playing); },
@@ -5053,8 +5083,8 @@ $('queue-help').onclick = () => {
 };
 
 played.subscribe(() => {
-  if (played.revision.clearing) historyPresentation = new Map();
-  repaintPlayedBefore();
+  if (played.revision.clearing) { historyPresentation = new Map(); learnedTitles = new Map(); }
+  repaintHistoryPresentation();
   requestHistoryPresentation();
 });
 played.onFailure((error) => status(t('Could not save History: {reason}', { reason: error.message })));

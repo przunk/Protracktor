@@ -46,7 +46,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
 | W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
 | W07 | Saved catalogue places | Implemented; full host gate passes; browser acceptance unchecked |
-| W08 | Learned list titles | Pending |
+| W08 | Learned list titles | Implemented; full host gate passes; browser acceptance unchecked |
 | W09 | Recent-search suggestions | Pending |
 | W10 | Live History search | Pending |
 | W11 | Search scopes and saved-playlist coverage | Pending |
@@ -549,6 +549,34 @@ match their archived hashes; reports are retained in ignored
 `user/web-parity-verification/w07-saved-places-full-gate/`.
 Actual browser appearance, touch, audio and background acceptance remain unchecked. No APK,
 intermediate bundle, merge or deployment.
+
+## W08 learned titles checkpoint — 2026-10-27
+
+Reference: `HistoryPresentation.kt` (`LearnedTitles.display`/`sourceLine`), all three native rule
+tests, `HistoryPresentationReads`/tests, `HistoryStoreListenedTest` and production Browse, Random,
+Queue and controller call sites. Accepted C101 uses History as the sole retained title source.
+
+The overlay applies before listened qualification. Display copies preserve original filename,
+URL, metadata, order and occurrence identity; neither catalogue sort fields nor Random's heard
+record is rewritten. Row text updates without rebuilding lists, moving scroll or altering the
+playing context. Existing playlist labels and History recency metadata remain independent.
+Source lines retain the filename once. Current display copies reach Add/enqueue/Info/share while
+Play/Select/remove keep original references. The Queue adapter keeps existing node/request keys.
+Stable file identity, rather than object-reference equality, preserves current-subsong audio
+export when an action receives a displayed copy. No decoder cache scan is introduced.
+
+Focused checks pass: five native-derived title rules, fifteen History storage/migration cases,
+17 actual page/control checks and the existing queue presentation checks. Combined page checks
+pass **865 assertions**. Six deliberate faults fail at named assertions: source mutation,
+disconnected title refresh, copied selection identity, wrong export identity, delayed Clear and
+wrong decoder filename. The forced full gate passes **1218 tests / 160 suites**, zero failures,
+errors or skips, **838 s**; all 31 unit tasks executed. All companions pass, including **865 page
+assertions**, five title rules, fifteen History storage cases and the retained engine, queue,
+Random, bookmark, PWA and server checks. Fresh lint: **0 errors / 79 warnings**, 88.7 s. All 76
+checked source inputs match their archived hashes; reports are retained in ignored
+`user/web-parity-verification/w08-learned-titles-full-gate/`. Browser appearance, audio export
+quality and background acceptance remain unchecked; worker request checks are host boundary
+evidence. No APK, intermediate bundle, merge or deployment.
 
 ## Deferred or blocked work
 

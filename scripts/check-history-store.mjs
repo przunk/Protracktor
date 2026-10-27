@@ -119,4 +119,16 @@ await test('two storage owners increment replay counts without read/write races'
   await Promise.all([store.played.record(oldRow), other.played.record(oldRow), store.played.record(oldRow), other.played.record(oldRow)]);
   assert.equal((await store.played.recent())[0].playCount, 4); store.forget(); other.forget();
 });
+await test('learned titles persist before qualification across reopen and clear only with History', async () => {
+  const store = await fresh();
+  await store.played.record({ url: 'decoded', name: ' Decoded ', file: 'a.mod' });
+  await store.played.record({ url: 'fallback', name: 'fallback.mod', file: 'fallback.mod' });
+  await store.played.record({ url: 'blank', name: '  ', file: 'blank.mod' });
+  const before = await store.played.recent(); store.forget();
+  const reopened = await import(`../web/src/store.js?history-test=${++moduleId}`);
+  assert.deepEqual(await reopened.played.presentationAmong(['decoded', 'fallback', 'blank', 'absent']),
+    new Map([['decoded', { name: 'Decoded', listened: false }], ['fallback', { name: '', listened: false }], ['blank', { name: '', listened: false }]]));
+  assert.deepEqual(await reopened.played.recent(), before);
+  await reopened.played.clear(); assert.equal((await reopened.played.presentationAmong(['decoded', 'fallback', 'blank'])).size, 0); reopened.forget();
+});
 console.log(`${checks} History storage/migration cases passed.`);

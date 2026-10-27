@@ -6,9 +6,9 @@ import { PendingReorder } from './queue-reorder.js';
 
 /** Keyed presentation of the production plan; this component never owns transport or storage. */
 export class QueueView {
-  constructor({ root, list, source, empty, repeatNote, icon, sourceLabel, subtitle,
+  constructor({ root, list, source, empty, repeatNote, icon, sourceLabel, subtitle, displayTrack = (track) => track,
     onPlaySource, onPlayManual, onAdd, onRemove, onInfo, onMove, onMenu }) {
-    Object.assign(this, { root, list, source, empty, repeatNote, icon, sourceLabel, subtitle,
+    Object.assign(this, { root, list, source, empty, repeatNote, icon, sourceLabel, subtitle, displayTrack,
       onPlaySource, onPlayManual, onAdd, onRemove, onInfo, onMove, onMenu });
     this.nodes = new Map();
     this.currentKey = null;
@@ -39,8 +39,8 @@ export class QueueView {
     const pending = this.plan.schedule.pending;
     const at = row.kind === 'manual' ? pending.findIndex((entry) => entry.id === row.request.id) : -1;
     const items = [
-      [t('Information'), () => this.onInfo(row.track), !row.track.local, 'info'],
-      [t('Add to queue'), () => this.onAdd(row.track, this.historyOrigin(row)), !row.track.local, 'add'],
+      [t('Information'), () => this.onInfo(this.displayTrack(row.track)), !row.track.local, 'info'],
+      [t('Add to queue'), () => this.onAdd(this.displayTrack(row.track), this.historyOrigin(row)), !row.track.local, 'add'],
       [t('Remove'), () => this.onRemove(row, node._generation), true, 'remove'],
     ];
     if (at >= 0) {
@@ -71,9 +71,9 @@ export class QueueView {
     };
     node._disposeGesture = bindTrackGestures(node, {
       icon: this.icon, addLabel: t('Add to queue'), removeLabel: t('Remove'),
-      onAdd: () => this.onAdd(node._row.track, this.historyOrigin(node._row)),
+      onAdd: () => this.onAdd(this.displayTrack(node._row.track), this.historyOrigin(node._row)),
       onRemove: () => this.onRemove(node._row, node._generation),
-      onLongPress: () => this.onInfo(node._row.track),
+      onLongPress: () => this.onInfo(this.displayTrack(node._row.track)),
       canSwipe: () => !node._exit && !this.dragging,
       canAdd: () => !node._row.track.local,
       canLongPress: () => !node._exit && !node._row.track.local && !this.dragging,
@@ -92,11 +92,13 @@ export class QueueView {
     node.classList.toggle('local', !!row.track.local);
     node.setAttribute('aria-current', row.playing ? 'true' : 'false');
     const { origin, text, title, meta } = node._elements;
+    const shown = this.displayTrack(row.track);
     origin.innerHTML = (row.playing ? this.icon('play') : '')
       + (row.kind === 'manual' ? this.icon('add') : !row.playing ? this.icon('source') : '');
-    title.textContent = row.track.name;
-    meta.textContent = this.subtitle(row.track);
-    text.setAttribute('aria-label', `${row.track.name}${row.kind === 'manual' ? ` · ${t('Manually queued')}` : ''}`);
+    if (title.textContent !== shown.name) title.textContent = shown.name;
+    const subtitle = this.subtitle(shown);
+    if (meta.textContent !== subtitle) meta.textContent = subtitle;
+    text.setAttribute('aria-label', `${shown.name}${row.kind === 'manual' ? ` · ${t('Manually queued')}` : ''}`);
     text.setAttribute('aria-disabled', row.track.local ? 'true' : 'false');
     const at = row.kind === 'manual' ? this.plan.schedule.pending.findIndex((entry) => entry.id === row.request.id) : -1;
     if (at >= 0 && this.plan.schedule.pending.length > 1) {
@@ -117,7 +119,7 @@ export class QueueView {
         node._grip = grip;
         node._disposeReorder = this.reorder.bind(grip, node, row.request.id);
       }
-      node._grip.setAttribute('aria-label', t('Reorder {name}', { name: row.track.name }));
+      node._grip.setAttribute('aria-label', t('Reorder {name}', { name: shown.name }));
     } else if (node._grip) { node._disposeReorder(); node._grip.remove(); node._grip = null; }
   }
 

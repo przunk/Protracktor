@@ -103,6 +103,16 @@ All 81 input hashes and reports are retained in ignored
 No APK, bundle, Android/schema change, merge or deployment.
 [Scope/evidence](WEB_IMPLEMENTATION.md#w07-saved-places-checkpoint--2026-10-27).
 
+**W08 implemented on the branch, 2026-10-27:** learned History titles update Browse, Random and
+Queue presentation without changing source identity, order, selection or decoder filenames.
+Clear History removes the overlay; displayed copies preserve current-subsong export identity.
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **838 s**;
+all 31 unit tasks executed, **865 page assertions** and all companions pass. Fresh lint:
+**0 errors / 79 warnings**, 88.7 s. All 76 input hashes and reports are retained in ignored
+`user/web-parity-verification/w08-learned-titles-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, Android/schema change, merge or deployment.
+[Scope/evidence](WEB_IMPLEMENTATION.md#w08-learned-titles-checkpoint--2026-10-27).
+
 ## WEB and Android parity inventory — 2026-10-26
 
 Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop
