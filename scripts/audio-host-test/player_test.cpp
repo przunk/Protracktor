@@ -383,6 +383,8 @@ int main() {
         f.player.setGain(.25f); f.player.start();
         const auto first=f.stream()->render();
         require(first[0]<.05f && first[0]>0,"normalization absent or silent");
+        require(std::abs(first[0]-.5f*.25f*std::pow(10.f,-12.f/20.f))<1e-6,
+            "JNI playback did not apply the -18 LUFS target before ducking");
         f.stream()->fail(); require(f.player.recoverOutput()==1,"route recovery failed");
         require(f.stream()->render()[0]==first[0],"route reset normalization");
         f.player.setGain(1); const auto restored=f.stream()->render();

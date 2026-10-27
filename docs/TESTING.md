@@ -80,6 +80,26 @@ Overall practical operation is accepted for the experiment; individual checklist
 unchecked unless separately reported. Host renders preview the production panel, not its
 composition over Google Maps or behaviour on an actual navigation device.
 
+## B52 Louder normalization target — unmerged trial, 2026-10-27
+
+The branch changes the target from -23 to -18 LUFS while preserving boost caps and sample-peak
+protection. [Host measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
+Release APK and full verification are pending; no listening outcome is inferred from host checks.
+
+1. Use the same output device, system-volume step, stereo mode and subsong. Enable **Volume
+   normalization** in Settings; an existing preference is retained. Compare the same passages
+   in Studium Fałszu (Jakim), Lotus 3 Space ninja and several quiet/loud Random selections.
+2. Compare with the previous APK's normalization On, then with this APK's normalization Off.
+   Record the installed build, track/subsong and stereo mode. Off should preserve the original
+   signal; the trial does not add a global boost to that path.
+3. Listen for loudness jumps, distortion, changes to attacks, quiet intros and fade-outs.
+   A higher target can increase first-play differences because quiet tracks still hit the
+   partial +6 dB cap. Repeat after longer listening to check measurement reuse.
+4. Toggle during playback, pause/resume, seek, select another subsong or stereo mode, and
+   exercise the established Bluetooth transitions. Retain notification/navigation ducking.
+
+All phone sound/interaction cases remain **unchecked** until reported for this trial.
+
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 
 [Contract and limits](VOLUME_NORMALIZATION.md). Phone feedback reports comparable perceived

@@ -95,11 +95,12 @@ private:
 /** Pure playback policy, separate from system volume and transient focus ducking. */
 class VolumeNormalizer {
 public:
+    static constexpr double targetLufs = -18.0;
     static constexpr float ceiling = 0.794328235f; // -2 dBFS sample-peak headroom, not true-peak certification.
     static float gainFor(const LoudnessProfile& p) {
         if (!p.usable()) return 0.5f; // Unknown/silence never starts at an inherited boosted gain.
         const double maxBoost=p.complete ? 12. : 6.;
-        return static_cast<float>(std::min(std::pow(10.,std::clamp(-23.-p.lufs,-36.,maxBoost)/20.),
+        return static_cast<float>(std::min(std::pow(10.,std::clamp(targetLufs-p.lufs,-36.,maxBoost)/20.),
             double(ceiling)/p.peak));
     }
     void configure(bool enabled, const LoudnessProfile& p={}) {

@@ -5,6 +5,50 @@ from develop 9c44fc9, and retained for develop on 2026-10-23. Integrated as **4a
 Prepared release [1.4.0 (1304)](RELEASE_NOTES_1.4.0.md) retains this playback policy. Earlier
 integration/build checkpoints below preserve their original 1.3.0 version and Git states.
 
+## Louder target trial — 2026-10-27, unmerged
+
+Try **-18 LUFS** on `feature/louder-normalization`, from develop `141a084`, before deciding
+whether to replace the released -23 LUFS policy. Listening feedback reports that another player
+sounds substantially louder; with normalization Off, Protracktor was estimated to remain
+10–15% quieter. This is a subjective comparison, not a measured gain ratio. The other player,
+its processing and exact test material have not been identified.
+
+Change only the normalization target. Keep the existing Off/On preference, default Off,
++6 dB partial/+12 dB complete boost caps, -2 dBFS sample-peak headroom, fixed trim, ramps,
+focus ducking and export behaviour. No global gain or additional Settings control is introduced.
+Existing profiles hold input measurements, not output gain, so they remain valid and use the
+new target when playback configures normalization. There is no schema/cache-format change.
+
+The target increase requests up to 5 dB more gain than the released policy; a gain cap or measured
+peak can prevent that increase. Reused 20-second decoded prefixes measured through the actual
+native meter/normalizer show the following. These are host DSP measurements of stored PCM,
+not a fresh Android decoder run or phone listening results:
+
+| Prefix | Input LUFS | Released -23 target, partial | Trial -18 target, partial |
+| --- | ---: | ---: | ---: |
+| IT, battle of honour | -26.25 | -23.00 | -20.25 |
+| SPC, top gear 2 title | -10.43 | -23.00 | -18.00 |
+| AdLib S3M, totally nuts | -18.55 | -23.00 | -18.00 |
+| Megadrive VGZ, ending theme | -31.57 | -25.57 | -25.57 |
+
+Partial-profile spread grows from 2.57 to 7.57 LU for this small sample. The two quiet prefixes
+reach the unchanged +6 dB cap; no measurement here justifies raising it. A separate **synthetic
+complete-profile check of the same prefixes**, not an assertion that their full tracks were
+measured, produces -18 LUFS for IT/SPC/S3M and -19.94 LUFS for VGZ, where peak headroom wins.
+All measured output sample peaks remain at or below the existing ceiling. The two previously
+compared Studium Fałszu/Lotus 3 tracks have not been measured in this trial.
+
+Before the target change, strengthened DSP tests fail on the requested output level/complete
+gain, and a production JNI/Player assertion fails on the final ducked sample. After the change,
+41 Player/analysis and 13 DSP checks pass, including both sample rates, unchanged caps,
+peak protection, Off bypass, mix transitions and route recovery. Full verification and the
+release test APK are pending. Device sound and acceptance remain **unchecked**. Retained local
+measurements and failure logs are under ignored `user/louder-normalization-verification/`.
+
+For this trial, [EBU R 128 s2](https://tech.ebu.ch/docs/r/r128s2.pdf) provides context for adapting
+playback levels to mobile conditions. This implementation's existing sample-peak protection is
+not the true-peak limiter described there, and no standard-compliance claim is made.
+
 ## Acceptance and integration — 2026-10-23
 
 Phone feedback reports comparable perceived loudness for Studium Fałszu (Jakim) and Lotus 3
@@ -33,7 +77,7 @@ Earlier checkpoint records below retain their original pre-acceptance and unmerg
 - Settings offers Off/On, default Off. Schema stays 23; versionName follows the release procedure.
 - Measure perceived stereo loudness using BS.1770 K weighting and gated 400 ms blocks. Use
   a bounded 0.1-LU histogram, not an unbounded allocation in the audio callback.
-- Use a fixed -23 LUFS target. Apply one measured trim per subsong, with at most
+- Use a fixed -18 LUFS target on this trial branch; the released policy is -23 LUFS. Apply one measured trim per subsong, with at most
   +6 dB for partial analysis and +12 dB for complete analysis; peak headroom may reduce either.
 - A disposable measurement cache is independent of History and playlists. Identity includes
   source content, companion content, subsong, stereo mode and algorithm/decoder revision.

@@ -7,6 +7,19 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## B52 Louder normalization target — trial, 2026-10-27
+
+Implemented on unmerged `feature/louder-normalization`, from develop `141a084`, for a phone
+comparison before accepting a policy change. The fixed target is -18 LUFS instead of the released
+-23 LUFS; existing gain caps, sample-peak protection and the default-Off preference are retained.
+41 native Player/analysis and 13 DSP checks pass after reproducing the old target with failing
+assertions. Real stored-PCM prefixes confirm that loudness increases only when gain/peak limits
+permit it; their first-play spread increases from 2.57 to 7.57 LU. Full gate/lint and a release
+test APK are pending. Actual Android sound and acceptance remain **unchecked**.
+[Trial, measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
+VersionName 1.4.0 and schema 23 are retained. Develop, master/tags, the frozen WEB work and AMP
+are unchanged; no merge, push or publication.
+
 ## WEB and Android parity inventory — 2026-10-26
 
 Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop
