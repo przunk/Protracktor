@@ -2,6 +2,28 @@
 
 Date: 2026-10-27. Reports: [C122–C124](STATUS.md#c122-redmi-note-8-pro-crashes-at-startup-after-a-previously-working-installation).
 
+## Current disposition
+
+**C122 is under observation, unresolved — decision recorded 2026-10-27.** Retain the findings;
+defer further reproduction, startup instrumentation and diagnostic builds until new evidence
+or another occurrence warrants returning to the issue. This does not close C122 as fixed or
+as a false alarm. C123/C124 retain their separate statuses.
+
+The reproduction work is preserved on unmerged `fix/c122-startup-investigation`, commit
+`0134822`, with logs, source hashes and XML under ignored `user/c122-reproduction/`:
+
+- Six synthetic startup scenarios passed on both API 29 and 30 in Robolectric. The final
+  targeted run passed 125 tests / 6 suites, zero failures/errors/skips; a deliberately wrong
+  restored playlist failed the new startup test on both APIs before restoring the original code.
+- Existing native-player/DSP tests passed 41 audio-host + 12 loudness cases under ASan/UBSan.
+  Those use a fake output/decoder and do not exercise the affected file through ARM backends.
+- Released schema-23 snapshots are identical across v1.2.0, v1.3.0 and v1.4.0. The crash was
+  not reproduced; the affected person's data, MIUI behaviour and Play/R8 build remain unchecked.
+
+The test branch has not been merged. Application production sources are unchanged. No APK was
+built and no full application gate/lint was run for these reproduction attempts. New reports
+should retain the exact version/build, installation channel and circumstances when available.
+
 WEB work is paused until the evening. Its clean branch `feature/web-feature-parity` remains at
 `488d3a957047024b220c372ec36a73f3fe1dd927`. This analysis uses develop `3183eee` and release tags
 v1.2.0, v1.3.0 and v1.4.0; no WEB implementation is integrated into Android.
@@ -12,8 +34,8 @@ The Android 11 / SDK 30 installation crashes at startup after a previously worki
 1.3.0 installation. A different person's fresh installation on the same phone model, Android 10 /
 SDK 29, starts and plays. The current build, installation channel and MIUI builds are unknown.
 Both software version and retained data differ; the successful fresh installation does not isolate
-an Android-version effect. A stack trace cannot currently be obtained. Continue source analysis
-without treating a missing trace as proof of any hypothesis.
+an Android-version effect. A stack trace cannot currently be obtained; its absence does not
+establish any hypothesis.
 
 The agent inspected both supplied 738 × 1600 screenshots under ignored `user/bug/`:
 `IMG-20261027-WA0001.jpg` shows Playlist; `IMG-20261027-WA0002.jpg` shows Random. Near-white titles,
@@ -59,7 +81,7 @@ it does not add a column/table. An actual older database or damaged schema remai
 unverified possibility. Audio normalization defaults off; its added analysis is not called merely
 by restoring a selected track. No specific Android 11 incompatibility has been identified.
 
-### Proposed diagnostic sequence — not implemented
+### Proposed diagnostic sequence — deferred during observation, not implemented
 
 - Keep the existing installation and data. First add bounded startup checkpoints before preference
   reads, database checking/restore, native setup and optional metadata decoding, including the
