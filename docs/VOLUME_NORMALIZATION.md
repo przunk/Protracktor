@@ -5,10 +5,22 @@ from develop 9c44fc9, and retained for develop on 2026-10-23. Integrated as **4a
 Prepared release [1.4.0 (1304)](RELEASE_NOTES_1.4.0.md) retains the original -23 LUFS policy. Earlier
 integration/build checkpoints below preserve their original 1.3.0 version and Git states.
 
+## Louder target integration — 2026-10-27
+
+The -18 LUFS policy is accepted after listening comparisons and merged as **641b875**.
+Studium Fałszu becomes louder as intended; another track, Tempest Fjortisfacials, becomes quieter.
+Its levels have not been measured, so this does not establish a decoder or normalization defect.
+The general listening outcome supports retaining -18 LUFS; the installed build and individual
+regression/quality cases were not separately confirmed. Merge sources match the checked trial;
+no additional build/test run or store release was performed for this integration.
+
+A separate disposable slider experiment is authorized, from -40 to -5 LUFS, step 1, default -18.
+Its code must remain unmerged and its findings recorded before returning to a fixed-target build.
+
 ## Louder target trial — 2026-10-27, unmerged
 
-Try **-18 LUFS** on `feature/louder-normalization`, from develop `141a084`, before deciding
-whether to replace the released -23 LUFS policy. Listening feedback reports that another player
+The initial trial used **-18 LUFS** on `feature/louder-normalization`, from develop `141a084`.
+Its unmerged verification record below is historical; integration is recorded above. Listening feedback reports that another player
 sounds substantially louder; with normalization Off, Protracktor was estimated to remain
 10–15% quieter. This is a subjective comparison, not a measured gain ratio. The other player,
 its processing and exact test material have not been identified.
@@ -110,7 +122,7 @@ Earlier checkpoint records below retain their original pre-acceptance and unmerg
 - Settings offers Off/On, default Off. Schema stays 23; versionName follows the release procedure.
 - Measure perceived stereo loudness using BS.1770 K weighting and gated 400 ms blocks. Use
   a bounded 0.1-LU histogram, not an unbounded allocation in the audio callback.
-- Use a fixed -18 LUFS target on this trial branch; the released policy is -23 LUFS. Apply one measured trim per subsong, with at most
+- Develop uses a fixed -18 LUFS target; release 1.4.0 uses -23 LUFS. Apply one measured trim per subsong, with at most
   +6 dB for partial analysis and +12 dB for complete analysis; peak headroom may reduce either.
 - A disposable measurement cache is independent of History and playlists. Identity includes
   source content, companion content, subsong, stereo mode and algorithm/decoder revision.

@@ -1,12 +1,13 @@
 # Architecture
 
-## Louder normalization target — unmerged trial, 2026-10-27
+## Louder normalization target — accepted and merged, 2026-10-27
 
-`VolumeNormalizer` uses a named -18 LUFS target on `feature/louder-normalization`; the released
+`VolumeNormalizer` uses a named -18 LUFS target on develop, merged as **641b875**; the released
 policy remains -23 LUFS. Measurements and cached profiles are unchanged, so gain is recalculated
 from existing input statistics without invalidation or a new schema. Retain partial/complete
 boost caps, peak headroom, fixed-trim transitions and independent focus ducking. The change is
-an Android listening experiment, not a global decoder boost or a WEB parity implementation.
+an accepted Android playback policy, with general listening approval and per-case checks still
+unreported. It adds no global decoder boost or WEB parity implementation.
 [Measurements and acceptance limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
 
 ## B54 Floating controls — gated experiment, 2026-10-26

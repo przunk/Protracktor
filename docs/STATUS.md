@@ -1,16 +1,16 @@
 # Status
 
-Updated: 2026-10-27 — B52 -18 LUFS trial ready on unmerged feature/louder-normalization, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-27 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; production availability remains pending.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06, as displayed by Play Console; Google's review is pending.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B52 Louder normalization target — trial, 2026-10-27
+## B52 Louder normalization target — accepted and merged, 2026-10-27
 
-Implemented on unmerged `feature/louder-normalization`, from develop `141a084`, for a phone
-comparison before accepting a policy change. The fixed target is -18 LUFS instead of the released
+Implemented on `feature/louder-normalization`, from develop `141a084`, and merged as **641b875**
+after the listening comparison and integration approval. The fixed target is -18 LUFS instead of the released
 -23 LUFS; existing gain caps, sample-peak protection and the default-Off preference are retained.
 41 native Player/analysis and 13 DSP checks pass after reproducing the old target with failing
 assertions. Real stored-PCM prefixes confirm that loudness increases only when gain/peak limits
@@ -26,10 +26,12 @@ release **1.4.0 (1330)** built in **190 s**:
 **11,973,003 bytes**, SHA-256
 `00d0d4cc9aa7dc5e37ac9705bfdabe705b495fa5fe1d0a7a2ad2161607655b1e`.
 Signature, embedded revision, version, ZIP/native alignment, R8 and packaged native outputs
-were checked. Actual Android sound and acceptance remain **unchecked**.
+were checked. Listening feedback accepts the -18 LUFS policy after comparing tracks; individual
+checklist outcomes and the exact installed build were not separately supplied.
 [Trial, measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
-VersionName 1.4.0 and schema 23 are retained. Develop, master/tags, the frozen WEB work and AMP
-are unchanged; no merge, push or publication.
+VersionName 1.4.0 and schema 23 are retained. The merge tree equals branch 691f870 and its
+application inputs match checked source fbf2958; this is a source comparison, not another run.
+Master/tags, frozen WEB work and AMP are unchanged; no push, build or publication for integration.
 
 ## WEB and Android parity inventory — 2026-10-26
 

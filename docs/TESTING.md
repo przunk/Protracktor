@@ -80,13 +80,14 @@ Overall practical operation is accepted for the experiment; individual checklist
 unchecked unless separately reported. Host renders preview the production panel, not its
 composition over Google Maps or behaviour on an actual navigation device.
 
-## B52 Louder normalization target — unmerged trial, 2026-10-27
+## B52 Louder normalization target — accepted and merged, 2026-10-27
 
 The branch changes the target from -23 to -18 LUFS while preserving boost caps and sample-peak
 protection. [Host measurements and limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
 Clean source fbf2958 passed 1217 tests/full gate/lint and 54 sanitized native/DSP checks.
 Minified test APK [1.4.0 (1330)](../dist/protracktor-release-1.4.0-1330-fbf2958-20261027-223550.apk)
-is ready; no listening outcome is inferred from host checks.
+was supplied. The overall listening result was accepted and merged as **641b875**; exact build
+and individual checklist outcomes were not separately supplied.
 
 1. Use the same output device, system-volume step, stereo mode and subsong. Enable **Volume
    normalization** in Settings; an existing preference is retained. Compare the same passages
@@ -101,7 +102,8 @@ is ready; no listening outcome is inferred from host checks.
 4. Toggle during playback, pause/resume, seek, select another subsong or stereo mode, and
    exercise the established Bluetooth transitions. Retain notification/navigation ducking.
 
-All phone sound/interaction cases remain **unchecked** until reported for this trial.
+Individual phone sound/interaction cases remain **unchecked** unless separately reported; the
+general listening acceptance does not imply that the full checklist was executed.
 
 ## B52 Volume normalization — accepted and merged, 2026-10-23
 
