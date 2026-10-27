@@ -4,7 +4,7 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
-import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
+import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks } from './store.js';
 import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
@@ -19,6 +19,9 @@ import * as randomCatalogue from './random-catalogue.js';
 import { RandomFiltersView } from './random-filters-view.js';
 import { ListeningSession } from './listening-session.js';
 import { HistoryPresentationReads } from './history-presentation.js';
+import { SavedPlaces, saveablePlace, savedPlaceId } from './saved-places.js';
+import { SavedPlacesView } from './saved-places-view.js';
+import * as savedCatalogue from './saved-places-catalogue.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -227,6 +230,8 @@ let drawing = false;
 let undoAction = null;
 let noticeId = 0;
 let queueView = null;
+let savedPlaces = null;
+let savedPlacesView = null;
 let queueUnderlying = null;
 let sourceNavigationAsked = 0;
 let sourceBrowseRoute = null;
@@ -2304,6 +2309,8 @@ function answerUnsaved(go) {
 
 /** The phone's icons, the same paths, for controls the page builds rather than declares. */
 const ICON = {
+  bookmark: 'M5 3H19V22L12 18L5 22ZM7 5V18.55L12 15.69L17 18.55V5Z',
+  bookmarkFilled: 'M5 3H19V22L12 18L5 22Z',
   save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
   back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
   // A file with a note on it: the tune sent as sound (A62). The phone's `AudioFile`.
@@ -3010,6 +3017,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  if (which !== 'browse') savedPlaces?.cancelOpening();
   closePlaybackQueue();
   if (!$('unsaved').hidden) answerUnsaved(false);
   $('browse').hidden = which !== 'browse';
@@ -3105,7 +3113,7 @@ function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
 /** Capture route fields only; transport and live index/cache/download ownership stay separate. */
 function captureBrowseRoute(results, extra = {}) {
   return Object.freeze({ path: Object.freeze([...browsePath]), query: browsePath[0] === 'search' ? $('browsesearch').value : '',
-    historyPage, results: Object.freeze([...results]), title: $('browsetitle').textContent,
+    historyPage, returnToSavedPlaces: !!savedParentKey, results: Object.freeze([...results]), title: $('browsetitle').textContent,
     note: $('browsenote').textContent, ...extra });
 }
 
@@ -3147,6 +3155,7 @@ async function openQueueSource() {
   }
   sourceBrowseRoute = restoreSourceRoute(workspace.context.route, { navigationVisit: searchAsked });
   browsePath = [...sourceBrowseRoute.path]; historyPage = sourceBrowseRoute.historyPage;
+  savedParentKey = sourceBrowseRoute.returnToSavedPlaces ? saveablePlace(browsePath, archive.sources()) : null;
   $('browsesearch').value = sourceBrowseRoute.query;
   const restoredRoute = sourceBrowseRoute;
   showPanel('browse');
@@ -3307,14 +3316,33 @@ async function switchTo(id, { preservePlayback = false, requireExisting = false,
   they expect to walk back up.
 */
 let browsePath = [];
+let savedParentKey = null;
 let searchTimer = null;
 /** Bumped by every search and every redraw, so a slow answer cannot land on a newer screen. */
 let searchAsked = 0;
 const SEARCH_LIMIT = 300;
 
-async function renderBrowse() {
+function renderSavedPlaces() {
+  if (!savedPlacesView || !savedPlaces) return;
+  savedPlacesView.render({ state: savedPlaces.state,
+    key: !$('browse').hidden ? saveablePlace(browsePath, archive.sources()) : null,
+    inList: !$('browse').hidden && browsePath[0] === 'saved' });
+}
+
+function openSavedPlaces() {
+  savedPlaces.cancelOpening();
+  browsePath = ['saved']; savedParentKey = null;
+  sourceBrowseRoute = null; jumpedTo = null; browseFromSource = false;
+  showPanel('browse');
+  return renderBrowse();
+}
+
+async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
+  const key = saveablePlace(browsePath, archive.sources());
+  if (!key || !savedParentKey || savedPlaceId(key) !== savedPlaceId(savedParentKey)) savedParentKey = null;
+  if (browsePath[0] !== 'saved' && savedPlaces?.state.opening) savedPlaces.cancelOpening();
   if (sourceBrowseRoute && (JSON.stringify(sourceBrowseRoute.path) !== JSON.stringify(browsePath)
       || browsePath[0] === 'search' && sourceBrowseRoute.query !== $('browsesearch').value
       || browsePath[0] === 'history' && sourceBrowseRoute.historyPage !== historyPage)) sourceBrowseRoute = null;
@@ -3326,6 +3354,8 @@ async function renderBrowse() {
   // swaps the whole list at once when it has what to draw. Every other level starts empty.
   const inPlace = browsePath[0] === 'catalogues';
   if (!inPlace) list.replaceChildren();
+  renderSavedPlaces();
+  if (savedPlaces && (key || browsePath[0] === 'saved')) savedPlaces.refresh();
   const digressing = !browseFromSource && !!away?.dice && arrivedByJump();
   $('browsedigression').hidden = !digressing;
   if (digressing) {
@@ -3367,6 +3397,11 @@ async function renderBrowse() {
   const domainRow = (name, detail, onclick, icon) => {
     const li = document.createElement('li');
     li.className = 'bdomain';
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    li.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onclick(); }
+    };
     const text = document.createElement('div');
     text.className = 'btext';
     const label = document.createElement('div');
@@ -3405,6 +3440,7 @@ async function renderBrowse() {
       browsePath = ['catalogues'];
       await renderBrowse();
     }, ICON.cloud);
+    domainRow(t('Saved places'), t('Author and game folders to return to later.'), openSavedPlaces, ICON.bookmarkFilled);
     domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice);
     domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history);
     domainRow(t('Search'), t('Across the catalogues this browser holds'), async () => {
@@ -3412,6 +3448,12 @@ async function renderBrowse() {
       await renderBrowse();
       $('browsesearch').focus();
     }, ICON.search);
+    return;
+  }
+
+  if (browsePath[0] === 'saved') {
+    $('browsetitle').textContent = t('Saved places');
+    renderSavedPlaces();
     return;
   }
 
@@ -3466,7 +3508,8 @@ async function renderBrowse() {
 
   const [, format, author] = browsePath;
   $('browsetitle').textContent = `${format} / ${author || t('(no author)')}`;
-  const tracks = await archive.tracksIn(format, author, source);
+  const tracks = resolved?.key && savedPlaceId(resolved.key) === savedPlaceId(key)
+    ? resolved.tracks : await archive.tracksIn(format, author, source);
   if (visit !== searchAsked) return;
   const route = captureBrowseRoute(tracks);
   tracks.forEach((track, i) => {
@@ -3935,6 +3978,11 @@ $('tab-browse').onclick = async () => {
   await renderBrowse();
 };
 $('browseback').onclick = async () => {
+  if (savedParentKey) { await openSavedPlaces(); return; }
+  if (browsePath[0] === 'saved') {
+    savedPlaces.cancelOpening(); browsePath = []; sourceBrowseRoute = null;
+    await renderBrowse(); return;
+  }
   if (browseFromSource && browsePath[0] === 'search') {
     // Native BrowseWorkflow leaves an Everywhere search without destroying its query/results.
     clearTimeout(searchTimer);
@@ -4956,7 +5004,39 @@ randomFiltersView = new RandomFiltersView($('randomfilter'), {
   onRetry: () => refreshRandomAvailability(true), onDownload: downloadRandomFavourites,
 });
 renderRandomFilters();
+savedPlacesView = new SavedPlacesView({ header: $('saved-place-header'), tools: $('saved-place-tools'),
+  list: $('browselist'), note: $('browsenote'), icon: (name) => iconSvg(ICON[name]),
+  onToggle: (key, saved) => saved ? savedPlaces.remove(key) : savedPlaces.save({ key,
+    catalogueName: archive.sourceName(key.catalogueId), savedAt: Date.now() }),
+  onOpen: (key) => savedPlaces.open(key), onRemove: (key) => savedPlaces.remove(key),
+  onPrepare: () => { savedPlaces.cancelOpening(); browsePath = ['catalogues']; sourceBrowseRoute = null; renderBrowse(); },
+  onRetry: () => savedPlaces.refresh() });
+savedPlaces = new SavedPlaces({ store: bookmarks, availability: savedCatalogue.savedPlaceRows,
+  resolve: savedCatalogue.resolveSavedPlace, isShowingList: () => !$('browse').hidden && browsePath[0] === 'saved',
+  changed: renderSavedPlaces,
+  show: (key, destination) => {
+    browsePath = [key.catalogueId, key.format, key.author]; savedParentKey = key;
+    sourceBrowseRoute = null; browseFromSource = false; jumpedTo = null;
+    showPanel('browse'); renderBrowse({ key, tracks: destination.tracks });
+  },
+  notice: (notice) => {
+    switch (notice) {
+      case 'saved': showNote(t('Place saved for later.')); break;
+      case 'already-saved': showNote(t('This place is already saved.')); break;
+      case 'removed': showNote(t('Bookmark removed. Music and playlists are unchanged.')); break;
+      case 'unavailable': showNote(t('This saved place is unavailable. Its bookmark has been kept.')); break;
+      case 'failed': showNote(t('Could not update saved places. Please try again.')); break;
+      default: throw new TypeError(`SavedPlaces.notice(${notice})`);
+    }
+  },
+  removed: (undo) => {
+    const text = t('Bookmark removed. Music and playlists are unchanged.');
+    if (undo) showUndo(text, undo); else showNote(text);
+  } });
+savedPlaces.refresh();
 catalogue.subscribe(({ prefixes }) => {
+  if (prefixes.some((prefix) => ['modland:', 'asma:'].includes(prefix))
+      && !$('browse').hidden && (browsePath[0] === 'saved' || saveablePlace(browsePath, archive.sources()))) savedPlaces.refresh();
   if (!prefixes.some((prefix) => ['modland:', 'asma:', 'modland-favourites:'].includes(prefix))) return;
   ++randomResourcesVersion;
   if (prefixes.some((prefix) => prefix !== 'modland-favourites:') || randomScope === 'favourites') prepareChangedRandom();

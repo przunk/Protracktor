@@ -13,6 +13,7 @@
 // callbacks in the page.
 
 import { HistoryWrites } from './history-writes.js';
+import { savedPlaceId, immutablePlace, compareSavedPlaces } from './saved-places.js';
 
 const DB = 'protracktor';
 const VERSION = 5;
@@ -304,26 +305,27 @@ export const catalogue = {
 let lastStamp = 0;
 
 /** Keep read/modify/write atomic, including another tab's replay and synchronous quota failures. */
-async function changeHistory(url, change) {
+async function changeRecord(name, id, change) {
   const db = await open();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction('played', 'readwrite');
-    const store = transaction.objectStore('played'), request = store.get(url);
+    const transaction = db.transaction(name, 'readwrite');
+    const store = transaction.objectStore(name), request = store.get(id);
     let failure;
+    let changed = false;
     request.onsuccess = () => {
       try {
         const after = change(request.result);
-        if (after) store.put(after);
+        if (after) { store.put(after); changed = true; }
       } catch (error) { failure = error; transaction.abort(); }
     };
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => resolve(changed);
     transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Aborted', 'AbortError'));
     transaction.onerror = () => {};
   });
 }
 
 function recordHistory(entry) {
-  return changeHistory(entry.url, (before) => {
+  return changeRecord('played', entry.url, (before) => {
     lastStamp = Math.max(Date.now(), lastStamp + 1, (before?.playedAt ?? 0) + 1);
     return { ...before, ...entry, listened: before?.listened === true,
       playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1 };
@@ -331,8 +333,21 @@ function recordHistory(entry) {
 }
 
 function qualifyHistory(url) {
-  return changeHistory(url, (before) => before && !before.listened ? { ...before, listened: true } : null);
+  return changeRecord('played', url, (before) => before && !before.listened ? { ...before, listened: true } : null);
 }
+
+/** Bookmarks have independent lifetime: clearing downloaded indexes or History cannot delete them. */
+export const bookmarks = {
+  save(place) {
+    const snapshot = immutablePlace(place), key = savedPlaceId(snapshot.key);
+    return changeRecord('bookmarks', key, (before) => before ? null : { key, place: snapshot });
+  },
+  async list() {
+    const rows = (await tx('bookmarks', 'readonly', (store) => store.getAll())) ?? [];
+    return rows.map((row) => immutablePlace(row.place)).sort(compareSavedPlaces);
+  },
+  remove(key) { return tx('bookmarks', 'readwrite', (store) => store.delete(savedPlaceId(key))); },
+};
 
 const historyFailures = new Set();
 const historyWrites = new HistoryWrites({ record: recordHistory, qualify: qualifyHistory,

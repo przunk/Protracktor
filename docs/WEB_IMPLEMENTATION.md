@@ -45,7 +45,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
 | W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
-| W07 | Saved catalogue places | Pending |
+| W07 | Saved catalogue places | Implemented; full host gate passes; browser acceptance unchecked |
 | W08 | Learned list titles | Pending |
 | W09 | Recent-search suggestions | Pending |
 | W10 | Live History search | Pending |
@@ -515,6 +515,40 @@ the unchanged Android unit-test stage, before their WEB companions started; the 
 candidate records that revision, and all final hashes match. A separate documentation-only
 commit records the Redmi reports and does not change checked application inputs.
 Actual browser appearance, audio timing, touch feel and background behaviour remain unchecked.
+
+## W07 Saved places checkpoint — 2026-10-27
+
+Android reference: `SavedPlace`/`SavedPlaces` and all nine domain tests, `SavedPlacesStore` and its
+real database tests, `SavedPlacesScreen`/UI tests, `CatalogueBrowser` local availability/resolution
+and `CatalogueBrowseState` parent navigation. The accepted B42 behaviour governs.
+
+Exact JSON tuple keys retain catalogue, format and author, including case, delimiters and empty
+authors. Insert-if-absent keeps the original label/time; independent v5 storage survives index
+and History deletion. Listing follows native saved-time/binary-key order. Ordered local writes,
+one-shot Undo and owned/cancellable reads retain the original record and never overwrite a later
+save. Undo queues behind another write. Saving/listing/removal has no decoder or network capability.
+
+Availability reads local group summaries; Open resolves current exact contents and retries an
+index generation change. Missing index/group/source states retain the bookmark, explain disabled
+Open and offer only applicable explicit catalogue recovery. Browse root and author/game headers
+expose labelled actions; the keyed Saved list keeps title/path left and equal Open/Bookmark controls
+right. Header toggling removes directly; list removal offers its own Undo without playlist effects.
+Back and Queue source snapshots retain the Saved places parent. Native English/Polish labels,
+bookmark state, loading/error/Retry and keyboard root entry are covered on the host.
+
+Focused checks pass: 13 domain, 9 storage, 8 catalogue/ownership, 8 DOM presentation and 30 actual
+page/control assertions, with retained History regression checks. Six deliberately broken copies
+fail their named guards: exact identity, cancelled Open, busy Undo, stale index, disconnected
+Bookmark and incorrect snackbar dispatch. The complete page checks pass.
+
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **839 s**, all
+31 unit tasks executed. All companions pass, including **848 page assertions**, the 13/9/8/8
+bookmark domain/storage/catalogue/presentation checks and retained engine, History, queue, Random,
+PWA and server checks. Fresh lint: **0 errors / 79 warnings**, 106.7 s. All 81 final checked inputs
+match their archived hashes; reports are retained in ignored
+`user/web-parity-verification/w07-saved-places-full-gate/`.
+Actual browser appearance, touch, audio and background acceptance remain unchecked. No APK,
+intermediate bundle, merge or deployment.
 
 ## Deferred or blocked work
 

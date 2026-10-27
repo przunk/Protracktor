@@ -7,6 +7,25 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Saved places": "Zapisane miejsca",
+  "Author and game folders to return to later.": "Foldery autorów i gier, do których chcesz wrócić.",
+  "Nothing saved yet. Open an author or game folder in an online catalogue and choose Bookmark.": "Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.",
+  "Updating saved places…": "Aktualizowanie zapisanych miejsc…",
+  "Refresh": "Odśwież",
+  "Bookmark": "Zakładka",
+  "Bookmarked": "Dodano zakładkę",
+  "Not bookmarked": "Brak zakładki",
+  "Open": "Otwórz",
+  "Catalogues": "Katalogi",
+  "Place saved for later.": "Miejsce zapisane na później.",
+  "This place is already saved.": "To miejsce jest już zapisane.",
+  "Bookmark removed. Music and playlists are unchanged.": "Zakładka usunięta. Muzyka i playlisty pozostały bez zmian.",
+  "Could not update saved places. Please try again.": "Nie udało się zaktualizować zapisanych miejsc. Spróbuj ponownie.",
+  "This saved place is unavailable. Its bookmark has been kept.": "To miejsce jest niedostępne. Zakładka została zachowana.",
+  "Download this catalogue’s index in Online catalogues to open this place. The bookmark is safe.": "Pobierz indeks tego katalogu w Katalogach online, aby otworzyć miejsce. Zakładka jest zachowana.",
+  "This exact folder has no playable tracks in the current index. You can refresh the index in Online catalogues; the bookmark is kept.": "Ten folder nie zawiera odtwarzalnych utworów w bieżącym indeksie. Możesz odświeżyć indeks w Katalogach online; zakładka jest zachowana.",
+  "This catalogue is not available in this version of the app. The bookmark is kept.": "Ten katalog nie jest dostępny w tej wersji aplikacji. Zakładka jest zachowana.",
+
   "Played before": "Już odsłuchane",
   "Could not read History: {reason}": "Nie udało się odczytać historii: {reason}",
   "Could not clear History: {reason}": "Nie udało się wyczyścić historii: {reason}",

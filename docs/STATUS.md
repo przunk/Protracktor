@@ -69,7 +69,8 @@ assertions**, **52 engine checks**, 67 context, 29 schedule, 14 effects, 9 sourc
 `user/web-parity-verification/w04-context-navigation-full-gate/`.
 **Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
 bundle is handed off. W03's source destinations pass the combined gate, but its future W10/W11
-History-query/Search-scope wiring remains pending. W06-W25 remain open; W05 is recorded below.
+History-query/Search-scope wiring remains pending. Later entries and the scope ledger supersede
+this checkpoint; W05-W07 are recorded below.
 Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
 
 **W05 implemented on the branch, 2026-10-27:** platform/Favourites filters preserve Random history,
@@ -91,6 +92,16 @@ migration and 3 worklet boundary cases pass with all existing companions. Fresh 
 79 warnings**, 94.3 s. Source hashes/reports: ignored
 `user/web-parity-verification/w06-played-before-full-gate/`. **Browser acceptance is unchecked.**
 No APK, bundle, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w06-played-before-checkpoint--2026-10-27).
+
+**W07 implemented on the branch, 2026-10-27:** exact author/game-folder bookmarks, Saved places,
+current-index availability, navigation and one-shot removal Undo are connected without playback
+or playlist mutation. The existing v5 bookmarks store is reused. The forced full gate passes
+**1218 tests / 160 suites**, zero failures/errors/skips, **839 s**; all 31 unit tasks executed,
+**848 page assertions** and all companions pass. Fresh lint: **0 errors / 79 warnings**, 106.7 s.
+All 81 input hashes and reports are retained in ignored
+`user/web-parity-verification/w07-saved-places-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, Android/schema change, merge or deployment.
+[Scope/evidence](WEB_IMPLEMENTATION.md#w07-saved-places-checkpoint--2026-10-27).
 
 ## WEB and Android parity inventory — 2026-10-26
 

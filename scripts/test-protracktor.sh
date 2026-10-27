@@ -160,11 +160,15 @@ run_check "Random history" random-history node scripts/check-random-history.mjs
 run_check "Random scopes" random-scope node scripts/check-random-scope.mjs
 run_check "Listening qualification" listening-session node scripts/check-listening-session.mjs
 run_check "History write/read ownership" history-state node scripts/check-history-state.mjs
+run_check "Saved places" saved-places node scripts/check-saved-places.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
+    run_check "Saved places storage" saved-places-store node scripts/check-saved-places-store.mjs
+    run_check "Saved places catalogues" saved-places-catalogue node scripts/check-saved-places-catalogue.mjs
+    run_check "Saved places presentation" saved-places-view node scripts/check-saved-places-view.mjs
     run_check "History storage/migrations" history-store node scripts/check-history-store.mjs
     run_check "Random catalogue/storage" random-catalogue node scripts/check-random-catalogue.mjs
     run_check "Random startup" random-startup node scripts/check-random-startup.mjs
