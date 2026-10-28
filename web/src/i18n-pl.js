@@ -230,6 +230,7 @@ export const PL = {
   "Nothing here yet": "Jeszcze tu pusto",
   "nothing matched {among}, in {ms} ms.": "nic nie pasuje {among}, w {ms} ms.",
   "Nothing playing": "Nic nie gra",
+  "Now Playing": "Teraz odtwarzane",
   "Nothing stored yet.": "Jeszcze nic nie zapisano.",
   "Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline — or send tunes from your phone with the pairing code.": "Nie ma jeszcze czego przeglądać. Pobierz katalog, a pół miliona utworów będzie do przejrzenia offline — albo wyślij utwory z telefonu kodem parowania.",
   "Nothing to pick from. Download the Modland index in Browse first.": "Nie ma z czego losować. Najpierw pobierz indeks Modlandu w Przeglądaj.",

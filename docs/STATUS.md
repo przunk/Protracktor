@@ -44,6 +44,16 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W16 implemented, 2026-10-28:** independent title/Add and metadata/Tune rows preserve
+Add's reserved target, title sizing and separate Queue action. Ordinary browser minimum stays
+64 px; enlarged text may wrap/grow. Actual opened state owns the counter, including both subsong
+modes and load/error resets; inspecting another file cannot replace it. Keyboard expansion is
+independent of transport. Forced full gate on **37715ec** passes **1247 tests / 169 suites**,
+zero failures/errors/skips, **805 s**; all companions execute, **1076 page assertions**, lint
+**0 errors / 79 warnings**. All **672** input hashes match. Three deliberate faults fail;
+restored sources pass. Physical browser geometry/touch/zoom/assistive technology remain unchecked.
+W17a position restoration is next. No WEB bundle, merge, push or deployment.
+
 **W13 implemented, 2026-10-28:** bulk selection for playable Browse/Search/History rows,
 source-order capture, first-Back clearing, visit/membership ownership and stable checkbox slots.
 Batch Add/Share preserve playback and manual FIFO. Local buffers stay in drafts/tab memory;

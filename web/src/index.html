@@ -417,25 +417,24 @@
     margin: 4px 12px 0;
     background: var(--surface-container);
     border-radius: var(--shape-l);
-    /* A height of its own rather than its tallest child's, so the keep button appearing does not
-       make the dock grow (`docs/STATUS.md` C54, met on the phone first). */
-    height: 64px;
-    padding: 0 18px;
-    display: flex; align-items: center; gap: 12px;
+    min-height: 64px;
+    padding: 0 12px 8px;
     cursor: pointer;
   }
-  .nowcard .text { min-width: 0; flex: 1; }
-  /* **A height of its own, not its tallest child's.** The keep button is taller than the chevron
-     beside it, so without this the dock grew wherever keeping was offered — which on the phone was
-     a visibly taller dock in Random than over the playlist (`docs/STATUS.md` C54). */
-  .nowkeep { flex: none; display: flex; align-items: center; justify-content: center;
-             width: 40px; height: 40px; margin-right: 4px; padding: 0;
+  /* Counter width and Add visibility cannot change the title row or the Add target (C112). */
+  .nowhead { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: end; min-height: 32px; }
+  .nowkeep-slot { width: 48px; height: 32px; }
+  .nowfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; min-height: 24px; }
+  .nowkeep { display: flex; align-items: flex-end; justify-content: center;
+             width: 48px; height: 32px; padding: 0;
              background: none; border: 0; border-radius: 50%; color: var(--on-surface-variant);
              cursor: pointer; }
   .nowkeep:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   .nowkeep svg { width: 22px; height: 22px; fill: currentColor; }
-  .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .title { min-width: 0; font-size: var(--title-medium); line-height: 1.5; font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .meta { flex: 1 1 64px; min-width: 64px; font-size: var(--body-medium); line-height: 1.5; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dock-tune { flex: none; font-size: var(--label-small); line-height: 1.5; color: var(--on-surface-variant); white-space: nowrap; }
+  .nowcard:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   /* A line that does not fit and is moving (A54, `fitLine`): no `…` while the whole of it passes. */
   .nowcard .scrolling { text-overflow: clip; }
   .nowcard .run { display: inline-block; }
@@ -841,7 +840,7 @@
   .queue-head .action { min-width: 48px; padding: 6px; }
   #playback-list { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-x: hidden; }
   #queue-instructions, #queue-repeat-note, #queue-empty { padding: 0 18px; }
-  .dock-summary { display: flex; gap: 6px; margin: 4px 12px 0; height: 64px; }
+  .dock-summary { display: flex; gap: 6px; margin: 4px 12px 0; min-height: 64px; }
   .dock-summary .nowcard { flex: 1; min-width: 0; margin: 0; }
   .dock-summary > .action { flex: none; align-self: center; min-width: 48px; }
   /* pan-y must be set before pointerdown; changing it after intent locks is too late. */
@@ -1113,20 +1112,19 @@
     </div>
 
     <div class="dock-summary">
-    <div class="nowcard" id="nowcard">
-      <div class="text">
+    <div class="nowcard" id="nowcard" role="button" tabindex="0" aria-label="Now Playing" aria-controls="nowplaying" aria-expanded="false">
+      <div class="nowhead">
         <div class="title" id="title">Nothing playing</div>
-        <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
+        <div class="nowkeep-slot">
+          <button class="nowkeep" id="nowkeep" title="Add this tune to the playlist" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+        </div>
       </div>
-      <!--
-        Keeping what is playing, for anything that is not the playlist: a random pick, a Browse
-        result, a tune sent by link. The phone has it in the same place and for the same reason —
-        the decision comes after hearing it (`keepTransient`).
-      -->
-      <button class="nowkeep" id="nowkeep" title="Add this tune to the playlist" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      </button>
-      <svg viewBox="0 0 24 24" id="expand"><path d="m7.4 15.4-1.4-1.4 6-6 6 6-1.4 1.4-4.6-4.6z"/></svg>
+      <div class="nowfoot">
+        <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
+        <div id="dock-tune" hidden></div>
+      </div>
     </div>
     <button class="action" id="showqueue" aria-pressed="false" aria-controls="playback-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h14v2H3V5zm0 4h14v2H3V9zm0 4h8v2H3v-2zm12-1v8l6-4-6-4z"/></svg>Queue</button>
     </div>

@@ -57,7 +57,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | Scope | Feature | State |
 | --- | --- | --- |
 | W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
-| W02 | Full manual queue and list interactions | Core implemented; live-drag commit alignment required in W12 shared gesture; browser/device acceptance unchecked |
+| W02 | Full manual queue and list interactions | Implemented, including native live-drag timing completed in W12a; full host gate passes; browser/device acceptance unchecked |
 | W03 | Return to playback source | Implemented including History and Search query/scope restoration; full host gate passes; browser acceptance unchecked |
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
@@ -67,11 +67,11 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W09 | Recent-search suggestions | Implemented; full host gate passes; browser acceptance unchecked |
 | W10 | Live History search | Implemented; full host gate passes; browser acceptance unchecked |
 | W11 | Search scopes and saved-playlist coverage | Implemented; full host gate passes; browser acceptance unchecked |
-| W12 | Playlist reorder and import/export | Pending |
-| W13 | Bulk Browse/Search/History actions | Pending |
+| W12 | Playlist reorder and import/export | Implemented in W12a/W12b; full host gate passes; browser acceptance unchecked |
+| W13 | Bulk Browse/Search/History actions | Implemented; full host gate passes; browser acceptance unchecked |
 | W14 | Original/Narrow/Mono | Pending |
 | W15 | Playback volume normalization | Pending |
-| W16 | Compact dock and subsong indication | Pending |
+| W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
 | W17 | Browse position and subsong following | Pending |
 | W18 | Playback-mode/settings restoration | Pending |
 | W19 | Read-ahead and prefetch controls | Pending |
@@ -1064,3 +1064,65 @@ Evidence, JUnit/lint and input receipt are under ignored `user/web-parity-verifi
 W01-W13 are implemented at host level. Continue W16-W18/W24 in the planned dependency order.
 This completion update changes documentation/message only. Actual browser layout/touch/file UI,
 background and cross-device behaviour remain unchecked; no WEB bundle, APK, merge or deployment.
+
+## W16 — Compact dock analysis, 2026-10-28
+
+Reference **c8209b1**: `PlayerDock`, `NowPlayingText`, `NowPlaying`, seven
+`DockIdentityLayoutTest` cases and existing browser card/subsong/marquee paths. W13 is fully
+verified and committed before beginning this scope. Follow the suggested presentation-first
+order; audio W14/W15 remains pending, with -18 LUFS retained for W15.
+
+Parity checklist:
+- Independent upper title/Add and lower metadata/full Tune N of M rows. Reserve Add's slot even
+  when hidden, with the counter ending at the same right edge. Neither counter length (1/5/256)
+  nor Add visibility changes the title width or Queue placement. Queue stays outside the card.
+- Retain the browser's existing ordinary 64 px card, without another top spacer. Let the card
+  and footer grow/wrap for large text/narrow layouts rather than overlap metadata/counter.
+  Android's own ordinary card is 60 dp; browser dimensions remain an explicit presentation
+  adaptation. Existing author/platform/year logic and reduced-motion marquee remain shared.
+- The counter reflects the actual opened decoder in both subsong modes, including live changes;
+  loading/error/empty transitions cannot leave an old file's count. Describing another row must
+  not overwrite the sounding file's counter. Keep progress/status outside this identity policy.
+- Add, card expansion and Queue are separate actions. Footer tap expands without saving; keyboard
+  Enter/Space has the same ownership and must not invoke global audio shortcuts. Preserve
+  transport, playback position, editor dirty state and manual FIFO merely by opening either panel.
+- Port the native identity/action/count cases through actual browser events and computed CSS
+  structure. Demonstrate missing/broken counter, reserved-slot and keyboard guards fail, then run
+  the full forced gate/lint and input receipt. Host CSS evidence is not physical layout or touch
+  acceptance; no screenshot is claimed without inspecting a generated artifact.
+
+Implementation and verification are pending.
+
+### W16 implementation checkpoint
+
+Independent header/footer markup reserves Add's 48 by 32 px slot, removes the decorative chevron
+and keeps Queue outside. The browser's ordinary minimum remains 64 px, without a fixed outer
+height or extra top spacer; large text can wrap/grow. Existing title/marquee and metadata logic
+are reused. Actual decoder state drives the localized full counter; loading/failure/single-tune
+transitions hide stale counts. Card keyboard activation and expanded state are explicit.
+
+The **24** focused production-page cases pass. Three deliberate faults are detected: a collapsed
+reserved slot, a missing keyboard event and an inspected file overwriting the live counter. The
+last negative control initially exposed a test setup omission: its decoder answer lacked success,
+so it never rendered the inspected metadata. It now requires both the successful inspected title
+and the unchanged live counter; the controlled fault fails and is restored. Native's seven
+`DockIdentityLayoutTest` and two `NowPlayingSharedTextUiTest` cases are the comparison reference;
+their fresh execution is included in the pending complete gate. No Android production changes.
+
+Full forced gate/lint and final input receipt are pending; physical browser geometry, touch,
+zoom/large text and assistive technology remain unchecked. No generated screenshot is claimed.
+
+### W16 final gate
+
+Clean candidate **37715ec8f8913a0bdce389b61a04d39352e1fde6** passes the forced full gate:
+**1247 tests / 169 suites**, zero failures/errors/skips, **805 s**, unit task **466.5 s** with
+all 31 tasks executed. All companions run, including **1076 page assertions**, actual WASM,
+processor/native audio, migrations, PWA and server checks. Fresh lint **86.2 s**, **0 errors/fatal /
+79 warnings**. All **672** recorded application/test/build/rule hashes match. Native's seven
+identity-layout and two shared-text UI cases pass again in this run; Android production and the
+engine are unchanged. Evidence, JUnit/lint, negative controls and input receipt are retained under
+ignored `user/web-parity-verification/w16/`.
+
+W16 is implemented at host level. This completion changes documentation/message only. Browser
+layout, zoom, touch, reader behaviour and background acceptance remain unchecked. Continue W17a
+Browse restoration and W17b subsong following separately; no WEB merge, bundle or deployment.

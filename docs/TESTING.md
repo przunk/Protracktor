@@ -3,6 +3,24 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W16 dock — browser checks pending, 2026-10-28
+
+Host DOM/CSS/event checks cannot prove physical geometry, focus/touch feel or visual overlap.
+No browser screenshot or bundle/deployment is claimed for this checkpoint.
+
+- Play Battle of honour.it by Treks, then files with 1, 5 and 256 subsongs in both modes. Title
+  stays upper left, Add upper right, shared metadata lower left and full Tune N of M lower right;
+  Queue stays outside. Add's target and title width must not shift as counts or ownership change.
+- Compare with/without Add over the active playlist: ordinary card height stays unchanged, with
+  balanced text insets and no top spacer. Try Polish, narrow/wide windows and enlarged text/zoom;
+  footer wrapping may grow the card, never overlay text or the Add target. Check both themes and
+  reduced-motion marquee behaviour. These rendering scenarios remain unchecked.
+- Tap Add, the footer and Queue separately. Add edits only the selected draft, footer opens Now
+  Playing, Queue opens its own panel; transport and manual requests stay unchanged. Tab to the
+  card and use Space/Enter without also triggering Play/Pause. Check visible focus and its reader
+  name/expanded state. Inspect another file, change subsong, load/fail a different file and return
+  to a single-tune track: the counter must describe only the actual opened file.
+
 ## WEB W13 Browse selection — browser checks pending, 2026-10-28
 
 Candidate only; no bundle/deployment. Host pointer/keyboard/IndexedDB checks do not establish

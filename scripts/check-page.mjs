@@ -3741,5 +3741,7 @@ await (await import('./check-page-playlist-transfer.mjs')).default({ window, che
 
 await (await import('./check-page-browse-selection.mjs')).default({ window, check });
 
+await (await import('./check-page-dock.mjs')).default({ window, check });
+
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

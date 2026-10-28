@@ -1624,6 +1624,9 @@ function setPlaying(on) {
   // Offered for anything playing that is not the playlist: a dice pick, a Browse result, a tune
   // sent by link. Deciding to keep it is what you do after hearing it.
   $('nowkeep').hidden = (!manualCurrent() && editorOwnsPlayback()) || !currentTrack() || workspace.editor.id === PHONE;
+  const tune = $('dock-tune');
+  tune.hidden = !currentTrack() || $('seek').dataset.opened !== '1' || subsongCount <= 1;
+  tune.textContent = tune.hidden ? '' : t('Tune {n} of {count}', { n: currentSubsong + 1, count: subsongCount });
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
@@ -3248,7 +3251,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   $('settings').hidden = which !== 'settings';
   $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
-  $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
+  $('nowcard').setAttribute('aria-expanded', String(which === 'nowplaying'));
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
@@ -4485,6 +4488,11 @@ $('saveas').onclick = async () => {
 };
 
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
+$('nowcard').onkeydown = (event) => {
+  if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault(); event.stopPropagation(); $('nowcard').click();
+  }
+};
 // Keeping what is playing, without leaving what it is playing from — the phone's `keepTransient`.
 $('nowkeep').onclick = (event) => {
   event.stopPropagation();

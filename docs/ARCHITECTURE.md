@@ -1,5 +1,18 @@
 # Architecture
 
+## WEB dock identity — branch candidate, 2026-10-28
+
+The identity card has independent title/Add and metadata/Tune rows. A permanent 48 by 32 px Add
+slot prevents changes of source or subsong count from shifting the save target or narrowing the
+title. Its ordinary browser minimum remains 64 px, with no extra top spacer; the footer can wrap
+and the card can grow with text. Queue remains outside the card, using the shared transport.
+
+The counter derives only from actual opened decoder state in the common playback presenter;
+inspecting another row cannot overwrite it. A new load, failure or empty source hides it. Both
+subsong modes display the full localized Tune N of M label. Existing metadata/marquee logic is
+reused. Card/Keep/Queue have independent pointer and keyboard ownership, with the expanded state
+published for assistive technology. This is presentation work, not a new transport state owner.
+
 ## WEB Browse bulk selection — branch candidate, 2026-10-28
 
 `TrackSelection` owns selected URL identities independently of the playlist editor and playback.
