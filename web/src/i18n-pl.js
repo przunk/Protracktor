@@ -7,6 +7,10 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Search History": "Szukaj w historii",
+  "No History entries match this phrase.": "Brak wpisów historii pasujących do tej frazy.",
+  "Loading History…": "Wczytywanie historii…",
+  "Could not load History. Please try again.": "Nie udało się wczytać historii. Spróbuj ponownie.",
   "Saved places": "Zapisane miejsca",
   "Author and game folders to return to later.": "Foldery autorów i gier, do których chcesz wrócić.",
   "Nothing saved yet. Open an author or game folder in an online catalogue and choose Bookmark.": "Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.",

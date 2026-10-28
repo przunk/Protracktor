@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
+import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks } from './store.js';
 import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
@@ -25,6 +25,8 @@ import * as savedCatalogue from './saved-places-catalogue.js';
 import { learnedDisplay, learnedSourceLine } from './learned-titles.js';
 import { RecentSearchHistory } from './recent-searches.js';
 import { SearchSuggestions } from './search-suggestions.js';
+import { HistoryBrowser } from './history-browser.js';
+import { trimQuery } from './query-text.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -166,10 +168,9 @@ function beginListeningAgain() {
 async function clearHistory() {
   listening.forget();
   listeningTrack = null;
-  const clear = played.clear();
   sourceBrowseRoute = null;
-  try { await clear; await renderBrowse(); }
-  catch (error) { showNote(t('Could not clear History: {reason}', { reason: error.message })); }
+  await historyBrowser.clear(() => played.clear(),
+    (error) => showNote(t('Could not clear History: {reason}', { reason: error.message })));
 }
 
 function requestHistoryPresentation() {
@@ -2929,7 +2930,8 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
   away = { stash: editorStash(), kind, dice, author };
   const sourceOrder = new PlayOrder({ tracks, shuffle, repeat, random: randomSource }).startAt(Math.min(Math.max(at, 0), tracks.length - 1));
   showSessionView(kind);
-  const source = { kind: 'collection', origin: kind, path: snapshot.path.join('/'), query: snapshot.query };
+  const source = { kind: 'collection', origin: kind, path: snapshot.path.join('/'),
+    query: kind === 'history' ? snapshot.historyQuery : snapshot.query };
   activateContext(new PlaybackContext({ source, route: captureSourceRoute(source, snapshot), order: sourceOrder }));
 }
 
@@ -3041,8 +3043,11 @@ function setQueue(urls, at = 0) {
  * Pair and Paste are dialogs over the page; Now Playing is a panel under the queue, because it is
  * something you read alongside the list rather than instead of it.
  */
-function showPanel(which) {
-  if (which !== 'browse') searchSuggestions?.close(true);
+function showPanel(which, { preserveHistory = false } = {}) {
+  if (which !== 'browse') {
+    searchSuggestions?.close(true);
+    if (!preserveHistory) { historyBrowser.leave(); $('historysearch').blur(); }
+  }
   if (which !== 'browse') savedPlaces?.cancelOpening();
   closePlaybackQueue();
   if (!$('unsaved').hidden) answerUnsaved(false);
@@ -3069,7 +3074,7 @@ function showPanel(which) {
 function openPlaybackQueue() {
   if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
   const underlying = !$('browse').hidden ? 'browse' : null;
-  showPanel(null);
+  showPanel(null, { preserveHistory: underlying === 'browse' });
   queueUnderlying = underlying;
   $('playback-panel').hidden = false;
   $('browse').hidden = true;
@@ -3108,14 +3113,16 @@ function renderQueueSourceAction() {
 /** One History presenter is shared by a live page and a captured playback-source view. */
 function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
   $('browsetitle').textContent = t('History');
-  if (!total && !rows.length) { note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.'); return; }
-  note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+  const phrase = trimQuery(historyBrowser.state.query);
+  if (!total && !rows.length) note.textContent = phrase ? t('No History entries match this phrase.')
+    : t('Nothing played yet. What the page plays is kept here, one row a tune.');
+  else note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
   if (historyPageCount(total) > 1) {
-    const { first, last } = historyPageRange(historyPage, total);
+    const { first, last } = historyPageRange(historyBrowser.state.page, total);
     $('historypager').hidden = false;
     $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() });
-    $('history-newer').disabled = historyPage === 0;
-    $('history-older').disabled = historyPage >= historyPageCount(total) - 1;
+    $('history-newer').disabled = historyBrowser.state.page === 0;
+    $('history-older').disabled = historyBrowser.state.page >= historyPageCount(total) - 1;
   }
   const tracks = rows.filter((entry) => entry.replayable).map(({ url, name, meta, file }) => ({ url, name, meta, file }));
   const route = savedRoute ?? captureBrowseRoute(tracks, { historyRows: rows, historyTotal: total });
@@ -3133,13 +3140,13 @@ function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
   }
   markPlayingIn(list);
   requestHistoryPresentation();
-  row(t('Clear the history'), null, clearHistory, ICON.remove);
+  if (total || phrase) row(t('Clear the history'), null, clearHistory, ICON.remove);
 }
 
 /** Capture route fields only; transport and live index/cache/download ownership stay separate. */
 function captureBrowseRoute(results, extra = {}) {
   return Object.freeze({ path: Object.freeze([...browsePath]), query: browsePath[0] === 'search' ? $('browsesearch').value : '',
-    historyPage, returnToSavedPlaces: !!savedParentKey, results: Object.freeze([...results]), title: $('browsetitle').textContent,
+    historyPage: historyBrowser.state.page, historyQuery: historyBrowser.state.query, returnToSavedPlaces: !!savedParentKey, results: Object.freeze([...results]), title: $('browsetitle').textContent,
     note: $('browsenote').textContent, ...extra });
 }
 
@@ -3180,7 +3187,8 @@ async function openQueueSource() {
     return;
   }
   sourceBrowseRoute = restoreSourceRoute(workspace.context.route, { navigationVisit: searchAsked });
-  browsePath = [...sourceBrowseRoute.path]; historyPage = sourceBrowseRoute.historyPage;
+  browsePath = [...sourceBrowseRoute.path];
+  if (browsePath[0] === 'history') historyBrowser.restore(sourceBrowseRoute);
   savedParentKey = sourceBrowseRoute.returnToSavedPlaces ? saveablePlace(browsePath, archive.sources()) : null;
   $('browsesearch').value = sourceBrowseRoute.query;
   const restoredRoute = sourceBrowseRoute;
@@ -3348,6 +3356,23 @@ let searchTimer = null;
 let searchAsked = 0;
 let submittedSearchQuery = null;
 const SEARCH_LIMIT = 300;
+const historyBrowser = new HistoryBrowser({
+  read: (query, page, signal) => played.read(query, page, signal),
+  changed: () => {
+    if (browsePath[0] === 'history') void renderBrowse().catch((error) =>
+      showNote(t('Could not read History: {reason}', { reason: error.message })));
+  },
+  failed: (error) => showNote(t('Could not read History: {reason}', { reason: error.message })),
+});
+$('historysearch').oninput = () => {
+  if (browsePath[0] !== 'history') return;
+  sourceBrowseRoute = null;
+  $('browselist').scrollTop = 0;
+  void historyBrowser.setQuery($('historysearch').value);
+};
+$('historysearch').onkeydown = (event) => {
+  if (event.key === 'Enter') { event.preventDefault(); $('historysearch').blur(); }
+};
 const recentSearches = new RecentSearchHistory({
   read: () => settings.get('recentSearches', []),
   write: (queries) => settings.set('recentSearches', queries),
@@ -3401,12 +3426,14 @@ function openSavedPlaces() {
 async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
+  if (browsePath[0] !== 'history') historyBrowser.leave();
   const key = saveablePlace(browsePath, archive.sources());
   if (!key || !savedParentKey || savedPlaceId(key) !== savedPlaceId(savedParentKey)) savedParentKey = null;
   if (browsePath[0] !== 'saved' && savedPlaces?.state.opening) savedPlaces.cancelOpening();
   if (sourceBrowseRoute && (JSON.stringify(sourceBrowseRoute.path) !== JSON.stringify(browsePath)
       || browsePath[0] === 'search' && sourceBrowseRoute.query !== $('browsesearch').value
-      || browsePath[0] === 'history' && sourceBrowseRoute.historyPage !== historyPage)) sourceBrowseRoute = null;
+      || browsePath[0] === 'history' && (sourceBrowseRoute.historyPage !== historyBrowser.state.page
+        || sourceBrowseRoute.historyQuery !== historyBrowser.state.query))) sourceBrowseRoute = null;
   const list = $('browselist');
   const note = $('browsenote');
   // **The catalogues redraw in place** (the owner, 2026-09-23): every download starting and ending
@@ -3435,6 +3462,15 @@ async function renderBrowse(resolved = null) {
   showSearchQuery(!digressing && browsePath[0] === 'search');
   $('browseclose').hidden = digressing;
   $('historypager').hidden = true;
+  $('historyquery').hidden = browsePath[0] !== 'history';
+  if (browsePath[0] === 'history') {
+    $('browsetitle').textContent = t('History');
+    const input = $('historysearch');
+    if (input.value !== historyBrowser.state.query) input.value = historyBrowser.state.query;
+    input.setAttribute('aria-label', t('Search History'));
+    input.placeholder = t('Search History');
+    list.setAttribute('aria-busy', String(historyBrowser.state.loading));
+  } else list.removeAttribute('aria-busy');
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
   // `const` read before its declaration throws when Browse is opened on the phone's list with an
@@ -3452,6 +3488,12 @@ async function renderBrowse(resolved = null) {
     li.append(label, number);
     if (icon) li.insertAdjacentHTML('afterbegin', iconSvg(icon));
     li.onclick = onclick;
+    if (browsePath[0] === 'history' && onclick) {
+      li.tabIndex = 0; li.setAttribute('role', 'button');
+      li.onkeydown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onclick(); }
+      };
+    }
     list.append(li);
   };
   // A row of the root: its name over one line of what it is, as the phone's DomainRow.
@@ -3533,12 +3575,16 @@ async function renderBrowse(resolved = null) {
   }
 
   if (browsePath[0] === 'history') {
-    const total = await played.count();
-    if (visit !== searchAsked) return;
-    historyPage = historyPageClamp(historyPage, total);
-    const rows = total ? await played.page(historyPage * HISTORY_PAGE, HISTORY_PAGE) : [];
-    if (visit !== searchAsked) return;
-    renderHistoryRows(list, note, rows, total, row);
+    if (!historyBrowser.active) { await historyBrowser.open(); return; }
+    const state = historyBrowser.state;
+    if (state.loading) { note.textContent = t('Loading History…'); return; }
+    if (state.failed) {
+      note.textContent = t('Could not load History. Please try again.');
+      row(t('Retry'), null, () => historyBrowser.setQuery(state.query), ICON.refresh);
+      if (trimQuery(state.query) || state.total) row(t('Clear the history'), null, clearHistory, ICON.remove);
+      return;
+    }
+    renderHistoryRows(list, note, state.rows, state.total, row);
     return;
   }
 
@@ -3666,16 +3712,19 @@ function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track)
 
 /** Browse → History. */
 async function openHistory() {
-  browsePath = ['history'];
-  // Opened at the newest: a visit starts where the question usually is, "what was that".
-  historyPage = 0;
-  await renderBrowse();
+  browsePath = ['history']; sourceBrowseRoute = null;
+  $('browselist').scrollTop = 0;
+  await historyBrowser.open();
 }
 
-/** Which hundred of History is on screen, the newest first (the phone's `HistoryPages`). */
-let historyPage = 0;
-$('history-newer').onclick = async () => { historyPage -= 1; await renderBrowse(); $('browselist').scrollTop = 0; };
-$('history-older').onclick = async () => { historyPage += 1; await renderBrowse(); $('browselist').scrollTop = 0; };
+$('history-newer').onclick = () => turnHistory(-1);
+$('history-older').onclick = () => turnHistory(1);
+async function turnHistory(delta) {
+  if (!historyBrowser.active || historyBrowser.state.loading) return;
+  sourceBrowseRoute = null;
+  $('browselist').scrollTop = 0;
+  await historyBrowser.turn(historyBrowser.state.page + delta);
+}
 
 /**
  * Plays a tune found by browsing, **without touching the playlist**. The list it came from is
@@ -4042,6 +4091,10 @@ $('tab-browse').onclick = async () => {
   await renderBrowse();
 };
 $('browseback').onclick = async () => {
+  if (browsePath[0] === 'history') {
+    sourceBrowseRoute = null; browsePath = [];
+    await renderBrowse(); return;
+  }
   if (savedParentKey) { await openSavedPlaces(); return; }
   if (browsePath[0] === 'saved') {
     savedPlaces.cancelOpening(); browsePath = []; sourceBrowseRoute = null;

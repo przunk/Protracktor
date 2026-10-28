@@ -12,6 +12,7 @@ export class HistoryWrites {
   }
   get generation() { return this.#generation; }
   get revision() { return this.#revision; }
+  get settled() { return this.#tail; }
   subscribe(listener) { this.#listeners.add(listener); return () => this.#listeners.delete(listener); }
   #publish(clearing = this.#revision.clearing) {
     this.#revision = Object.freeze({ number: this.#revision.number + 1, clearing });

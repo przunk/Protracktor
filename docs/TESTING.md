@@ -3,6 +3,25 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W09-W10 — browser checks pending, 2026-10-28
+
+No bundle handoff yet; these changes remain on `feature/web-feature-parity`. Host event/database
+checks are not proof of rendering, software-keyboard behaviour or touch.
+
+- Submit five queries; focus Search and check three plain-text recent prefix matches, case
+  handling, immediate option submission, arrow keys/Enter and Escape/Tab. Typing alone must not
+  search or persist, and result completion must not reopen the keyboard/dropdown.
+- Open History with more than 100 entries. Type part of an older title, author and filename;
+  edits filter after 200 ms without Enter. Check literal punctuation/accents, matching totals,
+  second/last-page boundaries and clearing the phrase. Input focus should survive results.
+- Play a filtered History result, then alter the filter and continue playback. Queue Go to source
+  must restore the producing query/page/results, without restarting music. Open/close Queue over
+  History and continue typing. A fresh Browse → History visit starts unfiltered at the top.
+- Check no matches versus empty History, labelled keyboard-accessible Retry after a read failure,
+  rapid edits/leave/reentry and Clear during a pending read. No obsolete rows/counts should return;
+  failed erase must explain the refusal and leave a usable filter. History Clear leaves recent
+  general queries intact. Check EN/PL and both themes, narrow/tall viewports and software keyboard.
+
 ## WEB W01-W02 — browser checklist, not yet a bundle handoff
 
 2026-10-27: host checks pass on `feature/web-feature-parity`, including the production
@@ -36,7 +55,7 @@ are still in progress and no intermediate APK/bundle is supplied here.
 ## WEB W03 source return — focused host checkpoint, browser checks pending
 
 The source label navigates through production handlers and passes the combined context/navigation
-host gate; W10/W11 scope/filter integration remains pending. Do not treat this as a packaged handoff.
+host gate. W10 now wires History query/page restoration; W11 Search scopes remain pending. Do not treat this as a packaged handoff.
 
 - [ ] While A plays and B is selected, open Queue and activate its source label. Reveal A without
   restarting, resuming a paused file or changing pending manual requests. Repeat during a manual

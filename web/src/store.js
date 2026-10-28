@@ -14,6 +14,9 @@
 
 import { HistoryWrites } from './history-writes.js';
 import { savedPlaceId, immutablePlace, compareSavedPlaces } from './saved-places.js';
+import { historyMatches, HistoryPageScan } from './history-filter.js';
+import { trimQuery } from './query-text.js';
+import { HISTORY_PAGE, historyPageClamp } from './rules.js';
 
 const DB = 'protracktor';
 const VERSION = 5;
@@ -419,6 +422,58 @@ export const played = {
 
   /** How many tunes History holds. */
   count() { return tx('played', 'readonly', (s) => s.count()); },
+
+  /** One coherent newest-first page/count, after ordered writes; filtered scans stay bounded. */
+  async read(query, requested, signal) {
+    await historyWrites.settled;
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const db = await open();
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const phrase = trimQuery(query);
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('played', 'readonly'), store = transaction.objectStore('played');
+      const abort = () => {
+        try { transaction.abort(); }
+        catch (error) { if (error.name !== 'InvalidStateError') throw error; }
+      };
+      signal?.addEventListener('abort', abort, { once: true });
+      let result;
+      if (phrase) {
+        const scan = new HistoryPageScan(requested);
+        const request = store.index('playedAt').openCursor(null, 'prev');
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) { result = scan.result(); return; }
+          const row = cursor.value;
+          if (historyMatches(phrase, row.name, row.author, row.file)) scan.accept(row);
+          cursor.continue();
+        };
+      } else {
+        const count = store.count();
+        count.onsuccess = () => {
+          const total = count.result, page = historyPageClamp(requested, total), rows = [];
+          result = { total, page, rows };
+          if (!total) return;
+          let skipped = page === 0;
+          const request = store.index('playedAt').openCursor(null, 'prev');
+          request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) return;
+            if (!skipped) { skipped = true; cursor.advance(page * HISTORY_PAGE); return; }
+            rows.push(cursor.value);
+            if (rows.length < HISTORY_PAGE) cursor.continue();
+          };
+        };
+      }
+      const cleanup = () => signal?.removeEventListener('abort', abort);
+      transaction.oncomplete = () => {
+        cleanup();
+        if (signal?.aborted) reject(new DOMException('Aborted', 'AbortError')); else resolve(result);
+      };
+      transaction.onabort = () => { cleanup(); reject(transaction.error ?? new DOMException('Aborted', 'AbortError')); };
+      transaction.onerror = () => {};
+    });
+  },
 
   /** Most recently played first, the whole of it: for the checks, not for History's screen. */
   async recent() {

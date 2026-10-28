@@ -1,0 +1,20 @@
+# Kotlin HistoryFilter and WEB share these literal phrase cases.
+case	query	title	author	file	expected
+unicode-title	%20%C5%BB%C3%93%C5%81W%20	Ma%C5%82y%20%C5%BC%C3%B3%C5%82w		x.mod	true
+author	chris	Ocean	Chris%20H%C3%BClsbeck	x.mod	true
+filename	LINKO.MOD	Decoded		folder%2Flinko.mod	true
+separate-fields	Ocean%20Chris	Ocean	Chris	x.mod	false
+blank					true
+literal-symbols	%25_%21	100%25_%21			true
+no-wildcard	%25	Ordinary		x.mod	false
+literal-quote	%27%20OR%201%3D1	%27%20OR%201%3D1			true
+no-accent-fold	zolw	%C5%BB%C3%B3%C5%82w			false
+author-unicode	H%C3%9CLSBECK	Ocean	Chris%20H%C3%BClsbeck	x.mod	true
+separator-whitespace	%1C%20track%C2%A0	Track			true
+bom-literal	%EF%BB%BFtrack	Track			false
+turkish-i	%C4%B1	%C4%B0			true
+sharp-s-no-expansion	SS	%C3%9F			false
+sharp-s-simple	%C3%9F	%E1%BA%9E			true
+supplementary	%F0%90%90%80	%F0%90%90%A8			true
+not-cross-field	title%20author	title	author		false
+trailing-space-inside	a%20b	a%20%20b			false

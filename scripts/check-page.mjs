@@ -157,12 +157,15 @@ window.Response ??= Response;
 window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
 
-const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
+const queryTextSource = fs.readFileSync('web/src/query-text.js', 'utf8').replace(/^export /gm, '');
+const historyFilterSource = fs.readFileSync('web/src/history-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '') + queryTextSource;
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const historyWritesSource = fs.readFileSync('web/src/history-writes.js', 'utf8').replace(/^export /gm, '');
 const savedPlacesSource = fs.readFileSync('web/src/saved-places.js', 'utf8').replace(/^export /gm, '');
-const storeSource = `const { HistoryWrites } = (() => { ${historyWritesSource}; return { HistoryWrites }; })();`
+const storeSource = `const { historyMatches, HistoryPageScan } = (() => { ${historyFilterSource}; return { historyMatches, HistoryPageScan }; })();`
+  + `const { HistoryWrites } = (() => { ${historyWritesSource}; return { HistoryWrites }; })();`
   + `const { savedPlaceId, immutablePlace, compareSavedPlaces, savedPlaceReason } = (() => { ${savedPlacesSource}; return { savedPlaceId, immutablePlace, compareSavedPlaces, savedPlaceReason }; })();`
   + fs.readFileSync('web/src/store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 // The language module and its Polish table, inlined as the others are (W6). The table first: the
@@ -183,8 +186,10 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { HistoryBrowser } from './history-browser.js';",
+    () => `const { HistoryBrowser } = (() => { ${fs.readFileSync('web/src/history-browser.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { HistoryBrowser }; })();`)
   .replace("import { RecentSearchHistory } from './recent-searches.js';",
-    () => `const { RecentSearchHistory } = (() => { ${fs.readFileSync('web/src/recent-searches.js', 'utf8').replace(/^export /gm, '')}; return { RecentSearchHistory }; })();`)
+    () => `const { RecentSearchHistory } = (() => { ${fs.readFileSync('web/src/recent-searches.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RecentSearchHistory }; })();`)
   .replace("import { SearchSuggestions } from './search-suggestions.js';",
     () => `const { SearchSuggestions } = (() => { ${fs.readFileSync('web/src/search-suggestions.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchSuggestions }; })();`)
   .replace("import { learnedDisplay, learnedSourceLine } from './learned-titles.js';",
@@ -221,7 +226,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';",
     `const { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } = (() => { ${stepsSource}; return { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval }; })();`)
   .replace("import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';", playbackSource)
-  .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
+  .replace(/^import .*from '\.\/rules\.js';$/gm, () => rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
   .replace(/^import .*from '\.\/i18n\.js';$/gm, i18nSource)
@@ -242,7 +247,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -3704,6 +3709,7 @@ await (await import('./check-page-played-before.mjs')).default({ window, check }
 await (await import('./check-page-saved-places.mjs')).default({ window, check });
 await (await import('./check-page-learned-titles.mjs')).default({ window, check });
 await (await import('./check-page-recent-searches.mjs')).default({ window, check });
+await (await import('./check-page-history-search.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

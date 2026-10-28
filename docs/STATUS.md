@@ -44,6 +44,16 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W10 implemented, 2026-10-28:** separate live History field, 200 ms debounce, whole-History literal
+Unicode matching, coherent bounded paging, read/Clear ownership and source-query restoration.
+Focused Android checks pass **26 tests / 5 suites**, including actual History UI and native SQLite;
+JS passes **30 rule/ownership cases**, **6 production storage cases** and **912 page assertions**.
+Controlled broken input, generation and common-fixture cases fail as intended and are restored.
+Final forced gate on **e38f728** passes **1239 tests / 165 suites**, zero failures/errors/skips,
+**755 s** overall; all WEB companions execute and lint has zero errors. All 640 recorded inputs
+still match. Browser appearance/keyboard/touch remain unchecked; W11 Search scopes are next.
+
+
 **W09 implemented, 2026-10-28:** query history/suggestions are connected through the real field,
 integrated Search action, keyboard and pointer handlers. Eighteen cases run against the actual
 Kotlin/JS rules; JS passes 24 domain cases, 11 DOM event cases, four IndexedDB cases and 883 page

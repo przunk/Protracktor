@@ -1,9 +1,26 @@
 # Architecture
 
+## WEB live History filter — branch candidate, 2026-10-28
+
+`HistoryBrowser` owns raw query, matching page/count/rows and loading/failure state; it does not
+own playback or recent general searches. Requests carry a generation and AbortController,
+edits debounce 200 ms, fresh entries reset query/page/scroll, and source return restores the
+producing snapshot. A Queue overlay preserves the underlying History visit. Current failures
+permit retry; stale failures and rows cannot publish after replacement or navigation.
+
+`played.read` waits for the ordered History writer. Blank queries obtain count/page in one
+readonly transaction; filtered cursors match title/author/filename literally and retain only a
+requested hundred plus the last partial page. Cancellation aborts active transactions and
+refuses publication even if completion wins the abort race. No schema change or bulk History
+allocation is introduced. `query-text.js` shares the precise Kotlin whitespace/simple-case rules
+with recent searches, while `history-filter.js` owns phrase matching and bounded paging.
+`HistoryFilterParityTest` and JS consume one declared TSV input. Android production is unchanged.
+[Reference, checklist and evidence](WEB_IMPLEMENTATION.md#w10--live-history-search-analysis-2026-10-28).
+
 ## WEB recent searches — branch candidate, 2026-10-28
 
 `RecentSearchHistory` owns bounded query history and serialized settings writes, separately from
-playback History and Browse snapshots. `recent-searches.js` ports the Kotlin trimming, case and
+playback History and Browse snapshots. `query-text.js` and `recent-searches.js` port Kotlin trimming, case and
 prefix rules; a common TSV runs against both implementations. The existing settings store gains
 one key, with no schema migration. Read failures are retried before writes; write failures retain
 the last persisted presentation and leave the ordinary search usable.

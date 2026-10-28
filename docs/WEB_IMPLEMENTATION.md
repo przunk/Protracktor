@@ -23,7 +23,7 @@ the rebase; this is not a new combined Android/WEB full-gate claim.
 
 Android's accepted normalization target is now **-18 LUFS**, superseding the initial W15 plan's
 -23 LUFS after the 2026-10-27 policy change. Retain its caps/peak guard and keep the slider/AMP
-experiments separate. W01/W02/W04-W08 are retained; W03 query/scope integration and W10-W25 remain
+experiments separate. W01/W02/W04-W08 are retained; W03 Search-scope integration and W11-W25 remain
 open. No WEB merge, deployment or additional APK is authorized by this resume.
 
 The initial Android reference was the baseline above; resumed comparisons use **c8209b1**.
@@ -58,14 +58,14 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | --- | --- | --- |
 | W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
 | W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
-| W03 | Return to playback source | Destination/route integration passes combined full host gate; W10/W11 query/scope wiring remains pending |
+| W03 | Return to playback source | History query/page restoration passes W10; W11 Search-scope wiring remains pending |
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
 | W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
 | W07 | Saved catalogue places | Implemented; full host gate passes; browser acceptance unchecked |
 | W08 | Learned list titles | Implemented; full host gate passes; browser acceptance unchecked |
 | W09 | Recent-search suggestions | Implemented; full host gate passes; browser acceptance unchecked |
-| W10 | Live History search | Pending |
+| W10 | Live History search | Implemented; full host gate passes; browser acceptance unchecked |
 | W11 | Search scopes and saved-playlist coverage | Pending |
 | W12 | Playlist reorder and import/export | Pending |
 | W13 | Bulk Browse/Search/History actions | Pending |
@@ -661,3 +661,67 @@ test, rule and build input hashes** still match; the completion record changes d
 Browser rendering, physical keyboard/touch and actual software-keyboard behaviour remain
 unchecked. No WEB bundle, merge or deployment. Private full/focused/mutation evidence is under
 ignored `user/web-parity-verification/w09/`.
+
+## W10 — Live History search analysis, 2026-10-28
+
+Current Android reference: **c8209b1ab79976ec28d27e1da447055756c7ca29**. Read
+`HistoryFilter`, `HistoryReads`, `HistoryBrowser`, `data/HistoryStore`, `ui/HistoryQueryField`
+and `HistoryDomain`; compare `HistoryFilterTest`, `HistoryBrowserTest`,
+`HistoryStoreSearchTest` and `HistoryBrowseUiTest`. The accepted B49 contract is literal matching
+across all History; C118's separate new-record refresh report is not an Android change here.
+
+Parity checklist:
+
+- Match a trimmed literal phrase separately in title, author or filename using the same Unicode
+  ignore-case rule; preserve accents, punctuation and field boundaries. Recent-query matching
+  and History share the narrow text-rule module, not persistence or UI state.
+- Debounce edits by **200 ms**; clear visible results/counts and reset page zero without disposing
+  or refocusing the field. Enter only dismisses the keyboard. History queries never enter recent
+  general searches, alter playback, reorder History or replace a captured source list.
+- Scan the newest-first cursor, retain at most the requested hundred plus the last partial page,
+  count every match and clamp shrinking/enormous/negative pages. Blank queries use an indexed
+  count and bounded cursor in one readonly transaction. No schema change or whole-History read.
+- Give each read a generation and cancellation signal, including identical-input/new-visit
+  races; stale rows/errors cannot replace another view. Current errors clear loading and offer
+  a labelled retry. No-match differs from an empty History; Clear is available for a nonblank
+  phrase even when it has no matches.
+- Reads wait for the existing ordered writer. Clear retires the current candidate and queued
+  read before erase, still erases after navigation, and reloads a cancelled filter after failure.
+  Existing listened marks, metadata, recency, counts and unrelated stores survive filtering.
+- A new History entry resets query/page/scroll; Queue-source return restores the producing
+  phrase/page/membership rather than pending text or newer storage. Opening/closing Queue over
+  History preserves its field/read ownership. Source navigation never changes the active plan.
+- Keep EN/PL feedback, accessible field/results state and keyboard actions. Browser appearance,
+  software keyboard and touch remain unverified by host checks.
+
+Implementation and verification are in progress; W10 is not yet declared complete.
+
+Focused evidence: **26 Android tests / 5 suites** pass (shared fixture plus the unchanged
+HistoryFilter, HistoryBrowser, HistoryStoreSearch and actual HistoryBrowse UI tests), **136 s**.
+JS passes **30 rule/ownership cases** and **6 production IndexedDB cases**. The integrated page
+passes **912 assertions**, including **29 new real field/pager/source/Clear/Back cases**. The 10,000-row
+fake-IndexedDB scan counts 5,000 matches in 129 ms on this host; this is not browser/phone latency.
+Deliberately disconnecting the actual field fails the DOM guard; bypassing generation ownership
+fails the identical-input late-read guard. A wrong common expectation fails both JS and the actual
+Kotlin test without forcing Gradle, proving its declared fixture input. All mutations are restored.
+The initial disconnected-field probe exposed an unbounded deferred await in the harness; the
+bounded, fail-fast guard was added and the repeated probe completes normally with one failure.
+Full forced gate/lint remain pending at this candidate checkpoint.
+
+Final path audit found an existing Back handler consuming retained general-Search text before
+leaving History. History now returns to Browse in one action without touching that independent
+query. The actual Back regression fails with the original handler and passes after restoration;
+the focused page loader is generated from the same production-loading harness. History also
+names its domain immediately during loading. The first full-gate attempt on **3a20b78** was
+intentionally interrupted after **159.2 s** to include this correction; it is not a passing gate.
+A new clean candidate and full forced run follow. No Android production change or WEB delivery.
+
+**Final forced gate checked:** clean source **e38f728** passes **1239 tests / 165 suites**,
+zero failures/errors/skips, **755 s** overall. Unit tests actually execute (31 tasks executed,
+444.9 s); all WEB companions run, including **912 page assertions**; lint completes with zero
+errors in 84.3 s. All **640 recorded application/test/build/rule input hashes** still match.
+This completion record changes documentation/commit message only. W10 and W03's History-query/
+page/source integration are implemented; W03 still needs W11's Search-scope wiring. Browser
+appearance, software keyboard, touch and physical background operation remain unchecked.
+Full/focused/mutation logs, JUnit/lint XML and input receipt are retained under ignored
+`user/web-parity-verification/w10/`. No WEB bundle, merge, push, deployment or APK.
