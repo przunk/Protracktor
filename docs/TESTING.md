@@ -3,6 +3,25 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W17b subsong strip — browser checks pending, 2026-10-28
+
+Host DOM rectangles and actual native Robolectric components are comparison evidence; real
+browser scroll clamping, touch, focus, painting and background behaviour remain unchecked.
+
+- Open a file at an arbitrary tune, e.g. 69 of 256, then Now Playing. One horizontal strip should
+  reveal the active chip. Advance while nearby: already-visible chips do not scroll; once the
+  new chip leaves the watched region it comes into view. A partly visible previous chip counts.
+- Manually scroll to 249–256 while tune 70 plays. Further advances must leave that distant region
+  in place. If music later reaches that region, ordinary following resumes. Change file/count,
+  close/reopen Now Playing and test both subsong modes: a fresh opening reveals actual current.
+- Select numeric chips by pointer/keyboard. Current selection must not restart, marks must follow
+  decoder answers, and Space must not also Play/Pause. Focus should survive current-only redraws.
+  Start another file with the strip visible: old controls disappear before the load answers.
+- Inspect a different file: read-only metadata, no controls for its subsongs affecting the audible
+  file. Return through the dock: actual current title/metadata/chips. Delay its description and
+  leave/reopen the live panel: old replies/errors must not replace the new view. Try EN/PL, themes,
+  narrow/wide windows, zoom, reduced motion and real touch scrolling; these remain manual checks.
+
 ## WEB W17a Browse positions — browser checks pending, 2026-10-28
 
 Host fixtures mock row rectangles and execute actual navigation/Back events; they do not establish

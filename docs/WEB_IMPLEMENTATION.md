@@ -1204,3 +1204,74 @@ and complete-page runs pass after that test correction.
 W17a is implemented at host level; W17b remains pending. This completion changes documentation/
 message only. Real-browser scroll/animation, touch, focus and background behaviour remain unchecked.
 No WEB merge, bundle, APK, push, deployment, schema or versionName change.
+
+## W17b — Subsong strip analysis, 2026-10-28
+
+Reference **c8209b1**: `SubsongStrip`, `ListScrolling`, `NowPlaying` and ProtracktorApp's conditional
+Now Playing sheet. W17a is verified before this substage. Existing `QueueFollowUiTest` covers
+vertical Queue following, not this strip; add a narrow actual-component native comparison.
+
+Parity checklist:
+- Show one horizontal row of 36 px numeric chips with a 6 px gap for counts above one. Opening a
+  file/count or freshly opening Now Playing reveals the actual current chip. Same-key/current
+  updates retain chip nodes and scroll/focus. Both play-all modes allow explicit chip selection.
+- On later advances, follow only if the previous chip was at least partly visible, and do nothing
+  when the new chip is already visible. Leave a deliberately distant region in place. A new file
+  or count resets this decision; closing/reopening the native sheet is a fresh opening too.
+- Keep visibility work owned by the current strip/file/count. Hidden panels defer measurement and
+  cannot fake a visible previous chip; obsolete deferred work must not move a new strip. Preserve
+  the current file's other metadata and in-page transport. Inspecting another file never starts it.
+- Actual chip pointer/keyboard events send one subsong selection, without a global Play shortcut.
+  Keep the existing numeric-chip icon exception, PL/EN descriptions and reduced-motion policy;
+  no native haptic port or additional mode is included.
+- Run equivalent actual `SubsongStrip` component cases in Robolectric and WEB geometry/event
+  cases. Demonstrate broken watch/visibility/ownership/event guards fail, restore, compare back to
+  native and run full checks/lint. Host visibility geometry is partial evidence; real browser
+  scrolling, touch and layout remain unchecked.
+
+Implementation and verification are pending.
+
+W17b reference findings before implementation: four actual native `SubsongStrip` cases pass in
+**24 s** focused, including initial/current visibility, distant-region retention, file/count reset
+and a real chip click with play-all Off. `PlaybackController.selectSubsong` also refuses the
+already-current index. Native `TrackInfoDialog` has no playable subsong strip. The existing browser
+Information panel currently draws active inspected-file chips wired to the sounding decoder, and
+a selected chip can redundantly restart its tune. Correct these within the strip adapter: keep
+Information read-only, restore actual live content on a fresh dock expansion and ignore duplicate/
+obsolete selections. Live subsong metadata must update its existing dock snapshot so reopening
+cannot resurrect the preceding tune's title. System metadata refresh remains W25.
+
+### W17b implementation checkpoint
+
+The keyed strip retains numeric chip nodes and focus, uses native opening/previous-visible rules,
+and owns deferred measurements by visit/file/count. A fresh panel opening follows current even
+for the same file. New loads retire old controls immediately; selected, hidden and detached chips
+cannot send an obsolete selection. Information stays read-only, late description replies cannot
+replace a fresh live panel, and reentry uses current subsong metadata rather than the preceding
+snapshot. System metadata remains W25. Browser alignment is direct rather than native animated
+scrolling, avoiding an old animation competing with a later selection or manual movement.
+
+Focused WEB **15 rule / 6 presentation / 21 production-page assertions** pass. The complete
+standalone page suite passes too. All **five** actual native component comparisons pass after
+adding the watched-region advance case. Six deliberate WEB faults fail at their expected guards;
+forcing native watching both permanently On and permanently Off breaks the corresponding actual
+component tests. Both restored native runs pass; native production bytes are unchanged. Receipts
+and pre-fix event failures are under ignored `user/web-parity-verification/w17b/`.
+
+Full forced checks/lint and their final source/input receipt remain pending. These are host
+checks, not physical-browser layout, touch, scrolling or assistive-technology acceptance.
+
+### W17b final gate
+
+Clean candidate **7d75d8793f31f072e56aef4e604ff6cb6417d870** passes the forced complete gate:
+**1252 tests / 170 suites**, zero failures/errors/skips, **825 s**. Unit execution **474.7 s**,
+all 31 tasks executed; all five native strip comparisons pass again. All companions run, including
+**1119 page assertions**, actual WASM and processor/native audio, migrations, PWA and server.
+Fresh lint **86.5 s**, **0 errors/fatal / 79 warnings**. All **683** recorded application/test/
+build/rule hashes match. Full logs, JUnit/lint, six WEB and two native negative controls and source
+receipt are retained under ignored `user/web-parity-verification/w17b/`.
+
+W17a and W17b are implemented at host level. This completion changes documentation/message only;
+native production, engine, schema and versionName are unchanged. Real-browser layout, scrolling,
+touch and assistive technology remain unchecked. Continue W18 restoration and W24 live language
+before the remaining storage, downloads and DSP scopes. No WEB merge, package, push or deployment.

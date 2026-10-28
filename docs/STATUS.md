@@ -44,6 +44,24 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W17 complete at host level, 2026-10-28:** W17b's keyed horizontal subsong strip keeps distant
+browsing stable, follows the watched current region and resets on fresh opening/file/count.
+Read-only Information, retired controls and late replies are covered. Forced full gate on
+**7d75d87** passes **1252 tests / 170 suites**, zero failures/errors/skips, **825 s**, all
+companions and **1119 page assertions**; lint **0 errors / 79 warnings**. All **683** input hashes
+match. Five actual native component comparisons and six WEB/two native negative controls support
+the port; native production is unchanged. Physical browser behaviour remains unchecked.
+W01-W13, W16 and W17 are implemented; W18 is next. No WEB merge, package, push or deployment.
+
+
+**W17b implementation checkpoint, 2026-10-28:** keyed horizontal subsong chips follow only the
+watched region and reset on file/count/fresh opening. Information is read-only; stale replies,
+retired controls and duplicate-current selections are guarded. Current metadata survives dock
+reentry. Focused 15 rule / 6 presentation / 21 page assertions and five actual native component
+cases pass, with six WEB and two native controlled faults detected and restored. Native
+production is unchanged. Full forced checks/lint are pending; real-browser behaviour is unchecked.
+
+
 **W17a implemented, 2026-10-28:** per-level offsets and exact departed-row restoration
 survive index changes, empty/loading views and obsolete reads. Fresh Browse/History/query resets
 and independent History page positions are covered; temporary Add/Queue preserves the visit.

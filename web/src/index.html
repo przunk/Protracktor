@@ -812,11 +812,11 @@
   .toggle[aria-checked="true"] {
     background: var(--secondary-container); color: var(--on-surface); border-color: var(--secondary-container);
   }
-  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .subsongs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin-top: 10px; scroll-behavior: auto; }
   .subsong {
     background: var(--surface-container); color: var(--on-surface);
-    border: 1px solid var(--surface-variant); border-radius: var(--shape-s);
-    min-width: 40px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--surface-variant); border-radius: 50%;
+    flex: none; width: 36px; height: 36px; padding: 0; font: inherit; font-size: 13px; cursor: pointer;
     font-variant-numeric: tabular-nums;
   }
   .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }

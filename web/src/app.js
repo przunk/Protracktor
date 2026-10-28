@@ -35,6 +35,7 @@ import { TrackSelection } from './track-selection.js';
 import { BrowseSelectionView } from './browse-selection-view.js';
 import { BrowseScroll } from './browse-scroll.js';
 import { BrowseScrollView } from './browse-scroll-view.js';
+import { SubsongStripView } from './subsong-strip-view.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -149,6 +150,7 @@ let historyPresentation = new Map();
 let learnedTitles = new Map();
 let historyRefreshQueued = false;
 let infoPresentation = null;
+let descriptionGeneration = 0;
 const historyReads = new HistoryPresentationReads({
   query: (ids, signal) => played.presentationAmong(ids, signal),
   currentRevision: () => played.revision,
@@ -267,6 +269,7 @@ let queueView = null;
 let playlistReorder = null;
 let browseSelectionView = null;
 let browseScrollView = null;
+let subsongStripView = null;
 let playlistRows = [], nextPlaylistRow = 0, renderingPlaylist = false;
 const retainedPlaylistTracks = new Map();
 let savedPlaces = null;
@@ -871,7 +874,7 @@ function onWorklet(message) {
       } else { listening.forget(); listeningTrack = null; }
       if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
-      renderNowPlaying(fields, subsongCount, currentSubsong);
+      renderCurrentNowPlaying();
       publishToSystem(currentTrack(), fields);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
@@ -982,9 +985,10 @@ function onWorklet(message) {
       }
       allowSeeking();
       const fields = withSongDb(describeFields(message.describe));
+      dockFields = fields;
       if (fields.title) $('title').textContent = fields.title;
       $('sub').textContent = describeLine(fields);
-      renderNowPlaying(fields, subsongCount, currentSubsong);
+      renderCurrentNowPlaying();
       setPlaying(true);
       break;
     }
@@ -1265,6 +1269,7 @@ function explainFailure(reason, entry) {
  * screen with nothing to say has to say that.
  */
 function renderNothingPlaying() {
+  ++descriptionGeneration;
   infoPresentation = null;
   repaintHistoryPresentation();
   $('np-title').textContent = currentTrack()?.name || t('Nothing playing');
@@ -1277,8 +1282,14 @@ function renderNothingPlaying() {
   const dd = document.createElement('dd');
   dd.textContent = t('nothing has played yet');
   list.append(dt, dd);
-  $('subsongs').replaceChildren();
+  subsongStripView?.clear();
   $('subsongbar').hidden = true;
+}
+
+function renderCurrentNowPlaying() {
+  ++descriptionGeneration;
+  if ($('seek').dataset.opened === '1' && currentTrack()) renderNowPlaying(dockFields ?? {}, subsongCount, currentSubsong);
+  else renderNothingPlaying();
 }
 
 function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { playedBefore = false } = {}) {
@@ -1316,24 +1327,10 @@ function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { p
   // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
   // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
   // The switch that decides what `next` means, shown only where it decides anything.
-  $('subsongbar').hidden = subsongs <= 1;
+  $('subsongbar').hidden = subsongs <= 1 || current < 0;
   $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
 
-  const strip = $('subsongs');
-  strip.replaceChildren();
-  if (subsongs > 1) {
-    for (let i = 0; i < subsongs; i++) {
-      const button = document.createElement('button');
-      button.className = 'subsong';
-      button.textContent = String(i + 1);
-      button.setAttribute('aria-pressed', String(i === current));
-      // The worklet answers with the tune's own length and title, and that answer redraws these
-      // chips — so this only asks. Marking the pressed one here as well would be a second opinion
-      // about which tune is playing.
-      button.onclick = () => node?.port.postMessage({ type: 'subsong', index: i });
-      strip.append(button);
-    }
-  }
+  subsongStripView?.render({ key: entry?.url, count: subsongs, current });
 }
 
 /**
@@ -1374,6 +1371,7 @@ function playAt(next) {
 
 async function openActualTrack(entry, { autoPlay = true } = {}) {
   if (!entry) return;
+  ++descriptionGeneration;
   sampleListening();
   listening.forget();
   listeningTrack = null;
@@ -1403,6 +1401,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   delete $('seek').dataset.opened;
   subsongCount = 1;
   currentSubsong = 0;
+  subsongStripView?.clear(); $('subsongbar').hidden = true;
   tuneCanSeek = false;
   allowSeeking();
   try {
@@ -1936,6 +1935,9 @@ function showInPlaylist(i) {
 let describeAsk = 0;
 const describePending = new Map();
 async function informAbout(entry, { playedBefore = true } = {}) {
+  const generation = ++descriptionGeneration;
+  const owns = () => generation === descriptionGeneration && !$('nowplaying').hidden;
+  subsongStripView?.clear(); $('subsongbar').hidden = true;
   infoPresentation = playedBefore ? entry : null;
   requestHistoryPresentation();
   repaintHistoryPresentation();
@@ -1945,8 +1947,10 @@ async function informAbout(entry, { playedBefore = true } = {}) {
   status(t('reading it…'));
   try {
     const bytes = await bytesOf(entry);
+    if (!owns()) return;
     if (!bytes) { status(t('that one stayed on the phone — there is nothing to read')); return; }
     await start();
+    if (!owns()) return;
     const id = ++describeAsk;
     // **With the watchdog `playAt` has.** A worklet that takes a message and never answers is a
     // failure this page has met twice, and without a deadline this promise is simply never settled:
@@ -1957,13 +1961,14 @@ async function informAbout(entry, { playedBefore = true } = {}) {
     });
     node.port.postMessage({ type: 'describe', id, name: fileOf(entry), bytes }, [bytes]);
     const described = await answer;
+    if (!owns()) return;
     if (!described) { status(t('the decoder took the file and never answered')); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
     renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry, { playedBefore });
     $('np-title').textContent = describeFields(described.describe).title || entry.name;
     status(t('{name} — not playing, just described', { name: entry.name }));
   } catch (e) {
-    status(t('could not read it: {reason}', { reason: e.message }));
+    if (owns()) status(t('could not read it: {reason}', { reason: e.message }));
   }
 }
 
@@ -3234,6 +3239,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which, { preserveBrowse = false } = {}) {
+  if (which !== 'nowplaying') { ++descriptionGeneration; subsongStripView?.hide(); }
   ++panelVisit;
   if (which !== 'addto' && !$('addto').hidden) {
     ++addAsked; addingRequest = null; pendingAdd = null; addFromBrowse = false; setAddBusy(false);
@@ -3258,6 +3264,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   $('settings').hidden = which !== 'settings';
   $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
+  if (which === 'nowplaying') subsongStripView?.show();
   $('nowcard').setAttribute('aria-expanded', String(which === 'nowplaying'));
   if (which === 'browse') browseScrollView?.reveal(browseSelectionOwner());
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
@@ -4521,7 +4528,11 @@ $('saveas').onclick = async () => {
   status(t('Saved as {name}', { name }));
 };
 
-$('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
+$('nowcard').onclick = () => {
+  const opening = $('nowplaying').hidden;
+  if (opening) renderCurrentNowPlaying();
+  showPanel(opening ? 'nowplaying' : null);
+};
 $('nowcard').onkeydown = (event) => {
   if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
     event.preventDefault(); event.stopPropagation(); $('nowcard').click();
@@ -5471,6 +5482,8 @@ browseSelectionView = new BrowseSelectionView({ model: browseSelection,
   header: $('browse-selection-head'), count: $('browse-selection-count'), all: $('browse-select-all'),
   leading: browseLeading, changed: updateSelectBar });
 browseScrollView = new BrowseScrollView({ model: browseScroll, viewport: $('browselist'), visible: () => !$('browse').hidden });
+subsongStripView = new SubsongStripView({ strip: $('subsongs'), visible: () => !$('nowplaying').hidden,
+  onSelect: (index) => node?.port.postMessage({ type: 'subsong', index }) });
 playlistReorder = new RowReorder({ list: document.querySelector('main'), rows: () => playlistRows,
   generation: playlistReorderOwner, move: movePlaylistRow, clampEdges: false,
   onStop: ({ id, generation, focus }) => {

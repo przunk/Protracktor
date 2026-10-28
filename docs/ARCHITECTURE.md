@@ -1,5 +1,22 @@
 # Architecture
 
+## WEB subsong following — branch candidate, 2026-10-28
+
+`SubsongStripView` keeps keyed numeric chips across current-only updates. Opening a file/count or
+freshly opening Now Playing reveals its actual current. Later advances move only when the previous
+chip was at least partly visible and the new one is outside the viewport. Manually browsed distant
+regions stay put. Frames belong to a strip visit; closing, replacement, invalid/single counts and
+new loads retire old work and controls. Direct alignment avoids an obsolete smooth scroll
+continuing after a newer selection; it also respects reduced motion without another animation.
+
+The pure follow/selection rules mirror native `SubsongStrip`/`PlaybackController.selectSubsong`.
+Actual-current, hidden and retired chip actions are refused; marks come from decoder replies.
+Information remains read-only rather than sending inspected-file indices to the audible decoder.
+An independent description generation rejects late results/errors after leaving or reopening the
+live view. Dock expansion uses the actual metadata/subsong snapshot, updated on live replies,
+so inspecting another file cannot resurrect its controls or an earlier tune's metadata. Browser
+system-metadata refresh remains W25; no new transport, storage, mode or Android behaviour is added.
+
 ## WEB Browse positions — branch candidate, 2026-10-28
 
 `BrowseScroll` holds per-session level offsets and pending departed-row identities. Its native-

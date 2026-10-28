@@ -186,6 +186,8 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { SubsongStripView } from './subsong-strip-view.js';",
+    () => `const { SubsongStripView } = (() => { ${fs.readFileSync('web/src/subsong-strip.js', 'utf8').replace(/^export /gm, '')}; ${fs.readFileSync('web/src/subsong-strip-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SubsongStripView }; })();`)
   .replace("import { BrowseScroll } from './browse-scroll.js';",
     () => `const { BrowseScroll } = (() => { ${fs.readFileSync('web/src/browse-scroll.js', 'utf8').replace(/^export /gm, '')}; return { BrowseScroll }; })();`)
   .replace("import { BrowseScrollView } from './browse-scroll-view.js';",
@@ -3748,6 +3750,8 @@ await (await import('./check-page-browse-selection.mjs')).default({ window, chec
 await (await import('./check-page-dock.mjs')).default({ window, check });
 
 await (await import('./check-page-browse-scroll.mjs')).default({ window, check });
+
+await (await import('./check-page-subsong-strip.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);
