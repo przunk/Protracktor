@@ -987,3 +987,80 @@ documentation/message; Android production sources and native engine are unchange
 develop. Actual picker/download, browser touch, background and cross-device acceptance remain
 unchecked. No merge, bundle, APK, push, deployment or versionName change. Evidence and source/input
 receipt are retained under ignored `user/web-parity-verification/w12b/`.
+
+
+## W13 — Bulk Browse selection analysis, 2026-10-28
+
+Reference **c8209b1**: read `BrowseScreen` TracksView/BrowseTrackRow, `AddToPlaylistDialog`,
+`HistoryBrowseUiTest`, `BrowseState`, and current browser row/chooser/share presenters. W12b is
+fully verified before beginning this separate scope.
+
+Parity checklist:
+- Long press begins id-based selection; taps/checkboxes toggle without playing. Select all/none
+  works on the displayed eligible list. Keep source order when capturing batch actions, not
+  selection order; retain selections only while their IDs belong to the same producing view.
+- Reserve the checkbox/header space before entering selection. Hide contextual row actions and
+  disable swipe while ticking; do not scroll-follow playback. Keep physical row nodes/focus and
+  protect the generated long-press click. Keyboard/context-menu paths reach the same rules.
+- First Back/Escape exits selection before navigation; subsequent Back follows the existing view
+  stack. Pending Search text/chip edits keep its producing snapshot. New submissions/history
+  phrases/pages and actual navigation reconcile/retire the old selection. Late results cannot
+  select another list. Queue overlays preserve the underlying Browse visit; a true leave clears it.
+- Batch Add to current edits the selected browser-owned draft without Save; other Add captures
+  references before clearing/opening the existing chooser. Cancel does not resurrect selection;
+  creating/selecting destinations retains existing dedup/save rules. Protected From the phone
+  offers the chooser instead of direct append. Main-list selection stays a separate owner.
+- Batch sharing is native Send to Web / browser Share with Protracktor, preserving reference order
+  and current eligibility/refusal policy. No new relay, bulk audio renderer or manual-FIFO feature.
+- Preserve existing browser capability boundaries: selectable rows are playable `.btrack` rows;
+  folder/action rows and unavailable phone-only placeholders remain explanatory. Native local
+  scanning/ownership is outside WEB. Bulk uses source references as native does; learned titles
+  remain presentation data. Do not persist buffers or alter playback/FIFO from selection alone.
+- Compare actual native BrowseScreen long presses, checkboxes, actions and Back with equivalent
+  browser pointer/key/button/chooser/share cases, including geometry, membership and async races.
+  Test the pure selection rules too, then demonstrate broken event/ownership/order guards fail.
+  Finish with a forced full gate/lint and input receipt. Browser touch/visual acceptance stays open.
+
+Implementation and verification are pending.
+
+### W13 implementation checkpoint
+
+Native `BrowseSelectionUiTest` exercises actual long presses, row/checkbox clicks, bottom actions,
+reserved leading/header geometry, membership/query changes and system Back: **3 tests pass**,
+**13 s** focused. WEB domain/presentation checks pass **6 / 7 cases**; actual-page checks cover
+Browse, Search, History, Queue overlays, protected phone destinations and local-byte ownership.
+Selection does not own playback; bulk capture follows source order, with no learned-title rewrite.
+
+The implementation also closes defects encountered through these actions: working drafts must
+keep local buffers until reference serialization, owned-list Save/Add/Save As must retain those
+buffers across editor switches, destination reads/writes need visit ownership and retryable
+snapshots, and focused buttons must not also invoke global Space transport. Two actual-page guards
+fail before the stale-read/error and keyboard corrections, then pass after them. Existing Random
+learned-title selection coverage now explicitly opens its main list before pressing Select; it
+previously drove a hidden main action while Browse was visible. Its title/raw-identity guard is
+unchanged. Native production behaviour remains unchanged.
+
+Full forced checks, negative-control receipt and final source identity are pending. Physical
+browser appearance, touch, file UI and background operation remain unchecked.
+
+### W13 final gate
+
+Clean candidate **679608413db5186d364fd50f9759a48f73026de3** passes the forced complete gate:
+**1247 tests / 169 suites**, zero failures/errors/skips, **794 s**, unit task **459.0 s** with
+all 31 tasks executed. All companions actually execute, including **1052 page assertions**,
+**6 selection-model** and **7 presentation** cases, actual WASM/processor/native audio, database
+upgrades, PWA and server checks. Fresh lint **83.6 s**, **0 errors/fatal / 79 warnings**.
+All **671** recorded application/test/build/rule hashes match. The native production behaviour
+and engine remain unchanged from accepted develop.
+
+Six controlled regressions fail at their intended guards: source order, owner retirement,
+checkbox bubbling, actual long-press binding, held working buffers and retained byte ownership
+once other live owners are replaced. All are restored. The first byte mutation was recovered by
+normal hydration and therefore was not a broken implementation; stripping the resulting working
+buffer and replacing the other runtime owners supplies the meaningful negative controls. Two
+actual-page guards also fail before the focused-button Space and obsolete chooser refusal fixes.
+Evidence, JUnit/lint and input receipt are under ignored `user/web-parity-verification/w13/`.
+
+W01-W13 are implemented at host level. Continue W16-W18/W24 in the planned dependency order.
+This completion update changes documentation/message only. Actual browser layout/touch/file UI,
+background and cross-device behaviour remain unchecked; no WEB bundle, APK, merge or deployment.

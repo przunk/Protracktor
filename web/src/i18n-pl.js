@@ -7,6 +7,12 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Adding…": "Dodawanie…",
+  "Could not add tracks: {reason}": "Nie udało się dodać utworów: {reason}",
+  "Could not read playlists: {reason}": "Nie udało się odczytać playlist: {reason}",
+  "That playlist no longer exists.": "Ta playlista już nie istnieje.",
+  "Select all": "Zaznacz wszystkie",
+  "Select none": "Odznacz wszystkie",
   "Import": "Importuj",
   "Export": "Eksportuj",
   "Import playlist": "Importuj playlistę",

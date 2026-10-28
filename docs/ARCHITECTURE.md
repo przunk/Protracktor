@@ -1,5 +1,32 @@
 # Architecture
 
+## WEB Browse bulk selection — branch candidate, 2026-10-28
+
+`TrackSelection` owns selected URL identities independently of the playlist editor and playback.
+Its owner identifies the producing folder, submitted Search query/scope or History query/page.
+Membership refresh intersects IDs; a new owner clears them. Captures are immutable, in source
+order, and borrow held buffers without transferring them. Native bulk operations use source
+references rather than the learned-title presentation overlay.
+
+`BrowseSelectionView` decorates stable playable rows with checkboxes inside their reserved leading
+slot. Long press, row tap, checkbox, keyboard and Select all reach the same model. Context actions,
+swipe and playback scroll-follow are suspended while selecting; first Back/Escape clears it.
+Queue overlays preserve the underlying visit, while actual navigation retires it. Unavailable
+phone-only placeholders and folder/action rows are not selectable in WEB. Selection never owns
+transport. Button/field key handling precedes global transport shortcuts.
+
+Bulk Add uses the existing editor draft, serialized other-playlist writes or fresh atomic creation;
+Share uses portable references. The destination chooser captures its batch before clearing
+selection. Reads, feedback and completion are scoped to its originating visit/request; failed
+writes retain a retryable snapshot. From the phone stays protected. The same per-playlist writer
+serializes Add with Save/Rename/Delete, including a fresh destination read before append.
+
+Actually held local buffers from successful owned-playlist Save/Add/Save As and import are retained
+for the tab lifetime, so switching editors does not strand newly saved references. Working drafts
+keep their buffers; reference serialization removes them at the storage/share boundary. Phone
+handoff autosaves do not retain every replaced phone payload. Nothing persists audio or adds a
+scanner, bulk manual queue operation, export renderer, schema or dependency.
+
 ## WEB playlist-file transfer — branch candidate, 2026-10-28
 
 `PlaylistTransfer` has no editor/transport ownership. It captures selected draft references for
@@ -18,8 +45,8 @@ native and corrected WEB results; other shared format cases match. Android code 
 Browser imports of native `asma://` ids use the existing archive path encoder and canonical
 HTTPS URLs; remote presentation uses the browser's author-folder metadata convention.
 
-Held import buffers live only for the tab lifetime. Search, list selection/discard and startup
-share hydration from existing runtime owners plus those retained imports. An enumerable private
+Held owned-playlist buffers live only for the tab lifetime. Search, list selection/discard and
+startup share hydration from existing runtime owners plus those retained buffers. An enumerable private
 symbol carries the original stored availability through immutable copies; reference serialization
 keeps it and strips buffers/symbols. A derived missing-file flag must never silently rewrite a
 protected phone list during a pending index save. With no held bytes, nonnetwork references are

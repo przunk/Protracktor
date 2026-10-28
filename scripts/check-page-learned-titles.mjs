@@ -89,7 +89,7 @@ export default async function checkLearnedTitles({ window, check }) {
   await api.catalogueStore.clear('asma:');
   await api.catalogueStore.replacePrefix('modland:', [...archive.toRecords('1\tProtracker/Titles/a.mod', 'modland', () => true).records,
     { key: 'modland:meta', tracks: 1, total: 1, complete: true }]);
-  api.setRandomScope('everything'); await api.rerollRandom(); await settle();
+  api.setRandomScope('everything'); await api.rerollRandom(); api.showPanel(null); await settle();
   send({ type: 'opened', describe: 'title\tRandom title', duration: 90, subsongs: 1, current: 0, rate: 44100 });
   $('next').dispatchEvent(new window.Event('pointerdown')); $('next').dispatchEvent(new window.Event('pointerup')); $('next').click(); await settle();
   send({ type: 'opened', describe: 'title\tRandom title', duration: 90, subsongs: 1, current: 0, rate: 44100 }); await settle();
@@ -97,6 +97,7 @@ export default async function checkLearnedTitles({ window, check }) {
   check(picks.length === 2 && picks[0].name === 'a.mod' && picks[1].name === 'a.mod'
     && [...$('queue').querySelectorAll('.title')].map((node) => node.textContent).join('|') === 'Random title|Random title',
     'Random shows the learned title on duplicate occurrences without modifying its raw heard record');
+  check($('browse').hidden && !window.document.querySelector('main').hidden, 'Random is visible before its Select event is driven');
   $('queue').querySelector('.rowmenu').click(); [...$('menu').querySelectorAll('button')].find((button) => button.textContent === 'Select').click(); await settle();
   check(!$('selectbar').hidden && $('queue').querySelector('.tick')?.checked,
     'the actual Random Select action retains raw occurrence references while displaying learned titles');

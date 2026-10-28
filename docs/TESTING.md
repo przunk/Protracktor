@@ -3,6 +3,29 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W13 Browse selection — browser checks pending, 2026-10-28
+
+Candidate only; no bundle/deployment. Host pointer/keyboard/IndexedDB checks do not establish
+physical touch, checkbox geometry or browser focus behaviour.
+
+- Long-press a playable Browse/Search/History row, then tap rows/checkboxes and Select all/none.
+  Space/Enter and the keyboard context menu must work without also toggling audio. Check stable
+  row/header spacing, hidden contextual actions, disabled swipe and no playback scroll-follow.
+  First Back/Escape clears ticks; the next follows normal navigation. Nothing changes playback,
+  the current source, elapsed time or manual requests just by selecting.
+- Select rows out of order; Add to current must append in source order to its draft and wait for
+  Save. Other playlist/New playlist saves its own destination without changing the editor or
+  playback; cancel does not restore ticks. Refuse storage, retry, or leave during a delayed read:
+  no empty action, duplicate append or obsolete chooser/error over the newer visit. From the phone
+  offers only other destinations, with no protected write.
+- Share a batch and verify portable ordered references without buffers. Add held local tracks,
+  Save, switch editors and play them without resending. Reload without those bytes: unavailable
+  placeholders explain the missing data. Stored lists and links must contain no audio payload.
+- Open/close Queue with a Browse selection, live-refresh History, change its query/page, submit
+  Search and navigate folders. Only IDs belonging to the same producing visit survive; a new
+  list clears ticks. Pending general-Search field/chip edits keep its existing result selection.
+  Check keyboard, mouse/touch, PL/EN, both themes and narrow/wide layouts in a real browser.
+
 ## WEB W12b M3U8 transfer — browser checks pending, 2026-10-28
 
 No bundle/deployment yet. Host events exercise FileReader and IndexedDB, but native file-picker,

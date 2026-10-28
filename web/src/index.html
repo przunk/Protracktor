@@ -874,6 +874,15 @@
   .queue-grip:active { cursor: grabbing; }
   .queue-track .text:focus-visible, .queue-grip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .swipe-surface, .track.reorder-preview { transition: none; } }
+  .browse-selection-head { display: flex; align-items: center; justify-content: space-between; flex: none;
+    height: 48px; padding: 0 16px; gap: 8px; }
+  .browse-selection-head > span { font-size: var(--label-large); }
+  .browse-selection-head .action { padding: 3px 8px; }
+  #browselist .btrack .track-leading { width: 40px; height: 40px; min-height: 40px; justify-content: center; }
+  #browselist .btrack .track-leading:has(input)::after { display: none; }
+  #browselist .btrack.ticked > .swipe-surface { background: color-mix(in srgb, var(--primary) 10%, var(--bg)); }
+  #browselist .btext:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  #selectbar { flex-wrap: wrap; }
   .queue-source { display: flex; align-items: center; gap: 4px; max-width: 100%; color: inherit; background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer; }
   .queue-source span { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .queue-source svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
@@ -984,6 +993,10 @@
       <input type="search" id="historysearch" placeholder="Search History" aria-label="Search History" aria-controls="browselist" autocomplete="off">
     </div>
     <p class="note" id="browsenote" aria-live="polite"></p>
+    <div id="browse-selection-head" class="browse-selection-head" hidden>
+      <span id="browse-selection-count" aria-live="polite"></span>
+      <button class="action" id="browse-select-all" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 7 3 3 7-7 1.4 1.4L10 17l-4.4-4.4L7 12z"/></svg><span>Select all</span></button>
+    </div>
     <div id="saved-place-header" class="saved-folder-header" hidden></div>
     <div id="saved-place-tools" class="saved-place-tools" hidden></div>
     <!-- History a hundred at a time, and the way on outside the list's scroll (the phone's pager). -->
@@ -1072,6 +1085,7 @@
     <!-- What you can do with what you ticked -- the phone's selection bar, icon and name each. -->
     <div id="selectbar" class="selectbar" hidden>
       <span id="selectcount"></span>
+      <button class="action" id="sel-add-current" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>Add</span></button>
       <button class="action" id="sel-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>Add to playlist</button>
       <button class="action" id="sel-share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z"/></svg>Share with Protracktor</button>
       <button class="action" id="sel-delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Delete</button>

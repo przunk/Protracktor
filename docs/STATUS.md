@@ -44,13 +44,25 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W13 implemented, 2026-10-28:** bulk selection for playable Browse/Search/History rows,
+source-order capture, first-Back clearing, visit/membership ownership and stable checkbox slots.
+Batch Add/Share preserve playback and manual FIFO. Local buffers stay in drafts/tab memory;
+storage and links carry references. Failed destination writes remain retryable; obsolete reads
+and feedback cannot replace a newer visit. Focused controls own Space before global shortcuts.
+Forced gate on **6796084** passes **1247 tests / 169 suites**, zero failures/errors/skips,
+**794 s**; all companions execute, **1052 page assertions**, lint **0 errors / 79 warnings**.
+All **671** recorded inputs match. Six controlled regressions fail at the expected guards;
+two concrete pre-fix keyboard/stale-error failures are corrected. Physical browser interaction
+remains unchecked. W01-W13 have host implementation evidence; W16 is next. No WEB bundle,
+merge, push, deployment or versionName change.
+
 **W12 implemented, 2026-10-28:** native-compatible M3U8 import/export, independent draft/
 playback ownership, atomic fresh playlist creation, explicit partial results and transient local
 byte resolution. Search/list/startup hydration distinguishes runtime availability from saved
 metadata. Forced full gate on **2bf2834** passes **1244 tests / 168 suites**, zero failures/
 errors/skips, **774 s**; all companions execute, **1010 page assertions**, lint **0 errors /
 79 warnings**. All **665** recorded inputs match. File-picker/download/cross-device UI unchecked.
-W12a and W12b are implemented; W13 bulk Browse selection is next.
+W12a, W12b and W13 are implemented at host level.
 
 **Native M3U comparison finding:** at reference c8209b1, exporting a blank artist writes a leading
 artist separator and `PlaylistFile.read` retains that separator in the title. The shared host case

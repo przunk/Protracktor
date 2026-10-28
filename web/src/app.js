@@ -31,6 +31,8 @@ import { HistoryBrowser } from './history-browser.js';
 import { trimQuery } from './query-text.js';
 import { playlistReference, networkPlaylistUrl, hydratePlaylistReference } from './playlist-file.js';
 import { PlaylistTransfer } from './playlist-transfer.js';
+import { TrackSelection } from './track-selection.js';
+import { BrowseSelectionView } from './browse-selection-view.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -209,6 +211,7 @@ function browseLeading(url) {
   const leading = document.createElement('span'); leading.className = 'track-leading';
   const primary = document.createElement('span'); primary.className = 'leading-primary';
   const badge = playedBadge(); badge.dataset.playedUrl = url;
+  paintPlayedBadge(badge);
   leading.append(primary, badge);
   return leading;
 }
@@ -217,16 +220,21 @@ const displayTrack = (track) => learnedDisplay(track, learnedTitles, fileOf(trac
 const mainDisplay = (track) => editorShown ? track : displayTrack(track);
 const displaySourceLine = (track) => learnedSourceLine({ ...track, meta: whereOf(track), file: fileOf(track) });
 
+function paintPlayedBadge(badge) {
+  badge.hidden = played.revision.clearing || historyPresentation.get(badge.dataset.playedUrl)?.listened !== true;
+}
+
 function repaintHistoryPresentation() {
   const clearing = played.revision.clearing;
   for (const badge of document.querySelectorAll('[data-played-url]')) {
-    badge.hidden = clearing || historyPresentation.get(badge.dataset.playedUrl)?.listened !== true;
+    paintPlayedBadge(badge);
   }
   const note = $('np-played');
   note.hidden = clearing || !infoPresentation || historyPresentation.get(infoPresentation.url)?.listened !== true;
   if (!note.hidden) note.textContent = t('Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.');
   for (const row of [...$('queue').children, ...$('browselist').children]) row.repaintTitle?.();
   if (queueView && !$('playback-panel').hidden) queueView.render(playbackPlan());
+  browseSelectionView?.render();
 }
 /**
  * Which playlist the queue on screen belongs to.
@@ -255,8 +263,9 @@ let undoAction = null;
 let noticeId = 0;
 let queueView = null;
 let playlistReorder = null;
+let browseSelectionView = null;
 let playlistRows = [], nextPlaylistRow = 0, renderingPlaylist = false;
-const importedHeldTracks = new Map();
+const retainedPlaylistTracks = new Map();
 let savedPlaces = null;
 let savedPlacesView = null;
 let queueUnderlying = null;
@@ -491,8 +500,16 @@ function changeEditorTracks(tracks, { dirty = true } = {}) {
   setDirty(dirty);
 }
 
+function retainPlaylistTracks(tracks) {
+  for (const track of tracks) if (track.url && track.data?.byteLength > 0) retainedPlaylistTracks.set(track.url, track);
+}
+
+function freshPlaylistId() {
+  return `p${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
 function heldPlaylistTracks() {
-  return [...importedHeldTracks.values(), ...editorTracks(), ...workspace.context.order.tracks,
+  return [...retainedPlaylistTracks.values(), ...editorTracks(), ...workspace.context.order.tracks,
     ...schedule.pending.map((entry) => entry.track), ...(schedule.current ? [schedule.current.track] : [])];
 }
 
@@ -1552,7 +1569,10 @@ function followPlaying() {
   if (!playlistReorder?.active && !selected.size && visibleIndex() >= 0) revealRow($('queue').children[visibleIndex()]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
-  if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), currentTrack()?.url));
+  if (!$('browse').hidden) {
+    const row = markPlayingIn($('browselist'), currentTrack()?.url);
+    if (!browseSelection.active) revealRow(row);
+  }
 }
 
 /**
@@ -2093,6 +2113,7 @@ async function saveQueue({ explicit = false } = {}) {
     const stored = await playlists.get(snapshot.playlistId);
     if (writeVersions.get(snapshot.playlistId) !== version) return false;
     await playlists.save({ id: snapshot.playlistId, name: stored?.name ?? name, tracks, index: at });
+    if (snapshot.playlistId !== PHONE) retainPlaylistTracks(snapshot.tracks);
     if (explicit) workspace = workspace.markSaved(snapshot);
     setDirty(workspace.editor.dirty);
     return true;
@@ -2549,7 +2570,21 @@ function parkEditedSourceAt(at) {
  * that moves keeps its tick; a row that leaves the list takes its tick with it (`render`).
  */
 let selected = new Set();
+const browseSelection = new TrackSelection({ changed: () => browseSelectionView?.render() });
 let pendingAdd = null;
+let addAsked = 0, panelVisit = 0, addingRequest = null;
+
+function browseSelectionOwner() {
+  const detail = browsePath[0] === 'search' ? [searchBrowser.state.result?.query,
+    searchBrowser.state.result && searchScopeKey(searchBrowser.state.result.scope)]
+    : browsePath[0] === 'history' ? [historyBrowser.state.query, historyBrowser.state.page] : null;
+  return JSON.stringify([browsePath, detail]);
+}
+
+function syncBrowseSelection() {
+  browseSelectionView?.sync(browseSelectionOwner(), [...$('browselist').children]
+    .map((node) => node._selectionRow).filter(Boolean));
+}
 /**
  * The click that follows a long press, which must not also tick the row off again. **Kept outside
  * the row**, because the press re-draws the list and the click lands on the new one; and forgotten
@@ -2586,11 +2621,16 @@ function clearSelection() {
 }
 
 function updateSelectBar() {
-  $('selectbar').hidden = !selected.size;
-  $('selectcount').textContent = tn(selected.size, '{n} selected', '{n} selected');
+  const browsing = !$('browse').hidden;
+  const count = browsing ? browseSelection.count : selected.size;
+  $('selectbar').hidden = !count || !browsing && document.querySelector('main').hidden;
+  $('selectcount').textContent = tn(count, '{n} selected', '{n} selected');
+  const direct = $('sel-add-current');
+  direct.hidden = !browsing || workspace.editor.id === PHONE;
+  direct.querySelector('span').textContent = t('Add to {name}', { name: workspace.editor.name });
   // Delete only where rows can go: one of the user's own playlists, not the phone's, not a
   // session's list.
-  $('sel-delete').hidden = !editorShown || workspace.editor.id === PHONE;
+  $('sel-delete').hidden = browsing || !editorShown || workspace.editor.id === PHONE;
 }
 
 /**
@@ -2599,27 +2639,40 @@ function updateSelectBar() {
  * rows by default; Browse passes the tune it was asked about, and is gone back to afterwards.
  */
 let addFromBrowse = false;
+function setAddBusy(busy) {
+  $('addtolist').inert = busy; $('addto-new').disabled = busy;
+  $('addto').setAttribute('aria-busy', String(busy));
+}
 async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has(entry) && !entry.local).map(mainDisplay), { browse = false } = {}) {
   if (!tracks.length) return;
-  pendingAdd = tracks;
-  addFromBrowse = browse;
-  // Ticked rows are already in the playlist on screen unless a session is showing; a tune from
-  // Browse is in none of them.
-  const inSession = browse || !editorShown;
-  const targets = (await playlists.all())
-    .filter((p) => p.id !== PHONE && (inSession || p.id !== workspace.editor.id));
-  const list = $('addtolist');
-  list.replaceChildren();
+  const asked = ++addAsked, panel = panelVisit, owner = browse ? browseSelectionOwner() : null;
+  const snapshot = Object.freeze(tracks.map((track) => Object.freeze({ ...track })));
+  pendingAdd = snapshot; addFromBrowse = browse; addingRequest = null; setAddBusy(false);
+  let targets;
+  try {
+    const inSession = browse || !editorShown;
+    targets = (await playlists.all())
+      .filter((p) => p.id !== PHONE && (inSession || p.id !== workspace.editor.id))
+      .sort((a, b) => Number(b.id === workspace.editor.id) - Number(a.id === workspace.editor.id));
+  } catch (error) {
+    if (pendingAdd === snapshot) pendingAdd = null;
+    if (asked === addAsked && panel === panelVisit && (!browse || owner === browseSelectionOwner())) {
+      showNote(t('Could not read playlists: {reason}', { reason: error.message }));
+    }
+    return;
+  }
+  if (asked !== addAsked || panel !== panelVisit || browse && owner !== browseSelectionOwner()) {
+    if (pendingAdd === snapshot) pendingAdd = null;
+    return;
+  }
+  const list = $('addtolist'); list.replaceChildren();
   for (const target of targets) {
     const li = document.createElement('li');
-    const count = document.createElement('div');
-    count.className = 'pcount';
-    count.textContent = String(target.tracks?.length ?? 0);
-    const name = document.createElement('div');
-    name.className = 'pname';
-    name.textContent = target.name;
-    li.append(count, name);
+    const count = document.createElement('div'); count.className = 'pcount'; count.textContent = String(target.tracks?.length ?? 0);
+    const name = document.createElement('div'); name.className = 'pname'; name.textContent = target.name;
+    li.append(count, name); li.tabIndex = 0; li.setAttribute('role', 'button');
     li.onclick = () => addTracksTo(target.id);
+    li.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); } };
     list.append(li);
   }
   $('addtonote').textContent = tn(tracks.length, '{n} track to add.', '{n} tracks to add.')
@@ -2633,23 +2686,41 @@ async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has
  * writes it; the one a session was started from is an edit of it and waits for Save like any other.
  */
 async function addTracksTo(id, newName = null) {
-  const tracks = pendingAdd ?? [];
-  pendingAdd = null;
-  if (id && id === workspace.editor.id) {
-    addToShowing(tracks);
-  } else {
-    const target = id ? await playlists.get(id) : { id: `p${Date.now().toString(36)}`, name: newName, tracks: [], index: 0 };
-    const have = new Set((target.tracks ?? []).map((t) => t.url));
-    const adding = tracks.filter((t) => !have.has(t.url)).map(plain);
-    await playlists.save({ ...target, tracks: [...(target.tracks ?? []), ...adding] });
-    status(t('Added {n} to {name}', { n: adding.length, name: target.name }) + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
+  const tracks = pendingAdd, asked = addAsked, fromBrowse = addFromBrowse;
+  if (!tracks?.length || addingRequest === tracks) return;
+  addingRequest = tracks; setAddBusy(true);
+  const note = $('addtonote').textContent; $('addtonote').textContent = t('Adding…');
+  try {
+    if (id && id === workspace.editor.id) addToShowing(tracks);
+    else {
+      const targetId = id ?? freshPlaylistId();
+      await writePlaylist(targetId, async () => {
+        const target = id ? await playlists.get(id) : { id: targetId, name: newName, tracks: [], index: 0 };
+        if (!target || deletedPlaylists.has(targetId)) throw new Error(t('That playlist no longer exists.'));
+        const have = new Set((target.tracks ?? []).map((track) => track.url));
+        const adding = tracks.filter((track) => {
+          if (have.has(track.url)) return false; have.add(track.url); return true;
+        }).map(plain);
+        const next = { ...target, tracks: [...(target.tracks ?? []), ...adding] };
+        if (id) await playlists.save(next); else await playlists.create(next);
+        retainPlaylistTracks(tracks);
+        status(t('Added {n} to {name}', { n: adding.length, name: target.name })
+          + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
+      });
+    }
+    if (asked === addAsked && pendingAdd === tracks) { closeAddTo(); if (!fromBrowse) clearSelection(); }
+  } catch (error) {
+    if (asked === addAsked) showNote(t('Could not add tracks: {reason}', { reason: error.message }));
+  } finally {
+    if (asked === addAsked && addingRequest === tracks) {
+      addingRequest = null; setAddBusy(false); $('addtonote').textContent = note;
+    }
   }
-  closeAddTo();
-  clearSelection();
 }
 
 /** Out of the picker, and back to Browse if that is where it was opened from. */
 function closeAddTo() {
+  ++addAsked; addingRequest = null; setAddBusy(false);
   const back = addFromBrowse;
   addFromBrowse = false;
   pendingAdd = null;
@@ -2666,11 +2737,11 @@ const plain = playlistReference;
 function addToShowing(tracks) {
   const target = editorTracks();
   const have = new Set(target.map((track) => track.url));
-  const adding = tracks.filter((track) => {
+  const adding = hydratePlaylistTracks(tracks.filter((track) => {
     if (have.has(track.url)) return false;
     have.add(track.url);
     return true;
-  }).map(plain);
+  }));
   if (adding.length) { changeEditorTracks([...target, ...adding]); render(); }
   status(t('Added {n} to {name}', { n: adding.length, name: workspace.editor.name })
     + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
@@ -3153,8 +3224,13 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which, { preserveBrowse = false } = {}) {
+  ++panelVisit;
+  if (which !== 'addto' && !$('addto').hidden) {
+    ++addAsked; addingRequest = null; pendingAdd = null; addFromBrowse = false; setAddBusy(false);
+  }
   playlistReorder?.cancel();
   if (which !== 'browse') {
+    if (!preserveBrowse) browseSelection.clear();
     searchSuggestions?.close(true);
     if (!preserveBrowse) { historyBrowser.leave(); searchBrowser.leave(); retireSearchAvailability(); $('historysearch').blur(); }
   }
@@ -3179,6 +3255,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   // Back to the list: a download made meanwhile may have changed what the empty list offers.
   if (!which) renderEmpty();
   if (randomFiltersView) requestRandomFilterRefresh();
+  updateSelectBar();
 }
 
 function openPlaybackQueue() {
@@ -3193,6 +3270,7 @@ function openPlaybackQueue() {
   queueView.render(playbackPlan());
   renderQueueSourceAction();
   requestRandomFilterRefresh();
+  updateSelectBar();
   queueView.revealCurrent();
   ($('playback-list').querySelector('[aria-current="true"] .text') ?? $('queue-title')).focus({ preventScroll: true });
 }
@@ -3207,6 +3285,7 @@ function closePlaybackQueue({ focus = false } = {}) {
   $('tab-browse').setAttribute('aria-pressed', String(queueUnderlying === 'browse'));
   $('showqueue').setAttribute('aria-pressed', 'false');
   queueUnderlying = null;
+  updateSelectBar();
   if (focus) $('showqueue').focus();
   if (focus && !$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability();
   requestRandomFilterRefresh();
@@ -3390,7 +3469,7 @@ const playlistTransfer = new PlaylistTransfer({
   remote: (id) => typeof id === 'string' && id.startsWith('asma://')
     ? archive.fileUrlFor(id.slice('asma://'.length), 'asma') : networkPlaylistUrl(id),
   presentRemote: (track) => ({ ...track, meta: sourceOf(track.url) || track.meta }),
-  newId: () => `p${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`,
+  newId: freshPlaylistId,
   save: (playlist) => playlists.create(playlist),
 });
 
@@ -3422,7 +3501,7 @@ $('playlist-file').onchange = async () => {
     const result = await playlistTransfer.import(await readPlaylistInput(file), file.name);
     if (result.kind === 'unreadable') { showNote(t('Could not read the playlist file.')); return; }
     if (result.kind === 'no-tracks') { showNote(t('The file contains no tracks.')); return; }
-    for (const track of result.tracks) if (track.data) importedHeldTracks.set(track.url, track);
+    retainPlaylistTracks(result.tracks);
     let refreshFailure = null;
     try { if (!$('playlists').hidden) await renderPlaylists(); }
     catch (error) { refreshFailure = error; }
@@ -3644,6 +3723,9 @@ function openSavedPlaces() {
 async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
+  const selectionOwner = browseSelectionOwner();
+  if (browseSelection.owner !== selectionOwner) browseSelectionView?.sync(selectionOwner, []);
+  try {
   if (browsePath[0] !== 'history') historyBrowser.leave();
   if (browsePath[0] !== 'search') { searchBrowser.leave(); retireSearchAvailability(); }
   const key = saveablePlace(browsePath, archive.sources());
@@ -3848,6 +3930,7 @@ async function renderBrowse(resolved = null) {
     trackRow(list, track, `${Math.round(track.size / 1024).toLocaleString()} KB`, () => playFromBrowse(tracks, i, 'browse', route), { folder: false });
   });
   markPlayingIn(list);
+  } finally { if (visit === searchAsked) syncBrowseSelection(); }
 }
 
 /**
@@ -3861,8 +3944,9 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   const li = document.createElement('li');
   li.className = 'btrack';
   li.dataset.url = track.url;
+  const owner = browseSelectionOwner();
   const text = document.createElement('div');
-  text.className = 'btext';
+  text.className = 'btext'; text.tabIndex = 0; text.setAttribute('role', 'button');
   const name = document.createElement('div');
   name.className = 'bname';
   name.textContent = track.name;
@@ -3897,7 +3981,7 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   more.setAttribute('aria-label', t('More for {name}', { name: track.name }));
   more.onclick = (event) => {
     event.stopPropagation();
-    openBrowseMenu(track, more, folder, shown);
+    openBrowseMenu(track, more, folder, shown, owner);
   };
   li.repaintTitle = () => {
     const display = shown();
@@ -3909,17 +3993,36 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   };
   li.repaintTitle();
   li.append(browseLeading(track.url), text, add, more);
-  li.onclick = onplay;
+  li.onclick = () => {
+    if (!browseSelection.accepts(owner, track.url)) return;
+    if (browseSelection.active) browseSelection.toggle(owner, track.url);
+    else onplay();
+  };
+  text.onkeydown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); }
+    if (event.key === 'ContextMenu' || event.key === 'F10' && event.shiftKey) {
+      event.preventDefault(); event.stopPropagation();
+      if (!browseSelection.active) openBrowseMenu(track, more, folder, shown, owner);
+    }
+  };
+  li.oncontextmenu = (event) => {
+    event.preventDefault(); if (!browseSelection.active) openBrowseMenu(track, more, folder, shown, owner);
+  };
   list.append(li);
   requestHistoryPresentation();
-  bindTrackGestures(li, { onAdd: () => enqueueTrack(shown(), historyOrigin),
+  const dispose = bindTrackGestures(li, { onAdd: () => enqueueTrack(shown(), historyOrigin),
+    onLongPress: () => browseSelection.start(owner, track.url),
+    canSwipe: () => !browseSelection.active,
+    canLongPress: () => browseSelection.accepts(owner, track.url),
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue') });
+  li._selectionRow = { owner, track, node: li, add, more, shown, text, dispose };
 }
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
-function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track)) {
+function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track), owner = browseSelectionOwner()) {
   const historyOrigin = browsePath[0] === 'history';
   const items = [
+    [t('Select'), () => browseSelection.start(owner, track.url), browseSelection.accepts(owner, track.url), ICON.check],
     [t('Add to another playlist'), () => openAddTo([plain(shown())], { browse: true }), true, ICON.playlistAdd],
     [t('Add to queue'), () => enqueueTrack(shown(), historyOrigin), true, ICON.playlistAdd],
     [t('Information'), () => informAbout(shown()), true, ICON.info],
@@ -3928,7 +4031,7 @@ function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track)
   if (folder && authorFolderOf(track)) {
     items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
-  items.push(shareEntry(shown, anchor, () => openBrowseMenu(track, anchor, folder, shown)));
+  items.push(shareEntry(shown, anchor, () => openBrowseMenu(track, anchor, folder, shown, owner)));
   showMenu(items, anchor);
 }
 
@@ -4289,6 +4392,7 @@ $('tab-browse').onclick = async () => {
   await renderBrowse();
 };
 $('browseback').onclick = async () => {
+  if (browseSelection.active) { browseSelection.clear(); return; }
   if (browsePath[0] === 'history') {
     sourceBrowseRoute = null; browsePath = [];
     await renderBrowse(); return;
@@ -4363,7 +4467,8 @@ $('saveas').onclick = async () => {
   if (!(await settleUnsaved())) return;
   const name = prompt(t('Call it what?'), t('My playlist'));
   if (!name) return;
-  const tracks = visibleTracks().map(plain);
+  const runtimeTracks = visibleTracks();
+  const tracks = runtimeTracks.map(plain);
   const at = Math.max(visibleIndex(), 0);
   const asked = ++editorAsked;
   const id = `p${Date.now().toString(36)}`;
@@ -4372,6 +4477,7 @@ $('saveas').onclick = async () => {
     showNote(t('could not save the playlist: {reason}', { reason: error.message }));
     return;
   }
+  retainPlaylistTracks(runtimeTracks);
   if (asked !== editorAsked) return;
   await switchTo(id);
   renderPlaylists();
@@ -4517,10 +4623,16 @@ $('random-filter').onclick = () => {
 };
 $('snackundo').onclick = () => undoAction?.();
 $('tab-save').onclick = () => saveEdits();
-$('sel-add').onclick = () => openAddTo();
+$('sel-add').onclick = () => !$('browse').hidden
+  ? openAddTo(browseSelection.take(), { browse: true }) : openAddTo();
+$('sel-add-current').onclick = () => {
+  if ($('browse').hidden || workspace.editor.id === PHONE) return;
+  addToShowing(browseSelection.take());
+};
 $('sel-share').onclick = () => {
-  const tracks = visibleTracks().filter((entry) => selected.has(entry));
-  clearSelection();
+  const browsing = !$('browse').hidden;
+  const tracks = browsing ? browseSelection.take() : visibleTracks().filter((entry) => selected.has(entry));
+  if (!browsing) clearSelection();
   sendToWeb(tracks.map(plain));
 };
 $('sel-delete').onclick = () => {
@@ -4528,13 +4640,18 @@ $('sel-delete').onclick = () => {
   selected = new Set();
   removeRows(ats);
 };
-$('sel-cancel').onclick = () => clearSelection();
+$('sel-cancel').onclick = () => !$('browse').hidden ? browseSelection.clear() : clearSelection();
 $('addto-new').onclick = async () => {
   const name = prompt(t('Call it what?'), t('New playlist'))?.trim();
   if (name) addTracksTo(null, name);
 };
 // Escape leaves the ticking first, the way Back does on the phone -- before it closes anything else.
 addEventListener('keydown', (event) => { if (event.key === 'Escape' && selected.size) clearSelection(); });
+addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !$('browse').hidden && browseSelection.active) {
+    event.preventDefault(); event.stopImmediatePropagation(); browseSelection.clear();
+  }
+}, true);
 $('tab-discard').onclick = () => discardEdits();
 $('unsaved-save').onclick = async () => { if (await saveEdits()) answerUnsaved(true); };
 $('unsaved-discard').onclick = async () => { if (await discardUnsaved()) answerUnsaved(true); };
@@ -5267,7 +5384,8 @@ function applyReceive(message) {
  */
 addEventListener('keydown', (event) => {
   const target = event.target;
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return;
+  if (event.defaultPrevented || target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement ||
+      target?.closest?.('button,a,select,[role="button"],[contenteditable="true"]')) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   const act = {
     ' ': () => $('playpause').click(),
@@ -5307,6 +5425,9 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 // **Not when the page was opened by a link.** A link is the queue already arriving, and the code
 // would sit in the middle of the screen while it did -- the hash is read after an await, so the
 // first thing anybody opening a tune sent to them would see is a QR code meant for somebody else.
+browseSelectionView = new BrowseSelectionView({ model: browseSelection,
+  header: $('browse-selection-head'), count: $('browse-selection-count'), all: $('browse-select-all'),
+  leading: browseLeading, changed: updateSelectBar });
 playlistReorder = new RowReorder({ list: document.querySelector('main'), rows: () => playlistRows,
   generation: playlistReorderOwner, move: movePlaylistRow, clampEdges: false,
   onStop: ({ id, generation, focus }) => {
