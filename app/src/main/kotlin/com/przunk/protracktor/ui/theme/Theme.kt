@@ -25,11 +25,7 @@ fun ProtracktorTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val dark = when (theme) {
-        AppTheme.SYSTEM -> isSystemInDarkTheme()
-        AppTheme.LIGHT -> false
-        AppTheme.DARK -> true
-    }
+    val dark = theme.isDark(isSystemInDarkTheme())
     // Dynamic colour is API 31+; minSdk is 29, so the fallback is not optional.
     val colors = if (dynamicColour && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

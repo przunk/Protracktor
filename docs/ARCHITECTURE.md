@@ -1363,6 +1363,11 @@ Its custom Light fallback uses cool neutral surfaces, dark ink and muted blue/te
 Android 12+ wallpaper colours still take precedence when System colour palette is enabled;
 the Dark fallback remains unchanged. This is a candidate palette pending visual acceptance.
 
+**System-bar icons use the same effective theme (2026-10-28 follow-up).** `AppTheme.isDark`
+resolves the app override for both Compose and `enableAppEdgeToEdge`. The latter retains AndroidX
+edge-to-edge setup and adjusts status/navigation icon appearances before the first content frame.
+Following system mode independently made the clock unreadable with app Light and system Dark.
+
 **One scrolling screen with sections, not a tree.** With this little in it a tree is ceremony, and
 every extra tap stands between somebody and the thing they came to change.
 

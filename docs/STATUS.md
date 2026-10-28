@@ -84,6 +84,16 @@ See [retained findings and limits](REDMI_NOTE_8_PRO_INVESTIGATION.md#current-dis
 
 ## C123 Light-theme colours are incorrect on Redmi Note 8 Pro
 
+**Clock follow-up, 2026-10-28:** app testing after the first appearance candidate reports an
+unreadable clock in Light. `MainActivity.enableEdgeToEdge()` selected system-bar icons from the
+phone configuration while Compose respected the app override. The real-activity regression
+test reproduces Light + system Dark with the wrong light-icon flag before the fix. The same
+unmerged branch now shares `AppTheme.isDark` between Compose and system bars, setting both
+status/navigation icon appearances from the app's effective mode. The AndroidX edge-to-edge
+background/contrast setup is retained. Focused API 29/30 cases pass; full gate and a replacement
+release APK are being prepared. Android 16 and actual clock rendering remain device checks.
+Integration after building this APK is explicitly authorized; MIUI acceptance is still pending.
+
 **Open — real user report received 2026-10-27; configuration clarified 2026-10-28.**
 User B from C122 reports incorrect colours in light mode on the fresh installation, Android 10
 (SDK 29), Redmi Note 8 Pro. System Dark mode with app Light and Polish labels is confirmed;

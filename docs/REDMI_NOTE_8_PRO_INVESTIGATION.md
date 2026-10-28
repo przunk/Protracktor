@@ -245,3 +245,26 @@ source identity or version recorded in this APK.
    Crowded one-line captions may ellipsize; touch targets and full accessibility labels remain.
 4. Pixel: choose Light and disable **System colour palette** to inspect the new fallback.
    Re-enable the switch to compare wallpaper colours, and check Dark separately.
+
+### System-bar clock follow-up — 2026-10-28
+
+App testing after the first candidate reports an unreadable clock with Light selected. The
+initial colour and layout changes did not align system-bar icons with the app override.
+`MainActivity` called the default `enableEdgeToEdge()`, whose appearance followed system night
+mode, while `ProtracktorTheme` separately respected Light/Dark/System. Thus system Dark with
+app Light could leave light clock/status icons over light content. This mechanism is distinct
+from the still-unconfirmed MIUI recolouring hypothesis.
+
+The real `MainActivity` entry test reproduces the mismatch on API 29 before the fix: the Light
+appearance flag is false although app Light requires true. A synthetic newer database fixture
+blocks player initialization while retaining the real window/theme setup; no decoder or fake
+activity entry path substitutes for production. The fix shares a pure `AppTheme.isDark` decision
+between Compose and the window. After AndroidX edge-to-edge setup, set both status and navigation
+icon appearances from this effective mode, retaining AndroidX's backgrounds/contrast behaviour.
+
+Four mode combinations are checked on API 29/30: Light with system Dark, Dark with system Light,
+and System in daytime/night. These check actual window appearance flags, not rendered OS clock
+pixels. An initial API 36 attempt did not execute because Robolectric requires Java 21 there;
+the existing Java 17 toolchain is retained. Android 16 behaviour remains unchecked on a phone.
+Full verification and replacement APK metadata follow when complete. Integration after the
+build is authorized; merge does not close the outstanding device checks.
