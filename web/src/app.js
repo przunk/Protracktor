@@ -36,6 +36,7 @@ import { BrowseSelectionView } from './browse-selection-view.js';
 import { BrowseScroll } from './browse-scroll.js';
 import { BrowseScrollView } from './browse-scroll-view.js';
 import { SubsongStripView } from './subsong-strip-view.js';
+import { PlaybackPreferences } from './playback-preferences.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -92,8 +93,12 @@ let index = -1;
  * With shuffle off, back means the row above, every time: the list is on screen and a button that
  * disagrees with it looks broken however defensible its bookkeeping.
  */
-let shuffle = false;
-let repeat = 'off';               // off -> all -> one
+const playbackPreferences = new PlaybackPreferences(() => localStorage);
+const restoredPlaybackPreferences = playbackPreferences.read();
+let shuffle = restoredPlaybackPreferences.value.shuffle;
+let repeat = restoredPlaybackPreferences.value.repeat; // off -> all -> one
+const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
+const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
 let history = [];                 // what was really played, for `previous` under shuffle
 let order = [];                   // the permutation `next` walks when shuffle is on
 let duration = 0;
@@ -247,9 +252,10 @@ function repaintHistoryPresentation() {
  * every handoff and never deleted — the same bargain the phone's own default playlist has, from the
  * other end. Everything else here was made in this browser and is the browser's to keep.
  */
+const initialOrder = new PlayOrder({ shuffle, repeat });
 let workspace = new PlaybackWorkspace({ editor: {
-  id: PHONE, name: t('From the phone'), order: new PlayOrder(), dirty: false, revision: 0,
-} });
+  id: PHONE, name: t('From the phone'), order: initialOrder, dirty: false, revision: 0,
+}, context: new PlaybackContext({ order: initialOrder }) });
 let editorShown = true;
 let sourcePlaylistId = PHONE;
 let sourcePlaylistName = t('From the phone');
@@ -590,10 +596,7 @@ let currentSubsong = 0;
  * file and the rest of this one is reachable only by tapping a chip; with it on, `next` walks the
  * file first and moves on when it runs out. Kept per browser, like the volume.
  */
-let playAllSubsongs = false;
-try {
-  playAllSubsongs = localStorage.getItem('protracktor.allsubsongs') === '1';
-} catch { /* a private window. Off is the safer default: it is what the transport looks like. */ }
+let playAllSubsongs = restoredPlaybackPreferences.value.playAllSubsongs;
 
 /**
  * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
@@ -1328,7 +1331,7 @@ function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { p
   // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
   // The switch that decides what `next` means, shown only where it decides anything.
   $('subsongbar').hidden = subsongs <= 1 || current < 0;
-  $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
+  renderPlaybackModes();
 
   subsongStripView?.render({ key: entry?.url, count: subsongs, current });
 }
@@ -1646,8 +1649,7 @@ function setPlaying(on) {
   // Shut while the dice runs: shuffle reorders the playlist, and Random plays from neither.
   $('shuffle').disabled = (!queue.length && !currentTrack()) || !!random;
   $('repeat').disabled = !queue.length && !currentTrack();
-  $('shuffle').classList.toggle('on', shuffle);
-  $('repeat').classList.toggle('on', repeat !== 'off');
+  renderPlaybackModes();
   // The panel's actions are about the track it is describing, so they go dead with it.
   const entry = currentTrack();
   $('np-show').disabled = !entry;
@@ -3199,7 +3201,7 @@ function beforeCurrent() {
  *
  * @param at which track to select, if the sender knows. Selected, not played.
  */
-function setQueue(urls, at = 0) {
+function setQueue(urls, at = 0, { persist = true } = {}) {
   ++editorAsked;
   ++scheduleIntent;
   drawing = false;
@@ -3222,10 +3224,10 @@ function setQueue(urls, at = 0) {
   adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   setDirty(wasDirty);
   showSessionView(null);
-  rememberEditorSelection(workspace.editor.id).catch((error) => showNote(t('could not save the playlist: {reason}', { reason: error.message })));
+  if (persist) rememberEditorSelection(workspace.editor.id).catch((error) => showNote(t('could not save the playlist: {reason}', { reason: error.message })));
   render();
   setPlaying(false);
-  remember();
+  if (persist) remember();
   const entry = currentTrack();
   $('title').textContent = entry?.name ?? t('Nothing playing');
   $('sub').textContent = entry ? t('press play') : '—';
@@ -4805,22 +4807,40 @@ $('fallback').oninput = () => {
 };
 showFallback();
 
-$('allsubsongs').onclick = () => {
-  playAllSubsongs = !playAllSubsongs;
+function renderPlaybackModes() {
   $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
-  try { localStorage.setItem('protracktor.allsubsongs', playAllSubsongs ? '1' : '0'); } catch { /* private window */ }
+  $('settings-allsubsongs').checked = playAllSubsongs;
+  $('shuffle').classList.toggle('on', shuffle);
+  $('shuffle').setAttribute('aria-pressed', String(shuffle));
+  $('shuffle').title = shuffle ? t('Shuffle on') : t('Shuffle off');
+  $('repeat').classList.toggle('on', repeat !== 'off');
+  $('repeat').setAttribute('aria-pressed', String(repeat !== 'off'));
+  $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
+  $('repeat').title = repeat === 'one' ? t('Repeat one') : repeat === 'all' ? t('Repeat all') : t('Repeat off');
+}
+
+function savePlaybackPreference(name, value) {
+  const failure = playbackPreferences.write(name, value);
+  if (failure) showNote(t('Could not save playback settings: {reason}', { reason: failure.message }));
+}
+
+function setPlayAllSubsongs(on) {
+  if (on === playAllSubsongs) return;
+  playAllSubsongs = on;
+  savePlaybackPreference('playAllSubsongs', on);
   setPlaying(playing);
   status(playAllSubsongs ? t('Next walks this file first') : t('Next moves to the next file'));
-};
-
-const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
-const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
+}
+$('allsubsongs').onclick = () => setPlayAllSubsongs(!playAllSubsongs);
+$('settings-allsubsongs').onchange = () => setPlayAllSubsongs($('settings-allsubsongs').checked);
+renderPlaybackModes();
 
 $('shuffle').onclick = () => {
   const context = workspace.context.withOrder(workspace.context.order.withShuffle(!shuffle));
   workspace = workspace.copy({ editor: { ...workspace.editor,
     order: workspace.editor.order.withShuffle(context.order.shuffle) } });
   adoptPlan(new PlaybackPlan(context, schedule));
+  savePlaybackPreference('shuffle', shuffle);
   setPlaying(playing);
   status(shuffle ? t('Shuffle on') : t('Shuffle off'));
 };
@@ -4829,10 +4849,7 @@ $('repeat').onclick = () => {
   const mode = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
   workspace = workspace.copy({ editor: { ...workspace.editor, order: workspace.editor.order.withRepeat(mode) } });
   adoptPlan(new PlaybackPlan(workspace.context.withOrder(workspace.context.order.withRepeat(mode)), schedule));
-  // **The shape carries the mode, not just the tint**, so it survives being read without colour --
-  // the same rule the dock follows on the phone (AGENTS.md §8).
-  $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
-  $('repeat').title = repeat === 'one' ? t('Repeat one') : repeat === 'all' ? t('Repeat all') : t('Repeat off');
+  savePlaybackPreference('repeat', repeat);
   setPlaying(playing);
   status($('repeat').title);
 };
@@ -5179,7 +5196,6 @@ let lastSentLink = null;
  */
 let aacSupport = null;   // null: not yet known; then true or false
 (async () => {
-  const asked = editorAsked;
   try {
     const answer = typeof AudioEncoder === 'undefined' ? null
       : await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128000 });
@@ -5577,6 +5593,7 @@ document.fonts?.ready.then(holdBarLabels);
 if (!location.hash.slice(1)) showPanel('pair');
 
 status(t('ready — press Play or load some URLs'));
+if (restoredPlaybackPreferences.failure) showNote(t('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
 pair();
 
 /**
@@ -5592,6 +5609,7 @@ pair();
 formatsReady().catch(() => {});
 
 (async () => {
+  const asked = editorAsked;
   try {
     await makePersistent();
     const id = await settings.get('active', PHONE);
@@ -5605,7 +5623,7 @@ formatsReady().catch(() => {});
       const tracks = hydratePlaylistTracks(playlist.tracks ?? []);
       workspace = workspace.selectPlaylist({ id, name: playlist.name, tracks });
       $('playlistname').textContent = playlist.name;
-      setQueue(tracks, playlist.index ?? 0);
+      setQueue(tracks, playlist.index ?? 0, { persist: false });
       showPanel(null);
       status(playlist.tracks?.length
         ? t('{name} — where you left it', { name: playlist.name })
@@ -5614,7 +5632,7 @@ formatsReady().catch(() => {});
   } catch (e) {
     // A private window, storage turned off, a second tab holding an old version. The page works
     // without any of this and saying so is better than a dialog nobody can act on.
-    status(t('this browser is not keeping playlists: {reason}', { reason: e.message }));
+    if (asked === editorAsked) status(t('this browser is not keeping playlists: {reason}', { reason: e.message }));
   }
   fromFragment();
 })();

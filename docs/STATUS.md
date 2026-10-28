@@ -44,6 +44,31 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W18 complete at host level, 2026-10-28:** retained shuffle/repeat and the shared Settings/player
+subsong choice restore without autoplay. Saved selection restores without writes; old results
+and failures cannot replace a newer view. Forced gate on **709fb71** passes **1252 tests / 170
+suites**, zero failures/errors/skips, **917 s**, all companions, **1135 page assertions** and ten
+fresh-page scenarios (194 bootstrap assertions). Lint **0 errors / 79 warnings**; all **688** input
+hashes match. Six controlled faults are detected and restored. Native production is unchanged.
+W01-W13 and W16-W18 are implemented; W24 is next. Physical browser acceptance remains unchecked.
+No WEB merge, package, push or deployment.
+
+
+**W18 implementation checkpoint, 2026-10-28:** shuffle/repeat restore before workspace creation;
+Settings and Now Playing share all-subsongs state. Saved playlist selection restores paused without
+writes; the startup ReferenceError and stale failure feedback are corrected. Ten preference cases,
+ten fresh-page scenarios (194 assertions) and 16 actual control assertions pass. Six controlled
+faults fail and restored sources pass. Native production is unchanged. Full gate/lint are pending;
+physical browser acceptance is unchecked. No merge or deployment.
+
+
+**W18 in progress, 2026-10-28:** fresh-page reproduction confirms saved-playlist restoration
+fails because its generation variable is undeclared; the catch presents it as a browser storage
+failure. Two actual startup assertions fail before the fix. This is being repaired with playback
+preference restoration; initialization must select paused without rewriting the playlist.
+No full W18 verification or browser acceptance is claimed yet.
+
+
 **W17 complete at host level, 2026-10-28:** W17b's keyed horizontal subsong strip keeps distant
 browsing stable, follows the watched current region and resets on fresh opening/file/count.
 Read-only Information, retired controls and late replies are covered. Forced full gate on

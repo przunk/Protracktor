@@ -186,6 +186,8 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { PlaybackPreferences } from './playback-preferences.js';",
+    () => `const { PlaybackPreferences } = (() => { ${fs.readFileSync('web/src/playback-preferences.js', 'utf8').replace(/^export /gm, '')}; return { PlaybackPreferences }; })();`)
   .replace("import { SubsongStripView } from './subsong-strip-view.js';",
     () => `const { SubsongStripView } = (() => { ${fs.readFileSync('web/src/subsong-strip.js', 'utf8').replace(/^export /gm, '')}; ${fs.readFileSync('web/src/subsong-strip-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SubsongStripView }; })();`)
   .replace("import { BrowseScroll } from './browse-scroll.js';",
@@ -272,6 +274,9 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
+const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
+if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
+
 console.log('page:');
 try {
   window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
@@ -322,6 +327,11 @@ check($('status').textContent.length > 0, 'the status line says something');
     'a sheet taller than the screen scrolls inside itself, since the page does not move');
 }
 check(!!window.__api, 'the script finished loading');
+
+if (startupCase) {
+  await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
+  window.close(); process.exit(failures.length ? 1 : 0);
+}
 
 if (window.__api) {
   // A queue arriving from the phone, in the shape WebRemote sends.
@@ -3752,6 +3762,8 @@ await (await import('./check-page-dock.mjs')).default({ window, check });
 await (await import('./check-page-browse-scroll.mjs')).default({ window, check });
 
 await (await import('./check-page-subsong-strip.mjs')).default({ window, check });
+
+await (await import('./check-page-playback-preferences.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

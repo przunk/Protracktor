@@ -7,6 +7,10 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Play every tune in a file": "Graj wszystkie utwory w pliku",
+  "Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.": "Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.",
+  "Could not save playback settings: {reason}": "Nie udało się zapisać ustawień odtwarzania: {reason}",
+  "Could not restore playback settings: {reason}": "Nie udało się przywrócić ustawień odtwarzania: {reason}",
   "Adding…": "Dodawanie…",
   "Could not add tracks: {reason}": "Nie udało się dodać utworów: {reason}",
   "Could not read playlists: {reason}": "Nie udało się odczytać playlist: {reason}",

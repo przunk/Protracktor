@@ -1,5 +1,21 @@
 # Architecture
 
+## WEB playback preferences — branch candidate, 2026-10-28
+
+`PlaybackPreferences` reads shuffle, repeat and the existing play-all key synchronously before
+constructing either workspace order. Unknown values fall back without writes; partial storage
+refusal preserves other readable keys and returns its failure. Each explicit action persists only
+its own key. A refused write leaves the in-memory choice intact and is shown in the snackbar.
+The actual context owns transport modes independently of the visible playlist; these are not edits.
+
+The Settings checkbox and Now Playing switch share `setPlayAllSubsongs`; `renderPlaybackModes`
+updates both and the transport mode marks, accessible repeat name and One glyph. Restoring state
+never invokes a click or decoder. The startup restore captures its own editor generation and uses
+`setQueue` without persistence, avoiding initialization writes. A later editor selection wins over
+late saved reads; existing explicit URL handoff follows restore and keeps its established policy.
+No schema change, autoplay, phone-byte retention change or Android production modification.
+
+
 ## WEB subsong following — branch candidate, 2026-10-28
 
 `SubsongStripView` keeps keyed numeric chips across current-only updates. Opening a file/count or

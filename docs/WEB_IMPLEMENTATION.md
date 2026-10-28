@@ -1275,3 +1275,87 @@ W17a and W17b are implemented at host level. This completion changes documentati
 native production, engine, schema and versionName are unchanged. Real-browser layout, scrolling,
 touch and assistive technology remain unchecked. Continue W18 restoration and W24 live language
 before the remaining storage, downloads and DSP scopes. No WEB merge, package, push or deployment.
+
+## W18 — Playback settings restoration analysis, 2026-10-28
+
+Reference **c8209b1**: `PlaylistSessionState`, `PlaylistSession`, `LibraryStore` player-state reads,
+`PlayQueue`, SettingsScreen and the corresponding restore/save tests in `PlaylistSessionTest`.
+W17 is verified and committed before this scope. Defaults are shuffle Off, repeat Off and play-all
+subsongs Off. The restored selected track is paused, not a request for a decoder or audio output.
+Settings writes sample the actual transport; an independently visible editor is not playback.
+
+Parity checklist:
+- Read browser playback preferences synchronously before constructing editor and context orders.
+  Preserve the existing play-all key; add shuffle/repeat keys without a schema migration. Missing
+  or malformed values use safe defaults, including unknown repeat -> Off. Startup does not write
+  defaults. A refused write keeps the in-memory choice and gives visible feedback.
+- Render restored shuffle state and repeat Off/All/One glyph/accessibility from actual state, not
+  a simulated button click. Mode changes are not playlist content edits and preserve manual FIFO,
+  current track, runtime bytes and playback. Save only the changed preference.
+- Add the native global play-all choice and supporting explanation to Settings. The checkbox and
+  existing Now Playing switch share one setter, one preference and one state presentation.
+  Both stay synchronized; Settings remains available for a single-tune file or before playback.
+- Restore the saved playlist/current selection without autoplay or initialization writes. A later
+  user playlist choice wins over delayed initialization; a full-list URL handoff wins over stored
+  selection while remaining paused. Keep existing phone-byte and unavailable-reference policies.
+- Exercise actual startup with preloaded production storage, each mode/default/invalid state,
+  stored position, slow reads and explicit handoff. Drive real controls and verify persistence,
+  error feedback, dirty state and queue/decoder continuity. Compare native restore/save cases,
+  prove guards fail, restore and run full gate/lint. Physical browser acceptance is unchecked.
+
+Pre-fix reproduction: a fresh page with a saved two-track playlist fails to select either that
+playlist or its saved second track. The startup restore references `asked` without declaring it;
+the unrelated AAC capability IIFE holds the only nearby capture. The outer catch mislabels this
+ReferenceError as refused browser playlist storage. Both actual startup guards fail before any
+repair. Startup `setQueue` also schedules playlist writes, contrary to the native no-write restore
+contract. Capture restoration ownership locally and allow this publication path to suppress its
+initialization writes. Evidence is retained under ignored `user/web-parity-verification/w18/`.
+
+Implementation, post-fix checks and full gate are pending.
+
+### W18 implementation checkpoint
+
+Synchronous reads initialize both editor and context orders. Three independent browser keys retain
+shuffle/repeat and the existing play-all choice; startup writes no defaults. Invalid values and
+refused/partial reads are nonfatal. Explicit actions persist only their changed key; write refusal
+is visible and does not revert the in-memory mode. Both subsong controls share one setter/render
+path. Repeat names, glyph and pressed state come from actual state, including restored One.
+
+The startup restore now owns its generation, publishes a saved selection paused without writes,
+and refuses both stale data and stale failure feedback. The saved-playlist ReferenceError and
+late-error feedback have actual failing pre-fix tests. Ten fresh-page scenarios cover defaults,
+empty selection, malformed values, One/All, legacy subsongs, denied preference reads, an actually
+captured old read followed by a newer choice, its late failure and explicit full-list handoff.
+Blocking before reading the active ID would not exercise stale publication; the comparison uses
+the held old playlist result. The empty-selection case independently protects initial context modes.
+
+Focused checks pass: **10 preference cases**, **10 fresh-page scenarios / 194 bootstrap assertions**
+(including their common page checks), and **16 actual mode-control assertions**. The complete page
+suite also passes **1135 assertions** before the final stale-error guard and target-style additions;
+those additions pass focused checks and remain included in the pending full gate. Six deliberately
+broken implementations fail: initial context modes, initialization writes, stale result ownership,
+actual Shuffle persistence, Settings event wiring and unknown repeat decoding. Both production
+files are restored and all fresh-page/control/rule checks pass again. Native production is unchanged;
+its 52 `PlaylistSessionTest` cases, including restore/save barriers and actual transport sampling,
+passed in W17b and will run again in the W18 full gate.
+
+Logs, pre-fix failures and negative controls are retained under ignored
+`user/web-parity-verification/w18/`. Physical browser reload/touch/reader/storage behaviour remains
+unchecked. Full forced gate/lint and final source receipt are pending. No schema/version change,
+WEB merge, bundle, push or deployment.
+
+### W18 final gate
+
+Clean candidate **709fb71307bfd949c51207351b49a3e21cff7724** passes the forced complete gate:
+**1252 tests / 170 suites**, zero failures/errors/skips, **917 s**; unit **473.5 s**, all 31
+tasks executed. Its 52 native session comparisons pass again. All companions run, including the
+ten fresh-page scenarios (**194 bootstrap assertions**, **92.4 s**), ten preference cases,
+**1135 complete-page assertions**, actual WASM, processor/native audio, migrations, PWA and server.
+Fresh lint **86.1 s**, **0 errors/fatal / 79 warnings**. All **688** recorded input hashes match.
+Full logs, JUnit/lint, pre-fix failures, six controlled regressions and source receipt are retained
+under ignored `user/web-parity-verification/w18/`.
+
+W18 is implemented at host level. This completion changes documentation/message only; native
+production, engine, schema and versionName are unchanged. Physical browser behaviour remains
+unchecked. Continue W24 live language, then retained cache/downloads and shared DSP scopes.
+No WEB merge, package, APK, push or deployment.

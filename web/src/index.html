@@ -824,6 +824,8 @@
        phone, which is where this page is most often read. */
     .setting { margin: 18px 0 4px; }
     .setting > label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .setting > .setting-toggle { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
+    .setting-toggle input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; flex: none; }
     .setting > output { display: block; margin: 10px 0 2px; font-variant-numeric: tabular-nums; }
     .setting.choice { border: 0; padding: 0; min-width: 0; }
     .setting.choice > legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
@@ -1220,6 +1222,11 @@
         <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
       </div>
       <dl id="settingsfields"></dl>
+
+      <div class="setting">
+        <label class="setting-toggle" for="settings-allsubsongs"><input id="settings-allsubsongs" type="checkbox"> Play every tune in a file</label>
+        <p class="storage">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</p>
+      </div>
 
       <!--
         The app's two choices (docs/PLAN_WEB_PARITY.md W6, W7), in the app's words. A new language

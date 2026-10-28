@@ -3,6 +3,24 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W18 restored playback modes — browser checks pending, 2026-10-28
+
+Host fresh-page/IndexedDB and control events are partial evidence; physical reload, storage
+permissions and reader/touch behaviour remain unchecked until tried in a browser.
+
+- Choose Shuffle and each Repeat mode, select a later playlist track and reload. Restore that
+  playlist/selection, marks and Repeat One glyph, paused, without opening audio. Try empty/new
+  storage and a saved all-subsongs value from the previous WEB version; defaults are Off.
+- Toggle Play every tune from Settings and Now Playing. Both reflect the same choice and persist
+  on reload. Next walks subsongs only when enabled; direct numeric selection works either way.
+  Settings offers this global choice even with no file or a single-tune file.
+- Play one source, view another playlist and change modes: actual playback and manual duplicate
+  requests survive, with no dirty playlist. Refuse preference writes: keep the session's mode and
+  explain the refusal. Permit a later write and try again. Do not clear user storage to recover.
+- With slow saved-state reads, select another playlist before initialization finishes: the newer
+  choice wins. Open a full-list handoff link on startup: its list wins and remains paused, keeping
+  modes. Existing explicit play links retain their separate playback behaviour.
+
 ## WEB W17b subsong strip — browser checks pending, 2026-10-28
 
 Host DOM rectangles and actual native Robolectric components are comparison evidence; real
