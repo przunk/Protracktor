@@ -617,3 +617,67 @@ export const musicCache = {
     });
   },
 };
+
+const isStoredArchive = (record) => record?.id === 'asma' && record.schema === 1 && Object.prototype.toString.call(record.body) === '[object Blob]' && record.body.size > 0
+  && Array.isArray(record.entries) && record.entries.length > 0
+  && record.entries.every((entry) => typeof entry.name === 'string' && entry.name.startsWith('asma/')
+    && Number.isSafeInteger(entry.start) && Number.isSafeInteger(entry.end) && entry.start >= 0 && entry.end >= entry.start && entry.end <= record.body.size
+    && Number.isSafeInteger(entry.size) && entry.size >= 0 && [0, 8].includes(entry.method)
+    && Number.isInteger(entry.crc) && entry.crc >= 0 && entry.crc <= 0xffffffff);
+const archiveRevision = (record) => {
+  const revision = record?.revision ?? 0;
+  if (!Number.isSafeInteger(revision) || revision < 0 || revision >= Number.MAX_SAFE_INTEGER) throw new Error('Invalid ASMA archive revision');
+  return revision;
+};
+
+/** A permanent archive and its derived index change together, even across browser tabs. */
+export const asmaArchive = {
+  async ticket() { return archiveRevision(await tx('asmaArchives', 'readonly', (store) => store.get('asma-control'))); },
+  async read() {
+    const record = await tx('asmaArchives', 'readonly', (store) => store.get('asma'));
+    if (!record) return null;
+    if (!isStoredArchive(record)) throw new Error('The stored ASMA archive is unreadable. Download it again to replace it.');
+    return record;
+  },
+  async replace(record, records, { signal, ticket } = {}) {
+    if (!isStoredArchive(record)) throw new Error('Invalid ASMA archive payload');
+    return mutateAsma({ record, records, signal, ticket });
+  },
+  remove() { return mutateAsma({ remove: true }); },
+};
+
+async function mutateAsma({ record, records, signal, ticket, remove = false }) {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['catalogue', 'asmaArchives'], 'readwrite');
+    const archive = transaction.objectStore('asmaArchives'), index = transaction.objectStore('catalogue');
+    let failure = null, applied = false;
+    const abort = () => { try { transaction.abort(); } catch { /* settled */ } };
+    const fail = (error) => { failure = error; abort(); };
+    const cleanup = () => signal?.removeEventListener('abort', abort);
+    transaction.onabort = () => { cleanup(); reject(failure ?? transaction.error ?? new DOMException('Aborted', 'AbortError')); };
+    transaction.onerror = () => {};
+    transaction.oncomplete = () => {
+      cleanup(); if (applied) catalogueChanged(['asma:']); resolve(applied);
+    };
+    if (signal?.aborted) { abort(); return; }
+    signal?.addEventListener('abort', abort, { once: true });
+    const guard = archive.get('asma-control');
+    guard.onsuccess = () => {
+      try {
+        const current = archiveRevision(guard.result);
+        if (!remove && current !== ticket) return;
+        index.delete(IDBKeyRange.bound('asma:', 'asma:\uffff'));
+        if (remove) archive.delete('asma');
+        else {
+          for (const row of records) {
+            if (!row.key?.startsWith('asma:')) throw new Error('An ASMA index record lies outside its prefix');
+            index.put(row);
+          }
+          archive.put({ ...record, revision: current + 1 });
+        }
+        archive.put({ id: 'asma-control', revision: current + 1 }); applied = true;
+      } catch (error) { fail(error); }
+    };
+  });
+}

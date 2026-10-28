@@ -82,7 +82,7 @@ export default async function checkPlaylistTransfer({ window, check }) {
     check((await imports()).length === noEntriesCount, 'picker cancellation and refused input write nothing');
 
     const asmaName = 'ASMA import';
-    pick(file('#PLAYLIST:ASMA import\n#PROTRACKTOR:id=asma://Composers/Rogers_Charles/Quest_For_Cool.sap\n#EXTINF:-1,Charles - Quest\nComposers/Rogers_Charles/Quest_For_Cool.sap'));
+    pick(file('#PLAYLIST:ASMA import\n#PROTRACKTOR:id=asma://asma/Composers/Rogers_Charles/Quest_For_Cool.sap\n#EXTINF:-1,Charles - Quest\nComposers/Rogers_Charles/Quest_For_Cool.sap'));
     check(await until(async () => (await imports()).some((row) => row.name === asmaName))
       && (await imports()).find((row) => row.name === asmaName).tracks[0]?.url === 'https://asma.atari.org/asma/Composers/Rogers_Charles/Quest_For_Cool.sap',
       'Android internal ASMA references become canonical playable browser URLs without a catalogue download');

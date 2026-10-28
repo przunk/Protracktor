@@ -44,6 +44,16 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W21 complete at host level, 2026-10-28:** explicit ASMA download retains the complete ZIP and
+atomically publishes/deletes its derived index. Schema remains 6; startup never fetches it.
+Current HTTPS IDs, documents, playback and fetched-cache separation survive; native-root import,
+corruption state and stale cross-tab publication/presentation are covered. Tested **57a189f**
+passes the forced full gate: **1255 tests / 172 suites**, zero failures/errors/skips, **984 s**,
+all companions, **1240 actual-ESM page assertions** and twelve cold starts (248 assertions).
+Lint: **0 errors / 79 warnings**, 86.5 s; all **716** input hashes match. The Random test copier's
+missing dependency is corrected and all four ownership assertions pass. Evidence is archived;
+physical browser CORS/quota/rendering/sound/background acceptance remains unchecked.
+
 **W20 complete at host level, 2026-10-28:** browser schema 6 separates fetched copies from user
 documents and the reserved ASMA archive. Native-style 512 MiB LRU, protected atomic publication,
 common byte resolution, Browse copy marks and Storage Clear/Retry pass the forced full gate on
@@ -60,7 +70,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**18 of 25 scopes are implemented** (W01-W13, W16-W18, W20, W24); W21 full ASMA is next. No WEB merge,
+**19 of 25 scopes are implemented** (W01-W13, W16-W18, W20-W21, W24); W23 recovery is next. No WEB merge,
 package, push or deployment.
 
 

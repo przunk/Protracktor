@@ -1284,17 +1284,13 @@ library, the database or the 20 MB archive. Copies are swept an hour after they 
 than on the next share: the receiving app reads the file after the chooser closes, and deleting the
 previous copy the moment a new share starts would sometimes pull it from under a slow reader.
 
-**A link is a different feature, not a cheaper one.** It exists only for catalogue tracks, and what
-it contains is the catalogue's answer rather than ours. Modland serves every file over HTTP, so its
-track URL *is* the link. ASMA publishes one archive and has no per-file address at all, so
-`webUrlFor` returns null and the share names the collection and the path inside it. That is
-deliberate: an `asma://` reference means nothing on anyone else's phone, and an action that appears
-to work is worse than one that says what it can do.
-
-The open part was settled on 2026-09-02: **a link points at the file**, the same bytes that
-are playing, and what the recipient does with it is theirs to decide. That is what Modland's link
-already was, and it is what ASMA cannot offer — which is why ASMA's share is a collection and a
-path rather than a worse link.
+**A shared catalogue link points at the file's public HTTP address.** Both Modland and ASMA
+provide individual file URLs. ASMA's paths were measured on 2026-09-11, correcting the initial
+2026-09-02 assumption that it only exposed a ZIP. Native playback still reads its retained
+archive using internal `asma://` IDs; `fileUrlFor`/`webUrlFor` convert those paths for recipients.
+WEB imports perform that conversion without duplicating the archive root. Internal archive IDs
+are not links another application can fetch. The recipient decides how to handle the public file;
+sharing a URL does not transfer the phone's private archive or permission grants.
 
 ## 17. How a list behaves
 
@@ -1733,3 +1729,29 @@ that slot and played-before stays below it. Playlist/Random/Queue numbers gain n
 actual bytes and tiny frees honestly; the origin-wide quota estimate remains separate. In-process
 subscriptions plus focus/visibility reads refresh membership; cross-tab durable playback leases
 are not supplied. Browser quota/persistence and real offline playback still require acceptance.
+
+### WEB complete ASMA archive — W21, 2026-10-28
+
+The explicit ASMA action retains the compressed ZIP and derives its catalogue in schema 6's
+reserved `asmaArchives` store. One transaction replaces or removes both archive and index;
+quota, cancellation and corrupt input preserve the prior installation. A persisted revision
+ticket also prevents an older download in another tab from restoring deleted or newer data.
+Startup and migration never fetch the archive. Existing HTTPS playlist/History identities remain.
+
+`zip-archive.js` validates directory/member agreement, bounds, paths, overlap, sizes and CRC before
+publication. Browser bounds are 64 MiB per expanded member and 512 MiB expanded per archive;
+unsupported encryption, ZIP64 or raw-DEFLATE capability produces an explicit refusal. The
+compressed immutable Blob is retained rather than thousands of duplicate expanded cache entries.
+
+`OfflineAsma` checks current storage and returns a fresh verified member buffer through the common
+byte resolver, after live handoff/prepared bytes and before individual HTTP/fetched-cache access.
+Damaged members remain unavailable for that archive revision even after metadata refresh; a new
+installation can repair them. Permanent ASMA does not enter the fetched-music LRU, and clearing
+that cache does not remove the archive or affect an already playing buffer.
+
+`AsmaView` projects actual archive/index facts into existing catalogue and storage controls.
+Generation/snapshot guards reject old reads; focus/visibility refreshes reflect other-tab changes
+without replacing focused buttons. Index presence alone never establishes offline availability.
+Confirmed deletion removes index and ZIP together while keeping documents, History and playback.
+Host parsing/storage/DOM evidence and real-browser acceptance are recorded separately in the
+[implementation ledger](WEB_IMPLEMENTATION.md#w21--complete-offline-asma-2026-10-28).

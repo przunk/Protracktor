@@ -1,0 +1,10 @@
+# cases: 6
+# Native Catalogue.Asma.parseIndex and WEB ZIP directory/index inputs.
+# path, UTF-8 body, format, author (- means empty), title, byte size
+path	body	format	author	title	size
+asma/Composers/Artist/song.sap	SAP	Composers	Artist	song.sap	3
+asma/Docs/readme.txt	text	Docs	-	readme.txt	4
+asma/Games/Abracadabra.sap	SAP	Games	-	Abracadabra.sap	3
+asma/Composers/Pieczko_Szymon/SimCity_2000.sap	SAP	Composers	Pieczko_Szymon	SimCity_2000.sap	3
+asma/Composers/O'Brien/a+b.sap	SAP	Composers	O'Brien	a+b.sap	3
+asma/Composers/Coop/Member/song.sap	SAP	Composers	Coop/Member	song.sap	3

@@ -49,5 +49,18 @@ await test('HTTP refusal never consumes or returns a response body', async () =>
   await assert.rejects(downloadMusic(async () => ({ ok: false, status: 404, arrayBuffer() { consumed = true; } }), 'fixture'), /HTTP 404/);
   assert.equal(consumed, false);
 });
-assert.equal(checks, 5); assert.equal(MUSIC_HEADERS_TIMEOUT, 45000); assert.equal(MUSIC_READ_TIMEOUT, 30000);
-console.log('5 production music-transfer cases passed with real Response streams and controlled timers');
+await test('an explicit archive cancellation interrupts stalled headers without awaiting timeout', async () => {
+  const controller = new AbortController(); let transferSignal;
+  const job = downloadMusic((url, options) => { transferSignal = options.signal; return new Promise(() => {}); }, 'archive', { signal: controller.signal });
+  const rejected = assert.rejects(job, { name: 'AbortError' }); await tick(); controller.abort(); await rejected;
+  assert.equal(transferSignal.aborted, true);
+});
+await test('archive progress follows complete chunks and cancellation discards partial content', async () => {
+  const controller = new AbortController(), progress = []; let producer, cancelled = false;
+  const stream = new ReadableStream({ start(value) { producer = value; }, cancel() { cancelled = true; } });
+  const job = downloadMusic(async () => new Response(stream, { headers: { 'content-length': '4' } }), 'archive', { signal: controller.signal, onProgress: (value) => progress.push(value) });
+  const rejected = assert.rejects(job, { name: 'AbortError' }); await tick(); producer.enqueue(new Uint8Array([1, 2])); await tick(); controller.abort(); await rejected;
+  assert.deepEqual(progress.map((value) => value.done), [0, 2]); assert(progress.every((value) => value.total === 4)); assert.equal(cancelled, true);
+});
+assert.equal(checks, 7); assert.equal(MUSIC_HEADERS_TIMEOUT, 45000); assert.equal(MUSIC_READ_TIMEOUT, 30000);
+console.log('7 production music-transfer cases passed with real Response streams and controlled timers');

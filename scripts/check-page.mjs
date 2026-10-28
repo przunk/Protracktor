@@ -16,6 +16,7 @@
 import fs from 'fs';
 import { webcrypto } from 'node:crypto';
 import path from 'path';
+import { zipFixture } from './fixtures/zip.mjs';
 import { JSDOM } from './../web/node_modules/jsdom/lib/api.js';
 
 const failures = [];
@@ -260,7 +261,11 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { RandomFiltersView } from './random-filters-view.js';",
     `const { RandomFiltersView } = (() => { ${randomFiltersViewSource}; return { RandomFiltersView }; })();`)
   .replace("import { RemoteMusic } from './remote-music.js';",
-    `const { RemoteMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '')}; ${fs.readFileSync('web/src/remote-music.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RemoteMusic }; })();`)
+    `const { RemoteMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'downloadCancelled')}; ${fs.readFileSync('web/src/remote-music.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RemoteMusic }; })();`)
+  .replace("import { OfflineAsma } from './offline-asma.js';",
+    `const { OfflineAsma } = (() => { ${fs.readFileSync('web/src/zip-archive.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'zipCancelled')}; const archiveReadZipMember = readZipMember; ${fs.readFileSync('web/src/offline-asma.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '').replace(/readZipMember\(/g, 'archiveReadZipMember(')}; return { OfflineAsma }; })();`)
+  .replace("import { AsmaView } from './asma-view.js';",
+    `const { AsmaView } = (() => { ${fs.readFileSync('web/src/asma-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { AsmaView }; })();`)
   .replace("import { MusicCacheView } from './music-cache-view.js';",
     `const { MusicCacheView } = (() => { ${fs.readFileSync('web/src/music-cache-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { MusicCacheView }; })();`)
   .replace("import { RandomHistory } from './random-history.js';",
@@ -286,11 +291,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
-    'const archive = (() => {' + lengthsSource + songdbSource + fs.readFileSync('web/src/catalogue.js', 'utf8')
+    'const archive = (() => {' + lengthsSource + songdbSource
+      + `const { zipDirectory, validateZip } = (() => { ${fs.readFileSync('web/src/zip-archive.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'zipCancelled')}; return { zipDirectory, validateZip }; })();`
+      + `const { downloadMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'downloadCancelled')}; return { downloadMusic }; })();` + fs.readFileSync('web/src/catalogue.js', 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
-    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, fileUrlFor, searchTitles, '
+    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, fileUrlFor, asmaFileUrl, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, sampleRandom, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
@@ -301,7 +308,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
 if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
 
-const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { musicNow: () => remoteMusic, musicStore: musicCache, bytesOf, browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
+const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { musicNow: () => remoteMusic, musicStore: musicCache, asmaNow: () => offlineAsma, asmaStore: asmaArchive, bytesOf, browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaArchive, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
 
 console.log('page:');
 try {
@@ -2158,46 +2165,25 @@ if (window.__api) {
 
 // --- ASMA in the browser -------------------------------------------------------------------------
 //
-// **The list, not the archive.** ASMA publishes a 20 MB zip; the page reads its central directory
-// with two ranged requests and fetches each tune from its own address. Checked against a zip built
-// here, served by a stand-in that answers ranges the way asma.atari.org does -- and once more by one
-// that ignores them, which a server is allowed to do.
+// A complete real ZIP fixture, retained independently from its derived catalogue rows.
 if (window.__api) {
   console.log('\nASMA:');
   const api = window.__api;
   const settle = () => new Promise((r) => setTimeout(r, 30));
   const { catalogue: store } = await import(path.resolve('web/src/store.js'));
-  const entry = (name, size) => {
-    const bytes = Buffer.from(name);
-    const head = Buffer.alloc(46);
-    head.writeUInt32LE(0x02014b50, 0);
-    head.writeUInt32LE(size, 24);
-    head.writeUInt16LE(bytes.length, 28);
-    return Buffer.concat([head, bytes]);
-  };
-  const names = [['asma/', 0], ['asma/Composers/', 0], ['asma/Composers/Aki/Robots.sap', 1922],
-                 ['asma/Composers/Aki/Atari_Style.sap', 7291], ['asma/Games/Boulder Dash (Tune 1).sap', 1000],
-                 ['asma/Docs/STIL.txt', 272641]];
-  const directory = Buffer.concat(names.map(([n, s]) => entry(n, s)));
-  const body = Buffer.alloc(70000, 7);          // what stands for the compressed tunes
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(names.length, 10);
-  end.writeUInt32LE(directory.length, 12);
-  end.writeUInt32LE(body.length, 16);
-  window.__asmaZip = Buffer.concat([body, directory, end]);
+  const names = [['asma/', ''], ['asma/Composers/', ''], ['asma/Composers/Aki/Robots.sap', 'SAP Robots'],
+                 ['asma/Composers/Aki/Atari_Style.sap', 'SAP Style'], ['asma/Games/Boulder Dash (Tune 1).sap', 'SAP Boulder'],
+                 ['asma/Docs/STIL.txt', 'text']];
+  window.__asmaZip = Buffer.from(zipFixture(names.map(([name, body]) => ({name, body}))));
   window.__asmaRanges = [];
   // The engine says hello, as the worklet does once it has compiled: the list is filtered by what
   // it can open, and a download waits for it to say (`whenEngineReady`).
   api.onWorklet({ type: 'ready', backends: 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none' });
 
-  await api.downloadAsmaIndex();
+  await api.downloadAsmaArchive();
   await settle();
-  const asked = window.__asmaRanges.splice(0);
-  // A directory this small sits inside the tail, so one ordinary range brings both.
-  const size = window.__asmaZip.length;
-  check(asked.length === 1 && asked[0] === `bytes=${size - 65557}-${size - 1}`,
-    'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
+  check(window.__asmaRanges.length === 0 && api.asmaNow().state.bytes === window.__asmaZip.length,
+    'the explicit download retains the complete archive without partial Range requests');
   const held = await api.archiveMeta('asma');
   check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
   // The row's spinner is the progress (the owner, 2026-09-23): the note narrates no download, so
@@ -2206,7 +2192,7 @@ if (window.__api) {
     'a download does not narrate itself in the note -- its row has the spinner');
   await api.browseTo(['catalogues']);
   const asmaRow = [...$('browselist').children].find((li) => li.querySelector('.bname')?.textContent === 'ASMA');
-  check(asmaRow && asmaRow.querySelector('.bmeta').textContent === '3 tunes' && asmaRow.querySelector('.bheld.yes'),
+  check(asmaRow && asmaRow.querySelector('.bmeta').textContent.includes('3 tunes') && asmaRow.querySelector('.bmeta').textContent.includes('available offline') && asmaRow.querySelector('.bheld.yes'),
     'Browse offers ASMA beside Modland, held, with how many tunes');
 
   await api.browseTo(['asma']);
@@ -2235,44 +2221,7 @@ if (window.__api) {
   const table = await api.randomTable();
   check(table.entries.some((e) => e.source === 'asma'), 'the dice picks from ASMA too');
 
-  // A server that ignores the range sends everything, and the same reading still works.
-  window.__asmaIgnoreRange = true;
-  await store.clear('asma:');
-  await api.downloadAsmaIndex();
-  await settle();
-  window.__asmaIgnoreRange = false;
-  window.__asmaRanges.length = 0;
-  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a server that ignores the range gives the same list');
-
-  // A browser that asks about every range is refused by this server: it gets the whole archive.
-  window.__asmaNoSafeRange = true;
-  await store.clear('asma:');
-  await api.downloadAsmaIndex();
-  await settle();
-  window.__asmaNoSafeRange = false;
-  window.__asmaRanges.length = 0;
-  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a browser whose range is refused falls back to the whole archive');
-
-  // ASMA's real directory is 849 KB, far more than one tail: then it takes a second ordinary range.
-  // Padded here past the tail with entries the filter drops, so only the three tunes remain.
-  const padding = Array.from({ length: 1500 }, (_, i) => entry(`asma/Docs/padding-${String(i).padStart(5, '0')}.txt`, 1));
-  const bigDirectory = Buffer.concat([directory, ...padding]);
-  const bigEnd = Buffer.from(end);
-  bigEnd.writeUInt16LE(names.length + padding.length, 10);
-  bigEnd.writeUInt32LE(bigDirectory.length, 12);
-  bigEnd.writeUInt32LE(200000, 16);
-  window.__asmaZip = Buffer.concat([Buffer.alloc(200000, 7), bigDirectory, bigEnd]);
-  await store.clear('asma:');
-  await api.downloadAsmaIndex();
-  await settle();
-  const big = window.__asmaZip.length;
-  const two = window.__asmaRanges.splice(0);
-  check(bigDirectory.length > 65557 && two.length === 2 && two[0] === `bytes=${big - 65557}-${big - 1}`
-        && two[1] === `bytes=200000-${200000 + bigDirectory.length - 1}`
-        && (await api.archiveMeta('asma'))?.tracks === 3,
-    'a real-sized archive is read as the tail and then the directory, both ordinary ranges');
-
-  await store.clear('asma:');
+  await window.__archive.forgetIndex('asma');
   await api.browseTo([]);
   window.__api.showPanel(null);
 }
@@ -2457,7 +2406,7 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 40));
   check(!$('settings').hidden, 'pressing it opens the settings');
   const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
-  check(labels[0] === 'Decoders in this build' && labels.includes('Modland index') && labels.includes('ASMA index')
+  check(labels[0] === 'Decoders in this build' && labels.includes('Modland index') && labels.includes('ASMA index and archive')
         && labels.includes('Song metadata') && labels.includes('Stored here'),
     'which say what this build plays, what is indexed, and what the browser is holding');
   // W4: what the page carries and what it keeps, each a button with its mark and its words.
@@ -3805,6 +3754,7 @@ await (await import('./check-page-playback-preferences.mjs')).default({ window, 
 await (await import('./check-page-live-language.mjs')).default({ window, check });
 await (await import('./check-page-live-language-views.mjs')).default({ window, check });
 await (await import('./check-page-music-cache.mjs')).default({ window, check });
+await (await import('./check-page-offline-asma.mjs')).default({ window, check });
 
 check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

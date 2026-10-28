@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from 'node:assert/strict';
 import { deflateSync } from 'node:zlib';
+import { zipFixture } from './fixtures/zip.mjs';
+import { zipDirectory } from '../web/src/zip-archive.js';
 
-const tracks = ['a', 'b'].map((name) => ({ url: `https://example.test/playback-startup/${name}.mod`, name }));
+const globalTracks = ['a', 'b'].map((name) => ({ url: `https://example.test/playback-startup/${name}.mod`, name }));
 const cases = {
   defaults: { raw: {}, shuffle: false, repeat: 'off', all: false },
   cache: { raw: {}, shuffle: false, repeat: 'off', all: false },
+  asma: { raw: {}, shuffle: false, repeat: 'off', all: false },
   empty: { raw: { shuffle: '1', repeat: 'one', allsubsongs: '1' }, shuffle: true, repeat: 'one', all: true },
   malformed: { raw: { shuffle: 'true', repeat: 'future-mode', allsubsongs: 'yes' }, shuffle: false, repeat: 'off', all: false },
   one: { raw: { shuffle: '1', repeat: 'one', allsubsongs: '1' }, shuffle: true, repeat: 'one', all: true },
@@ -23,15 +26,22 @@ const until = async (fn) => { for (let n = 0; n < 200; n++) { if (fn()) return t
 /** Seed through the production store before the common page entry; no alternate app bootstrap. */
 export async function prepare({ window, rulesSource, storeSource, name }) {
   const choice = cases[name]; assert(choice, `Unknown startup case: ${name}`);
+  const tracks = name === 'asma' ? [{ url: 'https://example.test/playback-startup/a.mod', name: 'a' },
+    { url: 'https://asma.atari.org/asma/Games/start.sap', name: 'start.sap' }] : [...globalTracks];
   for (const [key, value] of Object.entries(choice.raw)) window.localStorage.setItem(`protracktor.${key}`, value);
-  const store = window.eval(`(() => { ${rulesSource} ${storeSource}; return { playlists, settings, musicCache }; })()`);
+  const store = window.eval(`(() => { ${rulesSource} ${storeSource}; return { playlists, settings, musicCache, asmaArchive }; })()`);
   await store.playlists.save({ id: 'startup-list', name: 'Stored playlist', tracks, index: 1 });
   await store.playlists.save({ id: 'newer-list', name: 'Newer choice', tracks: [tracks[0]], index: 0 });
   if (name !== 'empty') await store.settings.set('active', 'startup-list');
+  if (name === 'asma') {
+    const bytes = zipFixture([{name:'asma/Games/start.sap',body:new Uint8Array([21,22,23,24])}]);
+    await store.asmaArchive.replace({id:'asma',schema:1,body:await new window.Response(bytes).blob(),entries:zipDirectory(bytes),tracks:1,total:1,at:1},
+      [{key:'asma:meta',tracks:1,total:1,complete:true}],{ticket:await store.asmaArchive.ticket()});
+  }
   if (name === 'cache') await store.musicCache.write(tracks[1].url, await new window.Response(new Uint8Array([21, 22, 23, 24])).blob());
   const state = window.__startup = { writes: [], preferenceWrites: [], notices: [], choice, tracks,
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
-  if (name === 'cache') {
+  if (name === 'cache' || name === 'asma') {
     const fetch = window.fetch; state.trackRequests = 0;
     window.fetch = (...args) => { if (String(args[0]) === tracks[1].url) state.trackRequests++; return fetch(...args); };
   }
@@ -63,6 +73,7 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
 
 export async function verify({ window, check, name }) {
   const api = window.__api, { document } = window, $ = (id) => document.getElementById(id), state = window.__startup;
+  const tracks = state.tracks;
   if (!api) { state.cleanup(); return; }
   try {
     if (name === 'empty') {
@@ -107,7 +118,7 @@ export async function verify({ window, check, name }) {
     check(api.contextNow() === null && window.__toWorklet.length === 0 && $('playpause').title === 'Play', `${name}: startup never constructs audio or opens a decoder`);
     check(!api.dirtyNow(), `${name}: restored modes are not playlist content edits`);
     check(state.preferenceWrites.length === 0, `${name}: initialization does not write defaults over saved preferences`);
-    if (name === 'cache') {
+    if (name === 'cache' || name === 'asma') {
       $('playpause').click();
       check(await until(() => window.__toWorklet.some((message) => message.type === 'open')),
         'a cold page can explicitly start its previously retained music');

@@ -7,6 +7,18 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  'ASMA could not be downloaded: {reason}': 'Nie udało się pobrać ASMA: {reason}',
+  'ASMA index and archive': 'Indeks i archiwum ASMA',
+  'This also removes the offline ASMA archive.': 'Usunięte zostanie również archiwum ASMA do odtwarzania offline.',
+  'The ASMA archive is unavailable: {reason}. Download it again from Online catalogues.': 'Archiwum ASMA jest niedostępne: {reason}. Pobierz je ponownie w Katalogach online.',
+  'ASMA is Atari 8-bit music. Download its full archive (about 20 MB) to browse and play offline.': 'ASMA to muzyka Atari 8-bit. Pobierz pełne archiwum (około 20 MB), aby przeglądać i odtwarzać bez internetu.',
+  'Not indexed yet': 'Brak indeksu',
+  'ASMA could not be read: {reason}': 'Nie udało się odczytać ASMA: {reason}',
+  'Update the ASMA archive': 'Zaktualizuj archiwum ASMA',
+  'Download the ASMA archive (about 20 MB)': 'Pobierz archiwum ASMA (około 20 MB)',
+  'Archive: {size} MB — available offline': 'Archiwum: {size} MB — dostępne offline',
+  'No offline archive — download about 20 MB': 'Brak archiwum offline — pobierz około 20 MB',
+
   "Interface text changes without interrupting playback.": "Teksty interfejsu zmieniają się bez przerywania odtwarzania.",
   "Could not save language choice: {reason}": "Nie udało się zapisać wyboru języka: {reason}",
   "Play every tune in a file": "Graj wszystkie utwory w pliku",

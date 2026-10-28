@@ -194,6 +194,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Saved places presentation" saved-places-view node scripts/check-saved-places-view.mjs
     run_check "Music cache presentation" music-cache-view node scripts/check-music-cache-view.mjs
     run_check "Music cache storage" music-cache-store node scripts/check-music-cache-store.mjs
+    run_check "Offline ASMA archive" asma-archive node scripts/check-asma-archive.mjs
     run_check "Music cache migrations" music-cache-migrations node scripts/check-music-cache-migrations.mjs
     run_check "History storage/migrations" history-store node scripts/check-history-store.mjs
     run_check "History filtering storage" history-filter-store node scripts/check-history-filter-store.mjs

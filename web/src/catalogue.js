@@ -12,7 +12,9 @@
 // own prefix -- a group (Modland's format, ASMA's section), an author, the tunes -- so browsing,
 // search and the dice treat them alike.
 
-import { catalogue } from './store.js';
+import { catalogue, asmaArchive } from './store.js';
+import { downloadMusic } from './music-download.js';
+import { zipDirectory, validateZip } from './zip-archive.js';
 import { md5, parseSongLengths } from './songlengths.js';
 import { parseSongDbMetadata, songDbKey } from './songdb.js';
 import { searchTerms, searchable } from './rules.js';
@@ -363,86 +365,27 @@ export async function downloadModland({
   return { tracks, total, buckets, formats };
 }
 
-/**
- * ASMA's list, **read out of its archive without downloading the archive**.
- *
- * ASMA publishes one 20 MB zip and no separate index; the phone downloads the lot, which is what
- * makes it work offline. A browser needs only the list, and a zip keeps its list at the end: the
- * end record says where the central directory is, and the directory names every file and its
- * size. Two ranged requests -- the tail, then the directory -- come to 0.85 MB (measured: 6,780
- * entries, 6,335 of them `.sap`), and each tune is then fetched from its own
- * address when it plays.
- *
- * A server that ignores `Range` answers 200 with the whole file; the same reading works on that,
- * because the offsets are the file's own.
- *
- * **Never the suffix form, `bytes=-N`**, which fails with "Failed to fetch". Only a range with a
- * start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
- * question without `Access-Control-Allow-Headers`, so the request is refused before it leaves. The
- * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
- * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
- */
-export async function downloadAsma({ fingerprint = '', isPlayable = () => true, onProgress = null } = {}) {
-  onProgress?.({ stage: 'fetching the list' });
-  // The end record is 22 bytes and may be followed by a comment of up to 64 KB.
-  let tail;
-  try {
-    const head = await fetch(ASMA_INDEX_URL, { method: 'HEAD' });
-    const length = Number(head.headers.get('content-length'));
-    if (!head.ok || !length) throw new Error('no size');
-    tail = await ranged(ASMA_INDEX_URL, `bytes=${Math.max(0, length - 65557)}-${length - 1}`);
-    tail.start = Math.max(0, length - 65557);
-  } catch {
-    onProgress?.({ stage: 'fetching the whole archive (20 MB), this browser will not ask for part of it' });
-    const response = await fetch(ASMA_INDEX_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    tail = { bytes: await response.arrayBuffer(), whole: true };
-  }
-  const view = new DataView(tail.bytes);
-  let end = -1;
-  for (let i = tail.bytes.byteLength - 22; i >= 0; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
-  }
-  if (end < 0) throw new Error('no end record in the archive');
-  const size = view.getUint32(end + 12, true);
-  const offset = view.getUint32(end + 16, true);
-  // Already in hand when the tail reached back far enough -- or was the whole file.
-  const from = tail.whole ? 0 : tail.start;
-  const directory = offset >= from
-    ? new DataView(tail.bytes, offset - from, size)
-    : new DataView((await ranged(ASMA_INDEX_URL, `bytes=${offset}-${offset + size - 1}`)).bytes);
-
-  onProgress?.({ stage: 'reading' });
-  const names = new TextDecoder();
-  const lines = [];
-  for (let at = 0; at + 46 <= directory.byteLength && directory.getUint32(at, true) === 0x02014b50;) {
-    const bytes = directory.getUint32(at + 24, true);
-    const nameLength = directory.getUint16(at + 28, true);
-    const extra = directory.getUint16(at + 30, true);
-    const comment = directory.getUint16(at + 32, true);
-    const name = names.decode(new Uint8Array(directory.buffer, directory.byteOffset + at + 46, nameLength));
-    at += 46 + nameLength + extra + comment;
-    // `asma/<section>/<author>/<title>.sap`; directories end in a slash and hold nothing.
-    if (!name.startsWith('asma/') || name.endsWith('/')) continue;
-    lines.push(`${bytes}\t${name.slice('asma/'.length)}`);
-  }
-
+/** The explicit ASMA action retains its whole ZIP and publishes the derived index atomically. */
+export async function downloadAsma({ fingerprint = '', isPlayable = () => true, onProgress = null, signal } = {}) {
+  const ticket = await asmaArchive.ticket();
+  onProgress?.({ stage: 'fetching' });
+  const bytes = await downloadMusic((...args) => fetch(...args), ASMA_INDEX_URL, { signal, onProgress });
+  const entries = zipDirectory(bytes).filter((entry) => entry.name.startsWith('asma/'));
+  if (!entries.length) throw new Error('The archive contains no ASMA files.');
+  const body = await new Response(bytes).blob();
+  await validateZip(body, entries, { signal, onProgress });
   onProgress?.({ stage: 'sorting' });
-  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(lines.join('\n'), ASMA, isPlayable);
+  const lines = entries.map((entry) => `${entry.size}\t${entry.name.slice('asma/'.length)}`).join('\n');
+  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(lines, ASMA, isPlayable);
+  const at = Date.now();
   onProgress?.({ stage: 'storing', done: 0, total: records.length });
-  await catalogue.replacePrefix(`${ASMA}:`, [...records, {
-    key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
+  const stored = await asmaArchive.replace({ id: ASMA, schema: 1, body, entries, tracks, total, at }, [...records, {
+    key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at,
     platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
-  }]);
+  }], { signal, ticket });
+  if (!stored) throw new DOMException('A newer ASMA download or deletion replaced this request.', 'AbortError');
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
-}
-
-/** One ranged request, and whether the server ignored the range and sent everything. */
-async function ranged(url, range) {
-  const response = await fetch(url, { headers: { Range: range } });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return { bytes: await response.arrayBuffer(), whole: response.status === 200, start: 0 };
 }
 
 /**
@@ -513,7 +456,10 @@ export async function meta(source = MODLAND) { return catalogue.get(keyFor(sourc
  * Deletes a catalogue's whole index -- its meta, formats, authors, tracks and title shards, which all
  * live under the source's own prefix -- and nothing of any other (W10, the phone's delete).
  */
-export async function forgetIndex(source) { await catalogue.clear(`${source}:`); }
+export async function forgetIndex(source) {
+  if (source === ASMA) await asmaArchive.remove();
+  else await catalogue.clear(`${source}:`);
+}
 export async function formats(source = MODLAND) { return (await catalogue.get(keyFor(source).formats))?.formats ?? []; }
 export async function authors(format, source = MODLAND) {
   return (await catalogue.get(keyFor(source).authors(format)))?.authors ?? [];
@@ -721,9 +667,18 @@ export function urlFor(format, author, title, source = MODLAND) {
   return fileUrlFor([format, ...(author ? author.split('/') : []), title].join('/'), source);
 }
 
-/** Also resolves Android's internal ASMA references imported from a playlist file. */
+/** A path relative to the catalogue's HTTP file root; existing browser identities stay stable. */
 export function fileUrlFor(path, source = MODLAND) {
   return SOURCES[source].files + path.split('/').map(encodeSegment).join('/');
+}
+
+/** Native IDs include the archive root; older WEB imports also accepted the shorter form. */
+export function asmaFileUrl(id) {
+  if (typeof id !== 'string' || !id.startsWith('asma://')) return null;
+  let path = id.slice('asma://'.length);
+  if (path.startsWith('asma/')) path = path.slice('asma/'.length);
+  if (!path || path.split('/').some((part) => !part || part === '.' || part === '..')) return null;
+  return fileUrlFor(path, ASMA);
 }
 
 function encodeSegment(segment) {

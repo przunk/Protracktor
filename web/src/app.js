@@ -4,9 +4,11 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
-import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue, musicCache } from './store.js';
+import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue, musicCache, asmaArchive } from './store.js';
 import * as archive from './catalogue.js';
 import { RemoteMusic } from './remote-music.js';
+import { OfflineAsma } from './offline-asma.js';
+import { AsmaView } from './asma-view.js';
 import { MusicCacheView } from './music-cache-view.js';
 import { freedCacheBytes } from './cache-budget.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
@@ -52,7 +54,7 @@ import { setUiText, setUiAttribute, makeUiText } from './ui-text.js';
 const $ = (id) => document.getElementById(id);
 const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
-let remoteMusic = null, musicCacheView = null;
+let remoteMusic = null, musicCacheView = null, offlineAsma = null, asmaView = null;
 
 /**
  * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
@@ -1867,7 +1869,8 @@ async function bytesOf(entry, { signal, ready } = {}) {
   const prepared = ready ? await ready : null;
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (prepared) return prepared.slice(0);
-  return remoteMusic.bytes(entry.url, { signal });
+  const archived = await offlineAsma.bytes(entry.url, { signal });
+  return archived ?? remoteMusic.bytes(entry.url, { signal });
 }
 
 /** Presence decorates the reserved Browse slot; source rows and selection stay put. */
@@ -1877,7 +1880,7 @@ function paintDownloadedMusic() {
     const primary = leading.querySelector('.leading-primary');
     if (!primary) continue; // Selection owns the whole slot.
     const url = leading.dataset.cacheUrl;
-    const state = remoteMusic?.has(url) ? 'retained' : held.has(url) ? 'tab' : '';
+    const state = remoteMusic?.has(url) || offlineAsma?.has(url) ? 'retained' : held.has(url) ? 'tab' : '';
     if (primary.dataset.copy === state) continue;
     primary.dataset.copy = state;
     if (state) {
@@ -2960,16 +2963,18 @@ async function renderSettings() {
         default: throw new TypeError(`CacheFreed(${freed.kind})`);
       }
     } });
+  await offlineAsma.refresh();
   const INDEX_GONE = uiMessageText('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched. Saved tracks can still play when their file is available.');
   const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
     sets.push({
       key: source,
-      label: uiMessageText('{source} index', { source: archive.sourceName(source) }),
+      label: source === 'asma' ? uiMessageText('ASMA index and archive') : uiMessageText('{source} index', { source: archive.sourceName(source) }),
+      asmaIndex: source === 'asma' ? held : null,
       held: held?.tracks ? uiPluralText(held.tracks, '{count} tune', '{count} tunes', { count: held.tracks.toLocaleString() }) : null,
       absent: uiMessageText('not downloaded — Browse offers it'),
-      consequence: INDEX_GONE,
+      consequence: source === 'asma' ? joinUiText(INDEX_GONE, ' ', uiMessageText('This also removes the offline ASMA archive.')) : INDEX_GONE,
       remove: () => archive.forgetIndex(source),
     });
   }
@@ -2995,13 +3000,16 @@ async function renderSettings() {
     const dt = document.createElement('dt');
     setUiText(dt, set.label);
     const dd = document.createElement('dd');
-    if (set.held) {
-      dd.append(makeUiText(document, joinUiText(set.held, ' · ')));
+    if (set.held || set.key === 'asma') {
+      if (set.key === 'asma') {
+        const detail = document.createElement('span'); detail.dataset.asmaStorageDetail = ''; dd.append(detail, ' · ');
+      } else dd.append(makeUiText(document, joinUiText(set.held, ' · ')));
       const remove = document.createElement('button');
       remove.className = 'plain';
       remove.innerHTML = iconSvg(ICON.remove);
       remove.append(makeUiText(remove.ownerDocument, uiMessageText('Delete')));
       remove.onclick = async () => {
+        if (set.key === 'asma' && (remove.disabled || !remove.isConnected)) return;
         if (!confirm(`${uiMessageText('Delete the {what}?', { what: set.label })}\n\n${set.consequence}`)) return;
         setUiText(dd, uiMessageText('deleting…'));
         deletingCatalogues.add(set.key);
@@ -3021,6 +3029,7 @@ async function renderSettings() {
     } else {
       setUiText(dd, set.absent);
     }
+    if (set.key === 'asma') asmaView.storage(dd, set.asmaIndex);
     list.append(dt, dd);
   }
 
@@ -3538,8 +3547,7 @@ function openPlaylistMenu(playlist, anchor) {
 const playlistTransfer = new PlaylistTransfer({
   selection: () => ({ id: workspace.editor.id, name: workspace.editor.name, tracks: editorTracks() }),
   read: (id) => playlists.get(id), known: async () => savedSearchTracks(await savedSearchRecords()), held: heldPlaylistTracks,
-  remote: (id) => typeof id === 'string' && id.startsWith('asma://')
-    ? archive.fileUrlFor(id.slice('asma://'.length), 'asma') : networkPlaylistUrl(id),
+  remote: (id) => archive.asmaFileUrl(id) ?? networkPlaylistUrl(id),
   presentRemote: (track) => ({ ...track, meta: sourceOf(track.url) || track.meta }),
   newId: freshPlaylistId,
   save: (playlist) => playlists.create(playlist),
@@ -4227,8 +4235,9 @@ async function downloadIndex() {
   }
 }
 
-/** Browse → Download the ASMA list: 0.85 MB of the archive's own directory (`archive.downloadAsma`). */
-async function downloadAsmaIndex() {
+/** Browse → Download the full ASMA archive and its derived index for offline playback. */
+async function downloadAsmaArchive() {
+  if (downloading.has('asma') || deletingCatalogues.has('asma')) return;
   const note = $('browsenote');
   await downloadStarted('asma');
   try {
@@ -4244,7 +4253,7 @@ async function downloadAsmaIndex() {
     await downloadEnded('asma');
   } catch (e) {
     await downloadEnded('asma');
-    setUiText(note, uiMessageText('the ASMA list could not be downloaded: {reason}', { reason: e.message }));
+    setUiText(note, uiMessageText('ASMA could not be downloaded: {reason}', { reason: e.message }));
   }
 }
 
@@ -4385,14 +4394,15 @@ async function renderCatalogues(list, note, canRender = () => true) {
   const metadata = await archive.songMetadataMeta();
   // Read before anything is drawn too, so no row waits in the middle of the list for it.
   const stale = await staleSentence(held.modland);
+  await offlineAsma.refresh();
   if (browsePath[0] !== 'catalogues' || !canRender()) return;
   // Built aside and put in place at once: the list is never seen empty or half drawn.
   const rows = document.createDocumentFragment();
 
-  const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
+  const sizes = { modland: '5.76 MB' };
   const about = {
     modland: uiMessageText('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
-    asma: uiMessageText("ASMA is Atari 8-bit music; files are fetched as needed and can be kept in this browser's music cache."),
+    asma: uiMessageText('ASMA is Atari 8-bit music. Download its full archive (about 20 MB) to browse and play offline.'),
   };
   const said = joinUiText(...[
     held.modland?.tracks ? holding(held.modland) : about.modland,
@@ -4402,18 +4412,19 @@ async function renderCatalogues(list, note, canRender = () => true) {
   for (const source of archive.sources()) {
     const here = held[source];
     const name = archive.sourceName(source);
-    heldRow(rows, {
+    const catalogueRow = heldRow(rows, {
       name,
-      detail: here?.tracks
-        ? uiPluralText(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
+      detail: here?.tracks ? uiPluralText(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
         : uiMessageText('Not indexed yet — tap the arrow to download its index ({size})', { size: sizes[source] ?? uiMessageText('a download') }),
       warning: source === 'modland' ? stale : '',
       held: !!here?.tracks,
       key: source,
-      label: here?.tracks ? uiMessageText('Update the index for {name}', { name }) : uiMessageText('Download the index for {name}', { name }),
-      ondownload: source === 'asma' ? downloadAsmaIndex : downloadIndex,
+      label: source === 'asma' ? asmaView.label()
+        : here?.tracks ? uiMessageText('Update the index for {name}', { name }) : uiMessageText('Download the index for {name}', { name }),
+      ondownload: source === 'asma' ? downloadAsmaArchive : downloadIndex,
       onopen: here?.tracks ? async () => { browsePath = [source]; await renderBrowse(); } : null,
     });
+    if (source === 'asma') asmaView.catalogue(catalogueRow, here);
   }
 
   // **One row for what files cannot say about themselves** (the phone's A52 D1): the SID lengths
@@ -5654,6 +5665,15 @@ played.onFailure((error) => status(uiMessageText('Could not save History: {reaso
 playlists.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 catalogue.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 window.addEventListener('focus', () => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
+
+offlineAsma = new OfflineAsma({ storage: asmaArchive,
+  urlForPath: (path) => archive.fileUrlFor(path.slice('asma/'.length), 'asma'),
+  changed: (notify) => catalogue.subscribe(({ prefixes }) => { if (prefixes.includes('asma:')) notify(); }) });
+asmaView = new AsmaView({ document, snapshot: () => offlineAsma.state, readIndex: () => archive.meta('asma'),
+  icon: (kind) => iconSvg(ICON[kind]), open: (row) => { browseScrollView?.remember(row.dataset.browseKey); browsePath = ['asma']; void renderBrowse(); } });
+offlineAsma.subscribe(() => { paintDownloadedMusic(); void asmaView.refresh(); });
+window.addEventListener('focus', () => { void offlineAsma.refresh(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void offlineAsma.refresh(); });
 
 remoteMusic = new RemoteMusic({ cache: musicCache, fetch: (...args) => fetch(...args),
   inUse: () => [currentTrack()?.url, ...(random?.bytes.keys() ?? [])].filter(Boolean) });

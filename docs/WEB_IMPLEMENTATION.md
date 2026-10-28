@@ -77,7 +77,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W18 | Playback-mode/settings restoration | Implemented; forced full gate passed; browser acceptance unchecked |
 | W19 | Read-ahead and prefetch controls | Pending |
 | W20 | Persistent music cache and offline marks | Implemented; forced full gate passed; browser acceptance unchecked |
-| W21 | Complete offline ASMA | Pending |
+| W21 | Complete offline ASMA | Implemented; forced full gate passed; browser acceptance unchecked |
 | W22 | Grouped downloads and Stop | Pending |
 | W23 | Legacy Modland request recovery | Pending |
 | W24 | Language changes without interrupting playback | Implemented; forced full gate passed |
@@ -1542,3 +1542,130 @@ background operation remain unchecked. W20 is implemented at host level: **18 of
 (W01-W13, W16-W18, W20, W24). Continue W21 full ASMA, W23 recovery, W19/W22, W14/W15 and W25,
 then the final requirements/commit audit and WEB package. No WEB merge, version change, push or
 deployment has occurred.
+
+## W21 — Complete offline ASMA, 2026-10-28
+
+Reference **c8209b1ab79976ec28d27e1da447055756c7ca29**: net/Catalogue.Asma, RemoteFiles archive
+access, LibraryDownloads and LibraryMaintenance, StorageSection, CatalogueTest,
+LibraryDownloadsTest's archive-before-index/refused-save cases and archive-storage tests. Native
+retains the compressed ZIP independently from fetched music, reads members by their exact paths
+and deletes an archive catalogue's index and ZIP together. Cache Clear leaves it and playing
+buffers alone. Existing WEB uses encoded HTTPS file IDs; retain those rather than rewriting
+playlists/History into Android's internal scheme.
+
+Parity checklist:
+- Only the explicit ASMA download fetches the complete archive (currently about 20 MB); startup
+  and schema migration never fetch it. An existing index remains browsable without claiming bytes.
+- Retain the compressed immutable Blob and validated member descriptors in schema 6's reserved
+  asmaArchives store. Verify members before publishing archive and derived index in one transaction.
+  Cancellation, corrupt input, quota failure and invalid records preserve the previous installation.
+- Use a persisted revision ticket in that transaction: an older download cannot restore data
+  after another tab deletes or replaces it. Roll back the revision on failure too. No extra schema.
+- Resolve held handoff buffers first, then prepared/archived/fetched copies through the same
+  playback/Information/export route. Each archive read returns fresh verified bytes; no duplicate
+  archive members enter the 512 MiB fetched-music LRU. Read current storage when resolving a member.
+- Decorate only actual member presence, preserve selection/played-before ownership, expose archive
+  size/status and one confirmed index+archive delete, and keep current playback/FIFO/editor/user
+  documents intact. Preserve English/Polish language switching without restarting audio.
+- Exercise native/shared cases, corruption, revision/rollback, cancellation, old indexes, real UI
+  download/play/delete, cold startup and legacy/native import identities before the full gate.
+
+Implementation uses zip-archive.js, OfflineAsma, AsmaView, the existing bounded downloader and the existing
+reserved store. The ZIP reader supports single-disk stored/deflated members and data descriptors,
+checks local/central bounds, names, overlap, size and CRC, and rejects encrypted/ZIP64/ambiguous
+entries. Browser resource bounds are 64 MiB per expanded member and 512 MiB per expanded archive.
+Raw DEFLATE support is required for compressed archive members; refusal is reported and preserves
+old data. Existing individual HTTPS file playback remains the fallback when no readable archive
+member is available. These are browser capability/resource limits, not new servers or dependencies.
+Format references: [PKWARE ZIP specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT)
+and [DecompressionStream constructor](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream/DecompressionStream).
+
+The actual existing import event had a separate identity defect: a native asma://asma/… reference
+was passed to an HTTP root that already ended in /asma/, duplicating the root. W12's shortened
+fixture hid this. The actual FileReader before-fix guard fails; conversion now accepts the native
+root and retains compatibility with the shortened form. Ordinary browser addresses stay unchanged.
+
+The shared six-case fixture includes native SAP/text download cases, authorless games, apostrophe/
+plus, nested author paths and URL encoding. Native Asma.parseIndex and WEB consume it.
+Native ZipInputStream reports unknown local-header sizes as zero for descriptor ZIPs; the current
+published archive has known local sizes. The native fixture models those known headers, and WEB
+also verifies descriptor members using their central-directory sizes. Native production is unchanged.
+
+### W21 preflight and regression checkpoint
+
+The production ZIP reader verifies all **6458 files** of the measured **20,136,268-byte** public
+archive, and three buffers exactly match Python ZipFile (Quest_For_Cool, Robots and SimCity_2000).
+This is host parsing/network evidence; CORS and audible browser playback remain unchecked.
+Production checks pass sixteen archive/storage/coordinator cases, seven transfer/deadline cases,
+shared native parsing and focused actual-page download/play/delete cases. Five deliberate faults
+(checksum, stale publication, missing rollback, unavailable offline glyph and stale presentation) are detected and restored.
+Removing a shared row fails WEB and native tests and reruns the Gradle task via its declared input;
+restoration passes. Before-fix app guards also demonstrate missing offline bytes and the actual
+native import defect. A new before-fix check caught corruption notices/availability being reset
+by metadata refresh; known damaged members now remain quarantined for that archive revision.
+
+Initial full-page preflight found two fixture issues: the Settings label still expected index-only
+ASMA, and the new playback test left a saved ASMA document before a later blank platform search.
+The label assertion follows the new joint storage item; the new stateful playback scenario now
+runs after the existing Search/playlist checks. Their assertions remain intact. Final integrated
+preflight passes **1240 actual-ESM page assertions**, with no uncaught UI exceptions, and **twelve
+fresh starts / 248 assertions**, including retained ASMA playback without network/autoplay or
+archive startup writes. The forced full project gate/lint are pending. W21 is not counted complete yet.
+Real browser rendering, quota/persistence, CORS, touch, sound and background operation remain
+unchecked. No merge, package, push, deployment, version change or APK is authorized by this stage.
+
+### W21 live-presentation correction before the full gate
+
+A further actual-page guard reproduced a stale claim after another connection deleted ASMA:
+focus refreshed the byte snapshot to empty but left the visible archive caption and controls
+unchanged. The initial forced gate on **26cbdc3** was deliberately stopped during native tests
+(exit 143 after 357.1 s); it is an interrupted run, not a passing gate. No source edits were made
+until its supervisor had stopped and cleaned up its own processes.
+
+AsmaView now owns archive/index presentation for both catalogue and storage rows. It refreshes
+existing captions, marks, labels, icons, action availability and folder-opening state from the
+latest data without replacing focused controls. An old index read cannot restore facts after a
+newer snapshot. Eight additional actual-page cases cover cross-connection removal/reinstallation,
+focus, unavailable Delete with its reason, live controls, stale reads and playback continuity.
+The new stale-presentation guard also detects an intentionally removed generation/snapshot check.
+
+The optional legacy test adapter also exposed duplicate private helper names when flattening
+modules. Its source adapter now isolates those names; production ESM module scopes are unchanged.
+The legacy full-page path passes, and the final actual-ESM preflight passes **1240 assertions**;
+twelve cold starts pass **248 assertions** with no new archive startup writes or network.
+The replacement forced full gate/lint are pending; W21 remains uncounted until they pass.
+
+### W21 copied-bootstrap dependency correction
+
+The next forced run on **1fbe9ef** passed **1255 native tests / 172 suites** in 479.8 s,
+twelve cold starts and the configured checks through the cache/History companions. It then
+stopped at the older Random-startup fixture: that test copies the common bootstrap into a
+temporary directory and resolved two historical imports, but not the new ZIP fixture import.
+The failing module path is a test-adapter dependency error, not an application Random failure.
+This attempt is archived as a failed full gate; lint had not run.
+
+The copier now resolves static relative imports against the real scripts directory. All four
+original persisted-scope/delayed-choice assertions pass unchanged. The remaining companion
+checks, including actual WASM/audio, migration, icons, PWA and server checks, also pass. The
+complete forced gate will be repeated. No application source changed
+for this correction; the source/verification record will still identify the exact tested commit.
+
+
+### W21 completed host gate
+
+Tested source **57a189fb96e981f8e95afbba5f9da79428d362da** passes the forced complete project gate:
+**1255 tests / 172 suites**, zero failures/errors/skips, **984 s** overall. All **31** native unit
+tasks executed (488.5 s); every configured companion passed, including **1240 actual-ESM page
+assertions**, **twelve fresh starts / 248 assertions**, actual WASM/audio, migrations, PWA and
+eleven server checks. Lint completed in **86.5 s**, **0 errors / 79 warnings**. All **716**
+source/test/build-input hashes match the candidate. Logs, JUnit XML, lint report and receipt were
+archived before another test could replace them. The final amendment changes documentation only.
+
+The architecture record now also corrects its obsolete claim that ASMA has no individual HTTP
+file URLs; current native Catalogue already supplies them. Existing public identities and the
+full offline archive are complementary. Native production remains unchanged. Browser CORS,
+quota/persistence, rendering, touch, sound and background behaviour remain unchecked.
+
+W21 is implemented at host level: **19 of 25 scopes** (W01-W13, W16-W18, W20-W21, W24).
+Continue W23 recovery, W19/W22, W14/W15 and W25, followed by the final requirements/commit audit
+and packaged WEB trial. No WEB merge, version change, push or deployment has occurred.

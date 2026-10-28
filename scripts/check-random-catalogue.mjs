@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from 'node:assert/strict';
+import {zipFixture} from './fixtures/zip.mjs';
 import '../web/node_modules/fake-indexeddb/auto/index.mjs';
 import { catalogue, playlists, played, settings } from '../web/src/store.js';
 import * as archive from '../web/src/catalogue.js';
@@ -13,14 +14,8 @@ const fixture = (lines, source = 'modland', playable = () => true, summary = tru
   return [...built.records, { key: `${source}:meta`, tracks: built.tracks, total: built.total, complete: true,
     fingerprint: lines, ...(summary ? { platformCounts: built.platformCounts, platformFingerprint: PLATFORM_FINGERPRINT } : {}) }];
 };
-const zipDirectory = (name) => {
-  const text=Buffer.from(name),header=Buffer.alloc(46),end=Buffer.alloc(22);
-  header.writeUInt32LE(0x02014b50);header.writeUInt32LE(300,24);header.writeUInt16LE(text.length,28);
-  const directory=Buffer.concat([header,text]);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(1,10);end.writeUInt32LE(directory.length,12);
-  return Buffer.concat([directory,end]);
-};
 const oldFetch=globalThis.fetch;
-const zip=zipDirectory('asma/Games/New/new.sap');
+const zip=Buffer.from(zipFixture([{name:'asma/Games/New/new.sap',body:'SAP'}]));
 const zipResponse=async()=>({ok:true,status:200,headers:{get:()=>String(zip.length)},arrayBuffer:async()=>zip.buffer.slice(zip.byteOffset,zip.byteOffset+zip.byteLength)});
 
 await test('a failed real ASMA index update retains the previous index and user data', async () => {
