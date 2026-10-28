@@ -24,5 +24,5 @@ const { played, playlists } = await import(path.resolve('web/src/store.js'));
 const page = await played.page(0, 100);
 const ok = page.length === 100 && page[0].url === 'u149' && page[99].url === 'u50'
   && await played.count() === 150 && (await playlists.get('mine'))?.name === 'Mine';
-console.log(ok ? '✓ a version-3 database opens as version 4: history paged, playlists kept' : `✗ ${JSON.stringify(page.slice(0,2))}`);
+console.log(ok ? '✓ a version-3 database opens in the current schema: history paged, playlists kept' : `✗ ${JSON.stringify(page.slice(0,2))}`);
 process.exit(ok ? 0 : 1);

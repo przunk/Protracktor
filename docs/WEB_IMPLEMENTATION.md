@@ -32,10 +32,11 @@ tests for each scope; port their actual scenarios and expected results to WEB ch
 fixtures are preferred where they express the same rule. Existing historical plans can describe
 earlier states; current accepted code/tests govern behaviour unless an actual defect is recorded.
 
-The browser database on develop is version 4. W06 implements the coordinated version 5 upgrade
-for listened History flags and the empty W07 bookmarks store. Version 6 remains reserved for
-retained remote music/ASMA storage if needed. Only version 5 is implemented so far. Existing user
-stores, URL identities, playlist ownership and the phone-handoff byte lifetime must survive.
+The browser database on develop is version 4. This branch implements the coordinated upgrades:
+version 5 adds listened History flags and bookmarks; version 6 adds retained remoteMusic and the
+reserved asmaArchives store. W20 enables fetched-music retention; W21 will enable the permanent
+archive without another schema change. Startup/migration performs no full archive download.
+Existing user stores, URL identities, playlist ownership and phone-handoff byte lifetime survive.
 Android schema remains 23. No other worktree or shared toolchain is changed.
 
 ## Baseline checks
@@ -72,10 +73,10 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W14 | Original/Narrow/Mono | Pending |
 | W15 | Playback volume normalization | Pending |
 | W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
-| W17 | Browse position and subsong following | Browse restoration implemented with full host gate; subsong following pending |
-| W18 | Playback-mode/settings restoration | Pending |
+| W17 | Browse position and subsong following | Implemented in W17a/W17b; full host gate passes; browser acceptance unchecked |
+| W18 | Playback-mode/settings restoration | Implemented; forced full gate passed; browser acceptance unchecked |
 | W19 | Read-ahead and prefetch controls | Pending |
-| W20 | Persistent music cache and offline marks | Pending |
+| W20 | Persistent music cache and offline marks | Implemented; forced full gate passed; browser acceptance unchecked |
 | W21 | Complete offline ASMA | Pending |
 | W22 | Grouped downloads and Stop | Pending |
 | W23 | Legacy Modland request recovery | Pending |
@@ -1454,3 +1455,90 @@ production is unchanged. Real browser rendering, sound, touch, OS/background and
 behaviour remain unchecked. W24 is implemented at host level; W01-W13/W16-W18/W24 total 17 of 25
 scopes. Continue W20 retained music, then the remaining download and DSP stages. No WEB merge,
 version change, package, push or deployment is part of this checkpoint.
+
+## W20 — Retained music and availability analysis, 2026-10-28
+
+Reference **c8209b1**: net/CacheBudget, RemoteFileCache, RemoteFiles/SharedFetches,
+player/OnPhone and BrowseCache; full CacheBudgetTest, RemoteFileCacheTest, OnPhoneTest and
+relevant BrowseCache cases. Native uses a 512 MiB completed-file budget, LRU(time,name),
+SHA-256 URL filenames, atomic publication and in-use protection. Protected bytes still count.
+Its fetched-cache clear leaves archives/user documents/audio alone and needs no confirmation.
+Shared transfers survive individual caller cancellation, while each UI/playback intent stays guarded.
+
+Parity checklist:
+- Publish complete positive Blobs atomically with eviction/accounting; use actual payload size,
+  current/read-ahead protection sampled under the transaction, and native digest tie-breaks.
+  Keep index/History/bookmark/playlist/PWA storage and future permanent ASMA outside this budget.
+- Reserve browser schema 6 for remoteMusic and asmaArchives; create no data or network downloads
+  in migration. Preserve v3/v4 listening seeding, v5 records, blocked upgrade/retry and future-schema
+  refusal without reset. Quota/request/eviction failure rolls back the whole attempted publication.
+- One byte resolver supplies playback, Information, file/audio sharing and Random. Live handoff
+  buffers are copied and reused without silent persistence, including transferred HTTP references.
+  Shared fetched bytes cannot be detached by another waiter; stale results never activate playback.
+- Browse/Search/History alone gain native-style available-copy glyphs above played-before, with
+  checkbox ownership and row/focus/scroll retained. Native playlist/Random/Queue rows have no cache
+  input; do not extend those views speculatively. Index/metadata presence is not an offline copy.
+- Storage reports actual retained bytes and the 512 MiB limit, clear/retry/failure accurately.
+  Clear keeps playing buffers/context/FIFO/drafts/documents and retires pre-clear publications.
+  An old failed cleanup must not permanently poison later playback.
+- Compare shared native/WEB budget cases, actual IDB rollback/migrations, production fetch/cancel/
+  transfer paths and actual page gestures/actions. Demonstrate broken guards, restore and run
+  full gate/lint. Real-browser offline/quota/rendering/sound remain unchecked until observed.
+
+At the initial analysis checkpoint, integration and verification were still pending. Ignored
+draft probes were preparation only and did not establish production or browser behaviour.
+W20 does not enable a full archive.
+
+### W20 implementation and preflight checkpoint
+
+The production schema is now 6, with independent fetched-copy and reserved archive stores. The
+coordinator supplies playback/Random/file actions through one byte resolver; runtime handoff bytes
+bypass retention. It shares transfers, bounds header/body stalls, copies each consumer's buffer,
+tracks truthful positive payloads and retires pre-clear writes. Storage exposes sizes, immediate
+Clear and visible failures/Retry. Browse's reserved native-style leading slot updates without
+rebuilding rows or replacing selection. No permanent archive is downloaded yet.
+
+Preflight passes **13 shared budget cases + 7 freed-quantity cases** in WEB and two actual native
+CacheBudgetParityTest methods; removing a shared row fails both and reruns native tests via the
+registered input. Production checks pass **13 coordinator**, **8 store**, **3 migration/refusal**,
+**5 real-stream/deadline** and **9 presentation** cases. Actual-page checks cover **26 cache cases**;
+the current full ESM preflight passes **1212 assertions**, including the pre-existing application
+regressions. Eleven cold starts pass **226 assertions**, including retained-byte playback from a
+fresh app/module state without network or startup autoplay.
+
+Ten controlled faults are rejected and restored: protected eviction, aliased transferred buffers,
+late publication, non-remote persistence, metadata-only presence, non-atomic rollback, retired
+write tickets, an old protected snapshot, overwritten checkboxes and persisted phone bodies.
+Additional before-fix failures detect discarded quota state, non-remote retention and Blob
+construction interrupting otherwise successful playback. The original startup document-write
+guard remains active while permitting native-style cache-only budget maintenance.
+
+The legacy page fixture used a never-resolving transfer tied to the old UI AbortSignal. Native
+SharedFetches keeps a transfer independent of a waiting view; the fixture now releases that shared
+response explicitly and checks that completion caches it without reopening a stopped occurrence.
+Each transfer has its own signal, preserving the Queue Clear download guard. Object-URL cleanup
+was missing from jsdom's platform fixture; it is supplied, and uncaught UI exceptions now fail the
+page gate. No production fallback is added for the host limitation.
+
+At preflight, the forced full gate/lint were pending; their completed result is recorded below.
+Native production is unchanged; Android test inputs and comparisons are extended. Real-browser
+storage, rendering, sound and background acceptance remain unchecked. No merge, package, version
+change, push or deployment is authorized by this stage.
+
+### W20 completed host verification — 2026-10-28
+
+Tested source **2d9faae93300b7e7b2695ebfe0c7125d28e068ea** passes the forced complete project gate:
+**1254 tests / 171 suites**, zero failures/errors/skips, **955 s** overall. All 31 native unit
+tasks executed (476.6 s), every configured companion passed, including **1212 actual-ESM page
+assertions**, eleven cold starts (226 assertions), native audio, WASM, migrations, PWA and eleven
+server checks. Lint completed in **88.0 s**, **0 errors / 79 warnings**. All **708** source/test/
+build-input hashes match the candidate. Logs, JUnit results and receipt were archived locally
+before further test runs; a documentation-only amend leaves those tested inputs unchanged.
+
+The shared fixture and controlled-fault evidence above demonstrate the new guards, including
+positive byte presence, cancellation/publication ownership and atomic storage rollback. Native
+production remains unchanged. Browser offline/quota behaviour, real rendering, sound, touch and
+background operation remain unchecked. W20 is implemented at host level: **18 of 25 scopes**
+(W01-W13, W16-W18, W20, W24). Continue W21 full ASMA, W23 recovery, W19/W22, W14/W15 and W25,
+then the final requirements/commit audit and WEB package. No WEB merge, version change, push or
+deployment has occurred.

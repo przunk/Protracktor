@@ -1502,3 +1502,27 @@ Browser acceptance remains unchecked: change English/Polish/System while playing
 editing a query and inspecting another file; verify sound continuity, theme, focus, scroll, retained
 selection and meaningful accessibility labels. Repeat with an external shared link and background
 playback. Host stubs do not establish audible continuity, mobile focus or OS behaviour.
+
+### Retained WEB music — W20, 2026-10-28
+
+Run the registered `check-cache-budget`, `check-music-download`, `check-remote-music`,
+`check-music-cache-store`, `check-music-cache-migrations` and `check-music-cache-view` scripts.
+Shared TSV cases are also consumed by the actual native CacheBudgetParityTest and declared as
+Gradle inputs. Removing a case must fail both implementations and force native test execution.
+Store tests use the production opener with host IndexedDB and real platform Blobs, not a copied
+schema or alternate application store. Controller tests exercise the same production coordinator
+with controlled network/storage ports. Stream tests use real Response bodies and controlled timers.
+
+Actual-module page checks drive Browse, selection, transport, Settings Clear/Retry and HTTP handoff.
+They verify byte identity, retained replay, cache-only cleanup, unchanged playback/FIFO/editor,
+protected documents, readable errors, refused quota and transferred-buffer lifetime. Cold-page
+startup additionally plays a pre-existing retained copy without network or initialization autoplay.
+Cache-budget maintenance may write `remoteMusic` during startup; every other store stays protected
+by the original no-initialization-write guard. The page harness supplies object-URL cleanup and
+rejects uncaught UI exceptions rather than ignoring delayed timer errors.
+
+Manual browser acceptance remains open: play online, reload, disable the network and replay; clear
+copies during playback; preserve handoff bytes during this tab while refusing persistence after
+reload; check size/mark/focus behaviour and truthful storage refusal. After W21, full ASMA must
+survive fetched-cache Clear, while deleting ASMA removes its archive and index together. Host tests
+establish no audible output, real browser storage allocation, mobile touch or background behaviour.

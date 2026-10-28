@@ -156,6 +156,9 @@ run_check "Track selection" track-selection node scripts/check-track-selection.m
 run_check "Browse restoration" browse-scroll node scripts/check-browse-scroll.mjs
 run_check "Subsong strip rules" subsong-strip node scripts/check-subsong-strip.mjs
 run_check "Playback preferences" playback-preferences node scripts/check-playback-preferences.mjs
+run_check "Music cache budget" cache-budget node scripts/check-cache-budget.mjs
+run_check "Music transfer deadlines" music-download node scripts/check-music-download.mjs
+run_check "Remote music ownership" remote-music node scripts/check-remote-music.mjs
 run_check "Playlist file transfer" playlist-transfer node scripts/check-playlist-transfer.mjs
 run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs
@@ -189,6 +192,9 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Saved places storage" saved-places-store node scripts/check-saved-places-store.mjs
     run_check "Saved places catalogues" saved-places-catalogue node scripts/check-saved-places-catalogue.mjs
     run_check "Saved places presentation" saved-places-view node scripts/check-saved-places-view.mjs
+    run_check "Music cache presentation" music-cache-view node scripts/check-music-cache-view.mjs
+    run_check "Music cache storage" music-cache-store node scripts/check-music-cache-store.mjs
+    run_check "Music cache migrations" music-cache-migrations node scripts/check-music-cache-migrations.mjs
     run_check "History storage/migrations" history-store node scripts/check-history-store.mjs
     run_check "History filtering storage" history-filter-store node scripts/check-history-filter-store.mjs
     run_check "Random catalogue/storage" random-catalogue node scripts/check-random-catalogue.mjs

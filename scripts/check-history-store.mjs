@@ -32,14 +32,14 @@ for (const version of [3, 4]) await test(`v${version} upgrade seeds old History 
   assert.equal((await store.playlists.get('kept')).name, 'Playlist');
   assert.equal(await store.settings.get('test'), 'Setting'); assert.equal((await store.catalogue.get('modland:meta')).tracks, 42);
   const upgraded = await requestResult(indexedDB.open('protracktor'));
-  assert.equal(upgraded.version, 5); assert.equal(upgraded.objectStoreNames.contains('bookmarks'), true); upgraded.close(); store.forget();
+  assert.equal(upgraded.version, 6); assert.equal(upgraded.objectStoreNames.contains('bookmarks'), true); upgraded.close(); store.forget();
 });
 await test('empty old History stays empty and new rows do not inherit migration marks', async () => {
   const store = await fresh(), db = await seed(4, []); db.close(); assert.equal(await store.played.count(), 0);
   await store.played.record({ url: 'new', name: 'New', listened: true });
   assert.equal((await store.played.recent())[0].listened, false); store.forget();
 });
-await test('reopening v5 neither reseeds new rows nor restores cleared legacy rows', async () => {
+await test('reopening the current schema neither reseeds new rows nor restores cleared legacy rows', async () => {
   const store = await fresh(), db = await seed(4); db.close(); await store.played.clear();
   await store.played.record({ url: 'new', name: 'New' }); store.forget();
   const reopened = await import(`../web/src/store.js?history-test=${++moduleId}`);
@@ -87,9 +87,9 @@ await test('a denied open can retry without poisoning the storage singleton', as
   assert.equal(await store.played.count(), 0); store.forget();
 });
 await test('a newer schema is refused without deleting its History or playlists', async () => {
-  const store = await fresh(), db = await seed(6); db.close();
+  const store = await fresh(), db = await seed(7); db.close();
   await assert.rejects(store.played.count(), { name: 'VersionError' });
-  const retained = await requestResult(indexedDB.open('protracktor', 6));
+  const retained = await requestResult(indexedDB.open('protracktor', 7));
   const transaction = retained.transaction(['played', 'playlists']);
   assert.deepEqual(await requestResult(transaction.objectStore('played').get('a')), oldRow);
   const next = retained.transaction('playlists'); assert.equal((await requestResult(next.objectStore('playlists').get('kept'))).name, 'Playlist'); retained.close(); store.forget();

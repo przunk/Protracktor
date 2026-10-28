@@ -14,6 +14,7 @@
 //   node scripts/check-page.mjs
 
 import fs from 'fs';
+import { webcrypto } from 'node:crypto';
 import path from 'path';
 import { JSDOM } from './../web/node_modules/jsdom/lib/api.js';
 
@@ -84,6 +85,9 @@ window.navigator.mediaSession = {
 
 const posted = [];
 let holdTrackFetch = false;
+const heldTrackFetches = new Map();
+const releaseHeldTrackFetch = (url) => { const release = heldTrackFetches.get(url); heldTrackFetches.delete(url); release?.(); };
+const reachPageState = async (predicate) => { for (let n = 0; n < 300; n++) { if (await predicate()) return true; await new Promise((done) => setTimeout(done, 10)); } return false; };
 window.fetch = async (url, options) => {
   const u = String(url);
   if (u.endsWith('/pair/host') && window.__staticHost) return { ok: false, status: 404, json: async () => { throw new SyntaxError('not JSON'); } };
@@ -123,7 +127,8 @@ window.fetch = async (url, options) => {
   posted.push(u);
   if (holdTrackFetch) {
     // A download that never finishes, so the press that calls one off can be tested at all.
-    return new Promise((_, reject) => {
+    return new Promise((resolve, reject) => {
+      heldTrackFetches.set(u, () => resolve({ ok: true, arrayBuffer: async () => new ArrayBuffer(64) }));
       options?.signal?.addEventListener('abort', () => {
         const error = new Error('aborted');
         error.name = 'AbortError';
@@ -156,6 +161,12 @@ window.TextDecoder ??= TextDecoder;
 window.CompressionStream ??= CompressionStream;
 window.DecompressionStream ??= DecompressionStream;
 window.Response ??= Response;
+// jsdom has URL parsing but no object-URL registry; timers must still have browser-shaped cleanup.
+let nextObjectUrl = 0;
+const objectUrls = new Map();
+window.URL.createObjectURL ??= (blob) => { const url = `blob:http://localhost:8173/${++nextObjectUrl}`; objectUrls.set(url, blob); return url; };
+window.URL.revokeObjectURL ??= (url) => objectUrls.delete(url);
+if (!window.crypto.subtle) Object.defineProperty(window.crypto, 'subtle', { value: webcrypto.subtle });
 window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
 
@@ -166,7 +177,9 @@ const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const historyWritesSource = fs.readFileSync('web/src/history-writes.js', 'utf8').replace(/^export /gm, '');
 const savedPlacesSource = fs.readFileSync('web/src/saved-places.js', 'utf8').replace(/^export /gm, '');
-const storeSource = `const { historyMatches, HistoryPageScan } = (() => { ${historyFilterSource}; return { historyMatches, HistoryPageScan }; })();`
+const cacheBudgetSource = fs.readFileSync('web/src/cache-budget.js', 'utf8').replace(/^export /gm, '');
+const storeSource = `const { MUSIC_CACHE_CEILING, cacheEvictions, totalCacheBytes, freedCacheBytes } = (() => { ${cacheBudgetSource}; return { MUSIC_CACHE_CEILING, cacheEvictions, totalCacheBytes, freedCacheBytes }; })();`
+  + `const { historyMatches, HistoryPageScan } = (() => { ${historyFilterSource}; return { historyMatches, HistoryPageScan }; })();`
   + `const { HistoryWrites } = (() => { ${historyWritesSource}; return { HistoryWrites }; })();`
   + `const { savedPlaceId, immutablePlace, compareSavedPlaces, savedPlaceReason } = (() => { ${savedPlacesSource}; return { savedPlaceId, immutablePlace, compareSavedPlaces, savedPlaceReason }; })();`
   + fs.readFileSync('web/src/store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
@@ -246,6 +259,10 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     `const randomCatalogue = (() => { ${randomCatalogueSource}; return { randomAvailability, scopedRandomTable, downloadFavourites, clearFavourites, favouritesMeta }; })();`)
   .replace("import { RandomFiltersView } from './random-filters-view.js';",
     `const { RandomFiltersView } = (() => { ${randomFiltersViewSource}; return { RandomFiltersView }; })();`)
+  .replace("import { RemoteMusic } from './remote-music.js';",
+    `const { RemoteMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '')}; ${fs.readFileSync('web/src/remote-music.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RemoteMusic }; })();`)
+  .replace("import { MusicCacheView } from './music-cache-view.js';",
+    `const { MusicCacheView } = (() => { ${fs.readFileSync('web/src/music-cache-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { MusicCacheView }; })();`)
   .replace("import { RandomHistory } from './random-history.js';",
     `const { RandomHistory } = (() => { ${randomHistorySource}; return { RandomHistory }; })();`)
   .replace("import { bindRandomDice } from './random-dice.js';",
@@ -284,7 +301,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
 if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
 
-const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
+const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { musicNow: () => remoteMusic, musicStore: musicCache, bytesOf, browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
 
 console.log('page:');
 try {
@@ -590,12 +607,15 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 80));
   check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z', 'pressing it puts the button back');
   check($('sub').textContent === 'stopped', 'and the dock says the load was stopped');
-  holdTrackFetch = false;
+  const stoppedFile = window.__api.actualNow().url, stoppedOpens = window.__toWorklet.filter((message) => message.type === 'open').length;
+  holdTrackFetch = false; releaseHeldTrackFetch(stoppedFile);
+  check(await reachPageState(() => window.__api.musicNow().has(stoppedFile)), 'a stopped waiter lets its shared completed transfer publish the cache');
+  check(window.__toWorklet.filter((message) => message.type === 'open').length === stoppedOpens, 'finishing the background transfer cannot reopen a stopped foreground occurrence');
 
   // **The load is not over when the fetch is.** Otherwise the dock says "opening…" while the
   // button shows a play arrow that does something other than what it shows.
   window.__api.playAt(0);
-  await new Promise((r) => setTimeout(r, 80));
+  check(await reachPageState(() => window.__toWorklet.filter((message) => message.type === 'open').length > stoppedOpens), 'an explicit replay opens the retained completed bytes');
   // The engine says "ready" in the real page; the harness never runs one, so the wording is the
   // one for an engine that has not answered yet. Either way the bytes have left.
   check($('sub').textContent.includes('opening') || $('sub').textContent.includes('waiting for the engine'),
@@ -1568,7 +1588,9 @@ if (window.__api) {
   check(wasAt === '1:07' && $('elapsed').textContent === '0:00' && Number($('seek').value) === 0,
     'choosing another tune puts the bar back to the start while it is still downloading');
   holdTrackFetch = false;
-  $('playpause').click();   // "stop loading", so the held download is called off
+  const heldUrl = window.__api.actualNow()?.url;
+  $('playpause').click();   // Stop this waiter; the shared transfer may finish independently.
+  releaseHeldTrackFetch(heldUrl);
   await settle();
 
   window.__api.endRandom();
@@ -3782,6 +3804,8 @@ await (await import('./check-page-playback-preferences.mjs')).default({ window, 
 
 await (await import('./check-page-live-language.mjs')).default({ window, check });
 await (await import('./check-page-live-language-views.mjs')).default({ window, check });
+await (await import('./check-page-music-cache.mjs')).default({ window, check });
 
+check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

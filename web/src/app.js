@@ -4,8 +4,11 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
-import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue } from './store.js';
+import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue, musicCache } from './store.js';
 import * as archive from './catalogue.js';
+import { RemoteMusic } from './remote-music.js';
+import { MusicCacheView } from './music-cache-view.js';
+import { freedCacheBytes } from './cache-budget.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
@@ -49,6 +52,7 @@ import { setUiText, setUiAttribute, makeUiText } from './ui-text.js';
 const $ = (id) => document.getElementById(id);
 const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
+let remoteMusic = null, musicCacheView = null;
 
 /**
  * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
@@ -221,6 +225,7 @@ function playedBadge() {
 
 function browseLeading(url) {
   const leading = document.createElement('span'); leading.className = 'track-leading';
+  leading.dataset.cacheUrl = url;
   const primary = document.createElement('span'); primary.className = 'leading-primary';
   const badge = playedBadge(); badge.dataset.playedUrl = url;
   paintPlayedBadge(badge);
@@ -1459,29 +1464,8 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   render();
   setPlaying(false);
   try {
-    if (entry.data) {
-      // **Handed over rather than fetched.** A file on the phone has no address a browser could
-      // open, so the phone sends the bytes with the queue -- which it can do because it is there at
-      // the moment of transfer, and because a tracker module is kilobytes (`docs/PLAN_WEB.md` §8).
-      //
-      // **A copy, and that is not tidiness** (`docs/review-round-8.md` R1). The message below
-      // *transfers* the buffer, which detaches it here -- so handing over `entry.data` itself made
-      // the queue's own copy zero bytes long, and the second play of that row sent nothing and
-      // threw. Measured: one transfer, `byteLength` 0. A `.slice` of twenty kilobytes is not worth
-      // reasoning about; a queue that empties itself as it plays is.
-      setUiText($('sub'), uiMessageText('from the phone…'));
-      bytes = entry.data.slice(0);
-    } else {
-      // A Random pick read ahead was fetched while the tune before it played, which is the point of
-      // reading ahead: a pick that has not been fetched is a gap between tracks. Used once.
-      bytes = ready ? await ready : null;
-      if (!bytes) {
-        setUiText($('sub'), uiMessageText('fetching…'));
-        const response = await fetch(entry.url, { signal: abort.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        bytes = await response.arrayBuffer();
-      }
-    }
+    setUiText($('sub'), heldBytesOf(entry) ? uiMessageText('from the phone…') : uiMessageText('fetching…'));
+    bytes = await bytesOf(entry, { signal: abort.signal, ready });
   } catch (e) {
     if (asked !== playAsked || abort.signal.aborted) return;
     // **Only the load that is still current clears the flag.** Two quick track changes overlap:
@@ -1869,15 +1853,42 @@ function render() {
  * two actions that need bytes are built on, and it is why they are disabled for a row that stayed
  * on the phone: there is nothing to go and get.
  */
-async function bytesOf(entry) {
-  // A copy for the same reason `playAt` takes one: the callers hand these to the worklet, which
-  // transfers them, and a transfer detaches whatever it was given (`docs/review-round-8.md` R1).
-  if (entry.data) return entry.data.slice(0);
-  if (!entry.url) return null;
-  const response = await fetch(entry.url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.arrayBuffer();
+function heldBytesOf(entry) {
+  if (entry.data?.byteLength > 0) return entry.data;
+  return heldPlaylistTracks().find((track) => track.url === entry.url && track.data?.byteLength > 0)?.data ?? null;
 }
+
+async function bytesOf(entry, { signal, ready } = {}) {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  // Handoff bytes retain their tab lifetime and bypass every persistent-cache writer.
+  const held = heldBytesOf(entry);
+  if (held) return held.slice(0);
+  if (!entry.url) return null;
+  const prepared = ready ? await ready : null;
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  if (prepared) return prepared.slice(0);
+  return remoteMusic.bytes(entry.url, { signal });
+}
+
+/** Presence decorates the reserved Browse slot; source rows and selection stay put. */
+function paintDownloadedMusic() {
+  const held = new Set(heldPlaylistTracks().filter((track) => track.data?.byteLength > 0).map((track) => track.url));
+  for (const leading of document.querySelectorAll('[data-cache-url]')) {
+    const primary = leading.querySelector('.leading-primary');
+    if (!primary) continue; // Selection owns the whole slot.
+    const url = leading.dataset.cacheUrl;
+    const state = remoteMusic?.has(url) ? 'retained' : held.has(url) ? 'tab' : '';
+    if (primary.dataset.copy === state) continue;
+    primary.dataset.copy = state;
+    if (state) {
+      primary.innerHTML = iconSvg(ICON.onPhone); primary.setAttribute('role', 'img');
+      setUiAttribute(primary, 'aria-label', state === 'retained' ? uiMessageText('Downloaded copy — available offline') : uiMessageText('Available in this tab'));
+    } else {
+      primary.replaceChildren(); primary.removeAttribute('role'); primary.removeAttribute('aria-label');
+    }
+  }
+}
+
 
 /**
  * Hands the file to the browser to save.
@@ -2351,7 +2362,7 @@ async function fillAhead(r = random) {
   const keep = new Set([...upcoming.map((track) => track.url), currentTrack()?.url]);
   for (const url of r.bytes.keys()) if (!keep.has(url)) r.bytes.delete(url);
   for (const track of upcoming) if (!r.bytes.has(track.url)) {
-    r.bytes.set(track.url, fetch(track.url).then((response) => response.ok ? response.arrayBuffer() : null).catch(() => null));
+    r.bytes.set(track.url, bytesOf(track).catch(() => null));
   }
 }
 
@@ -2481,6 +2492,7 @@ function answerUnsaved(go) {
 
 /** The phone's icons, the same paths, for controls the page builds rather than declares. */
 const ICON = {
+  onPhone: 'M19 1H9c-1.1 0-2 .9-2 2v3h2V4h10v16H9v-2H7v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zM7.01 13.47l-2.55-2.55-1.27 1.27L7 16l7.19-7.19-1.27-1.27z',
   bookmark: 'M5 3H19V22L12 18L5 22ZM7 5V18.55L12 15.69L17 18.55V5Z',
   bookmarkFilled: 'M5 3H19V22L12 18L5 22Z',
   save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
@@ -2930,7 +2942,25 @@ async function renderSettings() {
   heading.className = 'storagehead';
   setUiText(heading, uiMessageText('Storage in this browser'));
   list.append(heading);
-  const INDEX_GONE = uiMessageText('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched, and its tunes will not play.');
+  let noticeTicket = noticeId;
+  musicCacheView = new MusicCacheView({ root: list, icon: (kind) => iconSvg(ICON[kind]), state: remoteMusic.state,
+    onClear: () => { noticeTicket = noticeId; return remoteMusic.clear(); },
+    onRetry: async () => {
+      noticeTicket = noticeId; await remoteMusic.retry();
+      if (remoteMusic.state.failed) throw remoteMusic.state.failed;
+    },
+    notice: (event) => {
+      if (noticeTicket !== noticeId) return;
+      if (event.kind === 'failed') { showNote(uiMessageText('This browser could not update downloaded music: {reason}', { reason: event.error.message })); return; }
+      const freed = freedCacheBytes(event.bytes);
+      switch (freed.kind) {
+        case 'nothing': showNote(uiMessageText('There is no downloaded music to clear.')); break;
+        case 'under-megabyte': showNote(uiMessageText('Freed less than 1 MB.')); break;
+        case 'megabytes': showNote(uiMessageText('Freed {n} MB.', { n: freed.count })); break;
+        default: throw new TypeError(`CacheFreed(${freed.kind})`);
+      }
+    } });
+  const INDEX_GONE = uiMessageText('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched. Saved tracks can still play when their file is available.');
   const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
@@ -4362,7 +4392,7 @@ async function renderCatalogues(list, note, canRender = () => true) {
   const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
   const about = {
     modland: uiMessageText('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
-    asma: uiMessageText('ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.'),
+    asma: uiMessageText("ASMA is Atari 8-bit music; files are fetched as needed and can be kept in this browser's music cache."),
   };
   const said = joinUiText(...[
     held.modland?.tracks ? holding(held.modland) : about.modland,
@@ -5534,7 +5564,7 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 // first thing anybody opening a tune sent to them would see is a QR code meant for somebody else.
 browseSelectionView = new BrowseSelectionView({ model: browseSelection,
   header: $('browse-selection-head'), count: $('browse-selection-count'), all: $('browse-select-all'),
-  leading: browseLeading, changed: updateSelectBar });
+  leading: browseLeading, changed: () => { updateSelectBar(); paintDownloadedMusic(); } });
 browseScrollView = new BrowseScrollView({ model: browseScroll, viewport: $('browselist'), visible: () => !$('browse').hidden });
 subsongStripView = new SubsongStripView({ strip: $('subsongs'), visible: () => !$('nowplaying').hidden,
   onSelect: (index) => node?.port.postMessage({ type: 'subsong', index }) });
@@ -5624,6 +5654,12 @@ played.onFailure((error) => status(uiMessageText('Could not save History: {reaso
 playlists.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 catalogue.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 window.addEventListener('focus', () => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
+
+remoteMusic = new RemoteMusic({ cache: musicCache, fetch: (...args) => fetch(...args),
+  inUse: () => [currentTrack()?.url, ...(random?.bytes.keys() ?? [])].filter(Boolean) });
+remoteMusic.subscribe(() => { paintDownloadedMusic(); if (musicCacheView?.body.isConnected) musicCacheView.render(remoteMusic.state); });
+window.addEventListener('focus', () => { void remoteMusic.refresh(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void remoteMusic.refresh(); });
 
 renderNothingPlaying();
 holdBarLabels();

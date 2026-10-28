@@ -6,12 +6,13 @@
 // **IndexedDB rather than `localStorage`**, which is a few megabytes and synchronous — and the
 // index in `docs/PLAN_WEB_LIBRARY.md` S3 is eighteen. Measured on two machines: 473 GB and 256 GB
 // offered, `persist()` granted on both, and the whole of Modland written in 2.6 s and 1.9 s. So
-// this stores what it needs and reports what it holds; there is no budget to ration and no
-// eviction rule to design.
+// indexes remain separate from the bounded fetched-music cache. Browser quota and persistence
+// are capabilities we report, not a promise that the default music budget will always fit.
 //
 // Everything here is promises over the callback API, in one place, because the alternative is
 // callbacks in the page.
 
+import { MUSIC_CACHE_CEILING, cacheEvictions } from './cache-budget.js';
 import { HistoryWrites } from './history-writes.js';
 import { savedPlaceId, immutablePlace, compareSavedPlaces } from './saved-places.js';
 import { historyMatches, HistoryPageScan } from './history-filter.js';
@@ -19,7 +20,7 @@ import { trimQuery } from './query-text.js';
 import { HISTORY_PAGE, historyPageClamp } from './rules.js';
 
 const DB = 'protracktor';
-const VERSION = 5;
+const VERSION = 6;
 
 /** The playlist that is not a document: replaced wholesale by every handoff, never deleted. */
 export const PHONE = 'phone';
@@ -66,6 +67,9 @@ function open() {
         };
       }
       if (!db.objectStoreNames.contains('bookmarks')) db.createObjectStore('bookmarks', { keyPath: 'key' });
+      // Version 6: fetched copies and the explicit full-archive download have independent lifetimes.
+      if (!db.objectStoreNames.contains('remoteMusic')) db.createObjectStore('remoteMusic', { keyPath: 'url' });
+      if (!db.objectStoreNames.contains('asmaArchives')) db.createObjectStore('asmaArchives', { keyPath: 'id' });
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -538,3 +542,78 @@ export const settings = {
 
 /** For the checks, which need a clean database per run and no leftovers between them. */
 export function forget() { connection?.close(); connection = null; opening = null; }
+
+const musicListeners = new Set();
+const musicChanged = () => { for (const listener of musicListeners) queueMicrotask(listener); };
+const heldMusic = (row) => typeof row?.url === 'string' && Object.prototype.toString.call(row.body) === '[object Blob]' && row.body.size > 0;
+const musicName = (row) => /^[0-9a-f]{64}$/.test(row.name ?? '') ? row.name : `${row.url}#completed`;
+const musicEntry = (row) => ({ url: row.url, name: musicName(row), sizeBytes: row.body.size,
+  lastUsedMillis: Number.isFinite(row.lastUsedMillis) ? row.lastUsedMillis : 0 });
+
+/** One atomic payload/accounting/eviction transaction; async network/digests stay outside it. */
+async function musicMutation(run) {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('remoteMusic', 'readwrite'), store = transaction.objectStore('remoteMusic');
+    let failure, result, changed = false;
+    const fail = (error) => { failure = error; try { transaction.abort(); } catch { reject(error); } };
+    const step = (action) => (...args) => { try { action(...args); } catch (error) { fail(error); } };
+    transaction.oncomplete = () => { if (changed) musicChanged(); resolve(result); };
+    transaction.onerror = () => {};
+    transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Aborted', 'AbortError'));
+    step(() => run({ store, step, result: (value) => { result = value; }, changed: () => { changed = true; } }))();
+  });
+}
+
+function evictMusic(rows, store, protectedUrls, ceiling, changed) {
+  const entries = rows.filter(heldMusic).map(musicEntry);
+  const byName = new Map(entries.map((row) => [row.name, row.url]));
+  const protectedNames = new Set(entries.filter((row) => protectedUrls.has(row.url)).map((row) => row.name));
+  for (const row of rows) if (!heldMusic(row)) { store.delete(row.url); changed(); }
+  for (const name of cacheEvictions(entries, protectedNames, ceiling)) { store.delete(byName.get(name)); changed(); }
+}
+
+export const musicCache = {
+  subscribe(listener) { musicListeners.add(listener); return () => musicListeners.delete(listener); },
+  async read(url) {
+    const row = await tx('remoteMusic', 'readonly', (store) => store.get(url));
+    return heldMusic(row) ? row.body : null;
+  },
+  touch(url) {
+    // Re-read under the write lock: touching an old result must not restore it after Clear.
+    return changeRecord('remoteMusic', url, (row) => heldMusic(row) ? { ...row, lastUsedMillis: Date.now() } : null);
+  },
+  async snapshot() {
+    const rows = (await tx('remoteMusic', 'readonly', (store) => store.getAll())) ?? [];
+    return rows.filter(heldMusic).map(musicEntry);
+  },
+  async write(url, body, { inUse = () => [], ceiling = MUSIC_CACHE_CEILING, canPublish = () => true } = {}) {
+    if (Object.prototype.toString.call(body) !== '[object Blob]' || !body.size) return false;
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(url));
+    const name = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return musicMutation(({ store, step, result, changed }) => {
+      if (!canPublish()) { result(false); return; }
+      store.put({ url, name, body, lastUsedMillis: Date.now() }); changed();
+      const request = store.getAll();
+      request.onsuccess = step(() => {
+        evictMusic(request.result, store, new Set([url, ...inUse()]), ceiling, changed);
+        result(true);
+      });
+    });
+  },
+  enforce({ inUse = () => [], ceiling = MUSIC_CACHE_CEILING } = {}) {
+    return musicMutation(({ store, step, changed }) => {
+      const request = store.getAll();
+      request.onsuccess = step(() => evictMusic(request.result, store, new Set(inUse()), ceiling, changed));
+    });
+  },
+  clear() {
+    return musicMutation(({ store, step, result, changed }) => {
+      const request = store.getAll();
+      request.onsuccess = step(() => {
+        const bytes = request.result.filter(heldMusic).reduce((total, row) => total + row.body.size, 0);
+        store.clear(); changed(); result(bytes);
+      });
+    });
+  },
+};

@@ -6,6 +6,7 @@ import { deflateSync } from 'node:zlib';
 const tracks = ['a', 'b'].map((name) => ({ url: `https://example.test/playback-startup/${name}.mod`, name }));
 const cases = {
   defaults: { raw: {}, shuffle: false, repeat: 'off', all: false },
+  cache: { raw: {}, shuffle: false, repeat: 'off', all: false },
   empty: { raw: { shuffle: '1', repeat: 'one', allsubsongs: '1' }, shuffle: true, repeat: 'one', all: true },
   malformed: { raw: { shuffle: 'true', repeat: 'future-mode', allsubsongs: 'yes' }, shuffle: false, repeat: 'off', all: false },
   one: { raw: { shuffle: '1', repeat: 'one', allsubsongs: '1' }, shuffle: true, repeat: 'one', all: true },
@@ -23,18 +24,24 @@ const until = async (fn) => { for (let n = 0; n < 200; n++) { if (fn()) return t
 export async function prepare({ window, rulesSource, storeSource, name }) {
   const choice = cases[name]; assert(choice, `Unknown startup case: ${name}`);
   for (const [key, value] of Object.entries(choice.raw)) window.localStorage.setItem(`protracktor.${key}`, value);
-  const store = window.eval(`(() => { ${rulesSource} ${storeSource}; return { playlists, settings }; })()`);
+  const store = window.eval(`(() => { ${rulesSource} ${storeSource}; return { playlists, settings, musicCache }; })()`);
   await store.playlists.save({ id: 'startup-list', name: 'Stored playlist', tracks, index: 1 });
   await store.playlists.save({ id: 'newer-list', name: 'Newer choice', tracks: [tracks[0]], index: 0 });
   if (name !== 'empty') await store.settings.set('active', 'startup-list');
+  if (name === 'cache') await store.musicCache.write(tracks[1].url, await new window.Response(new Uint8Array([21, 22, 23, 24])).blob());
   const state = window.__startup = { writes: [], preferenceWrites: [], notices: [], choice, tracks,
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
+  if (name === 'cache') {
+    const fetch = window.fetch; state.trackRequests = 0;
+    window.fetch = (...args) => { if (String(args[0]) === tracks[1].url) state.trackRequests++; return fetch(...args); };
+  }
   // Cold module evaluation can outlast a snackbar. Observe its visible lifetime, not hidden text.
   const bar = window.document.getElementById('snackbar'), caption = window.document.getElementById('snacktext');
   const notices = new window.MutationObserver(() => {
     if (!bar.hidden && caption.textContent) state.notices.push(caption.textContent);
   });
   notices.observe(bar, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
+  // Native startup enforces fetched-cache budgets; user documents still initialize read-only.
   const transaction = IDBDatabase.prototype.transaction;
   IDBDatabase.prototype.transaction = function (stores, mode, ...rest) {
     if (mode === 'readwrite') state.writes.push(...(typeof stores === 'string' ? [stores] : stores));
@@ -61,7 +68,7 @@ export async function verify({ window, check, name }) {
     if (name === 'empty') {
       await wait(600);
       check(api.editorNow().id === 'phone' && api.actualNow() === null, 'no saved selection retains the empty phone view without inventing a current track');
-      check(state.writes.length === 0, 'empty initialization does not write a default playlist');
+      check(state.writes.every((name) => name === 'remoteMusic'), 'empty initialization does not write a default playlist');
     } else if (name.startsWith('delayed')) {
       check(api.editorNow().id === 'phone' && !!state.release, 'delayed storage has not prematurely published a saved editor');
       const get = api.storeNow.get; let held = false, release;
@@ -88,7 +95,7 @@ export async function verify({ window, check, name }) {
       check(await until(() => api.editorNow().id === 'startup-list'), 'fresh startup restores the saved playlist');
       check(api.actualNow()?.url === tracks[1].url && api.indexNow() === 1, 'fresh startup selects the stored second track');
       await wait(600);
-      check(state.writes.length === 0, 'restoring a saved playlist performs no initialization database writes');
+      check(state.writes.every((name) => name === 'remoteMusic'), 'restoring a saved playlist performs no initialization database writes');
     }
     const order = api.planNow().context.order, { choice } = state;
     check(order.shuffle === choice.shuffle && order.repeat === choice.repeat, `${name}: restored transport modes match native defaults and saved values`);
@@ -100,6 +107,15 @@ export async function verify({ window, check, name }) {
     check(api.contextNow() === null && window.__toWorklet.length === 0 && $('playpause').title === 'Play', `${name}: startup never constructs audio or opens a decoder`);
     check(!api.dirtyNow(), `${name}: restored modes are not playlist content edits`);
     check(state.preferenceWrites.length === 0, `${name}: initialization does not write defaults over saved preferences`);
+    if (name === 'cache') {
+      $('playpause').click();
+      check(await until(() => window.__toWorklet.some((message) => message.type === 'open')),
+        'a cold page can explicitly start its previously retained music');
+      const opened = window.__toWorklet.find((message) => message.type === 'open');
+      check(state.trackRequests === 0 && opened?.bytes.byteLength === 4 && new Uint8Array(opened.bytes)[0] === 21,
+        'fresh production module state reads the retained original bytes without a network fetch');
+      if (opened) api.onWorklet({ type: 'opened', requestId: opened.requestId, describe: '', duration: 90, rate: 44100, subsongs: 1, current: 0, canSeek: true });
+    }
     if (name === 'denied') check(state.notices.some((text) => text.includes('playback preference read refused')), 'a refused playback read is visibly explained while the saved playlist still restores paused');
   } finally { state.cleanup(); }
 }

@@ -1697,3 +1697,39 @@ The page integration gate evaluates the actual ESM graph inside the existing hos
 fixture. Flattening imports had hidden a missing production `catalogue` import; real-module startup
 rejects that defect. Node's VM flag belongs only to tests and adds no WEB runtime dependency.
 Host DOM and audio-message evidence do not establish real-browser sound or device behaviour.
+
+### WEB retained music — W20, 2026-10-28
+
+Browser schema **6** adds `remoteMusic` and reserves `asmaArchives`. An upgrade preserves the
+existing documents, indexes, bookmarks and History qualification; it neither downloads nor seeds
+music. Permanent archive payloads have a separate lifetime and do not consume the fetched-file
+budget. A future schema is refused without reset, and a blocked upgrade can be retried.
+
+`cache-budget.js` ports native CacheBudget's 512 MiB ceiling, completed-only accounting and
+LRU(time,name). The browser keeps original URL identities, with native SHA-256 URL names for the
+same-timestamp tie-break. `store.js` publishes an immutable Blob and evicts in one transaction.
+Actual positive payload size establishes presence; a metadata flag does not. Current/read-ahead
+protection is sampled under the write transaction; protected bytes still count. Accounting reads
+Blob handles/sizes, rather than allocating every cached ArrayBuffer. This is not a browser memory
+or permanence guarantee. Failed publication or eviction rolls back the attempted change.
+
+`RemoteMusic` owns shared transfers, persistence, membership and clear/publication generations;
+UI cancellation retires a waiter, not another caller's transfer. `music-download.js` bounds the
+browser's combined connect/header wait to 45 seconds (native connect15/read30 allowance) and
+renews the native 30-second inactivity deadline for each body read. Fetch exposes no separate TCP
+connection timer. Failed/partial transfers never publish a copy. Every decoder caller owns its
+buffer, and retention/Blob/quota failure cannot withhold successfully fetched bytes.
+
+The common app resolver serves playback, Random and file/Information/audio actions. Runtime
+handoff bytes take precedence and are copied without persistent publication, even for HTTP URLs.
+Only absolute HTTP(S) fetches enter retained storage; relative/local/data identities do not become
+silent durable imports. Clear retires old publication tickets, removes only fetched copies and
+keeps current audio, pending requests, drafts and user documents. The ticket guard is deliberately
+stronger than native's directory clear followed by possible late background publication.
+
+Browse/Search/History decorate the existing leading slot with native's phone/tick; selection owns
+that slot and played-before stays below it. Playlist/Random/Queue numbers gain no extra cache UI.
+`MusicCacheView` retains its controls while sizes/failures change and offers clear/retry. It reports
+actual bytes and tiny frees honestly; the origin-wide quota estimate remains separate. In-process
+subscriptions plus focus/visibility reads refresh membership; cross-tab durable playback leases
+are not supplied. Browser quota/persistence and real offline playback still require acceptance.

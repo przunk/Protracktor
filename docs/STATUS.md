@@ -44,6 +44,15 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W20 complete at host level, 2026-10-28:** browser schema 6 separates fetched copies from user
+documents and the reserved ASMA archive. Native-style 512 MiB LRU, protected atomic publication,
+common byte resolution, Browse copy marks and Storage Clear/Retry pass the forced full gate on
+**2d9faae**: **1254 tests / 171 suites**, zero failures/errors/skips, **955 s**, all companions,
+**1212 page assertions** and eleven cold starts (226 assertions). Lint: **0 errors / 79 warnings**;
+all **708** input hashes match. Shared native/WEB cases, migrations, transfer deadlines and
+controlled faults are verified. Browser offline/quota/rendering/audio behaviour remains unchecked.
+No WEB merge, package, version change or deployment.
+
 **W24 complete at host level, 2026-10-28:** live en/pl/System changes preserve playback, bytes,
 context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes the forced gate:
 **1252 tests / 170 suites**, zero failures/errors/skips, **922 s**, all companions including
@@ -51,7 +60,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**17 of 25 scopes are implemented** (W01-W13, W16-W18, W24); W20 cache is next. No WEB merge,
+**18 of 25 scopes are implemented** (W01-W13, W16-W18, W20, W24); W21 full ASMA is next. No WEB merge,
 package, push or deployment.
 
 
