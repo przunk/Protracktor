@@ -79,7 +79,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W20 | Persistent music cache and offline marks | Implemented; forced full gate passed; browser acceptance unchecked |
 | W21 | Complete offline ASMA | Implemented; forced full gate passed; browser acceptance unchecked |
 | W22 | Grouped downloads and Stop | Pending |
-| W23 | Legacy Modland request recovery | Pending |
+| W23 | Legacy Modland request recovery | Implemented; forced full gate passed; browser acceptance unchecked |
 | W24 | Language changes without interrupting playback | Implemented; forced full gate passed |
 | W25 | Browser Media Session and external controls | Pending; C104 reopened by scope selection |
 
@@ -1669,3 +1669,64 @@ quota/persistence, rendering, touch, sound and background behaviour remain unche
 W21 is implemented at host level: **19 of 25 scopes** (W01-W13, W16-W18, W20-W21, W24).
 Continue W23 recovery, W19/W22, W14/W15 and W25, followed by the final requirements/commit audit
 and packaged WEB trial. No WEB merge, version change, push or deployment has occurred.
+
+
+## W23 — Legacy Modland requests, 2026-10-28
+
+Reference **c8209b1ab79976ec28d27e1da447055756c7ca29**: Modland.legacyUnknownAuthorUrl/pathSegments,
+RemoteFiles.fetch/download/downloadAt/attempt, all four original ModlandLegacyPathsTest methods
+and all ten RemoteFilesModlandTest methods. Native recovers a moved unknown-author directory
+only after the original HTTP 404, then keeps the original playlist/cache identity.
+
+Parity checklist:
+- Only exact HTTPS Modland module-root URLs qualify. Decode per segment while preserving literal
+  plus; exclude the format root/filename, queries, fragments, encoded separators, lookalikes and
+  ambiguous multiple unknown directories. Nested format/game directories and exact encoding survive.
+- An original 200 is final. Only 404 may try one canonical replacement; access/server errors and
+  connection failures do not retry. A refused replacement reports its own failure, without a loop.
+- Discard refused bodies. Give each request its own 45-second connect/header allowance and retain
+  the 30-second body-inactivity bound, operation cancellation and independent shared waiters.
+- Publish complete positive bytes under the original ID only. Reopen offline, shared callers,
+  transfer ownership and Clear during fallback must retain W20's protections. Never rewrite
+  playlists, History, source order or metadata IDs to the recovered address.
+- Use the same resolver for real playlist playback and file/Information/export access; no private
+  playback-only retry, new server, dependency, archive crawl or browser credential-policy change.
+
+The narrow catalogue-urls.js extraction preserves the existing native-compatible path encoder
+byte for byte and avoids a catalogue/downloader import cycle. downloadMusic owns the request-only
+recovery; RemoteMusic still owns the original key, shared transfer and disk publication ticket.
+The legacy test adapter resolves these modules explicitly; production ESM scopes stay separate.
+
+A before-fix actual playlist click reported HTTP404, requested only the old URL and never opened
+its decoder. New production checks cover the four reported YM/SPC/AdLib/VGZ files, retained IDs,
+exact transferred bytes, History and offline replay. **23 shared URL cases** are consumed by
+native and WEB; malformed UTF-8 is additionally declined by WEB rather than copying Java's
+replacement-character decoding. Browser code does not set forbidden Cookie/User-Agent headers
+or reproduce native gate-cookie retries; normal browser CORS/credentials policy remains in force.
+This capability boundary does not trigger a proxy or a misleading retry on a transport refusal.
+
+Preflight passes **13 production recovery cases**, the existing **seven transfer/deadline cases**,
+**15 native tests / two suites**, **1256 actual-ESM page assertions** and the focused legacy
+adapter path. Four deliberately broken guards are detected and restored: ambiguous paths,
+non404 recovery, changed cache identity and the real row action without recovery. Removing a shared row also fails WEB and the native fixture guard (five tests run before the
+configured fail-fast stop). Restoring it reruns and passes all fifteen native tests. Both native
+commands match the positive preflight and use no rerun flag: the declared fixture input, rather
+than a changed filter, invalidates the test task. The integrated full project gate/lint remain
+pending; W23 is not yet counted complete. Real browser CORS,
+rendering, offline persistence and audible playback remain unchecked.
+
+
+### W23 completed host gate — 2026-10-29
+
+Tested source **7b1743e6537889d8a2b53fc43144c2316def6df6** passes the forced complete project gate:
+**1256 tests / 172 suites**, zero failures/errors/skips, **960 s** overall. All **31** native unit
+tasks executed (473.9 s); every configured companion passed, including **1256 actual-ESM page
+assertions**, twelve fresh starts / 248 assertions, thirteen production recovery cases, actual
+WASM/audio, migrations, PWA and eleven server checks. Lint: **0 errors / 79 warnings**, **85.7 s**.
+All **720** source/test/build-input hashes match. Full logs, JUnit, lint and receipt are archived;
+the final amendment changes documentation only. Native production remains unchanged.
+
+W23 is implemented at host level: **20 of 25 scopes** (W01-W13, W16-W18, W20-W21, W23-W24).
+Browser CORS, offline permanence, rendering and audible playback remain unchecked. Continue W19,
+W22, W14/W15 and W25, then the final requirements/commit audit and WEB package. No WEB merge,
+version change, push or deployment has occurred.

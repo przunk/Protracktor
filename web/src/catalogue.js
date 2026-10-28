@@ -14,6 +14,7 @@
 
 import { catalogue, asmaArchive } from './store.js';
 import { downloadMusic } from './music-download.js';
+import { MODLAND_FILE_BASE, encodeCataloguePath } from './catalogue-urls.js';
 import { zipDirectory, validateZip } from './zip-archive.js';
 import { md5, parseSongLengths } from './songlengths.js';
 import { parseSongDbMetadata, songDbKey } from './songdb.js';
@@ -27,7 +28,7 @@ const ASMA_INDEX_URL = 'https://asma.atari.org/asmadb/asma.zip';
 
 /** What each archive is called on screen, and where its files are served. */
 const SOURCES = {
-  [MODLAND]: { name: 'Modland', files: 'https://modland.com/pub/modules/' },
+  [MODLAND]: { name: 'Modland', files: MODLAND_FILE_BASE },
   // ASMA serves every file at its zip entry's own path (measured), which is what lets a
   // browser play it without the 20 MB archive -- `docs/rules/queue-cases.tsv` [asmaUrl].
   [ASMA]: { name: 'ASMA', files: 'https://asma.atari.org/asma/' },
@@ -669,7 +670,7 @@ export function urlFor(format, author, title, source = MODLAND) {
 
 /** A path relative to the catalogue's HTTP file root; existing browser identities stay stable. */
 export function fileUrlFor(path, source = MODLAND) {
-  return SOURCES[source].files + path.split('/').map(encodeSegment).join('/');
+  return SOURCES[source].files + encodeCataloguePath(path);
 }
 
 /** Native IDs include the archive root; older WEB imports also accepted the shorter form. */
@@ -680,18 +681,6 @@ export function asmaFileUrl(id) {
   if (!path || path.split('/').some((part) => !part || part === '.' || part === '..')) return null;
   return fileUrlFor(path, ASMA);
 }
-
-function encodeSegment(segment) {
-  let out = '';
-  for (const character of segment) {
-    out += /[A-Za-z0-9.\-*_]/.test(character)
-      ? character
-      : [...new TextEncoder().encode(character)]
-          .map((byte) => `%${byte.toString(16).toUpperCase().padStart(2, '0')}`).join('');
-  }
-  return out;
-}
-
 
 // --- HVSC's song lengths --------------------------------------------------------------------------
 //

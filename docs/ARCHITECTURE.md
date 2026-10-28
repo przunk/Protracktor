@@ -1755,3 +1755,19 @@ without replacing focused buttons. Index presence alone never establishes offlin
 Confirmed deletion removes index and ZIP together while keeping documents, History and playback.
 Host parsing/storage/DOM evidence and real-browser acceptance are recorded separately in the
 [implementation ledger](WEB_IMPLEMENTATION.md#w21--complete-offline-asma-2026-10-28).
+
+
+### WEB retained Modland addresses — W23, 2026-10-28
+
+catalogue-urls.js owns the native-compatible segment encoder and the narrowly scoped legacy
+unknown-author recovery rule. Catalogue URL construction and the bounded music reader use it
+without importing one another. The shared native/WEB cases cover nested formats, filenames,
+literal plus, Unicode and invalid or ambiguous routes.
+
+Only an original HTTP404 from the exact Modland module root permits one request with the moved
+author directory. Refused bodies are discarded, each attempt has a fresh header allowance, and
+transport/access/server failures remain explicit. The alternate address never becomes an ID:
+RemoteMusic retains complete bytes under the original URL, so playlist references, History,
+sharing and offline replay remain stable. Cancellation and Clear use the existing transfer and
+publication owners. Browser CORS and credential rules remain authoritative; no proxy or custom
+Cookie/User-Agent machinery is introduced.

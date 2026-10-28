@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { legacyUnknownAuthorUrl } from './catalogue-urls.js';
+
 // Fetch cannot separate TCP connect from response headers: bound their combined native allowance.
 export const MUSIC_HEADERS_TIMEOUT = 15_000 + 30_000;
 export const MUSIC_READ_TIMEOUT = 30_000;
@@ -30,8 +32,15 @@ export async function downloadMusic(fetch, url, { signal, onProgress } = {}) {
   signal?.addEventListener('abort', abort, { once: true });
   if (signal?.aborted) abort();
   try {
-    const response = await deadline(() => fetch(url, { signal: controller.signal }), MUSIC_HEADERS_TIMEOUT, controller);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    let response = await deadline(() => fetch(url, { signal: controller.signal }), MUSIC_HEADERS_TIMEOUT, controller);
+    if (!response.ok) {
+      discard(response);
+      const replacement = response.status === 404 ? legacyUnknownAuthorUrl(url) : null;
+      if (!replacement) throw new Error(`HTTP ${response.status}`);
+      // Each native connection gets its own deadline; recovery must not inherit an almost-expired one.
+      response = await deadline(() => fetch(replacement, { signal: controller.signal }), MUSIC_HEADERS_TIMEOUT, controller);
+      if (!response.ok) { discard(response); throw new Error(`HTTP ${response.status}`); }
+    }
     const contentLength = Number(response.headers?.get('content-length')), total = contentLength > 0 ? contentLength : null;
     onProgress?.({ stage: 'fetching', done: 0, total });
     // Null bodies are valid HTTP; the buffer path also supports platform response adapters.
@@ -55,4 +64,9 @@ export async function downloadMusic(fetch, url, { signal, onProgress } = {}) {
       reader.releaseLock?.();
     }
   } finally { signal?.removeEventListener('abort', abort); }
+}
+
+function discard(response) {
+  // Refused HTTP bodies are neither music nor worth waiting for before a single recovery attempt.
+  try { void response.body?.cancel?.()?.catch(() => {}); } catch { /* Already closed or locked. */ }
 }

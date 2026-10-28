@@ -268,6 +268,7 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/rules/cache-budget-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/cache-freed-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/asma-archive-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/rules/modland-legacy-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/history-filter-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/search-library-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/playlist-reorder-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)

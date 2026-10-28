@@ -1526,3 +1526,27 @@ copies during playback; preserve handoff bytes during this tab while refusing pe
 reload; check size/mark/focus behaviour and truthful storage refusal. After W21, full ASMA must
 survive fetched-cache Clear, while deleting ASMA removes its archive and index together. Host tests
 establish no audible output, real browser storage allocation, mobile touch or background behaviour.
+
+
+### WEB retained Modland paths — W23, 2026-10-28
+
+`node scripts/check-modland-recovery.mjs` consumes the 23 shared URL cases and runs thirteen
+production downloader/coordinator checks with real Response streams and host IndexedDB. Native
+ModlandLegacyPathsTest consumes the same file, declared as a Gradle test input; the ten existing
+RemoteFilesModlandTest cases remain unchanged. Controlled faults must fail before restoration.
+The existing seven music-transfer deadline/cancellation cases remain required. A removed shared row
+fails both readers and invalidates the native task without changing its command or adding a rerun
+flag; restoration executes and passes all fifteen reference tests.
+
+Actual page tests click saved playlist rows for conflict europe.ym, same game (22).spc,
+(opl2) totally nuts.s3m and 06 ending theme.vgz. They check exact original/recovered requests,
+bytes delivered to the worklet, original History and saved IDs, and replay without network.
+The common file-action resolver must reuse those bytes without issuing playback commands.
+These are host event/storage observations, not real-browser sound or CORS acceptance.
+
+Manual browser trial remains unchecked: play those retained legacy references online, replay
+from retained storage offline and inspect their unchanged playlist/History addresses. Compare
+an actual HTTP404 with an access/server refusal and a disconnected network; only the eligible
+404 may try one alternate path. Confirm that clearing retained music during a slow recovery
+leaves current sound alone and that the late transfer does not restore a cleared disk copy.
+Run the forced complete project gate/lint before closing this stage.

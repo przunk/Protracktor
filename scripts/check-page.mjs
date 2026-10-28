@@ -179,6 +179,8 @@ const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^expo
 const historyWritesSource = fs.readFileSync('web/src/history-writes.js', 'utf8').replace(/^export /gm, '');
 const savedPlacesSource = fs.readFileSync('web/src/saved-places.js', 'utf8').replace(/^export /gm, '');
 const cacheBudgetSource = fs.readFileSync('web/src/cache-budget.js', 'utf8').replace(/^export /gm, '');
+const catalogueUrlsSource = fs.readFileSync('web/src/catalogue-urls.js', 'utf8').replace(/^export /gm, '');
+const musicDownloadSource = catalogueUrlsSource + fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const storeSource = `const { MUSIC_CACHE_CEILING, cacheEvictions, totalCacheBytes, freedCacheBytes } = (() => { ${cacheBudgetSource}; return { MUSIC_CACHE_CEILING, cacheEvictions, totalCacheBytes, freedCacheBytes }; })();`
   + `const { historyMatches, HistoryPageScan } = (() => { ${historyFilterSource}; return { historyMatches, HistoryPageScan }; })();`
   + `const { HistoryWrites } = (() => { ${historyWritesSource}; return { HistoryWrites }; })();`
@@ -261,7 +263,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { RandomFiltersView } from './random-filters-view.js';",
     `const { RandomFiltersView } = (() => { ${randomFiltersViewSource}; return { RandomFiltersView }; })();`)
   .replace("import { RemoteMusic } from './remote-music.js';",
-    `const { RemoteMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'downloadCancelled')}; ${fs.readFileSync('web/src/remote-music.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RemoteMusic }; })();`)
+    `const { RemoteMusic } = (() => { ${musicDownloadSource.replace(/\bcancelled\b/g, 'downloadCancelled')}; ${fs.readFileSync('web/src/remote-music.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { RemoteMusic }; })();`)
   .replace("import { OfflineAsma } from './offline-asma.js';",
     `const { OfflineAsma } = (() => { ${fs.readFileSync('web/src/zip-archive.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'zipCancelled')}; const archiveReadZipMember = readZipMember; ${fs.readFileSync('web/src/offline-asma.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '').replace(/readZipMember\(/g, 'archiveReadZipMember(')}; return { OfflineAsma }; })();`)
   .replace("import { AsmaView } from './asma-view.js';",
@@ -291,9 +293,9 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
-    'const archive = (() => {' + lengthsSource + songdbSource
+    'const archive = (() => {' + lengthsSource + songdbSource + catalogueUrlsSource
       + `const { zipDirectory, validateZip } = (() => { ${fs.readFileSync('web/src/zip-archive.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'zipCancelled')}; return { zipDirectory, validateZip }; })();`
-      + `const { downloadMusic } = (() => { ${fs.readFileSync('web/src/music-download.js', 'utf8').replace(/^export /gm, '').replace(/\bcancelled\b/g, 'downloadCancelled')}; return { downloadMusic }; })();` + fs.readFileSync('web/src/catalogue.js', 'utf8')
+      + `const { downloadMusic } = (() => { ${musicDownloadSource.replace(/\bcancelled\b/g, 'downloadCancelled')}; return { downloadMusic }; })();` + fs.readFileSync('web/src/catalogue.js', 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
@@ -3755,6 +3757,7 @@ await (await import('./check-page-live-language.mjs')).default({ window, check }
 await (await import('./check-page-live-language-views.mjs')).default({ window, check });
 await (await import('./check-page-music-cache.mjs')).default({ window, check });
 await (await import('./check-page-offline-asma.mjs')).default({ window, check });
+await (await import('./check-page-modland-recovery.mjs')).default({ window, check });
 
 check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
