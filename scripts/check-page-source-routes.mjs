@@ -23,7 +23,8 @@ export default async function checkSourceRoutes({ window, check }) {
       complete: true, buckets: parsed.buckets, formats: parsed.formats, fingerprint: 'navigation-routes' }]);
   };
   await seed();
-  api.showPanel('browse'); $('browsesearch').value = 'Navigation'; await api.browseTo(['search']);
+  api.showPanel('browse'); await api.browseTo(['search']);
+  $('browsesearch').value = 'Navigation'; $('browsesearch').dispatchEvent(new window.Event('input', { bubbles: true }));
   $('browsesubmit').click();
   for (let tries = 0; tries < 200 && $('browselist').querySelectorAll('.btrack').length !== 2; tries++) await settle(10);
   const originalResults = [...$('browselist').querySelectorAll('.btrack')].map((row) => row.dataset.url);

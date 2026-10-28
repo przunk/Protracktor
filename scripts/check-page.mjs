@@ -159,7 +159,7 @@ window.navigator.storage ??= { persist: async () => true, persisted: async () =>
 
 const queryTextSource = fs.readFileSync('web/src/query-text.js', 'utf8').replace(/^export /gm, '');
 const historyFilterSource = fs.readFileSync('web/src/history-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
-const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '') + queryTextSource;
+const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '') + queryTextSource;
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const historyWritesSource = fs.readFileSync('web/src/history-writes.js', 'utf8').replace(/^export /gm, '');
@@ -186,6 +186,15 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';",
+    () => `const { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection } = (() => { ${fs.readFileSync('web/src/library-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection }; })();`)
+  .replace("import { SearchBrowser } from './search-browser.js';",
+    () => `const { SearchBrowser } = (() => { ${fs.readFileSync('web/src/search-browser.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchBrowser }; })();`)
+  .replace("import * as librarySearchStore from './library-search-store.js';",
+    () => `const librarySearchStore = (() => { ${fs.readFileSync('web/src/library-search-store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { searchCatalogueTracks, searchScopeAvailability }; })();`)
+  .replace("import { SearchScopesView, searchScopeLabel } from './search-scopes-view.js';",
+    () => `const { SearchScopesView, searchScopeLabel } = (() => { ${fs.readFileSync('web/src/search-scopes-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchScopesView, searchScopeLabel }; })();`)
+
   .replace("import { HistoryBrowser } from './history-browser.js';",
     () => `const { HistoryBrowser } = (() => { ${fs.readFileSync('web/src/history-browser.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { HistoryBrowser }; })();`)
   .replace("import { RecentSearchHistory } from './recent-searches.js';",
@@ -205,7 +214,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { HistoryPresentationReads } from './history-presentation.js';",
     `const { HistoryPresentationReads } = (() => { ${fs.readFileSync('web/src/history-presentation.js', 'utf8').replace(/^export /gm, '')}; return { HistoryPresentationReads }; })();`)
   .replace("import { RandomFilterState, storedRandomScope, platformById } from './random-scope.js';",
-    `const { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites } = (() => { ${platformDataSource}; ${randomScopeSource}; return { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites }; })();`)
+    `const { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, platformForFileName, parseModlandFavourites } = (() => { ${platformDataSource}; ${randomScopeSource}; return { RandomFilterState, storedRandomScope, platformById, PLATFORMS, PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, platformForFileName, parseModlandFavourites }; })();`)
   .replace("import * as randomCatalogue from './random-catalogue.js';",
     `const randomCatalogue = (() => { ${randomCatalogueSource}; return { randomAvailability, scopedRandomTable, downloadFavourites, clearFavourites, favouritesMeta }; })();`)
   .replace("import { RandomFiltersView } from './random-filters-view.js';",
@@ -247,7 +256,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -1203,17 +1212,18 @@ if (window.__api) {
   $('browsesearch').value = 'elysium';
   await window.__api.runSearch('elysium');
   check($('browsetitle').textContent === 'Search' && !$('browseback').hidden
-        && $('browsenote').textContent.startsWith('2 tunes by name or author'),
+        && $('browsenote').textContent.startsWith('2 matching tracks.'),
     'a search says what it found, and offers Back');
-  // Back clears the search and stays in Search; the next Back leaves it (the phone's order).
+  // Native Everywhere search leaves in one step and retains the query/result for reentry.
+  const retainedSearch = window.__api.searchNow().result;
   $('browseback').click();
   await settle();
-  check(!$('browsesearch').value && $('browsetitle').textContent === 'Search' && !$('browsesearch').hidden,
-    'which clears it and stays in Search');
-  $('browseback').click();
+  check($('browsesearch').value === 'elysium' && $('browsetitle').textContent === 'Browse' && $('browsesearch').hidden,
+    'Back leaves Everywhere Search without destroying its query');
+  [...$('browselist').children].find((li) => li.textContent.startsWith('Search')).click();
   await settle();
-  check($('browsesearch').hidden && $('browsetitle').textContent === 'Browse',
-    'and the next Back leaves Search, taking the field with it');
+  check(!$('browsesearch').hidden && window.__api.searchNow().result === retainedSearch,
+    'Search reentry shows the retained result without a hidden rerun');
   await window.__api.browseTo([]);
   window.__api.showPanel(null);
   await saved.remove('p-browse');
@@ -2155,7 +2165,7 @@ if (window.__api) {
   await api.runSearch('boulder');
   check([...$('browselist').children][0]?.dataset.url === 'https://asma.atari.org/asma/Games/Boulder%20Dash%20%28Tune%201%29.sap',
     'and by title, a tune filed with no author included');
-  check($('browsenote').textContent.includes('(Modland and ASMA)') || $('browsenote').textContent.includes('(ASMA)'),
+  check($('browsenote').textContent.includes('ASMA') && window.__api.searchNow().result.held.every(({ source }) => $('browsenote').textContent.includes(window.__archive.sourceName(source))),
     'the note says which archives it looked in');
   $('browsesearch').value = '';
 
@@ -3710,6 +3720,7 @@ await (await import('./check-page-saved-places.mjs')).default({ window, check })
 await (await import('./check-page-learned-titles.mjs')).default({ window, check });
 await (await import('./check-page-recent-searches.mjs')).default({ window, check });
 await (await import('./check-page-history-search.mjs')).default({ window, check });
+await (await import('./check-page-search-scopes.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

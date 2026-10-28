@@ -57,8 +57,8 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | Scope | Feature | State |
 | --- | --- | --- |
 | W01 | Independent playback context and selected playlist | Implemented; integrated full host gate passes; browser/device acceptance unchecked |
-| W02 | Full manual queue and list interactions | Implemented in model, transport and keyed panel; full host gate passes; browser/device acceptance unchecked |
-| W03 | Return to playback source | History query/page restoration passes W10; W11 Search-scope wiring remains pending |
+| W02 | Full manual queue and list interactions | Core implemented; live-drag commit alignment required in W12 shared gesture; browser/device acceptance unchecked |
+| W03 | Return to playback source | Implemented including History and Search query/scope restoration; full host gate passes; browser acceptance unchecked |
 | W04 | Remembered Random and deliberate reroll | Implemented; combined full host gate passes; browser acceptance unchecked |
 | W05 | Random platform/Favourites filters | Implemented; full host gate passes; browser acceptance unchecked |
 | W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
@@ -66,7 +66,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W08 | Learned list titles | Implemented; full host gate passes; browser acceptance unchecked |
 | W09 | Recent-search suggestions | Implemented; full host gate passes; browser acceptance unchecked |
 | W10 | Live History search | Implemented; full host gate passes; browser acceptance unchecked |
-| W11 | Search scopes and saved-playlist coverage | Pending |
+| W11 | Search scopes and saved-playlist coverage | Implemented; full host gate passes; browser acceptance unchecked |
 | W12 | Playlist reorder and import/export | Pending |
 | W13 | Bulk Browse/Search/History actions | Pending |
 | W14 | Original/Narrow/Mono | Pending |
@@ -725,3 +725,88 @@ page/source integration are implemented; W03 still needs W11's Search-scope wiri
 appearance, software keyboard, touch and physical background operation remain unchecked.
 Full/focused/mutation logs, JUnit/lint XML and input receipt are retained under ignored
 `user/web-parity-verification/w10/`. No WEB bundle, merge, push, deployment or APK.
+
+## W11 — Search scope/library analysis, 2026-10-28
+
+Android reference **c8209b1ab79976ec28d27e1da447055756c7ca29**: `SearchScope`, `LibrarySearch`,
+`SearchResults`, `BrowseWorkflow`, `SearchScopePanel`, `SearchTerms`, `CatalogueStore.search`
+and `LibraryStore.allTracks`; compare `LibrarySearchTest`, `SearchResultsTest`,
+`SearchTermsTest`, `SearchUiTest`/scope UI tests and the shared `searchMatch` rule cases.
+
+Parity checklist before implementation:
+
+- Everywhere combines all saved browser playlists with indexed catalogues; Online excludes saved
+  copies, and an empty catalogue selection means every held approved catalogue. Platform scope
+  includes both supported stores and an empty machine selection means all. No local-folder,
+  UnExoticA, live Mod Archive, AMP or proxy integration is added. The supported browser subset of
+  native Local is labelled Saved playlists, never Local folders.
+- Blank and one-character submissions are valid. AND folded words across native fields: catalogue
+  title/author, saved title/filename. Keep accents/separator folding distinct from History's
+  literal phrase rule. Use existing common cases and extend boundary cases where needed.
+- Keep the native per-source cap **2000**, global catalogue title order, saved-copy precedence
+  and stable URL deduplication. Browser playlists store separate copies where Android has one
+  global track row: canonicalize duplicate saved IDs deterministically before the cap, preserving
+  the latest saved metadata, then order by title. No mutation of stored playlists or drafts.
+- Count catalogue matches coherently with the bounded sorted result selection; never silently
+  truncate at WEB's former 300. Stream playable title shards rather than materializing all
+  archive rows. Cancellation/stale results/errors must honor request and view ownership.
+- Scope-kind changes clear stale rows; ticking within the same kind retains the old answer until
+  Search. Choosing a scope never searches automatically. Back first widens a narrowed scope, then
+  leaves Everywhere while retaining typed text and the existing answer.
+- Capture the query/scope that produced rows independently of pending text/chips. Queue-source
+  return restores those fields/results, preserving the transport plan and current resource state.
+  Do not regress W09's producing-query fix to Android's stale-row snapshot limitation.
+- Keep explicit storage failure/retry and missing-index explanations, EN/PL labels, plain recent
+  suggestions in the current scope, mouse/keyboard actions and stable field focus. Missing local
+  phone bytes remain unavailable with a reason; searching does not persist them.
+
+Implementation and host/browser verification remain pending at this analysis checkpoint.
+
+Implementation checkpoint: `LibrarySearch`/`SearchBrowser`, bounded sorted selection and coherent
+production storage are wired to stable scope controls and the existing recent-query field.
+All controls use actual click/input paths; current results carry their producing scope even when
+text/chips change. Ordinary Back now follows native widening/exit semantics and cached Search
+text cannot consume History/folder Back. The standalone scope check caught the platform tile
+being disabled by a chip-only availability rule; the production rule now distinguishes tile/chip
+keys. A controlled missing-scope probe exposed a mutable route read after synchronous model
+publication; restoration now retains its local immutable DTO across that callback.
+
+Reference comparison: **45 Kotlin tests / 5 suites** pass in **120 s**, including a new declared
+URI-encoded fixture with **25 shared SearchTerms cases**, existing LibrarySearch/SearchResults/
+SearchTerms tests and common rule cases. JS passes **42 domain cases**, **8 production IndexedDB
+cases**, and **10 scope DOM cases**. Actual-page checks exercise explicit blank/short submissions,
+all saved playlists, copies/absence, scope/chip actions, Back/reentry, producing source restore,
+latest reads/errors/Retry, stable rows and in-session phone bytes. A wrong shared expectation
+fails both JS and Kotlin without forcing Gradle. Disconnecting scope clicks, reversing copy
+precedence, accepting old owners, omitting scope restoration, rebuilding pending rows and dropping
+held bytes all fail their intended guards and are restored. The first missing-scope mutation
+failed by a callback null dereference; after the local-DTO safeguard, its repeated probe fails
+the intended scope-restore assertion. Full forced gate/lint remain pending; real browser UI,
+keyboard/touch/headset behaviour remain unchecked. Private evidence is under ignored
+`user/web-parity-verification/w11/`.
+
+The integrated page passed **946 assertions** before the final unchanged-text optimization;
+the current focused production-page loader passes its bootstrap plus **35 Search event checks**.
+Pending edits preserve row nodes and unchanged live-region text, avoiding a 2000-row rebuild or
+repeated identical announcements on every keystroke. Existing History cancellation/storage checks
+still pass after sharing the transaction completion helper. The final candidate's forced gate
+below must validate all page scenarios together; no bundle or browser acceptance is claimed.
+
+**Final forced gate checked:** clean source **1182e66** passes **1240 tests / 166 suites**,
+zero failures/errors/skips, **769 s** overall. Unit tests actually execute (31 tasks executed,
+454.3 s); all WEB companions run, including **947 page assertions**, **42 library-search domain**,
+**8 library storage** and **10 scope DOM cases**. Lint completes with zero errors in **83.3 s**.
+All **650 recorded application/test/build/rule input hashes** still match; this completion
+record changes documentation/commit message only. W11 and W03's Search-scope integration are
+implemented. Browser appearance, software keyboard, touch and external/background playback
+remain unchecked. Full/focused/mutation logs, JUnit/lint XML and input receipt are retained under
+ignored `user/web-parity-verification/w11/`. No bundle, merge, push, deployment or additional APK.
+
+### W12 preparation finding — live drag timing
+
+Code comparison with `ManualQueueReorder`/`PlaylistScreen` shows a remaining W02 gap: native
+updates the logical order on each full-row crossing, while WEB `PendingReorder` commits only on
+release. Thus cancellation/mid-gesture playback semantics differ even though current host tests
+pass. W02 remains partly complete until the shared queue/playlist gesture is aligned in W12's
+reorder substage, with native-based live-move/cancellation cases. Earlier implemented checkpoints
+cover their recorded cases and do not establish this missing parity.

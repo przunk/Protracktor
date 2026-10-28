@@ -101,6 +101,25 @@ async function tx(store, mode, run) {
   });
 }
 
+/** Cancellation may race completion; a finished transaction cannot be aborted again. */
+function readResult(transaction, signal, collect, failure = () => null) {
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      try { transaction.abort(); }
+      catch (error) { if (error.name !== 'InvalidStateError') throw error; }
+    };
+    const cleanup = () => signal?.removeEventListener('abort', abort);
+    signal?.addEventListener('abort', abort, { once: true });
+    transaction.oncomplete = () => {
+      cleanup();
+      if (signal?.aborted) reject(new DOMException('Aborted', 'AbortError')); else resolve(collect());
+    };
+    transaction.onabort = () => { cleanup(); reject(failure() ?? transaction.error ?? new DOMException('Aborted', 'AbortError')); };
+    transaction.onerror = () => {};
+    if (signal?.aborted) abort();
+  });
+}
+
 /**
  * Asks the browser not to evict this.
  *
@@ -123,7 +142,10 @@ export async function estimate() {
   } catch { return { usage: 0, quota: 0 }; }
 }
 
+const playlistListeners = new Set();
+const playlistsChanged = () => { for (const listener of playlistListeners) listener(); };
 export const playlists = {
+  subscribe(listener) { playlistListeners.add(listener); return () => playlistListeners.delete(listener); },
   /** Every playlist, the phone's first and the rest by name. */
   async all() {
     const found = (await tx('playlists', 'readonly', (s) => s.getAll())) ?? [];
@@ -139,13 +161,14 @@ export const playlists = {
    * phone's, and an edit in the page rewrites its own. A playlist is a few hundred rows at most.
    */
   save(playlist) {
-    return tx('playlists', 'readwrite', (s) => s.put({ ...playlist, updatedAt: Date.now() }));
+    return tx('playlists', 'readwrite', (s) => s.put({ ...playlist, updatedAt: Date.now() }))
+      .then((result) => { playlistsChanged(); return result; });
   },
 
   /** The phone's cannot go: it is a view of the last thing sent, not something the user made. */
   remove(id) {
     if (id === PHONE) return Promise.resolve();
-    return tx('playlists', 'readwrite', (s) => s.delete(id));
+    return tx('playlists', 'readwrite', (s) => s.delete(id)).then((result) => { playlistsChanged(); return result; });
   },
 };
 
@@ -226,6 +249,32 @@ export const catalogue = {
       if (found.length < batch) return;
       after = found.at(-1).key;
     }
+  },
+
+  /** One coherent query snapshot over playable title shards, with bounded per-cursor memory. */
+  async visitTitleShards(sources, visit, signal) {
+    const db = await open();
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const transaction = db.transaction('catalogue', 'readonly'), store = transaction.objectStore('catalogue');
+    const held = [];
+    let failure;
+    for (const source of sources) {
+      const meta = store.get(`${source}:meta`);
+      meta.onsuccess = () => {
+        if (!meta.result) return;
+        held.push({ source, ...meta.result });
+        if (!meta.result.tracks) return;
+        const prefix = `${source}:titles:`;
+        const request = store.openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) return;
+          try { visit(source, cursor.value); cursor.continue(); }
+          catch (error) { failure = error; transaction.abort(); }
+        };
+      };
+    }
+    return readResult(transaction, signal, () => held, () => failure);
   },
 
   /**
@@ -430,49 +479,36 @@ export const played = {
     const db = await open();
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const phrase = trimQuery(query);
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction('played', 'readonly'), store = transaction.objectStore('played');
-      const abort = () => {
-        try { transaction.abort(); }
-        catch (error) { if (error.name !== 'InvalidStateError') throw error; }
+    const transaction = db.transaction('played', 'readonly'), store = transaction.objectStore('played');
+    let result;
+    if (phrase) {
+      const scan = new HistoryPageScan(requested);
+      const request = store.index('playedAt').openCursor(null, 'prev');
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) { result = scan.result(); return; }
+        const row = cursor.value;
+        if (historyMatches(phrase, row.name, row.author, row.file)) scan.accept(row);
+        cursor.continue();
       };
-      signal?.addEventListener('abort', abort, { once: true });
-      let result;
-      if (phrase) {
-        const scan = new HistoryPageScan(requested);
+    } else {
+      const count = store.count();
+      count.onsuccess = () => {
+        const total = count.result, page = historyPageClamp(requested, total), rows = [];
+        result = { total, page, rows };
+        if (!total) return;
+        let skipped = page === 0;
         const request = store.index('playedAt').openCursor(null, 'prev');
         request.onsuccess = () => {
           const cursor = request.result;
-          if (!cursor) { result = scan.result(); return; }
-          const row = cursor.value;
-          if (historyMatches(phrase, row.name, row.author, row.file)) scan.accept(row);
-          cursor.continue();
+          if (!cursor) return;
+          if (!skipped) { skipped = true; cursor.advance(page * HISTORY_PAGE); return; }
+          rows.push(cursor.value);
+          if (rows.length < HISTORY_PAGE) cursor.continue();
         };
-      } else {
-        const count = store.count();
-        count.onsuccess = () => {
-          const total = count.result, page = historyPageClamp(requested, total), rows = [];
-          result = { total, page, rows };
-          if (!total) return;
-          let skipped = page === 0;
-          const request = store.index('playedAt').openCursor(null, 'prev');
-          request.onsuccess = () => {
-            const cursor = request.result;
-            if (!cursor) return;
-            if (!skipped) { skipped = true; cursor.advance(page * HISTORY_PAGE); return; }
-            rows.push(cursor.value);
-            if (rows.length < HISTORY_PAGE) cursor.continue();
-          };
-        };
-      }
-      const cleanup = () => signal?.removeEventListener('abort', abort);
-      transaction.oncomplete = () => {
-        cleanup();
-        if (signal?.aborted) reject(new DOMException('Aborted', 'AbortError')); else resolve(result);
       };
-      transaction.onabort = () => { cleanup(); reject(transaction.error ?? new DOMException('Aborted', 'AbortError')); };
-      transaction.onerror = () => {};
-    });
+    }
+    return readResult(transaction, signal, () => result);
   },
 
   /** Most recently played first, the whole of it: for the checks, not for History's screen. */

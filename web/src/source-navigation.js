@@ -34,14 +34,14 @@ export function sourceDestination(source, { playlistIds = [], randomSession = 0,
 }
 
 /** Route fields are the only snapshot data allowed to replace live Browse state. */
-export function captureSourceRoute(source, { path = [], query = '', searchScope = null, historyPage = 0,
+export function captureSourceRoute(source, { path = [], query = '', searchScope = null, searchSummary = null, historyPage = 0,
   historyQuery = '', historyTotal = 0, historyRows = null, returnToSavedPlaces = false, results = [], title = '', note = '' } = {}) {
   return Object.freeze({ source: Object.freeze({ ...source }), path: Object.freeze([...path]), query,
-    searchScope, historyPage, historyQuery, historyTotal, returnToSavedPlaces, historyRows: historyRows && Object.freeze([...historyRows]), results: Object.freeze([...results]), title, note });
+    searchScope, searchSummary, historyPage, historyQuery, historyTotal, returnToSavedPlaces, historyRows: historyRows && Object.freeze([...historyRows]), results: Object.freeze([...results]), title, note });
 }
 
 export function restoreSourceRoute(snapshot, current) {
-  const { path, query, searchScope, historyPage, historyQuery, historyTotal, historyRows, returnToSavedPlaces, results, title, note } = snapshot;
-  return Object.freeze({ ...current, path, query, searchScope, historyPage, historyQuery, historyTotal, historyRows, returnToSavedPlaces, results, title, note,
+  const { path, query, searchScope, searchSummary, historyPage, historyQuery, historyTotal, historyRows, returnToSavedPlaces, results, title, note } = snapshot;
+  return Object.freeze({ ...current, path, query, searchScope, searchSummary, historyPage, historyQuery, historyTotal, historyRows, returnToSavedPlaces, results, title, note,
     navigationVisit: (current.navigationVisit ?? 0) + 1, loading: false, jumpedTo: null, detour: null });
 }

@@ -635,6 +635,11 @@
     border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
     padding: 10px 56px 10px 16px; font: inherit;
   }
+  .search-scope-tiles { display: flex; gap: 8px; margin-bottom: 8px; }
+  .search-scope-tiles .chip { flex: 1; min-width: 0; justify-content: center; white-space: normal; }
+  .search-scope-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 8px; }
+  #search-scopes .chip.on { outline: 2px solid var(--primary); font-weight: 700; }
+  #search-scopes .note { margin: 4px 0 8px; }
   .history-query { margin: 6px 0 8px; }
   #historysearch { padding-right: 16px; }
   .search-query { position: relative; margin: 6px 0 8px; }
@@ -974,6 +979,7 @@
       <button type="button" id="browsesubmit" class="search-submit" aria-label="Search"></button>
       <ul id="search-suggestions" class="search-suggestions" hidden></ul>
     </div>
+    <div id="search-scopes" hidden></div>
     <div id="historyquery" class="history-query" hidden>
       <input type="search" id="historysearch" placeholder="Search History" aria-label="Search History" aria-controls="browselist" autocomplete="off">
     </div>

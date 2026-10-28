@@ -44,6 +44,24 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W11 implemented, 2026-10-28:** explicit Search scopes and all saved-playlist references, native
+2000-per-source limits, global catalogue ordering/counts, mixed title/author word matching and
+producing-scope restoration from Queue. Empty/short queries work; scope choices never auto-search.
+Stable rows survive pending edits; missing local copies explain their refusal and existing held
+phone bytes remain transient. Native focused reference checks pass **45 tests / 5 suites**;
+JS passes **42 domain**, **8 production-store** and **10 scope-presentation** cases. Controlled
+fixture, actual-click, precedence, ownership, scope restoration, DOM identity and byte-transfer
+guards fail as intended; sources are restored. Final forced gate on **1182e66** passes
+**1240 tests / 166 suites**, zero failures/errors/skips, **769 s** overall; **947 page checks**
+and all companions execute; lint has zero errors. All 650 recorded inputs match. W03 scope/query
+restoration is complete; physical browser acceptance remains unchecked.
+
+**W02/W12 drag comparison finding:** native commits each full-row drag move immediately, while
+WEB currently commits only on release. Current host checks do not cover native cancellation/
+mid-gesture semantics. W02 remains partly complete until this common gesture is aligned during
+W12 playlist-reorder work. No WEB merge/deployment or bundle handoff yet.
+
+
 **W10 implemented, 2026-10-28:** separate live History field, 200 ms debounce, whole-History literal
 Unicode matching, coherent bounded paging, read/Clear ownership and source-query restoration.
 Focused Android checks pass **26 tests / 5 suites**, including actual History UI and native SQLite;

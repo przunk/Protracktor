@@ -1,5 +1,37 @@
 # Architecture
 
+## WEB scoped library search — branch candidate, 2026-10-28
+
+`SearchBrowser` owns explicit-submit query/scope state and request cancellation. An immutable
+producing result stays separate from pending field/chip edits. Scope-kind changes clear stale
+rows; same-kind chips retain them until Search. Back widens a narrowed scope before leaving;
+reentry retains the answer. Unchanged results keep their DOM row nodes while the field and scope
+presentation update. `SearchScopesView` owns controls, labels and verified availability, not
+search execution. Selection/focus never triggers a lookup or changes transport.
+
+`LibrarySearch` ports per-source 2000-row limits, saved-copy precedence, native matching fields
+and source ordering. Browser-saved references supply the supported subset of Android's Local
+library; the UI calls it Saved playlists and offers no folder scanner. Independent playlist
+copies are canonicalized by latest saved copy before the cap and ordered by binary title, because
+Android has one globally unique track row. Filtering never mutates playlists or drafts.
+`SearchSelection` retains only the first 2000 globally sorted catalogue hits while counting all.
+`visitTitleShards` reads current metadata and playable title shards in one readonly transaction;
+word matches span title/author, platforms use the existing shared map. This avoids full-archive
+materialization and mixed metadata/result snapshots. `readResult` shares completion/cancellation
+handling with History, including cancellation after a transaction has already finished.
+
+Source-route DTOs capture producing scope and summary alongside query/membership. Restoration
+uses a local immutable DTO while model publication can invalidate the visible route; current
+index/cache/download facts remain independent. Queue overlays preserve both Search and History
+visits. Scope availability follows committed playlist/index changes and window focus, keeping
+verified choices during refresh and explaining pending/error/empty states distinctly.
+
+Saved local references recover bytes only from the existing in-session editor/context/manual
+owners. Playback preserves that buffer; persistence and links retain references, never bytes.
+Missing copies remain visible with a reason and no replay action. Approved browser catalogues
+remain Modland/ASMA; no live archive, AMP, proxy, filesystem or new dependency is introduced.
+[Contract and verification](WEB_IMPLEMENTATION.md#w11--search-scopelibrary-analysis-2026-10-28).
+
 ## WEB live History filter — branch candidate, 2026-10-28
 
 `HistoryBrowser` owns raw query, matching page/count/rows and loading/failure state; it does not

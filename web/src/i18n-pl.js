@@ -7,6 +7,25 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "All platforms": "Wszystkie platformy",
+  "Online: {names}": "Online: {names}",
+  "Online": "Online",
+  "Searched: {sources}.": "Przeszukano: {sources}.",
+  "{n} matching tracks.": ["{n} pasujący utwór.", "{n} pasujące utwory.", "{n} pasujących utworów."],
+  "Everywhere": "Wszędzie",
+  "Saved playlists": "Zapisane playlisty",
+  "By platform": "Według platformy",
+  "Search scope": "Zakres wyszukiwania",
+  "Search: {scope}": "Szukaj: {scope}",
+  "Could not check search scopes. Try again.": "Nie udało się sprawdzić zakresów wyszukiwania. Spróbuj ponownie.",
+  "Checking search sources…": "Sprawdzanie źródeł wyszukiwania…",
+  "No catalogue index is held. Download one in Online catalogues.": "Brak indeksu katalogu. Pobierz go w Katalogach online.",
+  "No catalogue selected means all indexed catalogues.": "Brak wybranego katalogu oznacza wszystkie zaindeksowane katalogi.",
+  "No tracks match this search.": "Brak utworów pasujących do wyszukiwania.",
+  "{n} catalogue entries match; showing up to 2000.": "Pasujących wpisów katalogu: {n}; wyświetlono maksymalnie 2000.",
+  "Showing up to 2000 saved tracks. Narrow the search for more.": "Wyświetlono maksymalnie 2000 zapisanych utworów. Zawęź wyszukiwanie, aby znaleźć kolejne.",
+  "Filters changed. Press Search to update the results.": "Filtry zmieniono. Naciśnij Szukaj, aby zaktualizować wyniki.",
+
   "Search History": "Szukaj w historii",
   "No History entries match this phrase.": "Brak wpisów historii pasujących do tej frazy.",
   "Loading History…": "Wczytywanie historii…",

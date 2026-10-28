@@ -27,6 +27,10 @@ import { RecentSearchHistory } from './recent-searches.js';
 import { SearchSuggestions } from './search-suggestions.js';
 import { HistoryBrowser } from './history-browser.js';
 import { trimQuery } from './query-text.js';
+import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
+import { SearchBrowser } from './search-browser.js';
+import * as librarySearchStore from './library-search-store.js';
+import { SearchScopesView, searchScopeLabel } from './search-scopes-view.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -2355,6 +2359,7 @@ const ICON = {
   detour: 'M3 5h7a5 5 0 0 1 5 5v6h3l-4.5 5.5L9 16h3v-6a2 2 0 0 0-2-2H3V5z',
   // The way back to the playlist, the same glyph the heading's button was drawn with.
   playlist: 'M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z',
+  joystick: { d: 'M5,16 L19,16 A2,2 0 0,1 21,18 L21,20 A2,2 0 0,1 19,22 L5,22 A2,2 0 0,1 3,20 L3,18 A2,2 0 0,1 5,16 Z M10.6,16 L10.6,8.75 A3,3 0 1,1 13.4,8.75 L13.4,16 Z M5.2,19 A1.8,1.8 0 1,1 8.8,19 A1.8,1.8 0 1,1 5.2,19 Z', hollow: true },
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
   grip: 'M4 7h16v2H4V7zm0 8h16v2H4v-2z',
@@ -2931,7 +2936,8 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
   const sourceOrder = new PlayOrder({ tracks, shuffle, repeat, random: randomSource }).startAt(Math.min(Math.max(at, 0), tracks.length - 1));
   showSessionView(kind);
   const source = { kind: 'collection', origin: kind, path: snapshot.path.join('/'),
-    query: kind === 'history' ? snapshot.historyQuery : snapshot.query };
+    query: kind === 'history' ? snapshot.historyQuery : trimQuery(snapshot.query),
+    scope: snapshot.searchScope ? searchScopeKey(snapshot.searchScope) : undefined };
   activateContext(new PlaybackContext({ source, route: captureSourceRoute(source, snapshot), order: sourceOrder }));
 }
 
@@ -3043,10 +3049,10 @@ function setQueue(urls, at = 0) {
  * Pair and Paste are dialogs over the page; Now Playing is a panel under the queue, because it is
  * something you read alongside the list rather than instead of it.
  */
-function showPanel(which, { preserveHistory = false } = {}) {
+function showPanel(which, { preserveBrowse = false } = {}) {
   if (which !== 'browse') {
     searchSuggestions?.close(true);
-    if (!preserveHistory) { historyBrowser.leave(); $('historysearch').blur(); }
+    if (!preserveBrowse) { historyBrowser.leave(); searchBrowser.leave(); retireSearchAvailability(); $('historysearch').blur(); }
   }
   if (which !== 'browse') savedPlaces?.cancelOpening();
   closePlaybackQueue();
@@ -3074,7 +3080,7 @@ function showPanel(which, { preserveHistory = false } = {}) {
 function openPlaybackQueue() {
   if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
   const underlying = !$('browse').hidden ? 'browse' : null;
-  showPanel(null, { preserveHistory: underlying === 'browse' });
+  showPanel(null, { preserveBrowse: underlying === 'browse' });
   queueUnderlying = underlying;
   $('playback-panel').hidden = false;
   $('browse').hidden = true;
@@ -3097,6 +3103,7 @@ function closePlaybackQueue({ focus = false } = {}) {
   $('showqueue').setAttribute('aria-pressed', 'false');
   queueUnderlying = null;
   if (focus) $('showqueue').focus();
+  if (focus && !$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability();
   requestRandomFilterRefresh();
 }
 
@@ -3146,6 +3153,7 @@ function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
 /** Capture route fields only; transport and live index/cache/download ownership stay separate. */
 function captureBrowseRoute(results, extra = {}) {
   return Object.freeze({ path: Object.freeze([...browsePath]), query: browsePath[0] === 'search' ? $('browsesearch').value : '',
+    searchScope: browsePath[0] === 'search' ? searchBrowser.state.scope : null,
     historyPage: historyBrowser.state.page, historyQuery: historyBrowser.state.query, returnToSavedPlaces: !!savedParentKey, results: Object.freeze([...results]), title: $('browsetitle').textContent,
     note: $('browsenote').textContent, ...extra });
 }
@@ -3186,16 +3194,18 @@ async function openQueueSource() {
     $('sessiontitle').focus({ preventScroll: true });
     return;
   }
-  sourceBrowseRoute = restoreSourceRoute(workspace.context.route, { navigationVisit: searchAsked });
-  browsePath = [...sourceBrowseRoute.path];
-  if (browsePath[0] === 'history') historyBrowser.restore(sourceBrowseRoute);
-  savedParentKey = sourceBrowseRoute.returnToSavedPlaces ? saveablePlace(browsePath, archive.sources()) : null;
-  $('browsesearch').value = sourceBrowseRoute.query;
-  const restoredRoute = sourceBrowseRoute;
+  const restoredRoute = restoreSourceRoute(workspace.context.route, { navigationVisit: searchAsked });
+  sourceBrowseRoute = restoredRoute;
+  browsePath = [...restoredRoute.path];
+  if (browsePath[0] === 'history') historyBrowser.restore(restoredRoute);
+  if (browsePath[0] === 'search') { submittedSearchQuery = restoredRoute.query; searchBrowser.restore(restoredRoute); }
+  savedParentKey = restoredRoute.returnToSavedPlaces ? saveablePlace(browsePath, archive.sources()) : null;
+  $('browsesearch').value = restoredRoute.query;
   showPanel('browse');
   if (browsePath[0] === 'history') $('browselist').scrollTop = 0;
   await renderBrowse();
   if (!$('browse').hidden && sourceBrowseRoute === restoredRoute) $('browsetitle').focus({ preventScroll: true });
+  if (browsePath[0] === 'search') void refreshSearchAvailability();
 }
 
 function playbackSourceLabel(source) {
@@ -3203,7 +3213,7 @@ function playbackSourceLabel(source) {
     case 'playlist': return source.id === workspace.editor.id ? workspace.editor.name
       : source.id === sourcePlaylistId ? sourcePlaylistName : source.name;
     case 'random': return t('Random');
-    case 'collection': return source.origin === 'link' ? t('Sent to you') : source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
+    case 'collection': return source.path === 'search' ? source.query || t('Search') : source.origin === 'link' ? t('Sent to you') : source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
     case 'external': return t('Sent to you');
     default: return t('Manually queued');
   }
@@ -3355,7 +3365,64 @@ let searchTimer = null;
 /** Bumped by every search and every redraw, so a slow answer cannot land on a newer screen. */
 let searchAsked = 0;
 let submittedSearchQuery = null;
-const SEARCH_LIMIT = 300;
+let searchScopesView = null;
+let renderedSearchResult = null;
+let searchAvailability = { value: null, loading: false, failed: false };
+let searchAvailabilityAsked = 0;
+let searchAvailabilityController = null;
+
+async function savedSearchRecords() {
+  const stored = await playlists.all();
+  const held = new Map();
+  const live = [...editorTracks(), ...workspace.context.order.tracks, ...schedule.pending.map((entry) => entry.track)];
+  if (schedule.current) live.push(schedule.current.track);
+  for (const track of live) if (track.data) held.set(track.url, track.data);
+  return stored.map((playlist) => ({ ...playlist, tracks: (playlist.tracks ?? []).map((track) => {
+    const data = held.get(track.url);
+    return { ...track, file: fileOf(track), ...(data ? { data } : {}),
+      local: !!track.local || !data && !/^https?:\/\//i.test(track.url ?? '') };
+  }) }));
+}
+const librarySearch = new LibrarySearch({ playlists: savedSearchRecords,
+  catalogues: librarySearchStore.searchCatalogueTracks });
+const searchBrowser = new SearchBrowser({
+  run: (request, signal) => librarySearch.run(request, signal),
+  changed: () => {
+    if (browsePath[0] === 'search') void renderBrowse().catch((error) =>
+      showNote(t('could not search: {reason}', { reason: error.message })));
+  },
+  failed: (error) => showNote(t('could not search: {reason}', { reason: error.message })),
+});
+function retireSearchAvailability() {
+  ++searchAvailabilityAsked; searchAvailabilityController?.abort(); searchAvailabilityController = null;
+  searchAvailability = { ...searchAvailability, loading: false };
+}
+function renderSearchScopes() {
+  searchScopesView?.render(searchBrowser.state.scope, searchAvailability);
+}
+async function refreshSearchAvailability() {
+  if (browsePath[0] !== 'search' || !searchBrowser.active) return;
+  const asked = ++searchAvailabilityAsked;
+  searchAvailabilityController?.abort();
+  const controller = searchAvailabilityController = new AbortController();
+  searchAvailability = { ...searchAvailability, loading: true, failed: false }; renderSearchScopes();
+  try {
+    const saved = savedSearchTracks(await savedSearchRecords()).filter((track) => !track.local);
+    const value = await librarySearchStore.searchScopeAvailability(saved, controller.signal);
+    if (asked === searchAvailabilityAsked) searchAvailability = { value, loading: false, failed: false };
+  } catch (error) {
+    if (asked === searchAvailabilityAsked && error.name !== 'AbortError') searchAvailability = { ...searchAvailability, loading: false, failed: true };
+  } finally { if (asked === searchAvailabilityAsked) { searchAvailabilityController = null; renderSearchScopes(); } }
+}
+searchScopesView = new SearchScopesView($('search-scopes'), { icon: (name) => iconSvg(ICON[name]), sourceName: archive.sourceName, sourceIds: archive.sources(),
+  onScope: (kind) => {
+    sourceBrowseRoute = null;
+    searchBrowser.setScope(searchScope(searchBrowser.state.scope.kind === kind ? 'everywhere' : kind));
+    void refreshSearchAvailability();
+  },
+  onToggle: (id) => { sourceBrowseRoute = null; searchBrowser.toggleId(id); },
+  onRetry: () => refreshSearchAvailability(),
+});
 const historyBrowser = new HistoryBrowser({
   read: (query, page, signal) => played.read(query, page, signal),
   changed: () => {
@@ -3384,8 +3451,8 @@ searchSuggestions = new SearchSuggestions({
   suggestions: (typed) => recentSearches.suggestions(typed),
   onInput: () => {
     clearTimeout(searchTimer); ++searchAsked;
-    submittedSearchQuery = null;
-    $('browsenote').textContent = t('Press Search or Enter to search.');
+    submittedSearchQuery = null; sourceBrowseRoute = null;
+    searchBrowser.setQuery($('browsesearch').value);
   },
   onSubmit: submitSearch,
   onFocus: () => recentSearches.ready.then(() => {
@@ -3427,20 +3494,20 @@ async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
   if (browsePath[0] !== 'history') historyBrowser.leave();
+  if (browsePath[0] !== 'search') { searchBrowser.leave(); retireSearchAvailability(); }
   const key = saveablePlace(browsePath, archive.sources());
   if (!key || !savedParentKey || savedPlaceId(key) !== savedPlaceId(savedParentKey)) savedParentKey = null;
   if (browsePath[0] !== 'saved' && savedPlaces?.state.opening) savedPlaces.cancelOpening();
   if (sourceBrowseRoute && (JSON.stringify(sourceBrowseRoute.path) !== JSON.stringify(browsePath)
-      || browsePath[0] === 'search' && sourceBrowseRoute.query !== $('browsesearch').value
+      || browsePath[0] === 'search' && (sourceBrowseRoute.query !== searchBrowser.state.query
+        || searchScopeKey(sourceBrowseRoute.searchScope ?? searchScope()) !== searchScopeKey(searchBrowser.state.scope))
       || browsePath[0] === 'history' && (sourceBrowseRoute.historyPage !== historyBrowser.state.page
         || sourceBrowseRoute.historyQuery !== historyBrowser.state.query))) sourceBrowseRoute = null;
   const list = $('browselist');
   const note = $('browsenote');
-  // **The catalogues redraw in place** (the owner, 2026-09-23): every download starting and ending
-  // redraws them, and clearing first left an empty list and an empty note for the moment the reads
-  // took -- everything under them jumped up and back, twice per download. `renderCatalogues`
-  // swaps the whole list at once when it has what to draw. Every other level starts empty.
-  const inPlace = browsePath[0] === 'catalogues';
+  // These presenters preserve complete catalogue rows and unchanged Search results in place.
+  const inPlace = browsePath[0] === 'catalogues' || browsePath[0] === 'search';
+  if (browsePath[0] !== 'search') renderedSearchResult = null;
   if (!inPlace) list.replaceChildren();
   renderSavedPlaces();
   if (savedPlaces && (key || browsePath[0] === 'saved')) savedPlaces.refresh();
@@ -3460,6 +3527,12 @@ async function renderBrowse(resolved = null) {
   // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
   showSearchQuery(!digressing && browsePath[0] === 'search');
+  $('search-scopes').hidden = digressing || browsePath[0] !== 'search';
+  if (browsePath[0] === 'search') {
+    if ($('browsesearch').value !== searchBrowser.state.query) $('browsesearch').value = searchBrowser.state.query;
+    const label = t('Search: {scope}', { scope: searchScopeLabel(searchBrowser.state.scope, archive.sourceName, archive.sources()) });
+    $('browsesearch').setAttribute('aria-label', label); $('browsesearch').placeholder = label; renderSearchScopes();
+  }
   $('browseclose').hidden = digressing;
   $('historypager').hidden = true;
   $('historyquery').hidden = browsePath[0] !== 'history';
@@ -3522,7 +3595,8 @@ async function renderBrowse(resolved = null) {
 
   if (sourceBrowseRoute) {
     const route = sourceBrowseRoute;
-    if (browsePath[0] === 'history') renderHistoryRows(list, note, route.historyRows ?? route.results.map((track) => ({ ...track, replayable: true })), route.historyTotal, row, route);
+    if (browsePath[0] === 'search') renderSearchRows(list, note, route);
+    else if (browsePath[0] === 'history') renderHistoryRows(list, note, route.historyRows ?? route.results.map((track) => ({ ...track, replayable: true })), route.historyTotal, row, route);
     else {
       $('browsetitle').textContent = browsePath[0] === 'search' ? t('Search') : route.title;
       note.textContent = route.note;
@@ -3566,11 +3640,8 @@ async function renderBrowse(resolved = null) {
   }
 
   if (browsePath[0] === 'search') {
-    $('browsetitle').textContent = t('Search');
-    const query = $('browsesearch').value;
-    if (query.trim().length >= 2 && submittedSearchQuery === query) { await runSearch(query); return; }
-    note.textContent = query.trim().length >= 2 ? t('Press Search or Enter to search.')
-      : t('A tune or an author, two letters or more.');
+    if (!searchBrowser.active) { searchBrowser.open(); void refreshSearchAvailability(); return; }
+    renderSearchRows(list, note);
     return;
   }
 
@@ -3732,7 +3803,7 @@ async function turnHistory(delta) {
  * can be tried, and Add is how anything gets kept. The phone's `playFromResults`.
  */
 function playFromBrowse(tracks, at, kind = 'browse', route = captureBrowseRoute(tracks)) {
-  openAway(tracks.map(plain), at, kind, route);
+  openAway(tracks.map((track) => ({ ...plain(track), ...(track.data ? { data: track.data } : {}) })), at, kind, route);
 }
 
 /**
@@ -4010,76 +4081,52 @@ async function renderCatalogues(list, note, canRender = () => true) {
   list.replaceChildren(rows);
 }
 
-/**
- * Searching the index.
- *
- * **Tunes, never folders.** A name typed may be a tune's or an author's, as on the phone, whose
- * search matches both and answers
- * with tracks either way: an author found here brings their tunes, not a row to walk into.
- * Submitted through the query field, and it says how long it took: reading 1,663 title shards is a real amount of work and
- * a number is more honest than a spinner.
- */
+/** Explicit submission; the model retains producing results independently of pending edits. */
 async function runSearch(query) {
-  submittedSearchQuery = query;
-  const list = $('browselist');
-  const note = $('browsenote');
-  const asked = ++searchAsked;
-  // A search is always Search's: typed there, its results stay there when the list redraws.
-  if (browsePath[0] !== 'search') { browsePath = ['search']; showSearchQuery(true); }
-  if (query.trim().length < 2) { await renderBrowse(); return; }
-  // Every archive held, one list of results: somebody typing a name does not know which has it.
-  const held = [];
-  for (const source of archive.sources()) {
-    const known = await archive.meta(source);
-    if (known?.tracks) held.push({ source, ...known });
-  }
-  if (asked !== searchAsked) return;
-  if (!held.length) { note.textContent = t('Download an index first.'); return; }
+  submittedSearchQuery = query; sourceBrowseRoute = null;
+  browsePath = ['search'];
+  return searchBrowser.submit(query);
+}
 
-  note.textContent = t('searching…');
-  const started = performance.now();
-  const answers = await Promise.all(held.map(({ source }) => Promise.all([
-    archive.searchAuthors(query, 100, source), archive.searchTitles(query, 200, source),
-  ])));
-  const people = answers.flatMap(([authors]) => authors);
-  const found = answers.flatMap(([, { hits }]) => hits);
-  const seen = new Set(found.map((t) => t.url));
-  let full = answers.some(([, { capped }]) => capped);
-  for (const { source, format, author } of people) {
-    if (found.length >= SEARCH_LIMIT) { full = true; break; }
-    for (const track of await archive.tracksIn(format, author, source)) {
-      if (seen.has(track.url)) continue;
-      seen.add(track.url);
-      found.push(track);
-    }
-  }
-  if (found.length > SEARCH_LIMIT) { found.length = SEARCH_LIMIT; full = true; }
-  // A slower search for "zo" must not draw over the one for "zool" that finished first.
-  if (asked !== searchAsked) return;
+function renderSearchRows(list, note, savedRoute = null) {
   $('browsetitle').textContent = t('Search');
-  $('browseback').hidden = false;
-  list.replaceChildren();
-  let route;
-  found.forEach((track, i) => {
-    trackRow(list, track, track.meta.replace('Modland/', ''), () => playFromBrowse(found, i, 'browse', route));
-  });
-  markPlayingIn(list);
-
-  const ms = Math.round(performance.now() - started);
-  // Where it looked, every time, so "nothing matched" cannot be read as "Modland has no such tune"
-  // when the tune is in a format this browser does not index.
-  const tunes = held.reduce((sum, { tracks }) => sum + tracks, 0);
-  const among = t('among the {tunes} tunes this browser can play ({where})', {
-    tunes: tunes.toLocaleString(),
-    where: held.map(({ source }) => archive.sourceName(source)).join(t(' and ')),
-  });
-  note.textContent = found.length
-    ? t('{found} tunes by name or author {among}, in {ms} ms.', { found: `${found.length}${full ? '+' : ''}`, among, ms })
-    : t('nothing matched {among}, in {ms} ms.', { among, ms })
-      + ' ' + (held.some(({ complete }) => complete)
-        ? t('Formats this build cannot open are indexed but not offered.')
-        : t('Formats it cannot play are not in an index built before this browser kept everything.'));
-  route = captureBrowseRoute(found, { query });
+  const state = searchBrowser.state;
+  list.setAttribute('aria-busy', String(state.loading));
+  if (!state.result || state.loading || state.failed) { list.replaceChildren(); renderedSearchResult = null; }
+  if (state.loading) { note.textContent = t('searching…'); return; }
+  if (state.failed) { note.textContent = t('could not search: {reason}', { reason: state.failed.message }); return; }
+  const result = state.result;
+  if (!result) { note.textContent = t('Press Search or Enter to search.'); return; }
+  if (renderedSearchResult !== result) {
+    list.replaceChildren();
+    const tracks = result.tracks.filter((track) => !track.local);
+    const summary = Object.freeze({ catalogueMatches: result.catalogueMatches, playlistCapped: result.playlistCapped,
+      held: result.held, fallbackNote: result.fallbackNote });
+    const route = savedRoute ?? captureBrowseRoute(result.tracks, { query: result.query, searchScope: result.scope, searchSummary: summary });
+    for (const track of result.tracks) {
+      if (!track.local) trackRow(list, track, (track.meta ?? sourceOf(track.url)).replace('Modland/', ''),
+        () => playFromBrowse(tracks, tracks.indexOf(track), 'browse', route));
+      else {
+        const row = document.createElement('li'); row.className = 'gone'; row.dataset.url = track.url;
+        const title = document.createElement('div'); title.className = 'bname'; title.textContent = track.name;
+        const reason = document.createElement('div'); reason.className = 'bmeta';
+        reason.textContent = t("Played from the phone's copy — the page does not keep those");
+        row.append(title, reason); list.append(row);
+      }
+    }
+    renderedSearchResult = result;
+  }
+  for (const row of list.children) { row.repaintAdd?.(); row.repaintTitle?.(); }
+  markPlayingIn(list); requestHistoryPresentation();
+  let description = result.fallbackNote ?? (result.tracks.length
+    ? tn(result.tracks.length, '{n} matching track.', '{n} matching tracks.') : t('No tracks match this search.'));
+  const sources = [...(searchesPlaylists(result.scope) ? [t('Saved playlists')] : []), ...result.held.map(({ source }) => archive.sourceName(source))];
+  if (sources.length) description += ' ' + t('Searched: {sources}.', { sources: sources.join(', ') });
+  if (result.catalogueMatches) description += ' ' + t('{n} catalogue entries match; showing up to 2000.', { n: result.catalogueMatches.toLocaleString() });
+  if (result.playlistCapped) description += ' ' + t('Showing up to 2000 saved tracks. Narrow the search for more.');
+  if (!result.held.length && state.scope.kind === 'online') description += ' ' + t('No catalogue index is held. Download one in Online catalogues.');
+  if (searchBrowser.staleAnswer) description += ' ' + t('Filters changed. Press Search to update the results.');
+  if (note.textContent !== description) note.textContent = description;
 }
 
 $('tab-browse').onclick = async () => {
@@ -4100,7 +4147,10 @@ $('browseback').onclick = async () => {
     savedPlaces.cancelOpening(); browsePath = []; sourceBrowseRoute = null;
     await renderBrowse(); return;
   }
-  if (browseFromSource && browsePath[0] === 'search') {
+  if (browsePath[0] === 'search') {
+    if (searchBrowser.state.scope.kind !== 'everywhere') {
+      sourceBrowseRoute = null; searchBrowser.setScope(searchScope()); return;
+    }
     // Native BrowseWorkflow leaves an Everywhere search without destroying its query/results.
     clearTimeout(searchTimer);
     sourceBrowseRoute = null;
@@ -4112,7 +4162,7 @@ $('browseback').onclick = async () => {
   // Out of a search, back to where it was typed; otherwise one level up. **Except above the folder
   // a digression came from** (`docs/BACKLOG.md` A41): there the way back is the dice, not the
   // archive, which is what "one level of digression" means.
-  if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else if (
+  if (
     !browseFromSource && away?.dice && arrivedByJump()
   ) {
     showPanel(null);
@@ -5176,6 +5226,9 @@ played.subscribe(() => {
   requestHistoryPresentation();
 });
 played.onFailure((error) => status(t('Could not save History: {reason}', { reason: error.message })));
+playlists.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
+catalogue.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
+window.addEventListener('focus', () => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 
 renderNothingPlaying();
 holdBarLabels();

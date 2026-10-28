@@ -32,7 +32,7 @@ export default async function checkRecentSearches({ window, check }) {
   type('only typed'); await new Promise((r) => setTimeout(r, 300));
   check(JSON.stringify(api.recentQueriesNow()) === JSON.stringify(retained), 'typing alone never creates a recent submission');
   await api.renderBrowse();
-  check(api.submittedSearchNow() === null && $('browsenote').textContent === window.__i18n.t('Press Search or Enter to search.'),
+  check(api.submittedSearchNow() === null && api.searchNow().result?.query !== 'only typed',
     'a redraw does not silently submit the newly typed query');
   type('delta'); const chosen = $('search-suggestions').children[2];
   check(!!chosen, 'typing a matching prefix restores the three actual options');

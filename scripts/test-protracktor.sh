@@ -164,12 +164,15 @@ run_check "Saved places" saved-places node scripts/check-saved-places.mjs
 run_check "Learned titles" learned-titles node scripts/check-learned-titles.mjs
 run_check "Recent searches" recent-searches node scripts/check-recent-searches.mjs
 run_check "History filtering" history-filter node scripts/check-history-filter.mjs
+run_check "Library search" library-search node scripts/check-library-search.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
     run_check "Search suggestions" search-suggestions node scripts/check-search-suggestions.mjs
+    run_check "Search scopes presentation" search-scopes-view node scripts/check-search-scopes-view.mjs
+    run_check "Library search storage" library-search-store node scripts/check-library-search-store.mjs
     run_check "Recent search storage" recent-searches-store node scripts/check-recent-searches-store.mjs
     run_check "Saved places storage" saved-places-store node scripts/check-saved-places-store.mjs
     run_check "Saved places catalogues" saved-places-catalogue node scripts/check-saved-places-catalogue.mjs

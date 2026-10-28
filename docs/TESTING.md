@@ -3,6 +3,32 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W11 Search scopes — browser checks pending, 2026-10-28
+
+Candidate on `feature/web-feature-parity`; no merge, bundle or deployment yet. Host events and
+IndexedDB checks cannot establish appearance, keyboard feel, touch or browser latency.
+
+- Search a title, author and words split across both. Try accent folding, blank and one-character
+  queries, punctuation and a result beyond the former 300-row cap. Check global title ordering,
+  the 2000-per-source limit and visible full catalogue counts.
+- Put the same URL in a saved playlist and a catalogue; the saved copy should win once. Search
+  across another saved playlist with a different selected editor and check that neither playlist
+  nor playback changes. A missing local phone copy explains its refusal; a still-held copy plays
+  without persisting bytes or detaching the source buffer.
+- Choose Saved playlists, Online, individual catalogue chips, By platform and several machines.
+  Empty chip selections cover all in that kind. Scope selection never auto-searches. Kind changes
+  clear old rows; chip/text edits keep the producing rows stable until explicit Search. Recent
+  suggestions submit immediately in the selected scope and close the keyboard/dropdown.
+- Back first widens narrowed Search, then returns to Browse retaining the phrase; reentry retains
+  the previous answer. Folder and History Back must not consume cached general-Search text.
+- Play an answer, change text/chips without submitting, then use Queue Go to source. The restored
+  query/scope/membership must be those that produced the playing list; music/manual FIFO stay
+  intact. Opening/closing Queue over Search leaves the field usable.
+- Try rapid submissions, leave/reentry, refused storage, scope Retry, index removal/replacement,
+  and saved-reference search without indexes. No obsolete rows/errors or false missing-index
+  explanation while reads are pending. Check EN/PL, both themes, narrow/wide screens, zoom,
+  keyboard-only operation and software keyboard. These device/browser scenarios remain unchecked.
+
 ## WEB W09-W10 — browser checks pending, 2026-10-28
 
 No bundle handoff yet; these changes remain on `feature/web-feature-parity`. Host event/database

@@ -1,0 +1,27 @@
+# Shared SearchTerms.matchesAny and WEB matching, URI-encoded UTF-8 fields.
+case	query	first	second	expected
+existing-1	ninja	space_ninja.mod		true
+existing-2	space%20ninja	space_ninja.mod		true
+existing-3	space%20ninja	spaceninja.mod		true
+existing-4	ninja%20space	space-ninja.mod		true
+existing-5	SPACE%20Ninja	space%20ninja.mod		true
+existing-6	space%20ninja	space_robot.mod		false
+existing-7	spaceninja	space_ninja.mod		false
+existing-8	4-mat%20space	space.mod	4-Mat	true
+existing-9	4-mat%20space	ninja.mod	4-Mat	false
+existing-10		anything.mod		true
+existing-11	michal		Micha%C5%82%20Kowalski	true
+existing-12	micha%C5%82	michal.mod		true
+existing-13	akes%20lekhorna	%C3%85kes%20lekh%C3%B6rna%20%28za%29		true
+existing-14	dzwiek	d%C5%BAwi%C4%99k.xm		true
+existing-15	%C5%81%C3%93D%C5%B9	lodz.mod		true
+existing-16	strasse	Stra%C3%9Fe		true
+existing-17	nerual	%EF%BC%AEerual%20%EF%BC%B4toille.mdx		true
+existing-18	michal	michel.mod		false
+bom-literal	%EF%BB%BFspace	space.mod		false
+separator-control-trim	%1Cspace%1C	Space.mod		true
+formfeed-inside-is-literal	space%0Cninja	space_ninja.mod		false
+carriage-return-inside-is-literal	space%0Dninja	space_ninja.mod		false
+nbsp-folds-to-space	space%C2%A0ninja	space_ninja.mod		true
+literal-wildcards	%25_%21	a%25_%21.mod		true
+no-sql-wildcards	%25	ordinary.mod		false
