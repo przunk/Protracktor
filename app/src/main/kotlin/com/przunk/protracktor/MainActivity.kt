@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -18,6 +17,7 @@ import com.przunk.protracktor.ui.ProtracktorApp
 import com.przunk.protracktor.ui.DatabaseGate
 import com.przunk.protracktor.data.DatabaseAccess
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
+import com.przunk.protracktor.ui.theme.enableAppEdgeToEdge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -77,14 +77,15 @@ class MainActivity : ComponentActivity() {
         // configuration change or a restore after the process was killed. Neither is somebody asking
         // to open a file, and in the second the controller restores what was playing by itself.
         if (savedInstanceState == null) pendingOpen = openableUri(intent)
-        enableEdgeToEdge()
+        val theme = Appearance.theme(this)
+        enableAppEdgeToEdge(theme)
         setContent {
             // Read here rather than remembered in Compose: a theme change recreates the activity,
             // exactly as a language change does, so this reads the new value on the way back in.
             // Recreating is heavier than recomposing and it is the honest way to change something
             // the window itself was built with.
             ProtracktorTheme(
-                theme = Appearance.theme(this),
+                theme = theme,
                 dynamicColour = Appearance.dynamicColour(this),
             ) {
                 DatabaseGate(
@@ -96,7 +97,7 @@ class MainActivity : ComponentActivity() {
                         onLanguageSelected = { language ->
                             if (AppLocale.select(this, language)) recreate()
                         },
-                        selectedTheme = Appearance.theme(this),
+                        selectedTheme = theme,
                         onThemeSelected = { theme ->
                             if (Appearance.selectTheme(this, theme)) recreate()
                         },

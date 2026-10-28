@@ -12,6 +12,13 @@ enum class AppTheme(val stored: String?) {
     LIGHT("light"),
     DARK("dark");
 
+    /** One effective mode for Compose colours and system-bar icon contrast. */
+    fun isDark(systemDark: Boolean): Boolean = when (this) {
+        SYSTEM -> systemDark
+        LIGHT -> false
+        DARK -> true
+    }
+
     companion object {
         fun fromStored(value: String?): AppTheme = entries.firstOrNull { it.stored == value } ?: SYSTEM
     }

@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-27 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-28 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -84,6 +84,24 @@ See [retained findings and limits](REDMI_NOTE_8_PRO_INVESTIGATION.md#current-dis
 
 ## C123 Light-theme colours are incorrect on Redmi Note 8 Pro
 
+**Clock follow-up, 2026-10-28:** app testing after the first appearance candidate reports an
+unreadable clock in Light. `MainActivity.enableEdgeToEdge()` selected system-bar icons from the
+phone configuration while Compose respected the app override. The real-activity regression
+test reproduces Light + system Dark with the wrong light-icon flag before the fix. The same
+integrated implementation shares `AppTheme.isDark` between Compose and system bars, setting both
+status/navigation icon appearances from the app's effective mode. The AndroidX edge-to-edge
+background/contrast setup is retained. Eight API 29/30 window cases and two palette checks pass.
+Clean source **c5f0ccb** passes the full gate: **1236 tests / 162 suites**, zero failures/errors/
+skips, **637 s** overall; fresh unit execution **424.1 s**, lint **0 errors / 79 warnings**, 96.9 s.
+Replacement minified, test-signed **1.4.0 (1341)** built in **100 s**:
+[APK](../dist/protracktor-release-1.4.0-1341-c5f0ccb-20261028-091012.apk), **11,975,599 bytes**,
+SHA-256 `6413c6620a2688b559324256d65e1eef5b76d448e6576a9d15a130174014d03d`.
+Signature, version, non-debuggable state, ZIP CRC/16KB alignment and packaged MIUI opt-out pass;
+all 282 recorded application/build input hashes match. This supersedes build 1339 for the clock.
+Android 16 and actual clock rendering remain device checks.
+**Integrated into develop on 2026-10-28 after explicit approval to merge the built candidate.**
+MIUI, actual clock rendering and palette acceptance remain pending; C123/C124 are not closed.
+
 **Open — real user report received 2026-10-27; configuration clarified 2026-10-28.**
 User B from C122 reports incorrect colours in light mode on the fresh installation, Android 10
 (SDK 29), Redmi Note 8 Pro. System Dark mode with app Light and Polish labels is confirmed;
@@ -94,7 +112,35 @@ remain dark. Source images remain ignored under `user/bug/`. MIUI forced darkeni
 source-supported hypothesis strengthened by this configuration, requiring a device comparison,
 not an established cause. A Pixel 7 on stock Android 16 with English labels looks correct in
 reported use; those multiple differences do not isolate a cause. See
-[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No code fix or device verification is claimed.
+[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No verified phone fix is claimed.
+
+**Initial candidate prepared 2026-10-28 on `fix/redmi-theme-action-alignment`:** explicitly disable
+platform Force Dark in the production theme and opt out of MIUI inversion with Xiaomi's documented
+`force_dark_google=true` application metadata. Keep the app's Light/Dark/System selection.
+The packaged-metadata regression test failed before this change on API 29; both resource checks
+then passed on API 29/30 (four cases). Full verification and a release APK are recorded below.
+The cause and effectiveness on the affected Redmi remain unconfirmed until device testing,
+planned for Thursday, 2026-10-29. C123 remains open.
+
+The same candidate includes a revised Light fallback palette, requested 2026-10-28: cool neutral
+surfaces, dark text and muted blue/teal accents. Dark and the API 31+ wallpaper-colour preference
+are retained. Disable **System colour palette** to view this fallback on a Pixel. Eleven focused
+resource/layout/theme checks pass; the contrast check fails when action text is deliberately
+changed to white, then the original colour is restored. Five host component previews were
+generated and visually inspected in English/Polish and Light/Dark; they do not reproduce MIUI.
+Clean source **b8717bb** passed the forced full gate: **1228 tests / 162 suites**, zero
+failures/errors/skips; all 31 unit-test tasks executed, 446.9 s; whole gate **621 s**. Companion
+checks passed and fresh lint reported **0 errors / 79 warnings**, 87.3 s. Minified, test-signed
+release **1.4.0 (1339)** built in **106 s**:
+[APK](../dist/protracktor-release-1.4.0-1339-b8717bb-20261028-011415.apk), **11,975,431 bytes**,
+SHA-256 `e690dc82fc5ea72b14cc629ae0c4b7ea65596f3fd8e648baabb5c4cf04894a6f`.
+Signature, version, non-debuggable flag, ZIP CRC/16KB alignment and both packaged recolouring
+opt-outs were checked. All 281 recorded application/build input hashes still match the candidate.
+[Light component preview](../dist/protracktor-light-preview-b8717bb.png).
+**Partially checked overall:** host checks pass; actual Redmi/Pixel behaviour and palette
+acceptance remain unverified. This first checkpoint preceded integration; no push or publication.
+Later documentation commits do not
+relabel this APK.
 
 ## C124 Icons are uneven on Redmi Note 8 Pro
 
@@ -106,8 +152,16 @@ The agent inspected both screenshots on 2026-10-27. Different action-pill widths
 (e.g. Playlist versus Filter), shifting their centre axes despite a shared right edge.
 Polish label lengths and available layout width are relevant candidates: button width has a
 minimum, not an equal-width group contract. Consistent adaptive sizing within related groups
-is proposed; no code fix or device verification has been performed. See
+is implemented by the candidate below; device verification is pending. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
+
+**Implemented 2026-10-28 on `fix/redmi-theme-action-alignment`, integrated with the clock follow-up:** size playlist
+actions from their longest localized caption and constrain the group to the available row width.
+Random Filter and the return-to-playlist action share one measured width. Divide the available
+physical pixels before converting to dp so rounding cannot narrow the last of five actions.
+The rendered Polish playlist test failed before the change (139 versus 112 px); five geometry
+and touch tests now pass, including English/Polish and five actions at 320dp with 2x text.
+Phone appearance and MIUI behaviour remain unverified; C124 stays open until device testing.
 
 ## C121 WEB decoder filename lost when an entry has a display title
 

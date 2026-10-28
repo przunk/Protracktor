@@ -20,6 +20,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.MainActivity
+import com.przunk.protracktor.AppTheme
+import com.przunk.protracktor.Appearance
+import androidx.core.view.WindowCompat
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.DatabaseAccess
 import com.przunk.protracktor.data.DatabaseAccessState
@@ -81,6 +84,30 @@ class DatabaseAccessEntryTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(text).assertIsDisplayed()
     }
+
+    private fun systemBars(theme: AppTheme, lightAppearance: Boolean) {
+        Appearance.selectTheme(context, theme)
+        activity = Robolectric.buildActivity(MainActivity::class.java).setup().visible()
+        awaitText(context.getString(R.string.database_unavailable_title))
+        val window = activity!!.get().window
+        val insets = WindowCompat.getInsetsController(window, window.decorView)
+        assertEquals("Status-bar clock/icons follow the app's effective theme", lightAppearance,
+            insets.isAppearanceLightStatusBars)
+        assertEquals("Navigation icons follow the same app theme", lightAppearance,
+            insets.isAppearanceLightNavigationBars)
+    }
+
+    @Test @Config(sdk = [29, 30], qualifiers = "en-w360dp-h800dp-night-xhdpi")
+    fun `system bars use Light despite system Dark`() = systemBars(AppTheme.LIGHT, true)
+
+    @Test @Config(sdk = [29, 30], qualifiers = "en-w360dp-h800dp-notnight-xhdpi")
+    fun `system bars use Dark despite system Light`() = systemBars(AppTheme.DARK, false)
+
+    @Test @Config(sdk = [29, 30], qualifiers = "en-w360dp-h800dp-night-xhdpi")
+    fun `system bars follow System at night`() = systemBars(AppTheme.SYSTEM, false)
+
+    @Test @Config(sdk = [29, 30], qualifiers = "en-w360dp-h800dp-notnight-xhdpi")
+    fun `system bars follow System in daytime`() = systemBars(AppTheme.SYSTEM, true)
 
     @Test fun `real activity blocks external open before constructing the player`() {
         activity = Robolectric.buildActivity(MainActivity::class.java,

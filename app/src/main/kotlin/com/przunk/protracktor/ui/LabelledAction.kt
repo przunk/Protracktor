@@ -35,8 +35,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.R
 
 /**
  * How tall every action pill stands, one word or three, **at the phone's default text size**.
@@ -101,15 +105,41 @@ private fun pillHeight(slim: Boolean): Dp {
 /** The icon in a slim pill. Material's default is 24dp, which leaves no room for the word under it. */
 private val SLIM_ICON = 20.dp
 
-/**
- * How narrow a slim pill may be, so a row of them reads as a row of equals.
- *
- * Width follows the label, and the labels are not the same length: "WEB" drew a button two thirds
- * the width of "Settings" beside it. This is the widest of them plus its padding, which makes the
- * short ones match rather than the long ones shrink — five at this width still cross a 320dp screen
- * with the seams between them.
- */
+/** Minimum surface width; groups measure their longest localized label separately. */
 private val SLIM_MIN_WIDTH = 56.dp
+private val ACTION_HORIZONTAL_PADDING = 6.dp
+
+/** Includes the surface's padding and outer seams; the caller constrains the group to its row. */
+@Composable
+internal fun slimActionWidth(vararg labels: String): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelSmall
+    val density = LocalDensity.current
+    val textWidth = labels.maxOfOrNull {
+        measurer.measure(AnnotatedString(it), style = style, maxLines = 1, softWrap = false).size.width
+    } ?: 0
+    return with(density) {
+        maxOf(SLIM_MIN_WIDTH, textWidth.toDp() + ACTION_HORIZONTAL_PADDING * 2) + ACTION_SEAM * 2
+    }
+}
+
+/** The return action and Random's Filter occupy the same column, across separate layouts. */
+@Composable
+internal fun sessionActionWidth(): Dp = slimActionWidth(
+    stringResource(R.string.action_to_playlist), stringResource(R.string.random_filter),
+)
+
+@Composable
+internal fun PlaylistReturnAction(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    LabelledAction(
+        icon = PlayerIcons.Playlist,
+        label = stringResource(R.string.action_to_playlist),
+        onClick = onClick,
+        haptic = null,
+        slim = true,
+        modifier = modifier.width(sessionActionWidth()),
+    )
+}
 
 /**
  * The gap a pill leaves on each side of itself, inside its own layout bounds.
@@ -130,11 +160,9 @@ internal val ACTION_SEAM = 3.dp
  * Shared rather than repeated: a second copy inline in one screen's header would drift from this
  * one by the third caller.
  *
- * **Width comes from the caller.** A row of these should be a grid of equals, and the way to get
- * that is `Modifier.weight(1f)` so they share the space that is actually there. A fixed width was
- * tried and was worse than ragged: at 84dp five of them are 420dp, a phone gives about 310, and the
- * last two wrapped to a second line — which reads as actions having gone missing rather than as a
- * grid. In a top bar, where there is no row to share, no width is right.
+ * Width comes from the caller: weighted grids share their row; compact groups use
+ * [slimActionWidth] constrained to the available space. A fixed global width would overflow
+ * narrow windows when all playlist actions are present.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -239,7 +267,7 @@ internal fun LabelledAction(
                 // lives in, so at the largest text sizes the choice is between padding and
                 // legibility. Three device-independent pixels either side are still a gap; half a
                 // letter missing is not a word.
-                .padding(horizontal = if (wrapLabel) 3.dp else 6.dp,
+                .padding(horizontal = if (wrapLabel) 3.dp else ACTION_HORIZONTAL_PADDING,
                     vertical = if (slim && tightened) 3.dp else 6.dp),
         ) {
             // The same quieter pair as the follow-track navigation button. Using the named
