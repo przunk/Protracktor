@@ -72,7 +72,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W14 | Original/Narrow/Mono | Pending |
 | W15 | Playback volume normalization | Pending |
 | W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
-| W17 | Browse position and subsong following | Pending |
+| W17 | Browse position and subsong following | Browse restoration implemented with full host gate; subsong following pending |
 | W18 | Playback-mode/settings restoration | Pending |
 | W19 | Read-ahead and prefetch controls | Pending |
 | W20 | Persistent music cache and offline marks | Pending |
@@ -1126,3 +1126,81 @@ ignored `user/web-parity-verification/w16/`.
 W16 is implemented at host level. This completion changes documentation/message only. Browser
 layout, zoom, touch, reader behaviour and background acceptance remain unchecked. Continue W17a
 Browse restoration and W17b subsong following separately; no WEB merge, bundle or deployment.
+
+## W17a — Browse position analysis, 2026-10-28
+
+Reference **c8209b1**: `BrowseScroll`, its eight tests, `ListScrolling`, BrowseScreen's
+RestorePosition/group/catalogue/History paths and ProtracktorApp's view/overlay lifetimes.
+W16 is verified and committed before this separate restoration substage; subsong following
+remains W17b.
+
+Parity checklist:
+- Keep positions per producing Browse level for one session. Before entering a catalogue/group/
+  author or saved place, remember the exact row identity. Back restores that row after real rows
+  arrive, even when its index changed. A genuinely missing row consumes its marker and uses its
+  own saved offset; never jump to an old numeric index. Loading/empty rows wait without consuming.
+- Snapshot before DOM replacement, including overlapping asynchronous renders. An obsolete
+  result cannot restore a newer view; an intermediate loading/empty list must not overwrite a
+  saved offset with its clamped zero. Same-level refresh preserves position and input focus.
+- Fresh Browse starts at the top; Queue and temporary destination choosers retain the underlying
+  visit. Fresh History and changes of its phrase start at the top. History pages keep separate
+  offsets within a query. Search positions belong to producing query/scope, not pending edits.
+- Use stable URL/folder/catalogue/domain/bookmark identities, independent of translated labels.
+  Pointer and keyboard folder activation reach the same departure recording. Preserve existing
+  source-return/Random/digression navigation, playback, selection-first Back and manual FIFO.
+- Port native restore decisions and drive actual nested Browse/Back, changed/missing index,
+  delayed reads, fresh reentry, History paging/query and Queue cases. Demonstrate broken identity,
+  generation and event guards fail, restore and run the full gate/lint. Physical browser scroll
+  feel and touch remain unchecked; no scroll rendering claim comes from jsdom geometry hooks.
+
+Implementation and verification are pending.
+
+### W17a implementation checkpoint
+
+The pure model ports native pending-return and per-level lifetime rules; the DOM adapter owns
+capture-before-replacement and latest-visible-visit restoration. Stable folder/catalogue/domain/
+URL/bookmark identities survive translated labels or index changes. Fresh Browse and History
+phrases reset, History pages keep independent offsets, and producing Search rows retain their
+position during pending edits. Folder keys use actual raw names, including an empty author.
+Pointer and keyboard activation use the same departure recorder.
+
+Temporary Add destination choosers now preserve their underlying Browse models rather than
+implicitly starting History anew. An actual Saved places test exposed restoration against stale
+membership: the first render consumed the bookmark marker before its refresh started. The guard
+fails before changing refresh-before-restore ordering and passes afterwards. No Native production
+change or new persistence. Browser restoration uses a direct target alignment instead of native
+Compose's distance-dependent scroll animation; physical feel remains unchecked.
+
+Focused WEB **6 rule / 7 presentation / 22 production-page cases** pass. Four deliberately broken
+implementations are detected: identity lookup, visit ownership, intermediate-snapshot capture and
+the actual folder activation recorder. Sources are restored. These cases port `BrowseScrollTest`
+and exercise the equivalent real browser events; its eight native tests run again in the pending
+full gate. Evidence is under ignored `user/web-parity-verification/w17/`. Full checks/lint and
+final receipt are pending; W17b subsong following remains separate and unimplemented.
+
+The first combined page run exposed a test setup dependency: the Search position case inherited
+Saved playlists from the prior bulk-local fixture, so its catalogue rows were correctly absent.
+It now chooses Everywhere through the actual scope control before asserting catalogue position;
+production Search semantics and existing guards are unchanged. This test-only correction is made
+before the forced gate reaches its WEB phase; all Android/native production and test inputs stay
+identical to the candidate on which its fresh unit phase started.
+
+### W17a final gate
+
+The forced full gate passes **1247 tests / 169 suites**, zero failures/errors/skips, **813 s**;
+fresh unit execution **461.4 s**, all 31 tasks executed. All companions actually execute,
+including **1098 page assertions**, **6 Browse model / 7 presentation cases**, actual WASM,
+processor/native audio, migrations, PWA and server checks. Fresh lint **84.5 s**, **0 errors/fatal /
+79 warnings**. Native's eight `BrowseScrollTest` cases pass again; Android production is unchanged.
+All **677** recorded final application/test/build/rule hashes match.
+
+Source receipt is phase-specific: unit execution started at **834836dd2609ed62107346235c360f54223f8e53**.
+Before the WEB phase, **7f1b1d375b9f0b2c9ff213a9045fdf972b771f1e** corrected only its new page test's
+inherited Search-scope setup. Android/native production/test sources remain identical; WEB checks
+execute the corrected test. The original and corrected receipts, logs, JUnit/lint and four
+negative controls are retained under ignored `user/web-parity-verification/w17/`. Both independent
+and complete-page runs pass after that test correction.
+
+W17a is implemented at host level; W17b remains pending. This completion changes documentation/
+message only. Real-browser scroll/animation, touch, focus and background behaviour remain unchecked.
+No WEB merge, bundle, APK, push, deployment, schema or versionName change.

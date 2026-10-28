@@ -33,6 +33,8 @@ import { playlistReference, networkPlaylistUrl, hydratePlaylistReference } from 
 import { PlaylistTransfer } from './playlist-transfer.js';
 import { TrackSelection } from './track-selection.js';
 import { BrowseSelectionView } from './browse-selection-view.js';
+import { BrowseScroll } from './browse-scroll.js';
+import { BrowseScrollView } from './browse-scroll-view.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -264,6 +266,7 @@ let noticeId = 0;
 let queueView = null;
 let playlistReorder = null;
 let browseSelectionView = null;
+let browseScrollView = null;
 let playlistRows = [], nextPlaylistRow = 0, renderingPlaylist = false;
 const retainedPlaylistTracks = new Map();
 let savedPlaces = null;
@@ -2574,6 +2577,10 @@ function parkEditedSourceAt(at) {
  */
 let selected = new Set();
 const browseSelection = new TrackSelection({ changed: () => browseSelectionView?.render() });
+const browseScroll = new BrowseScroll();
+function forgetHistoryPositions() {
+  browseScroll.forgetWhere((key) => JSON.parse(key)[0][0] === 'history');
+}
 let pendingAdd = null;
 let addAsked = 0, panelVisit = 0, addingRequest = null;
 
@@ -2680,7 +2687,7 @@ async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has
   }
   $('addtonote').textContent = tn(tracks.length, '{n} track to add.', '{n} tracks to add.')
     + (targets.length ? '' : ' ' + t('There is no other playlist yet — make one.'));
-  showPanel('addto');
+  showPanel('addto', { preserveBrowse: browse });
 }
 
 /**
@@ -3252,6 +3259,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('nowcard').setAttribute('aria-expanded', String(which === 'nowplaying'));
+  if (which === 'browse') browseScrollView?.reveal(browseSelectionOwner());
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
@@ -3288,6 +3296,7 @@ function closePlaybackQueue({ focus = false } = {}) {
   $('tab-browse').setAttribute('aria-pressed', String(queueUnderlying === 'browse'));
   $('showqueue').setAttribute('aria-pressed', 'false');
   queueUnderlying = null;
+  if (!$('browse').hidden) browseScrollView?.reveal(browseSelectionOwner());
   updateSelectBar();
   if (focus) $('showqueue').focus();
   if (focus && !$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability();
@@ -3667,6 +3676,7 @@ const historyBrowser = new HistoryBrowser({
 $('historysearch').oninput = () => {
   if (browsePath[0] !== 'history') return;
   sourceBrowseRoute = null;
+  forgetHistoryPositions();
   $('browselist').scrollTop = 0;
   void historyBrowser.setQuery($('historysearch').value);
 };
@@ -3710,9 +3720,12 @@ function submitSearch(query) {
 
 function renderSavedPlaces() {
   if (!savedPlacesView || !savedPlaces) return;
+  const inList = !$('browse').hidden && browsePath[0] === 'saved';
+  const visit = inList ? browseScrollView?.begin(browseSelectionOwner()) : null;
   savedPlacesView.render({ state: savedPlaces.state,
     key: !$('browse').hidden ? saveablePlace(browsePath, archive.sources()) : null,
-    inList: !$('browse').hidden && browsePath[0] === 'saved' });
+    inList });
+  if (inList) browseScrollView?.finish(visit, { loading: savedPlaces.state.loading });
 }
 
 function openSavedPlaces() {
@@ -3727,6 +3740,7 @@ async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
   const selectionOwner = browseSelectionOwner();
+  const scrollVisit = browseScrollView?.begin(selectionOwner);
   if (browseSelection.owner !== selectionOwner) browseSelectionView?.sync(selectionOwner, []);
   try {
   if (browsePath[0] !== 'history') historyBrowser.leave();
@@ -3745,8 +3759,8 @@ async function renderBrowse(resolved = null) {
   const inPlace = browsePath[0] === 'catalogues' || browsePath[0] === 'search';
   if (browsePath[0] !== 'search') renderedSearchResult = null;
   if (!inPlace) list.replaceChildren();
-  renderSavedPlaces();
   if (savedPlaces && (key || browsePath[0] === 'saved')) savedPlaces.refresh();
+  renderSavedPlaces();
   const digressing = !browseFromSource && !!away?.dice && arrivedByJump();
   $('browsedigression').hidden = !digressing;
   if (digressing) {
@@ -3786,8 +3800,9 @@ async function renderBrowse(resolved = null) {
   // index downloaded, and jsdom does not reach that state (`docs/STATUS.md` C37).
   // An icon for the rows that do something -- Random, History, a download -- as the phone's Browse
   // rows have one; rows that are data (a format, an author, a tune) are drawn as the phone draws them.
-  const row = (name, count, onclick, icon = null) => {
+  const row = (name, count, onclick, icon = null, identity = name) => {
     const li = document.createElement('li');
+    li.dataset.browseKey = `folder:${identity}`;
     const label = document.createElement('div');
     label.className = 'bname';
     label.textContent = name;
@@ -3796,23 +3811,27 @@ async function renderBrowse(resolved = null) {
     number.textContent = count == null ? '' : count.toLocaleString();
     li.append(label, number);
     if (icon) li.insertAdjacentHTML('afterbegin', iconSvg(icon));
-    li.onclick = onclick;
-    if (browsePath[0] === 'history' && onclick) {
+    li.onclick = onclick ? () => {
+      if (browsePath[0] !== 'history') browseScrollView?.remember(li.dataset.browseKey);
+      onclick();
+    } : null;
+    if (onclick) {
       li.tabIndex = 0; li.setAttribute('role', 'button');
       li.onkeydown = (event) => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onclick(); }
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); }
       };
     }
     list.append(li);
   };
   // A row of the root: its name over one line of what it is, as the phone's DomainRow.
-  const domainRow = (name, detail, onclick, icon) => {
+  const domainRow = (name, detail, onclick, icon, identity) => {
     const li = document.createElement('li');
     li.className = 'bdomain';
+    li.dataset.browseKey = `domain:${identity}`;
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
     li.onkeydown = (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onclick(); }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); }
     };
     const text = document.createElement('div');
     text.className = 'btext';
@@ -3825,7 +3844,7 @@ async function renderBrowse(resolved = null) {
     text.append(label, meta);
     li.append(text);
     li.insertAdjacentHTML('afterbegin', iconSvg(icon));
-    li.onclick = onclick;
+    li.onclick = () => { browseScrollView?.remember(li.dataset.browseKey); onclick(); };
     list.append(li);
   };
 
@@ -3852,15 +3871,15 @@ async function renderBrowse(resolved = null) {
     domainRow(t('Online catalogues'), t('Browse the archives — indexed once, then browsable offline'), async () => {
       browsePath = ['catalogues'];
       await renderBrowse();
-    }, ICON.cloud);
-    domainRow(t('Saved places'), t('Author and game folders to return to later.'), openSavedPlaces, ICON.bookmarkFilled);
-    domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice);
-    domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history);
+    }, ICON.cloud, 'catalogues');
+    domainRow(t('Saved places'), t('Author and game folders to return to later.'), openSavedPlaces, ICON.bookmarkFilled, 'saved');
+    domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice, 'random');
+    domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history, 'history');
     domainRow(t('Search'), t('Across the catalogues this browser holds'), async () => {
       browsePath = ['search'];
       await renderBrowse();
       $('browsesearch').focus();
-    }, ICON.search);
+    }, ICON.search, 'search');
     return;
   }
 
@@ -3916,7 +3935,7 @@ async function renderBrowse(resolved = null) {
       row(name || t('(no author)'), count, async () => {
         browsePath = [source, format, name];
         await renderBrowse();
-      });
+      }, null, name);
     }
     return;
   }
@@ -3933,7 +3952,14 @@ async function renderBrowse(resolved = null) {
     trackRow(list, track, `${Math.round(track.size / 1024).toLocaleString()} KB`, () => playFromBrowse(tracks, i, 'browse', route), { folder: false });
   });
   markPlayingIn(list);
-  } finally { if (visit === searchAsked) syncBrowseSelection(); }
+  } finally {
+    if (visit === searchAsked) {
+      syncBrowseSelection();
+      const loading = !sourceBrowseRoute && (browsePath[0] === 'history' ? historyBrowser.state.loading
+        : browsePath[0] === 'search' ? searchBrowser.state.loading : false);
+      browseScrollView?.finish(scrollVisit, { loading });
+    }
+  }
 }
 
 /**
@@ -4040,6 +4066,7 @@ function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track)
 
 /** Browse → History. */
 async function openHistory() {
+  forgetHistoryPositions();
   browsePath = ['history']; sourceBrowseRoute = null;
   $('browselist').scrollTop = 0;
   await historyBrowser.open();
@@ -4050,7 +4077,6 @@ $('history-older').onclick = () => turnHistory(1);
 async function turnHistory(delta) {
   if (!historyBrowser.active || historyBrowser.state.loading) return;
   sourceBrowseRoute = null;
-  $('browselist').scrollTop = 0;
   await historyBrowser.turn(historyBrowser.state.page + delta);
 }
 
@@ -4252,6 +4278,7 @@ function downloadButton(key, held, label, onclick) {
 function heldRow(list, { name, detail, warning = '', held, key, label, ondownload, onopen = null }) {
   const li = document.createElement('li');
   li.className = 'bheldrow';
+  li.dataset.browseKey = `catalogue:${key}`;
   const text = document.createElement('div');
   text.className = 'btext';
   const title = document.createElement('div');
@@ -4273,7 +4300,13 @@ function heldRow(list, { name, detail, warning = '', held, key, label, ondownloa
   }
   li.append(heldMark(held), text, downloadButton(key, held, label, ondownload));
   // Only openable once it is here: an empty catalogue opened teaches nothing about why.
-  if (onopen) li.onclick = onopen; else li.classList.add('closed');
+  if (onopen) {
+    li.onclick = () => { browseScrollView?.remember(li.dataset.browseKey); onopen(); };
+    text.tabIndex = 0; text.setAttribute('role', 'button');
+    text.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); }
+    };
+  } else li.classList.add('closed');
   list.append(li);
   return li;
 }
@@ -4388,6 +4421,7 @@ function renderSearchRows(list, note, savedRoute = null) {
 
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }
+  browseScrollView?.reset();
   browsePath = [];
   browseFromSource = false; sourceBrowseRoute = null;
   jumpedTo = null;
@@ -5436,6 +5470,7 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 browseSelectionView = new BrowseSelectionView({ model: browseSelection,
   header: $('browse-selection-head'), count: $('browse-selection-count'), all: $('browse-select-all'),
   leading: browseLeading, changed: updateSelectBar });
+browseScrollView = new BrowseScrollView({ model: browseScroll, viewport: $('browselist'), visible: () => !$('browse').hidden });
 playlistReorder = new RowReorder({ list: document.querySelector('main'), rows: () => playlistRows,
   generation: playlistReorderOwner, move: movePlaylistRow, clampEdges: false,
   onStop: ({ id, generation, focus }) => {
@@ -5465,7 +5500,11 @@ savedPlacesView = new SavedPlacesView({ header: $('saved-place-header'), tools: 
   list: $('browselist'), note: $('browsenote'), icon: (name) => iconSvg(ICON[name]),
   onToggle: (key, saved) => saved ? savedPlaces.remove(key) : savedPlaces.save({ key,
     catalogueName: archive.sourceName(key.catalogueId), savedAt: Date.now() }),
-  onOpen: (key) => savedPlaces.open(key), onRemove: (key) => savedPlaces.remove(key),
+  onOpen: (key) => {
+    if ($('browse').hidden || browsePath[0] !== 'saved') return;
+    browseScrollView.remember(savedPlaceId(key)); savedPlaces.open(key);
+  },
+  onRemove: (key) => savedPlaces.remove(key),
   onPrepare: () => { savedPlaces.cancelOpening(); browsePath = ['catalogues']; sourceBrowseRoute = null; renderBrowse(); },
   onRetry: () => savedPlaces.refresh() });
 savedPlaces = new SavedPlaces({ store: bookmarks, availability: savedCatalogue.savedPlaceRows,

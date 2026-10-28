@@ -3,6 +3,26 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W17a Browse positions — browser checks pending, 2026-10-28
+
+Host fixtures mock row rectangles and execute actual navigation/Back events; they do not establish
+physical scrolling, scrollbars, browser clamping or touch feel. No bundle/deployment yet.
+
+- Scroll far down Modland formats/authors, open a folder and Back through several levels. Return
+  to the exact departed row. Refresh/change an index so the row moves; remove that row: return
+  to its identity when present, otherwise retain the parent's offset without an old-index jump.
+  Back during a delayed read must keep the newer level and its position. Try empty/loading rows.
+- Close Browse and open it anew: top/root. Queue over Browse preserves its underlying position.
+  Same-level index/status refresh must not reset scroll or move input focus. Use mouse, keyboard
+  Enter/Space and touch; neither navigation nor restoration may restart music or edit the queue.
+- History fresh entry/query starts at the top. Scroll page one, change page and return: each page
+  keeps its own offset within that phrase. Open/cancel Add to another playlist over History: same
+  query/page/offset. Queue open/close preserves it. Returning to an earlier phrase starts fresh.
+- Search positions belong to the result's producing query/scope; pending field/chip edits must
+  keep that result's position. Open a Saved place, add another bookmark ahead of it while away,
+  then Back: wait for refreshed membership before locating the departed bookmark. Try deletion,
+  refused/delayed refresh and EN/PL. Verify no old result scrolls a newer view.
+
 ## WEB W16 dock — browser checks pending, 2026-10-28
 
 Host DOM/CSS/event checks cannot prove physical geometry, focus/touch feel or visual overlap.

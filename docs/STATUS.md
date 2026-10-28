@@ -44,6 +44,18 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W17a implemented, 2026-10-28:** per-level offsets and exact departed-row restoration
+survive index changes, empty/loading views and obsolete reads. Fresh Browse/History/query resets
+and independent History page positions are covered; temporary Add/Queue preserves the visit.
+Saved places waits for refreshed membership before consuming its marker. The forced complete
+gate passes **1247 tests / 169 suites**, zero failures/errors/skips, **813 s**, all companions,
+**1098 page assertions**; lint **0 errors / 79 warnings**. Android/native sources match the unit
+phase launched on **834836d**; before the WEB phase, test setup alone was corrected in **7f1b1d3**
+to explicitly choose its Search scope. All **677** final input hashes match. Four controlled
+faults and the pre-fix bookmark race are detected and restored. Physical browser scrolling/touch
+remain unchecked. W17b subsong following is next; W17 is not yet complete. No WEB bundle,
+merge, push, deployment, schema or versionName change.
+
 **W16 implemented, 2026-10-28:** independent title/Add and metadata/Tune rows preserve
 Add's reserved target, title sizing and separate Queue action. Ordinary browser minimum stays
 64 px; enlarged text may wrap/grow. Actual opened state owns the counter, including both subsong

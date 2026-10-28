@@ -186,6 +186,10 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { BrowseScroll } from './browse-scroll.js';",
+    () => `const { BrowseScroll } = (() => { ${fs.readFileSync('web/src/browse-scroll.js', 'utf8').replace(/^export /gm, '')}; return { BrowseScroll }; })();`)
+  .replace("import { BrowseScrollView } from './browse-scroll-view.js';",
+    () => `const { BrowseScrollView } = (() => { ${fs.readFileSync('web/src/browse-scroll-view.js', 'utf8').replace(/^export /gm, '')}; return { BrowseScrollView }; })();`)
   .replace("import { TrackSelection } from './track-selection.js';",
     () => `const { TrackSelection } = (() => { ${fs.readFileSync('web/src/track-selection.js', 'utf8').replace(/^export /gm, '')}; return { TrackSelection }; })();`)
   .replace("import { BrowseSelectionView } from './browse-selection-view.js';",
@@ -3742,6 +3746,8 @@ await (await import('./check-page-playlist-transfer.mjs')).default({ window, che
 await (await import('./check-page-browse-selection.mjs')).default({ window, check });
 
 await (await import('./check-page-dock.mjs')).default({ window, check });
+
+await (await import('./check-page-browse-scroll.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

@@ -1,5 +1,25 @@
 # Architecture
 
+## WEB Browse positions — branch candidate, 2026-10-28
+
+`BrowseScroll` holds per-session level offsets and pending departed-row identities. Its native-
+derived restore decisions are Nothing, Wait for loading/empty rows, Scroll to the exact current
+identity, or Forget a genuinely missing row. There is no old-index fallback. The level key is
+shared with Browse selection, including producing Search query/scope and History query/page.
+
+`BrowseScrollView` snapshots before DOM replacement and applies only the latest completed visible
+visit. Loading/clamped intermediate lists cannot overwrite a saved offset. Queue-hidden updates
+wait for the same owner to become visible; same-level refresh restores its captured offset.
+Folder/catalogue/domain/bookmark actions record stable identities through both pointer and
+keyboard paths. Fresh Browse clears the session; fresh History/query clears only History state,
+while paging keeps independent offsets. Browser restoration aligns the target directly; physical
+scroll/animation feel remains a browser check.
+
+A destination chooser opened from Browse preserves its underlying models and position. Saved
+places starts its refresh before attempting restoration, so old membership cannot consume a
+return marker before a newly inserted bookmark changes the row's index. This changes no playback,
+playlist, manual-request, storage or source-navigation ownership.
+
 ## WEB dock identity — branch candidate, 2026-10-28
 
 The identity card has independent title/Add and metadata/Tune rows. A permanent 48 by 32 px Add

@@ -153,6 +153,7 @@ run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.s
 
 # These domain cases need only Node, not a browser/DOM dependency or a compiled WASM engine.
 run_check "Track selection" track-selection node scripts/check-track-selection.mjs
+run_check "Browse restoration" browse-scroll node scripts/check-browse-scroll.mjs
 run_check "Playlist file transfer" playlist-transfer node scripts/check-playlist-transfer.mjs
 run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs
@@ -173,6 +174,7 @@ run_check "Library search" library-search node scripts/check-library-search.mjs
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
+    run_check "Browse restoration presentation" browse-scroll-view node scripts/check-browse-scroll-view.mjs
     run_check "Browse selection presentation" browse-selection-view node scripts/check-browse-selection-view.mjs
     run_check "Playlist import storage" playlist-transfer-store node scripts/check-playlist-transfer-store.mjs
     run_check "Search suggestions" search-suggestions node scripts/check-search-suggestions.mjs
