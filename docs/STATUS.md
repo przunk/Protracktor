@@ -44,10 +44,18 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W09 implemented, 2026-10-28:** query history/suggestions are connected through the real field,
+integrated Search action, keyboard and pointer handlers. Eighteen cases run against the actual
+Kotlin/JS rules; JS passes 24 domain cases, 11 DOM event cases, four IndexedDB cases and 883 page
+assertions. Native lookup starts on explicit submission; typing alone never records or silently
+submits on redraw. Forced full gate on **5f239c9** passed **1238 tests / 164 suites** in
+**760 s**, zero failures/errors/skips; lint has zero errors. All 598 recorded application/test/build
+inputs still match. Browser acceptance is unchecked; no WEB bundle, merge or deployment.
+
 **Resumed 2026-10-28:** rebase onto accepted develop **c8209b1**, retaining all WEB application
 changes byte-for-byte. New Android comparisons use that reference, including the accepted -18
 LUFS policy for W15. Original branch preserved at `backup/web-parity-before-resume-20261028`;
-resumed head **dc8c850**, **865 page checks passed**. W09 starts next; W03 remains partially
+resumed head **dc8c850**, **865 page checks passed** before W09; W03 remains partially
 integrated until History/Search scope work. No WEB merge or deployment is approved.
 
 Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.

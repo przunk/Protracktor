@@ -374,4 +374,9 @@ export const PL = {
   "No tracks in the queue. Add tracks from any list.": "Brak utworów w kolejce. Dodaj utwory z dowolnej listy.",
   "Go to source: {name}": "Przejdź do źródła: {name}",
   "The playback source is no longer available.": "Źródło odtwarzania nie jest już dostępne.",
+  "Recent searches": "Ostatnie wyszukiwania",
+  "Press Search or Enter to search.": "Wybierz Szukaj lub naciśnij Enter, aby wyszukać.",
+  "could not read recent searches: {reason}": "nie można odczytać ostatnich wyszukiwań: {reason}",
+  "could not save recent searches: {reason}": "nie można zapisać ostatnich wyszukiwań: {reason}",
+  "could not search: {reason}": "nie można wyszukać: {reason}",
 };

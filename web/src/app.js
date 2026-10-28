@@ -23,10 +23,13 @@ import { SavedPlaces, saveablePlace, savedPlaceId } from './saved-places.js';
 import { SavedPlacesView } from './saved-places-view.js';
 import * as savedCatalogue from './saved-places-catalogue.js';
 import { learnedDisplay, learnedSourceLine } from './learned-titles.js';
+import { RecentSearchHistory } from './recent-searches.js';
+import { SearchSuggestions } from './search-suggestions.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
+let searchSuggestions = null;
 
 /**
  * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
@@ -3039,6 +3042,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  if (which !== 'browse') searchSuggestions?.close(true);
   if (which !== 'browse') savedPlaces?.cancelOpening();
   closePlaybackQueue();
   if (!$('unsaved').hidden) answerUnsaved(false);
@@ -3342,7 +3346,42 @@ let savedParentKey = null;
 let searchTimer = null;
 /** Bumped by every search and every redraw, so a slow answer cannot land on a newer screen. */
 let searchAsked = 0;
+let submittedSearchQuery = null;
 const SEARCH_LIMIT = 300;
+const recentSearches = new RecentSearchHistory({
+  read: () => settings.get('recentSearches', []),
+  write: (queries) => settings.set('recentSearches', queries),
+  onChange: () => searchSuggestions?.refresh(),
+});
+$('browsesubmit').innerHTML = iconSvg(ICON.search);
+searchSuggestions = new SearchSuggestions({
+  root: $('browsequery'), input: $('browsesearch'), submit: $('browsesubmit'), list: $('search-suggestions'),
+  suggestions: (typed) => recentSearches.suggestions(typed),
+  onInput: () => {
+    clearTimeout(searchTimer); ++searchAsked;
+    submittedSearchQuery = null;
+    $('browsenote').textContent = t('Press Search or Enter to search.');
+  },
+  onSubmit: submitSearch,
+  onFocus: () => recentSearches.ready.then(() => {
+    if (recentSearches.readError && !$('browsequery').hidden && document.activeElement === $('browsesearch')) {
+      showNote(t('could not read recent searches: {reason}', { reason: recentSearches.readError.message }));
+    }
+  }),
+});
+
+function showSearchQuery(visible) { searchSuggestions.setVisible(visible); }
+
+function submitSearch(query) {
+  recentSearches.record(query).catch((error) => showNote(t('could not save recent searches: {reason}', { reason: error.message })));
+  const task = runSearch(query);
+  const asked = searchAsked;
+  return task.catch((error) => {
+    if (asked === searchAsked && browsePath[0] === 'search') {
+      $('browsenote').textContent = t('could not search: {reason}', { reason: error.message });
+    }
+  });
+}
 
 function renderSavedPlaces() {
   if (!savedPlacesView || !savedPlaces) return;
@@ -3393,7 +3432,7 @@ async function renderBrowse(resolved = null) {
   // the one that leads back to the dice.
   // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
-  $('browsesearch').hidden = digressing || browsePath[0] !== 'search';
+  showSearchQuery(!digressing && browsePath[0] === 'search');
   $('browseclose').hidden = digressing;
   $('historypager').hidden = true;
 
@@ -3487,8 +3526,9 @@ async function renderBrowse(resolved = null) {
   if (browsePath[0] === 'search') {
     $('browsetitle').textContent = t('Search');
     const query = $('browsesearch').value;
-    if (query.trim().length >= 2) { await runSearch(query); return; }
-    note.textContent = t('A tune or an author, two letters or more.');
+    if (query.trim().length >= 2 && submittedSearchQuery === query) { await runSearch(query); return; }
+    note.textContent = query.trim().length >= 2 ? t('Press Search or Enter to search.')
+      : t('A tune or an author, two letters or more.');
     return;
   }
 
@@ -3927,15 +3967,16 @@ async function renderCatalogues(list, note, canRender = () => true) {
  * **Tunes, never folders.** A name typed may be a tune's or an author's, as on the phone, whose
  * search matches both and answers
  * with tracks either way: an author found here brings their tunes, not a row to walk into.
- * Debounced, and it says how long it took: reading 1,663 title shards is a real amount of work and
+ * Submitted through the query field, and it says how long it took: reading 1,663 title shards is a real amount of work and
  * a number is more honest than a spinner.
  */
 async function runSearch(query) {
+  submittedSearchQuery = query;
   const list = $('browselist');
   const note = $('browsenote');
   const asked = ++searchAsked;
   // A search is always Search's: typed there, its results stay there when the list redraws.
-  if (browsePath[0] !== 'search') { browsePath = ['search']; $('browsesearch').hidden = false; }
+  if (browsePath[0] !== 'search') { browsePath = ['search']; showSearchQuery(true); }
   if (query.trim().length < 2) { await renderBrowse(); return; }
   // Every archive held, one list of results: somebody typing a name does not know which has it.
   const held = [];
@@ -3991,12 +4032,6 @@ async function runSearch(query) {
         : t('Formats it cannot play are not in an index built before this browser kept everything.'));
   route = captureBrowseRoute(found, { query });
 }
-
-$('browsesearch').oninput = () => {
-  clearTimeout(searchTimer);
-  const query = $('browsesearch').value;
-  searchTimer = setTimeout(() => runSearch(query), 250);
-};
 
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }

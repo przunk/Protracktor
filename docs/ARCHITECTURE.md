@@ -1,5 +1,21 @@
 # Architecture
 
+## WEB recent searches — branch candidate, 2026-10-28
+
+`RecentSearchHistory` owns bounded query history and serialized settings writes, separately from
+playback History and Browse snapshots. `recent-searches.js` ports the Kotlin trimming, case and
+prefix rules; a common TSV runs against both implementations. The existing settings store gains
+one key, with no schema migration. Read failures are retried before writes; write failures retain
+the last persisted presentation and leave the ordinary search usable.
+
+`SearchSuggestions` binds existing input/submit/listbox nodes. It owns dropdown eligibility,
+keyboard/pointer selection and available-height placement, but not searches, playback or storage.
+Submitting closes focus before invoking the page; asynchronous updates only refresh eligible
+views. `app.js` distinguishes typed text from an acknowledged submitted query so a redraw cannot
+silently launch a newly typed lookup. Search-source snapshots keep the query that produced their
+rows. The integrated Search icon follows the native field's accessible-label convention; the
+options are plain text. Browser rendering/keyboard acceptance remains unchecked.
+
 ## Louder normalization target — accepted and merged, 2026-10-27
 
 `VolumeNormalizer` uses a named -18 LUFS target on develop, merged as **641b875**; the released

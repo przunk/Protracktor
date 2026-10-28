@@ -1,6 +1,7 @@
 # Protracktor privacy policy
 
 Effective date: 2026-10-25
+Updated: 2026-10-28
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -97,7 +98,9 @@ running the page the user opened.
 
 Protracktor also has a web page: a second player that runs in a browser, served by whoever hosts
 it — usually the user, on a machine of their own. The page keeps its playlists, play history,
-downloaded catalogue indexes and settings in that browser's own storage, on that device. It sends
+bookmarked catalogue folders, the twenty most recent unique submitted searches, downloaded
+catalogue indexes and settings in that browser's own storage, on that device. Recent-search
+suggestions are matched locally; typing alone does not save a query. The page sends
 nothing to the developer and has no analytics, advertising or account. For what the user browses,
 downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org` and, for song
 metadata the user downloads, `raw.githubusercontent.com`, as the app does,

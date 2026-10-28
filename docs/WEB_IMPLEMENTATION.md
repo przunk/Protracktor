@@ -23,10 +23,11 @@ the rebase; this is not a new combined Android/WEB full-gate claim.
 
 Android's accepted normalization target is now **-18 LUFS**, superseding the initial W15 plan's
 -23 LUFS after the 2026-10-27 policy change. Retain its caps/peak guard and keep the slider/AMP
-experiments separate. W01/W02/W04-W08 are retained; W03 query/scope integration and W09-W25 remain
+experiments separate. W01/W02/W04-W08 are retained; W03 query/scope integration and W10-W25 remain
 open. No WEB merge, deployment or additional APK is authorized by this resume.
 
-Android reference is the baseline commit above. Read production code and existing Kotlin/native
+The initial Android reference was the baseline above; resumed comparisons use **c8209b1**.
+Read production code and existing Kotlin/native
 tests for each scope; port their actual scenarios and expected results to WEB checks. Shared
 fixtures are preferred where they express the same rule. Existing historical plans can describe
 earlier states; current accepted code/tests govern behaviour unless an actual defect is recorded.
@@ -63,7 +64,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W06 | Qualified played-before marks | Implemented; full host gate passes; browser acceptance unchecked |
 | W07 | Saved catalogue places | Implemented; full host gate passes; browser acceptance unchecked |
 | W08 | Learned list titles | Implemented; full host gate passes; browser acceptance unchecked |
-| W09 | Recent-search suggestions | Pending |
+| W09 | Recent-search suggestions | Implemented; full host gate passes; browser acceptance unchecked |
 | W10 | Live History search | Pending |
 | W11 | Search scopes and saved-playlist coverage | Pending |
 | W12 | Playlist reorder and import/export | Pending |
@@ -608,3 +609,55 @@ full gate/lint results and manual-browser gaps here or in the corresponding feat
 At the end audit all branch commits and W01-W25 criteria, correct findings, rerun final checks,
 and package the checked WEB bundle in dist with its SHA-256 and source identity. The final
 browser checklist and pending device results remain separate from technical handoff.
+
+## W09 — Recent searches, 2026-10-28
+
+Android reference: **c8209b1ab79976ec28d27e1da447055756c7ca29**. Read production
+`player/RecentSearches.kt`, `data/RecentSearchPreferences.kt`, `ui/SearchQueryField.kt` and
+`BrowseWorkflow.setQuery/runSearch`; compare `RecentSearchesTest`, `RecentSearchPreferencesTest`
+and `RecentSearchUiTest`. The first mutates only query state; explicit submission records a query
+and runs the lookup. W09 therefore replaces WEB's typing-starts-search handler with the native
+explicit Search/Enter action. Existing source-route checks now press the actual Search control,
+retaining their original query/result/transport assertions.
+
+Parity checklist and implementation:
+
+- Retain twenty unique trimmed submitted strings, latest spelling first; blank submissions and
+  unchanged state do not write. Prefix filtering ignores leading typed whitespace and case,
+  preserves trailing whitespace/accents, and runs before the three-option limit. Kotlin whitespace
+  and non-expanding Java-style case mappings avoid divergent BOM, Turkish-I and sharp-S results.
+- `recent-searches.js` owns rules and serialized storage. The existing settings store gains one
+  key without a schema bump. Publish only after a completed write; serialize rapid submissions,
+  retain prior state on refusal, and retry an unavailable initial read before replacing unknown
+  data. Clear playback History leaves this independent preference intact.
+- `search-suggestions.js` binds the real field, integrated Search icon, plain text listbox and
+  keyboard/pointer handlers. Arrow keys expose an active option; Enter submits it or the typed
+  query; Escape/Tab dismiss. Submission closes and blurs before asynchronous work. Data/result
+  refresh never focuses the field or reopens a submitted popup. Placement follows available
+  viewport space and preserves scrolling when the keyboard limits room.
+- Input edits retire obsolete reads without submitting or recording. A redraw may rerun only
+  an acknowledged submitted query; it cannot silently submit new text. Selecting a suggestion
+  uses the existing search scope/transport path rather than changing playback. W11 still owns
+  adding the missing scope controls and wider library coverage.
+- Errors reading/writing recent searches have localized feedback. Search remains usable after
+  a preference-write refusal. PL/EN names, literal text rendering and accessible option state
+  follow the native field convention; the integrated icon has an accessible label, while the
+  suggestion list has no decorative icons or visible section heading.
+
+`docs/rules/recent-search-cases.tsv` supplies **18 common cases** to production Kotlin and JS;
+Gradle declares it as an input. The focused Kotlin run passes the shared test plus all eight
+existing RecentSearches tests. JS passes **24 rule/storage-order cases**, **11 DOM event cases**,
+**4 production IndexedDB cases**, and the complete page passes **883 assertions**. A wrong fixture
+expectation fails both JS and Kotlin without forced Gradle execution; a disconnected actual
+option click fails the DOM guard. Original inputs and callback were restored. The page harness
+uses replacement callbacks when inlining the new modules so regex dollar characters remain
+literal. Test fixtures open Search through its actual domain entry instead of focusing a hidden
+panel. The privacy description now includes retained queries and catalogue bookmarks.
+
+**Checked:** forced `./scripts/test-protracktor.sh --really` on source **5f239c9** passed
+**1238 tests / 164 suites**, zero failures/errors/skips, **760 s**, and lint with zero errors.
+All WEB companions ran, including the **883 page assertions**. All **598 recorded application,
+test, rule and build input hashes** still match; the completion record changes documentation only.
+Browser rendering, physical keyboard/touch and actual software-keyboard behaviour remain
+unchecked. No WEB bundle, merge or deployment. Private full/focused/mutation evidence is under
+ignored `user/web-parity-verification/w09/`.

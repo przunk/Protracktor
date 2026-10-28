@@ -24,6 +24,8 @@ export default async function checkSourceRoutes({ window, check }) {
   };
   await seed();
   api.showPanel('browse'); $('browsesearch').value = 'Navigation'; await api.browseTo(['search']);
+  $('browsesubmit').click();
+  for (let tries = 0; tries < 200 && $('browselist').querySelectorAll('.btrack').length !== 2; tries++) await settle(10);
   const originalResults = [...$('browselist').querySelectorAll('.btrack')].map((row) => row.dataset.url);
   check(originalResults.length === 2, 'the source-route fixture uses actual indexed search results');
   const row = $('browselist').querySelector('.btrack');
@@ -39,7 +41,7 @@ export default async function checkSourceRoutes({ window, check }) {
     && [...$('browselist').querySelectorAll('.btrack')].map((entry) => entry.dataset.url).join() === originalResults.join()
     && api.planNow().context === searchPlan.context && api.scheduleNow() === searchPlan.schedule
     && window.__toWorklet.length === searchCommands,
-    'Search source return restores its query/results and retires old debounce work without playback');
+    'Search source return restores its submitted query/results and retires newly typed text without playback');
 
   const slowPath = ['modland', 'Protracker', 'Slow source'];
   const slowKey = 'modland:tracks:Protracker/Slow source';

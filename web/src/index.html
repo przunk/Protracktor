@@ -630,11 +630,24 @@
                     white-space: pre; overflow-x: auto; }
   /* Browsing: one list, four levels, and a head that says where you are. */
   #browsesearch {
-    width: 100%; box-sizing: border-box; margin: 6px 0 8px;
+    width: 100%; box-sizing: border-box; margin: 0; min-height: 48px;
     background: var(--surface-container); color: var(--on-surface);
     border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
-    padding: 10px 16px; font: inherit;
+    padding: 10px 56px 10px 16px; font: inherit;
   }
+  .search-query { position: relative; margin: 6px 0 8px; }
+  .search-submit { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 48px;
+    border: 0; background: none; color: var(--on-surface); border-radius: var(--shape-xl);
+    display: grid; place-items: center; cursor: pointer; }
+  .search-submit svg { width: 24px; height: 24px; fill: currentColor; }
+  .search-suggestions { position: absolute; z-index: 5; top: 100%; left: 0; right: 0;
+    margin: 2px 0 0; padding: 4px 0; list-style: none; border-radius: 12px; overflow-y: auto; box-sizing: border-box;
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); box-shadow: 0 4px 12px #0003; }
+  .search-suggestions li { padding: 12px 16px; min-height: 24px; cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-suggestions li:hover, .search-suggestions li[aria-selected="true"] {
+    background: var(--secondary-container); color: var(--on-secondary-container); }
   .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -954,7 +967,11 @@
     </div>
     <!-- Whose folder this is, while the dice waits under it: the session heading, in this screen. -->
     <div id="browsedigression" class="randomhead digression" hidden></div>
-    <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+    <div id="browsequery" class="search-query" hidden>
+      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+      <button type="button" id="browsesubmit" class="search-submit" aria-label="Search"></button>
+      <ul id="search-suggestions" class="search-suggestions" hidden></ul>
+    </div>
     <p class="note" id="browsenote"></p>
     <div id="saved-place-header" class="saved-folder-header" hidden></div>
     <div id="saved-place-tools" class="saved-place-tools" hidden></div>
