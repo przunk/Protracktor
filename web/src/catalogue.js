@@ -718,8 +718,12 @@ function metaFor(source, format, author) {
 export function urlFor(format, author, title, source = MODLAND) {
   // An empty author is a file filed straight under its group (ASMA's `Games/Title.sap`), not an
   // empty folder: splitting "" gives one empty segment, and the address a double slash.
-  return SOURCES[source].files
-    + [format, ...(author ? author.split('/') : []), title].map(encodeSegment).join('/');
+  return fileUrlFor([format, ...(author ? author.split('/') : []), title].join('/'), source);
+}
+
+/** Also resolves Android's internal ASMA references imported from a playlist file. */
+export function fileUrlFor(path, source = MODLAND) {
+  return SOURCES[source].files + path.split('/').map(encodeSegment).join('/');
 }
 
 function encodeSegment(segment) {

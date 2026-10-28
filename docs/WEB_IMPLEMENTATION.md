@@ -886,3 +886,104 @@ W02's live-drag parity gap and W12a are implemented at host level. W12b file tra
 This completion record changes documentation/commit message only. Physical browser painting,
 touch, capture, software keyboard and background operation remain unchecked. No bundle, APK,
 merge, push or deployment for this WEB stage.
+
+
+## W12b — M3U8 transfer analysis, 2026-10-28
+
+Android reference **c8209b1**, production `PlaylistTransfer`, `PlaylistFile`,
+`LibraryStore.replaceTracks` and `LibraryIndexStore.findByFile`; read all `PlaylistFileTest` and
+`PlaylistTransferTest` cases. W12a is verified/committed before starting this separate substage.
+
+Parity checklist before coding:
+
+- Export captures the selected draft when its playlist matches, otherwise persisted contents;
+  retain the initial label across suspended reads. Do not Save, switch context or change dirty/
+  position/FIFO. Empty export and read/download failure are distinct notices. Sanitize only the
+  download filename; retain Unicode name/title/author and native M3U comment identities/sizes.
+- Parse native extended M3U8 and ordinary location lists, unknown comments, ignored EXTINF duration,
+  first artist separator, per-entry metadata reset, title/filename fallback, signed 64-bit size and
+  embedded playlist name. Name fallback strips document path/prefix/last extension, then Imported.
+- Import always creates a new playlist without selecting it. Nonempty but all-unresolved input
+  still creates an empty list with 0/N notice. Count resolved offerings before first-occurrence
+  deduplication, as native store does. Do not change legacy pasted-list duplicate rules.
+- Resolve latest exact known id, supported internal archive id/remote id, remote location, then
+  a held local filename with optional positive size. Browser has no scanner/SAF: local bytes must
+  actually be held in this tab. Keep successful local matches transient for subsequent list
+  loading; never put bytes into storage, M3U or share fragments. Missing bytes after restart are
+  visibly unavailable. Native `asma://` ids map to existing canonical HTTPS archive URL rules;
+  unsupported native-only schemes remain explicitly unresolved. Other individual HTTP(S) links
+  stay supported; no new catalogue or AMP integration.
+- Browser file picker/download adapt pure format/transfer rules. Preserve protected From the phone
+  ownership, accessible icon/labels, EN/PL and errors. Cancelled picker does nothing; unreadable,
+  no-entry, partial, storage and download outcomes are distinct. Fresh import ids cannot collide;
+  delayed work never mutates the active editor/source or forces another view.
+- Use common format cases in Kotlin/JS and port native transfer snapshot/resolution/duplicate/
+  all-missing/failure cases. Drive real picker/menu events with IndexedDB and file/download hooks;
+  assert ordering, playback/draft invariants and never-persisted held buffers. Demonstrate guards
+  fail when broken, then restore and execute the forced full gate/lint. Real file-picker/download
+  UI and phone-to-browser sharing remain unchecked until a browser trial.
+
+Implementation and verification are pending at this checkpoint.
+
+
+### W12b implementation and comparison findings
+
+Pure format/transfer modules now drive actual Import/Export controls. Thirty shared cases cover
+read, byte-for-byte write and native download filenames. Native comparison: **26 tests / 3 suites**
+pass, **4 s** final focused (the earlier run took **13 s**). WEB currently passes **49 rule/transfer cases**, **37 production-page
+scenarios** and **3 production IndexedDB cases**. All three fixture files were individually
+mutated: both JS/Kotlin reject the wrong expectations, and Gradle reruns without forcing after a
+clean restored baseline. Focused/negative logs remain under ignored
+`user/web-parity-verification/w12b/`; the full forced gate and final input receipt are pending.
+
+Transfers preserve the current editor, unsaved snapshot, playback position and FIFO. Successful
+imports create fresh atomic identities, deduplicate only new membership and count resolved offered
+entries; all-unresolved input creates an empty list with 0/N. Local resolution retains only
+actually held tab buffers; they never enter IDB, playlist files or share payload. Selecting,
+discarding and startup rehydrate from the same runtime owners used by Search. Missing/detached
+bytes do not count as playable. Derived availability is tracked separately from saved flags,
+including through immutable copies: the first page run exposed automatic saving of those derived
+fields over the phone list, so that regression is covered without weakening its existing guard.
+
+A real request-level constraint error exposed `transaction.error == null` before abort. The shared
+transaction helper now takes the request's error when needed; collision tests fail before this
+fix and pass after. Creation uses `add`, so a collision cannot overwrite an existing playlist.
+Failed view refresh after a committed import reports success plus its separate refresh error.
+Malformed/unreadable/no-entry inputs, read/storage/download failures and picker cancellation have
+distinct outcomes; late completion does not take over another editor or view.
+
+Intentional compatibility details:
+- Signed Long size metadata uses canonical decimal strings where JS Number would lose precision.
+- Native ASMA identities become canonical browser HTTPS archive URLs through the existing encoder;
+  source presentation uses the browser's author-folder path. Unsupported native-only references
+  are unresolved, and only actual HTTP(S) network schemes are accepted.
+- Metadata newlines are flattened to prevent line injection; ordinary native write cases match
+  byte for byte. This browser hardening does not alter Android.
+- Native writes the artist separator even for an empty author, but its reader accepts only a
+  separator after a nonempty artist. A new shared read case records native and corrected WEB
+  results separately. The WEB reader accepts a separator at position zero; titles containing
+  another separator round trip without a fabricated author or prefix. The writer keeps native
+  wire compatibility. Android's reader defect is recorded, not modified in this WEB task.
+
+Physical file-picker/download, touch, background and cross-device behaviour remain unchecked.
+No schema/version change, native Android behaviour change, bundle, APK, merge or deployment.
+
+
+### W12b final gate
+
+Clean candidate **2bf2834ed263c6c584339ee4d011ce2d25299ca7** passes
+`./scripts/test-protracktor.sh --really`: **1244 tests / 168 suites**, zero failures/errors/skips,
+**774 s** overall, unit task **454.1 s**, all 31 unit-build tasks executed. All companions run,
+including **1010 page assertions**, **49 transfer rules**, **3 creation-storage cases**, actual
+WASM/processor/native audio, database upgrade, PWA and server checks. Fresh lint: **84.0 s**,
+**0 errors/fatal / 79 warnings**. All **665** recorded application/test/build/rule hashes match.
+Seven final negative controls cover entry metadata reset, export ownership, reference-only writes,
+derived availability, atomic creation, real request errors and actual input ownership. All fail
+at their expected guards and are restored. The empty-artist guard also fails before correction.
+All three shared fixture files individually trigger uncached Kotlin execution without forcing.
+
+W12a and W12b are implemented at host level. W13 is next. This completion record changes only
+documentation/message; Android production sources and native engine are unchanged from accepted
+develop. Actual picker/download, browser touch, background and cross-device acceptance remain
+unchecked. No merge, bundle, APK, push, deployment or versionName change. Evidence and source/input
+receipt are retained under ignored `user/web-parity-verification/w12b/`.

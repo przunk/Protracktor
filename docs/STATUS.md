@@ -44,13 +44,26 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W12 implemented, 2026-10-28:** native-compatible M3U8 import/export, independent draft/
+playback ownership, atomic fresh playlist creation, explicit partial results and transient local
+byte resolution. Search/list/startup hydration distinguishes runtime availability from saved
+metadata. Forced full gate on **2bf2834** passes **1244 tests / 168 suites**, zero failures/
+errors/skips, **774 s**; all companions execute, **1010 page assertions**, lint **0 errors /
+79 warnings**. All **665** recorded inputs match. File-picker/download/cross-device UI unchecked.
+W12a and W12b are implemented; W13 bulk Browse selection is next.
+
+**Native M3U comparison finding:** at reference c8209b1, exporting a blank artist writes a leading
+artist separator and `PlaylistFile.read` retains that separator in the title. The shared host case
+records this behaviour; the WEB reader accepts the empty artist without altering its title.
+Android production code remains unchanged and its correction needs a separate Android task.
+
 **W12a implemented, 2026-10-28:** shared immediate row-crossing moves for playlist and manual
 Queue, draft/source isolation and duplicate occurrence retention. Focused native **12 tests /
 3 suites**, WEB **18 domain / 13 grip / 26 actual-page cases** pass. Forced full gate on
 **53e437a** passes **1241 tests / 167 suites**, zero failures/errors/skips, **765 s**; all
 companions execute, **973 page assertions**, lint **0 errors / 79 warnings**. All 656 recorded
 inputs match. Physical-browser touch, capture and painting remain unchecked. W12b M3U8 transfer
-is not implemented.
+is implemented in W12b.
 
 **W11 implemented, 2026-10-28:** explicit Search scopes and all saved-playlist references, native
 2000-per-source limits, global catalogue ordering/counts, mixed title/author word matching and

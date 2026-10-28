@@ -1,0 +1,20 @@
+# Shared Android/WEB playlist-file cases; data cells are URI encoded UTF-8.
+case	text	name	entries	web_entries
+native-local	%23EXTM3U%0A%23PLAYLIST%3AFavourites%0A%23EXTINF%3A-1%2C4-Mat%20-%20elysium%0A%23PROTRACKTOR%3Aid%3Dcontent%3A%2F%2Fprovider%2Felysium%0A%23PROTRACKTOR%3Asize%3D104928%0AProtracker%2F4-Mat%2Felysium.mod%0A	Favourites	content%3A%2F%2Fprovider%2Felysium%09elysium%094-Mat%09104928%09Protracker%2F4-Mat%2Felysium.mod%09elysium.mod	content%3A%2F%2Fprovider%2Felysium%09elysium%094-Mat%09104928%09Protracker%2F4-Mat%2Felysium.mod%09elysium.mod
+plain-other-player	%23EXTM3U%0A%23EXTINF%3A212%2CRob%20Hubbard%20-%20Commando%0A%2Fsdcard%2FMusic%2Fcommando.sid%0A%23EXTINF%3A-1%2Cunknown.mod%0Amusic%2Funknown.mod%0A	-	-%09Commando%09Rob%20Hubbard%090%09%2Fsdcard%2FMusic%2Fcommando.sid%09commando.sid%0A-%09unknown.mod%09%090%09music%2Funknown.mod%09unknown.mod	-%09Commando%09Rob%20Hubbard%090%09%2Fsdcard%2FMusic%2Fcommando.sid%09commando.sid%0A-%09unknown.mod%09%090%09music%2Funknown.mod%09unknown.mod
+bare-locations	somewhere%2Ftune.sndh%0Ahttps%3A%2F%2Fexample.org%2Fnext.mod%0A	-	-%09tune.sndh%09%090%09somewhere%2Ftune.sndh%09tune.sndh%0A-%09next.mod%09%090%09https%3A%2F%2Fexample.org%2Fnext.mod%09next.mod	-%09tune.sndh%09%090%09somewhere%2Ftune.sndh%09tune.sndh%0A-%09next.mod%09%090%09https%3A%2F%2Fexample.org%2Fnext.mod%09next.mod
+comments-and-empty	%23EXTM3U%0A%0A%23PLAYLIST%3AMusic%0A%23EXTGRP%3AChiptunes%0A%23EXTINF%3A-1%2CA%20tune%0Aa.mod	Music	-%09A%20tune%09%090%09a.mod%09a.mod	-%09A%20tune%09%090%09a.mod%09a.mod
+first-separator	%23EXTINF%3A-1%2C4-Mat%20-%20hi-score%20-%20again%0Ax.mod	-	-%09hi-score%20-%20again%094-Mat%090%09x.mod%09x.mod	-%09hi-score%20-%20again%094-Mat%090%09x.mod%09x.mod
+metadata-reset	%23PROTRACKTOR%3Aid%3Dfirst%0A%23PROTRACKTOR%3Asize%3D21%0A%23EXTINF%3A-1%2CA%20-%20First%0Ax.mod%0Ay.mod	-	first%09First%09A%0921%09x.mod%09x.mod%0A-%09y.mod%09%090%09y.mod%09y.mod	first%09First%09A%0921%09x.mod%09x.mod%0A-%09y.mod%09%090%09y.mod%09y.mod
+line-breaks-and-whitespace	%20%0D%0A%20%23PLAYLIST%3A%20%C5%BB%C3%B3%C5%82%C4%87%20%F0%9F%8E%B5%20%20%0D%20%23EXTINF%3A2%2C%20%20Autor%20-%20Tytu%C5%82%20%20%0D%0Aa.mod%0A%20b.mod%20%0D	%C5%BB%C3%B3%C5%82%C4%87%20%F0%9F%8E%B5	-%09Tytu%C5%82%09Autor%090%09a.mod%09a.mod%0A-%09b.mod%09%090%09b.mod%09b.mod	-%09Tytu%C5%82%09Autor%090%09a.mod%09a.mod%0A-%09b.mod%09%090%09b.mod%09b.mod
+blank-name-is-first	%23PLAYLIST%3A%20%20%20%0A%23PLAYLIST%3ALater%0Ax.mod	-	-%09x.mod%09%090%09x.mod%09x.mod	-%09x.mod%09%090%09x.mod%09x.mod
+empty	%23EXTM3U%0A%23%20comment	-	-	-
+bad-size-and-blank-id	%23PROTRACKTOR%3Asize%3DNaN%0A%23PROTRACKTOR%3Aid%3D%20%0Ax.mod	-	-%09x.mod%09%090%09x.mod%09x.mod	-%09x.mod%09%090%09x.mod%09x.mod
+long-max	%23PROTRACKTOR%3Asize%3D9223372036854775807%0Ax.mod	-	-%09x.mod%09%099223372036854775807%09x.mod%09x.mod	-%09x.mod%09%099223372036854775807%09x.mod%09x.mod
+long-min	%23PROTRACKTOR%3Asize%3D-9223372036854775808%0Ax.mod	-	-%09x.mod%09%09-9223372036854775808%09x.mod%09x.mod	-%09x.mod%09%09-9223372036854775808%09x.mod%09x.mod
+overflow	%23PROTRACKTOR%3Asize%3D9223372036854775808%0Ax.mod	-	-%09x.mod%09%090%09x.mod%09x.mod	-%09x.mod%09%090%09x.mod%09x.mod
+negative	%23PROTRACKTOR%3Asize%3D-8%0Ax.mod	-	-%09x.mod%09%09-8%09x.mod%09x.mod	-%09x.mod%09%09-8%09x.mod%09x.mod
+plus	%23PROTRACKTOR%3Asize%3D%2B10%0Ax.mod	-	-%09x.mod%09%0910%09x.mod%09x.mod	-%09x.mod%09%0910%09x.mod%09x.mod
+empty-inf-fallback	%23EXTINF%3A12%0Ax.mod	-	-%09x.mod%09%090%09x.mod%09x.mod	-%09x.mod%09%090%09x.mod%09x.mod
+repeated-info	%23EXTINF%3A-1%2CFirst%20-%20Old%0A%23EXTINF%3A-1%2CNew%0Ax.mod	-	-%09New%09First%090%09x.mod%09x.mod	-%09New%09First%090%09x.mod%09x.mod
+legacy-empty-author	%23EXTM3U%0A%23EXTINF%3A-1%2C%20-%20Unknown%20-%20Intro%0Aunknown.mod%0A	-	-%09-%20Unknown%20-%20Intro%09%090%09unknown.mod%09unknown.mod	-%09Unknown%20-%20Intro%09%090%09unknown.mod%09unknown.mod

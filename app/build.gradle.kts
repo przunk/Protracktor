@@ -268,6 +268,9 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/rules/history-filter-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/search-library-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/playlist-reorder-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/rules/playlist-file-read-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/rules/playlist-file-write-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/rules/playlist-filename-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     // And `UadecoreCanBeExecutedTest` this build script and UADE's CMake, for the same reason:
     // three settings that only matter together, none of which any code path mentions.
     inputs.file(rootProject.file("app/build.gradle.kts")).withPathSensitivity(PathSensitivity.RELATIVE)

@@ -3,6 +3,34 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W12b M3U8 transfer — browser checks pending, 2026-10-28
+
+No bundle/deployment yet. Host events exercise FileReader and IndexedDB, but native file-picker,
+file-download and cross-application sharing UI remain unchecked.
+
+- In Playlists, Import a UTF-8 native M3U8, a plain list, Unicode names and HTTP(S)/ASMA references.
+  A new playlist appears without selecting it, changing the current draft, pausing audio or
+  touching manual requests. Try partial/missing locals, duplicates and all-missing input: counts
+  refer to resolved offerings; imported membership keeps first-occurrence order. A nonempty
+  all-missing input creates an empty new list and says 0/N. Empty/unreadable/comment-only input
+  and cancelled picker must not create a playlist. Try the same picked file twice.
+- Reorder/remove without Save and export that playlist: the file must carry the draft. Export
+  another playlist while changing the visible one: contents/name remain the initial requested
+  selection. No implicit Save or playback change. Unicode label survives inside a sanitized
+  filename. From the phone offers only read-only Export, never Rename/Delete. Empty export and
+  read/download failures explain themselves. Reimport browser exports, including unknown artist
+  titles containing a separator. Android's existing empty-artist reader discrepancy is recorded
+  in Status; it is not fixed by this WEB branch.
+- Import references to files currently held from the phone. Replace the phone list, choose the
+  imported list and play it; held buffers stay usable. Edit and Save, then export: neither the
+  stored record nor the file may contain audio payload. Reload the tab with that list selected:
+  missing local bytes must disable its rows, not try to fetch `content://`. Reconnect/resend bytes
+  and check rehydration, without clearing playlists or History.
+- Leave the view/change playlist during a delayed file read. Completion creates its own list
+  without stealing the new view or editor. Storage refusal/collision must preserve existing data;
+  failed refresh after a committed import reports both outcomes honestly. Check EN/PL, both
+  themes, narrow/wide windows, keyboard, actual picker/download and Android round trips.
+
 ## WEB W12a live reorder — browser checks pending, 2026-10-28
 
 Candidate only; no WEB bundle or deployment yet. Host geometry/pointer hooks cannot establish

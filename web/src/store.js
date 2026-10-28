@@ -95,7 +95,9 @@ async function tx(store, mode, run) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(store, mode);
     const request = run(transaction.objectStore(store));
-    transaction.onerror = () => reject(transaction.error);
+    // During a bubbled request error, transaction.error may remain null until abort follows.
+    transaction.onerror = (event) => reject(transaction.error ?? event.target?.error
+      ?? new DOMException('The database request failed.', 'UnknownError'));
     transaction.onabort = () => reject(transaction.error ?? new DOMException('Aborted', 'AbortError'));
     transaction.oncomplete = () => resolve(request?.result);
   });
@@ -162,6 +164,12 @@ export const playlists = {
    */
   save(playlist) {
     return tx('playlists', 'readwrite', (s) => s.put({ ...playlist, updatedAt: Date.now() }))
+      .then((result) => { playlistsChanged(); return result; });
+  },
+
+  /** Imports create a new identity; a collision must never replace an existing playlist. */
+  create(playlist) {
+    return tx('playlists', 'readwrite', (s) => s.add({ ...playlist, updatedAt: Date.now() }))
       .then((result) => { playlistsChanged(); return result; });
   },
 

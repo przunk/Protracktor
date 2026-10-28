@@ -29,6 +29,8 @@ import { RecentSearchHistory } from './recent-searches.js';
 import { SearchSuggestions } from './search-suggestions.js';
 import { HistoryBrowser } from './history-browser.js';
 import { trimQuery } from './query-text.js';
+import { playlistReference, networkPlaylistUrl, hydratePlaylistReference } from './playlist-file.js';
+import { PlaylistTransfer } from './playlist-transfer.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -254,6 +256,7 @@ let noticeId = 0;
 let queueView = null;
 let playlistReorder = null;
 let playlistRows = [], nextPlaylistRow = 0, renderingPlaylist = false;
+const importedHeldTracks = new Map();
 let savedPlaces = null;
 let savedPlacesView = null;
 let queueUnderlying = null;
@@ -486,6 +489,19 @@ function changeEditorTracks(tracks, { dirty = true } = {}) {
   if (owns) applyTransportOrder();
   refreshStashes();
   setDirty(dirty);
+}
+
+function heldPlaylistTracks() {
+  return [...importedHeldTracks.values(), ...editorTracks(), ...workspace.context.order.tracks,
+    ...schedule.pending.map((entry) => entry.track), ...(schedule.current ? [schedule.current.track] : [])];
+}
+
+function hydratePlaylistTracks(tracks) {
+  const held = new Map(heldPlaylistTracks().filter((track) => track.data?.byteLength > 0).map((track) => [track.url, track.data]));
+  return tracks.map((track) => {
+    const data = track.data?.byteLength > 0 ? track.data : held.get(track.url);
+    return hydratePlaylistReference(track, data);
+  });
 }
 
 function playlistReorderOwner() {
@@ -2388,7 +2404,7 @@ async function discardEdits() {
   try {
     const saved = await playlists.get(id);
     if (asked !== editorAsked || workspace.editor.id !== id) return false;
-    changeEditorTracks(saved?.tracks ?? [], { dirty: false });
+    changeEditorTracks(hydratePlaylistTracks(saved?.tracks ?? []), { dirty: false });
     render();
     status(t('Changes discarded'));
     return true;
@@ -2640,7 +2656,7 @@ function closeAddTo() {
   showPanel(back ? 'browse' : null);
 }
 
-const plain = ({ url, name, meta, local, file }) => ({ url, name, meta, local, file });
+const plain = playlistReference;
 
 /**
  * Appends to the playlist that is showing -- or waiting under a session -- and answers how many
@@ -3336,8 +3352,8 @@ async function renderPlaylists() {
     li.append(count, name);
 
     // Everything that can be done *to* a playlist, behind the same three dots a track row uses.
-    // "From the phone" has none: it is not something anybody made, and it is not renamed or deleted.
-    if (playlist.id !== PHONE) {
+    // From the phone permits only read-only export; its ownership stays with the phone.
+    {
       const more = document.createElement('button');
       more.className = 'pmenu';
       more.innerHTML = iconSvg(ICON.more);
@@ -3356,13 +3372,66 @@ async function renderPlaylists() {
     : t('Nothing stored yet.');
 }
 
-/** A playlist's own menu: the phone's Rename and Delete, with their icons. */
+/** Export is read-only; renaming and deleting remain limited to browser-owned lists. */
 function openPlaylistMenu(playlist, anchor) {
-  showMenu([
+  const items = [
+    [t('Export'), () => exportPlaylist(playlist.id, playlist.id === PHONE ? t('From the phone') : playlist.name), true, ICON.save],
+  ];
+  if (playlist.id !== PHONE) items.push(
     [t('Rename'), () => renamePlaylist(playlist), true, ICON.rename],
     [t('Delete'), () => deletePlaylist(playlist), true, ICON.remove],
-  ], anchor);
+  );
+  showMenu(items, anchor);
 }
+
+const playlistTransfer = new PlaylistTransfer({
+  selection: () => ({ id: workspace.editor.id, name: workspace.editor.name, tracks: editorTracks() }),
+  read: (id) => playlists.get(id), known: async () => savedSearchTracks(await savedSearchRecords()), held: heldPlaylistTracks,
+  remote: (id) => typeof id === 'string' && id.startsWith('asma://')
+    ? archive.fileUrlFor(id.slice('asma://'.length), 'asma') : networkPlaylistUrl(id),
+  presentRemote: (track) => ({ ...track, meta: sourceOf(track.url) || track.meta }),
+  newId: () => `p${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`,
+  save: (playlist) => playlists.create(playlist),
+});
+
+async function exportPlaylist(id, label) {
+  try {
+    const result = await playlistTransfer.export(id, label);
+    if (result.kind === 'empty') { showNote(t('There is nothing in this playlist.')); return; }
+    downloadFile(new File([result.text], result.filename, { type: 'audio/x-mpegurl;charset=utf-8' }));
+  } catch (error) { showNote(t('Could not export the playlist: {reason}', { reason: error.message })); }
+}
+
+function readPlaylistInput(file) {
+  if (typeof file.text === 'function') return file.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error ?? new Error(t('Could not read the playlist file.')));
+    reader.onabort = () => reject(new Error(t('Could not read the playlist file.')));
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+$('playlist-import').onclick = () => $('playlist-file').click();
+$('playlist-file').onchange = async () => {
+  const file = $('playlist-file').files?.[0];
+  $('playlist-file').value = '';
+  if (!file) return;
+  try {
+    const result = await playlistTransfer.import(await readPlaylistInput(file), file.name);
+    if (result.kind === 'unreadable') { showNote(t('Could not read the playlist file.')); return; }
+    if (result.kind === 'no-tracks') { showNote(t('The file contains no tracks.')); return; }
+    for (const track of result.tracks) if (track.data) importedHeldTracks.set(track.url, track);
+    let refreshFailure = null;
+    try { if (!$('playlists').hidden) await renderPlaylists(); }
+    catch (error) { refreshFailure = error; }
+    const message = result.found < result.offered
+      ? t('Imported {found} of {offered} into “{name}”; the rest are not available in this browser.', result)
+      : tn(result.found, 'Imported {n} track into “{name}”.', 'Imported {n} tracks into “{name}”.', result);
+    showNote(refreshFailure ? message + ' ' + t('Could not refresh playlists: {reason}', { reason: refreshFailure.message }) : message);
+  } catch (error) { showNote(t('Could not import the playlist: {reason}', { reason: error.message })); }
+};
 
 async function renamePlaylist(playlist) {
   const name = prompt(t('Call it what?'), playlist.name)?.trim();
@@ -3429,7 +3498,7 @@ async function switchTo(id, { preservePlayback = false, requireExisting = false,
   if (requireExisting && !playlist && id !== PHONE) { onMissing(); return false; }
   captureTransport();
   workspace = workspace.selectPlaylist({ id, name: id === PHONE ? t('From the phone')
-    : playlist?.name ?? t('Playlist'), tracks: playlist?.tracks ?? [] }, { preservePlayback });
+    : playlist?.name ?? t('Playlist'), tracks: hydratePlaylistTracks(playlist?.tracks ?? []) }, { preservePlayback });
   if (workspace.context.belongsTo(id)) applyTransportOrder();
   selected = new Set();
   hideUndo();
@@ -3462,15 +3531,8 @@ let searchAvailabilityController = null;
 
 async function savedSearchRecords() {
   const stored = await playlists.all();
-  const held = new Map();
-  const live = [...editorTracks(), ...workspace.context.order.tracks, ...schedule.pending.map((entry) => entry.track)];
-  if (schedule.current) live.push(schedule.current.track);
-  for (const track of live) if (track.data) held.set(track.url, track.data);
-  return stored.map((playlist) => ({ ...playlist, tracks: (playlist.tracks ?? []).map((track) => {
-    const data = held.get(track.url);
-    return { ...track, file: fileOf(track), ...(data ? { data } : {}),
-      local: !!track.local || !data && !/^https?:\/\//i.test(track.url ?? '') };
-  }) }));
+  return stored.map((playlist) => ({ ...playlist, tracks: hydratePlaylistTracks(playlist.tracks ?? [])
+    .map((track) => ({ ...track, file: fileOf(track) })) }));
 }
 const librarySearch = new LibrarySearch({ playlists: savedSearchRecords,
   catalogues: librarySearchStore.searchCatalogueTracks });
@@ -5359,9 +5421,10 @@ formatsReady().catch(() => {});
     // "From the phone" back in front of the reader -- and that is the one list Browse will not
     // write into, so the tab they had just unblocked shuts again.
     if (playlist && id !== PHONE) {
-      workspace = workspace.selectPlaylist({ id, name: playlist.name, tracks: playlist.tracks ?? [] });
+      const tracks = hydratePlaylistTracks(playlist.tracks ?? []);
+      workspace = workspace.selectPlaylist({ id, name: playlist.name, tracks });
       $('playlistname').textContent = playlist.name;
-      setQueue(playlist.tracks ?? [], playlist.index ?? 0);
+      setQueue(tracks, playlist.index ?? 0);
       showPanel(null);
       status(playlist.tracks?.length
         ? t('{name} — where you left it', { name: playlist.name })

@@ -1,5 +1,31 @@
 # Architecture
 
+## WEB playlist-file transfer — branch candidate, 2026-10-28
+
+`PlaylistTransfer` has no editor/transport ownership. It captures selected draft references for
+active exports and reads persisted contents for another playlist, retaining the initial label.
+Import resolves exact known ids, supported remote/archive identities and then a matching held
+filename/optional positive size. It creates one new playlist atomically; found counts describe
+resolved offerings before first-occurrence deduplication. Failed creation never replaces another
+identity. The picker/download are adapters; cancellation and refresh failure are distinct from
+unreadable, empty, partial and failed imports.
+
+`playlist-file.js` owns native-compatible M3U8 metadata, signed 64-bit decimal sizes and reference
+serialization. It preserves the wire format, except sanitizing metadata newlines so they cannot
+inject extra entries. The reader corrects the native empty-artist delimiter bug: native writes
+` - Title` but currently reads the delimiter back into the title. The common case records both
+native and corrected WEB results; other shared format cases match. Android code is unchanged.
+Browser imports of native `asma://` ids use the existing archive path encoder and canonical
+HTTPS URLs; remote presentation uses the browser's author-folder metadata convention.
+
+Held import buffers live only for the tab lifetime. Search, list selection/discard and startup
+share hydration from existing runtime owners plus those retained imports. An enumerable private
+symbol carries the original stored availability through immutable copies; reference serialization
+keeps it and strips buffers/symbols. A derived missing-file flag must never silently rewrite a
+protected phone list during a pending index save. With no held bytes, nonnetwork references are
+visibly unavailable. Empty/detached buffers are discarded; persisted/local metadata alone never
+proves playable bytes. No schema change, file scanner, filesystem grant or audio persistence.
+
 ## WEB live row reorder — branch candidate, 2026-10-28
 
 `RowReorder` is shared by editable playlists and the pending manual block. Whole-row crossings

@@ -7,6 +7,17 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Import": "Importuj",
+  "Export": "Eksportuj",
+  "Import playlist": "Importuj playlistę",
+  "There is nothing in this playlist.": "Na tej playliście nic nie ma.",
+  "Could not export the playlist: {reason}": "Nie udało się wyeksportować playlisty: {reason}",
+  "Could not import the playlist: {reason}": "Nie udało się zaimportować playlisty: {reason}",
+  "Could not refresh playlists: {reason}": "Nie udało się odświeżyć playlist: {reason}",
+  "Could not read the playlist file.": "Nie udało się odczytać pliku playlisty.",
+  "The file contains no tracks.": "Plik nie zawiera utworów.",
+  "Imported {found} of {offered} into “{name}”; the rest are not available in this browser.": "Zaimportowano {found} z {offered} do „{name}”; pozostałe nie są dostępne w tej przeglądarce.",
+  "Imported {n} tracks into “{name}”.": ["Zaimportowano {n} utwór do „{name}”.", "Zaimportowano {n} utwory do „{name}”.", "Zaimportowano {n} utworów do „{name}”."],
   "All platforms": "Wszystkie platformy",
   "Online: {names}": "Online: {names}",
   "Online": "Online",

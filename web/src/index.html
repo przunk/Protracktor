@@ -1188,8 +1188,10 @@
       <ol id="playlistlist"></ol>
       <div class="sheetbuttons">
         <button class="outlined" id="newlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+        <button class="outlined" id="playlist-import"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Import</button>
         <button class="outlined" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
       </div>
+      <input type="file" id="playlist-file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" aria-label="Import playlist" hidden>
       <p class="storage" id="storageline"></p>
     </div>
   </div>
