@@ -266,5 +266,15 @@ Four mode combinations are checked on API 29/30: Light with system Dark, Dark wi
 and System in daytime/night. These check actual window appearance flags, not rendered OS clock
 pixels. An initial API 36 attempt did not execute because Robolectric requires Java 21 there;
 the existing Java 17 toolchain is retained. Android 16 behaviour remains unchecked on a phone.
-Full verification and replacement APK metadata follow when complete. Integration after the
-build is authorized; merge does not close the outstanding device checks.
+Clean source **c5f0ccb776dd39e829d1a007176993e568d081a8** passes the full gate: **1236 tests /
+162 suites**, zero failures/errors/skips; fresh unit execution **424.1 s**, all companion checks
+passed, **637 s** overall. Fresh lint: **0 errors / 79 warnings**, **96.9 s**. Eight window cases
+and two palette tests also passed in the focused run. Minified, test-signed release **1.4.0
+(1341)** built in **100 s**, **11,975,599 bytes**:
+[replacement APK](../dist/protracktor-release-1.4.0-1341-c5f0ccb-20261028-091012.apk), SHA-256
+`6413c6620a2688b559324256d65e1eef5b76d448e6576a9d15a130174014d03d`.
+Signature, version/non-debuggable state, ZIP CRC/16KB alignment and MIUI metadata were checked;
+all 282 recorded application/build input hashes still match. Private logs, JUnit XML and receipts
+are under ignored `user/system-bars-verification/`. This supersedes build 1339 for the clock fix.
+Android 16 and actual OS rendering remain unchecked. Integration after the build is authorized;
+merge does not close the outstanding device checks.

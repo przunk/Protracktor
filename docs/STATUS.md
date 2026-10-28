@@ -90,8 +90,15 @@ phone configuration while Compose respected the app override. The real-activity 
 test reproduces Light + system Dark with the wrong light-icon flag before the fix. The same
 unmerged branch now shares `AppTheme.isDark` between Compose and system bars, setting both
 status/navigation icon appearances from the app's effective mode. The AndroidX edge-to-edge
-background/contrast setup is retained. Focused API 29/30 cases pass; full gate and a replacement
-release APK are being prepared. Android 16 and actual clock rendering remain device checks.
+background/contrast setup is retained. Eight API 29/30 window cases and two palette checks pass.
+Clean source **c5f0ccb** passes the full gate: **1236 tests / 162 suites**, zero failures/errors/
+skips, **637 s** overall; fresh unit execution **424.1 s**, lint **0 errors / 79 warnings**, 96.9 s.
+Replacement minified, test-signed **1.4.0 (1341)** built in **100 s**:
+[APK](../dist/protracktor-release-1.4.0-1341-c5f0ccb-20261028-091012.apk), **11,975,599 bytes**,
+SHA-256 `6413c6620a2688b559324256d65e1eef5b76d448e6576a9d15a130174014d03d`.
+Signature, version, non-debuggable state, ZIP CRC/16KB alignment and packaged MIUI opt-out pass;
+all 282 recorded application/build input hashes match. This supersedes build 1339 for the clock.
+Android 16 and actual clock rendering remain device checks.
 Integration after building this APK is explicitly authorized; MIUI acceptance is still pending.
 
 **Open — real user report received 2026-10-27; configuration clarified 2026-10-28.**
