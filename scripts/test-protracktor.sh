@@ -152,6 +152,7 @@ run_check "Test-runner fixtures" runner python3 "$SCRIPT_DIR/check-test-runner.p
 run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.sh"
 
 # These domain cases need only Node, not a browser/DOM dependency or a compiled WASM engine.
+run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs
 run_check "Playback schedule" playback-schedule node scripts/check-playback-schedule.mjs
 run_check "Playback effects" playback-effects node scripts/check-playback-steps.mjs

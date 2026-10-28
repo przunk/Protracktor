@@ -44,6 +44,14 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W12a implemented, 2026-10-28:** shared immediate row-crossing moves for playlist and manual
+Queue, draft/source isolation and duplicate occurrence retention. Focused native **12 tests /
+3 suites**, WEB **18 domain / 13 grip / 26 actual-page cases** pass. Forced full gate on
+**53e437a** passes **1241 tests / 167 suites**, zero failures/errors/skips, **765 s**; all
+companions execute, **973 page assertions**, lint **0 errors / 79 warnings**. All 656 recorded
+inputs match. Physical-browser touch, capture and painting remain unchecked. W12b M3U8 transfer
+is not implemented.
+
 **W11 implemented, 2026-10-28:** explicit Search scopes and all saved-playlist references, native
 2000-per-source limits, global catalogue ordering/counts, mixed title/author word matching and
 producing-scope restoration from Queue. Empty/short queries work; scope choices never auto-search.
@@ -56,10 +64,10 @@ guards fail as intended; sources are restored. Final forced gate on **1182e66** 
 and all companions execute; lint has zero errors. All 650 recorded inputs match. W03 scope/query
 restoration is complete; physical browser acceptance remains unchecked.
 
-**W02/W12 drag comparison finding:** native commits each full-row drag move immediately, while
-WEB currently commits only on release. Current host checks do not cover native cancellation/
-mid-gesture semantics. W02 remains partly complete until this common gesture is aligned during
-W12 playlist-reorder work. No WEB merge/deployment or bundle handoff yet.
+**W02 drag parity gap closed by W12a:** the initial WEB release-only move differed from native
+live crossing/cancellation. The shared gesture and native-derived guards now align this timing.
+W02 host implementation is complete again; physical browser acceptance remains unchecked.
+No WEB merge/deployment or bundle handoff yet.
 
 
 **W10 implemented, 2026-10-28:** separate live History field, 200 ms debounce, whole-History literal

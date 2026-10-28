@@ -1,5 +1,27 @@
 # Architecture
 
+## WEB live row reorder — branch candidate, 2026-10-28
+
+`RowReorder` is shared by editable playlists and the pending manual block. Whole-row crossings
+commit immediately, as native does; gesture cancellation stops further movement and retains
+those edits. Incremental pointer/scroll deltas retain residual displacement across moves and
+partial reversals. Pending requests clamp to their block; the playlist uses its actual `main`
+scroll container. Frames bound edge scrolling to 480 pixels/s with a 50 ms frame cap.
+
+Views freeze physical row order during a gesture while updating the logical order and applying
+transforms, then synchronize on release/cancellation with pinned numeric scroll. They retain the
+captured row/handle and consume its generated click. Changed membership, context or visibility
+ends a stale gesture. Keyboard arrows and labelled menu actions reach the same domain move.
+The playlist renderer reserves existing object occurrences before matching replacement metadata
+by URL, using linear bags; legacy duplicate URLs keep independent handles.
+
+`moveEditorTrack` applies an index permutation to the draft, actual history and source occurrence
+IDs. It avoids URL-to-last-index collapse for existing pasted duplicates. A move marks the draft
+and re-deals shuffle from the retained current occurrence. The active source changes only when
+it belongs to that editor. No decoder command, pending-manual edit or playback restart occurs;
+Save/Discard remain the selected draft's responsibility. Physical touch, capture and painting
+still require a real browser check.
+
 ## WEB scoped library search — branch candidate, 2026-10-28
 
 `SearchBrowser` owns explicit-submit query/scope state and request cancellation. An immutable
@@ -93,8 +115,8 @@ mirrors. Actual open-job ownership is distinct from schedule/speculative-Random 
 Clear can preserve a loading file while retiring old speculation. Undo restores content/context,
 retains live editor changes and never rewinds audio.
 
-`QueueView` owns keyed DOM presentation only. `PendingReorder` previews within the pending block
-and commits an occurrence-ID move on release; it never moves source/current rows or owns transport.
+`QueueView` owns keyed DOM presentation only. `PendingReorder` now aliases the shared `RowReorder`,
+which commits occurrence-ID moves at each full-row crossing within the pending block; it never moves source/current rows or owns transport.
 Shared row gestures arbitrate horizontal intent before consumption, preserve vertical scrolling,
 cancel additional pointers and suppress abandoned click/context-menu events. Menus and keyboard
 actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move

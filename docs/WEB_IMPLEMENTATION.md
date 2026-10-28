@@ -804,9 +804,85 @@ ignored `user/web-parity-verification/w11/`. No bundle, merge, push, deployment 
 
 ### W12 preparation finding — live drag timing
 
-Code comparison with `ManualQueueReorder`/`PlaylistScreen` shows a remaining W02 gap: native
-updates the logical order on each full-row crossing, while WEB `PendingReorder` commits only on
-release. Thus cancellation/mid-gesture playback semantics differ even though current host tests
-pass. W02 remains partly complete until the shared queue/playlist gesture is aligned in W12's
-reorder substage, with native-based live-move/cancellation cases. Earlier implemented checkpoints
+Initial code comparison with `ManualQueueReorder`/`PlaylistScreen` found a W02 gap: native
+updates the logical order on each full-row crossing, while the earlier WEB `PendingReorder`
+committed only on release. Thus cancellation/mid-gesture playback semantics differ even though current host tests
+passed. W12a below closes that gap with a shared queue/playlist gesture and native-derived
+live-move/cancellation cases. Earlier implemented checkpoints
 cover their recorded cases and do not establish this missing parity.
+
+## W12a — Shared live drag and playlist reorder analysis, 2026-10-28
+
+Android reference **c8209b1**: `PlaybackController.moveTrack`, `PlayerUiState.withEditorQueue`,
+`PlayQueue.withTracks`, `PlaylistScreen.dragToReorder`, `ManualQueueReorder`, and production-shell
+`PlaylistDragUiTest`/`ManualQueueReorderUiTest`. The preceding W02 timing gap is part of this shared
+reorder substage. M3U8 transfer remains a separate W12b commit and gate.
+
+Parity checklist before coding:
+
+- A valid full-row crossing changes the logical order immediately, in both the pending-manual
+  block and the editable playlist. Cancellation keeps already applied moves. Same/invalid moves
+  are no-ops. Respect native residual-offset hysteresis and current/manual/source boundaries.
+- Playlist moves mark a draft and wait for Save; Discard reloads that selected playlist. Keep
+  current track, position, metadata, decoded buffer, manual FIFO and source occurrence IDs. An
+  editor unrelated to the active source never changes its playback. Shuffle re-deals from the
+  current track, preserving its actual history; ordinary Next follows the edited list.
+- Existing WEB pasted lists can contain duplicate URLs, unlike native playlists. Use an explicit
+  index permutation for legacy occurrences; do not collapse their current/history positions or
+  source omission IDs through a URL-to-last-index map.
+- Use one live gesture implementation for Queue's pending subset and playlist handles, with
+  pointer/keyboard/menu paths, full-row steps, bounded auto-scroll and safe cancellation on owner/
+  membership changes. Preserve stable handle nodes while dragging. Freeze their physical DOM
+  order and preview via transforms while committing the model, then synchronize on completion;
+  this avoids rebuilding the entire playlist renderer solely to add the feature.
+- Keep numeric scroll fixed when the first row moves, draw the whole raised row over neighbours,
+  retain capture/focus and swallow the generated click. Reorder only from the handle, not the
+  vertically scrollable/swipeable row. No grips in protected From the phone or transient/Random
+  views, or during multi-selection. Preserve existing gesture thresholds and action conventions.
+- Tests must use actual pointer/key events, not only direct move methods, plus common native model
+  cases and the existing shell scenarios. Native cancellation/live-move expectations replace
+  older preview-on-release assertions; retain every boundary, click, multi-pointer and scroll guard.
+  Browser touch/painting/capture behaviour remains unchecked until a real-browser trial.
+
+Implementation is pending at this analysis checkpoint.
+
+
+### W12a implementation / focused verification
+
+One shared live `RowReorder` now serves pending Queue requests and playlist handles. The
+`queue-reorder.js` compatibility export retains the previous module entry point. Physical row
+nodes stay in place during pointer ownership; logical moves and dirty state update immediately.
+Views synchronize on stop and restore viewport/focus without triggering decoder work. Leaving a
+view cancels further movement. Source occurrence IDs and legacy repeated URLs use an explicit
+positional permutation instead of ambiguous URL remapping. Protected/transient lists stay intact.
+Keyboard arrows and labelled menu actions reach the same move as pointer gestures.
+
+Focused reference tests pass **12 tests / 3 suites** (`PlaylistReorderParityTest`,
+`PlaylistDragUiTest`, `ManualQueueReorderUiTest`) in **43 s**. Thirteen shared non-shuffle cases
+cover current retention, Next/Previous, repeat, empty/single and invalid moves. WEB passes
+**18 domain cases**, **13 real grip-event cases**, and **26 production-page cases** using synthetic
+geometry. These are host checks; physical browser behaviour remains unchecked. Negative controls
+for live commit, unrelated-source ownership and physical node retention fail at their guards and
+are restored. Full forced gate/lint and final input receipt are pending at this checkpoint.
+
+The first full run was deliberately interrupted during unit tests to add a CSS regression guard:
+unavailable local references do not have the swipe wrapper that normally positions a row, so their
+raised drag layer also needs `position: relative`. The host cascade guard fails with that missing
+rule, then passes after restoration. This interrupted run is not full-gate evidence. The candidate
+was corrected before restarting; the complete replacement gate is pending.
+
+
+### W12a final gate
+
+Clean candidate **53e437ade8c8ec13f789531022b8a5573aa8564c** passes
+`./scripts/test-protracktor.sh --really`: **1241 tests / 167 suites**, zero failures/errors/skips,
+**765 s** overall, unit task **444.9 s**, all 31 unit-build tasks executed. All companions ran,
+including **973 page assertions**, actual WASM/processor/native audio, database upgrade, PWA and
+server checks. Fresh lint finishes in **84.0 s**, **0 errors/fatal and 79 warnings**. All **656**
+recorded application/test/build/rule input hashes match. Full/focused/negative logs and JUnit/lint
+reports are retained in ignored `user/web-parity-verification/w12/`.
+
+W02's live-drag parity gap and W12a are implemented at host level. W12b file transfer remains open.
+This completion record changes documentation/commit message only. Physical browser painting,
+touch, capture, software keyboard and background operation remain unchecked. No bundle, APK,
+merge, push or deployment for this WEB stage.

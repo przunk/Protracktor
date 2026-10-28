@@ -3,6 +3,28 @@
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
+## WEB W12a live reorder — browser checks pending, 2026-10-28
+
+Candidate only; no WEB bundle or deployment yet. Host geometry/pointer hooks cannot establish
+physical touch, pointer capture, overlap painting or scroll feel.
+
+- In an editable playlist, hold its labelled Reorder handle. Move less than one row, then across
+  several rows, pause between moves and partially reverse. Logical moves apply while held;
+  the raised row stays under the pointer, above neighbours, with the viewport pinned except
+  for edge auto-scroll. Cancellation retains already committed moves.
+- Play a middle item, add duplicate manual requests and reorder that playlist. Track, elapsed
+  time, position and pending requests stay unchanged; Next uses the edited source order. Repeat
+  and shuffle preserve their Android semantics. Reorder visible B while A plays: A stays intact.
+- Save and reload the draft; discard another reorder. Verify the selected playlist is the one
+  saved/restored. Try a pasted list containing repeated URLs, including the playing occurrence.
+- In Queue, drag duplicate pending requests within their indentation. Current/source rows cannot
+  be reordered through their handles. Close Queue or change membership while dragging: no hidden
+  continued movement. Existing swipe/long press and departure animation must still behave normally.
+- Use keyboard arrows and the handle's labelled move menu; check focus, boundary actions, EN/PL,
+  both themes, narrow/wide windows and reduced motion. A completed drag must not trigger playback
+  or the menu through its synthesized click. Protected From the phone, Random/transient and
+  selection-mode lists must not gain editable-playlist handles.
+
 ## WEB W11 Search scopes — browser checks pending, 2026-10-28
 
 Candidate on `feature/web-feature-parity`; no merge, bundle or deployment yet. Host events and

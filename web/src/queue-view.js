@@ -14,10 +14,17 @@ export class QueueView {
     this.currentKey = null;
     this.exitId = 0;
     this.plan = null;
-    this.reorder = new PendingReorder({ list, generation: () => this.plan?.schedule.generation,
+    this.reorder = new PendingReorder({ list, generation: () => JSON.stringify([
+      this.plan?.schedule.generation, this.plan?.schedule.current?.id,
+      this.plan?.context.currentEntryId, this.plan?.context.visibleIndices.map((i) => this.plan.context.entryIds[i]),
+    ]),
       rows: () => (this.plan?.schedule.pending ?? []).flatMap((request) => {
         const node = this.nodes.get(`manual:${request.id}`); return node && !node._exit ? [{ id: request.id, node }] : [];
-      }), move: onMove, onStart: () => { for (const node of this.nodes.values()) node._animation?.cancel(); } });
+      }), move: onMove, onStart: () => { for (const node of this.nodes.values()) node._animation?.cancel(); },
+      onStop: ({ id, focus }) => { if (!this.rendering && this.plan) {
+        const scroll = list.scrollTop; this.render(this.plan); list.scrollTop = scroll;
+        if (focus && !root.hidden) this.nodes.get(`manual:${id}`)?._grip?.focus({ preventScroll: true });
+      } } });
   }
 
   get dragging() { return this.reorder.active; }
@@ -124,6 +131,7 @@ export class QueueView {
   }
 
   render(plan) {
+    this.rendering = true;
     this.plan = plan;
     this.source.textContent = this.sourceLabel(plan.context.source);
     const rows = plan.schedule.rows(plan.context);
@@ -166,9 +174,11 @@ export class QueueView {
         if (node._grip) node._grip.disabled = false;
       }
       this.update(node, row, plan.schedule.generation, hasSource);
-      while (cursor?._exit) cursor = cursor.nextElementSibling;
-      if (cursor !== node) this.list.insertBefore(node, cursor);
-      cursor = node.nextElementSibling;
+      if (!this.dragging) {
+        while (cursor?._exit) cursor = cursor.nextElementSibling;
+        if (cursor !== node) this.list.insertBefore(node, cursor);
+        cursor = node.nextElementSibling;
+      }
     }
     if (!this.reducedMotion && !this.dragging) for (const row of rows) {
       const key = keyOf(row), node = this.nodes.get(key), previous = before.get(key);
@@ -183,8 +193,9 @@ export class QueueView {
     this.repeatNote.hidden = !(plan.context.order.repeat === 'one' && plan.schedule.pending.length);
     const current = rows.find((row) => row.playing);
     const key = current ? keyOf(current) : null;
-    if (!this.root.hidden && key && key !== this.currentKey) this.nodes.get(key)?.scrollIntoView?.({ block: 'nearest' });
+    if (!this.dragging && !this.root.hidden && key && key !== this.currentKey) this.nodes.get(key)?.scrollIntoView?.({ block: 'nearest' });
     this.currentKey = key;
+    this.rendering = false;
   }
 
   revealCurrent() {

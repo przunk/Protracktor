@@ -10,6 +10,8 @@ import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-contex
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { QueueView } from './queue-view.js';
+import { RowReorder } from './row-reorder.js';
+import { moveItems, moveEditorTrack } from './list-reorder.js';
 import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
 import { bindTrackGestures } from './row-gestures.js';
 import { RandomHistory } from './random-history.js';
@@ -250,6 +252,8 @@ let drawing = false;
 let undoAction = null;
 let noticeId = 0;
 let queueView = null;
+let playlistReorder = null;
+let playlistRows = [], nextPlaylistRow = 0, renderingPlaylist = false;
 let savedPlaces = null;
 let savedPlacesView = null;
 let queueUnderlying = null;
@@ -482,6 +486,34 @@ function changeEditorTracks(tracks, { dirty = true } = {}) {
   if (owns) applyTransportOrder();
   refreshStashes();
   setDirty(dirty);
+}
+
+function playlistReorderOwner() {
+  return `${workspace.editor.id}:${editorAsked}:${editorShown}:${!!randomView}:${selected.size}:${document.querySelector('main').hidden}`;
+}
+
+function canReorderPlaylist() {
+  return editorShown && workspace.editor.id !== PHONE && !randomView && !selected.size;
+}
+
+function movePlaylistRow(id, target) {
+  if (!canReorderPlaylist()) return;
+  const from = playlistRows.findIndex((row) => row.id === id), to = playlistRows.findIndex((row) => row.id === target);
+  const next = moveEditorTrack(workspace, from, to);
+  if (next === workspace) return;
+  const owns = editorOwnsPlayback();
+  playlistRows = moveItems(playlistRows, from, to);
+  workspace = next;
+  if (owns) applyTransportOrder();
+  refreshStashes(); setDirty(true); render();
+}
+
+function playlistMoveMenu(row, anchor) {
+  const at = playlistRows.indexOf(row);
+  showMenu([
+    [t('Move earlier'), () => movePlaylistRow(row.id, playlistRows[at - 1].id), at > 0, ICON.up],
+    [t('Move later'), () => movePlaylistRow(row.id, playlistRows[at + 1].id), at + 1 < playlistRows.length, ICON.down],
+  ], anchor);
 }
 
 function showEditor() {
@@ -1501,7 +1533,7 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  */
 function followPlaying() {
   // Not while rows are being ticked: a list that moves under a working finger fights it.
-  if (!selected.size && visibleIndex() >= 0) revealRow($('queue').children[visibleIndex()]);
+  if (!playlistReorder?.active && !selected.size && visibleIndex() >= 0) revealRow($('queue').children[visibleIndex()]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
   if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), currentTrack()?.url));
@@ -1633,8 +1665,35 @@ function render() {
   // a digression is Browse's rather than this one.
   if (!$('browse').hidden) markPlayingIn($('browselist'));
   if (selected.size) selected = new Set([...selected].filter((entry) => tracks.includes(entry)));
-  list.replaceChildren(...tracks.map((entry, i) => {
+  renderingPlaylist = true;
+  if (playlistReorder?.active && (!canReorderPlaylist() || playlistRows.length !== tracks.length
+    || playlistRows.some((row, i) => row.entry !== tracks[i]))) playlistReorder.cancel();
+  playlistReorder?.validate();
+  if (!playlistReorder?.active) {
+    const byEntry = new Map(), byUrl = new Map(), used = new Set();
+    for (const row of playlistRows) for (const [table, key] of [[byEntry, row.entry], [byUrl, row.entry.url]]) {
+      if (!table.has(key)) table.set(key, { rows: [], at: 0 });
+      table.get(key).rows.push(row);
+    }
+    const take = (bag) => {
+      while (bag && bag.at < bag.rows.length) {
+        const row = bag.rows[bag.at++];
+        if (!used.has(row)) { used.add(row); return row; }
+      }
+      return null;
+    };
+    // Reserve exact objects first, so a metadata replacement cannot steal another duplicate's key.
+    const rows = tracks.map((entry) => take(byEntry.get(entry)));
+    tracks.forEach((entry, i) => {
+      rows[i] ??= take(byUrl.get(entry.url)) ?? { id: ++nextPlaylistRow };
+      rows[i].entry = entry;
+    });
+    for (const row of playlistRows) row.dispose?.();
+    playlistRows = rows;
+    list.replaceChildren(...tracks.map((entry, i) => {
+    const descriptor = playlistRows[i];
     const li = document.createElement('li');
+    descriptor.node = li; li.dataset.occurrence = descriptor.id;
     li.className = i === shownIndex && rowState ? `track ${rowState}` : 'track';
     // Grey rather than red: `.failed` means a decoder refused this, and nothing here broke -- the
     // bytes simply never left the phone. A different state, and one that does not answer a click.
@@ -1678,10 +1737,11 @@ function render() {
     menu.setAttribute('aria-label', t('More for {name}', { name: entry.name }));
     menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
     // Stopped here, or opening the menu would also start the track underneath it.
-    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu, i); };
+    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(descriptor.entry, menu, playlistRows.indexOf(descriptor)); };
 
     const transient = !editorShown;
     li.repaintTitle = () => {
+      const entry = descriptor.entry;
       const shown = transient ? displayTrack(entry) : entry;
       if (title.textContent !== shown.name) title.textContent = shown.name;
       const source = transient ? displaySourceLine(shown) : whereOf(entry);
@@ -1693,6 +1753,7 @@ function render() {
     li.append(n, text, menu);
     if (!entry.local) {
       li.onclick = () => {
+        const entry = descriptor.entry, i = playlistRows.indexOf(descriptor);
         if (swallowRowClick) { swallowRowClick = false; return; }
         if (selected.size) { toggleSelected(entry); return; }
         // **A tune chosen by hand deals the shuffle again, starting at it** (the owner, 2026-09-25):
@@ -1704,10 +1765,35 @@ function render() {
         else if (randomView) playRememberedRandomAt(i, randomView, tracks);
         else playAt(i);
       };
-      holdToSelect(li, entry);
+      descriptor.disposeGesture = holdToSelect(li, () => descriptor.entry);
     }
+    let disposeReorder;
+    if (canReorderPlaylist() && tracks.length > 1) {
+      const grip = document.createElement('button');
+      grip.className = 'queue-grip'; grip.classList.add('playlist-grip'); grip.innerHTML = iconSvg(ICON.grip); grip.append(t('Reorder'));
+      grip.setAttribute('aria-label', t('Reorder {name}', { name: entry.name }));
+      grip.onclick = (event) => { event.stopPropagation(); playlistMoveMenu(descriptor, grip); };
+      grip.onkeydown = (event) => {
+        if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault(); event.stopPropagation();
+        const at = playlistRows.indexOf(descriptor), target = playlistRows[at + (event.key === 'ArrowUp' ? -1 : 1)];
+        if (target) {
+          const viewport = list.parentElement, scroll = viewport.scrollTop; movePlaylistRow(descriptor.id, target.id); viewport.scrollTop = scroll;
+          playlistRows.find((row) => row.id === descriptor.id)?.node.querySelector('.playlist-grip')?.focus({ preventScroll: true });
+        }
+      };
+      (li.querySelector('.swipe-surface') ?? li).append(grip);
+      disposeReorder = playlistReorder.bind(grip, li, descriptor.id);
+    }
+    descriptor.dispose = () => { disposeReorder?.(); descriptor.disposeGesture?.(); };
     return li;
   }));
+  } else for (const [i, row] of playlistRows.entries()) {
+    row.node.querySelector('.n').textContent = String(i + 1);
+    for (const state of ['playing', 'paused', 'selected', 'loading', 'failed']) row.node.classList.toggle(state, i === shownIndex && rowState === state);
+    row.node.repaintTitle();
+  }
+  renderingPlaylist = false;
   updateSelectBar();
   $('count').textContent = tracks.length
     ? tn(tracks.length, '{n} track', '{n} tracks')
@@ -2456,12 +2542,13 @@ let pendingAdd = null;
  */
 let swallowRowClick = false;
 
-function holdToSelect(row, entry) {
+function holdToSelect(row, currentEntry) {
   row.addEventListener('pointerdown', () => { swallowRowClick = false; });
-  bindTrackGestures(row, {
-    onAdd: () => enqueueTrack(mainDisplay(entry), visibleFromHistory()),
-    onLongPress: () => { swallowRowClick = true; startSelecting(entry); },
-    canSwipe: () => selected.size === 0,
+  return bindTrackGestures(row, {
+    onAdd: () => enqueueTrack(mainDisplay(currentEntry()), visibleFromHistory()),
+    onLongPress: () => { swallowRowClick = true; startSelecting(currentEntry()); },
+    canSwipe: () => selected.size === 0 && !playlistReorder?.active,
+    canLongPress: () => !playlistReorder?.active,
     icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue'),
   });
 }
@@ -3050,6 +3137,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which, { preserveBrowse = false } = {}) {
+  playlistReorder?.cancel();
   if (which !== 'browse') {
     searchSuggestions?.close(true);
     if (!preserveBrowse) { historyBrowser.leave(); searchBrowser.leave(); retireSearchAvailability(); $('historysearch').blur(); }
@@ -3095,6 +3183,7 @@ function openPlaybackQueue() {
 
 function closePlaybackQueue({ focus = false } = {}) {
   if ($('playback-panel').hidden) return;
+  queueView?.reorder.cancel();
   ++sourceNavigationAsked;
   $('playback-panel').hidden = true;
   $('browse').hidden = queueUnderlying !== 'browse';
@@ -5156,6 +5245,15 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 // **Not when the page was opened by a link.** A link is the queue already arriving, and the code
 // would sit in the middle of the screen while it did -- the hash is read after an await, so the
 // first thing anybody opening a tune sent to them would see is a QR code meant for somebody else.
+playlistReorder = new RowReorder({ list: document.querySelector('main'), rows: () => playlistRows,
+  generation: playlistReorderOwner, move: movePlaylistRow, clampEdges: false,
+  onStop: ({ id, generation, focus }) => {
+    if (renderingPlaylist) return;
+    const viewport = document.querySelector('main'), scroll = viewport.scrollTop;
+    render(); viewport.scrollTop = scroll;
+    if (focus && generation === playlistReorderOwner()) playlistRows.find((row) => row.id === id)?.node.querySelector('.playlist-grip')?.focus({ preventScroll: true });
+  },
+});
 queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'), source: $('playback-source'),
   empty: $('queue-empty'), repeatNote: $('queue-repeat-note'),
   icon: (kind) => iconSvg(ICON[kind === 'source' ? 'playlist' : kind]),

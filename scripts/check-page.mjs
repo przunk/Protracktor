@@ -176,7 +176,7 @@ const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').re
 const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^export /gm, '');
-const reorderSource = fs.readFileSync('web/src/queue-reorder.js', 'utf8').replace(/^export /gm, '');
+const reorderSource = fs.readFileSync('web/src/row-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const sourceNavigationSource = fs.readFileSync('web/src/source-navigation.js', 'utf8').replace(/^export /gm, '');
 const randomHistorySource = fs.readFileSync('web/src/random-history.js', 'utf8').replace(/^export /gm, '');
@@ -186,6 +186,9 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { RowReorder } from './row-reorder.js';", '')
+  .replace("import { moveItems, moveEditorTrack } from './list-reorder.js';",
+    () => `const { moveItems, moveEditorTrack } = (() => { ${fs.readFileSync('web/src/list-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { moveItems, moveEditorTrack }; })();`)
   .replace("import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';",
     () => `const { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection } = (() => { ${fs.readFileSync('web/src/library-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection }; })();`)
   .replace("import { SearchBrowser } from './search-browser.js';",
@@ -228,7 +231,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { bindTrackGestures } from './row-gestures.js';",
     `const { bindTrackGestures } = (() => { ${gesturesSource}; return { bindTrackGestures }; })();`)
   .replace("import { QueueView } from './queue-view.js';",
-    `const { PendingReorder } = (() => { ${reorderSource}; return { PendingReorder }; })();
+    `const { RowReorder } = (() => { ${reorderSource}; return { RowReorder }; })(); const PendingReorder = RowReorder;
      const { QueueView } = (() => { ${queueViewSource}; return { QueueView }; })();`)
   .replace("import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';",
     `const { PlaybackSchedule, PlaybackPlan } = (() => { ${scheduleSource}; return { PlaybackSchedule, PlaybackPlan }; })();`)
@@ -3721,6 +3724,8 @@ await (await import('./check-page-learned-titles.mjs')).default({ window, check 
 await (await import('./check-page-recent-searches.mjs')).default({ window, check });
 await (await import('./check-page-history-search.mjs')).default({ window, check });
 await (await import('./check-page-search-scopes.mjs')).default({ window, check });
+
+await (await import('./check-page-list-reorder.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);
