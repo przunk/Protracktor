@@ -176,7 +176,8 @@ run_check "Library search" library-search node scripts/check-library-search.mjs
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
-    run_check "Playback settings startup" playback-startup node scripts/check-playback-startup.mjs
+    run_check "Playback settings startup" playback-startup env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-playback-startup.mjs
+    run_check "UI message ownership" ui-messages node scripts/check-ui-messages.mjs
     run_check "Browse restoration presentation" browse-scroll-view node scripts/check-browse-scroll-view.mjs
     run_check "Subsong strip presentation" subsong-strip-view node scripts/check-subsong-strip-view.mjs
     run_check "Browse selection presentation" browse-selection-view node scripts/check-browse-selection-view.mjs
@@ -196,7 +197,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
     run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
     run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs
-    run_check "Web page" page node scripts/check-page.mjs
+    run_check "Web page" page env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs
     page_output="$(<"$PROTRACKTOR_LOG_PREFIX-page.log")"
     page_checks=$(echo "$page_output" | grep -c '✓' || true)
     echo "🖥  $page_checks page checks passed"

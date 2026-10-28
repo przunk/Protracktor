@@ -44,6 +44,17 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W24 complete at host level, 2026-10-28:** live en/pl/System changes preserve playback, bytes,
+context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes the forced gate:
+**1252 tests / 170 suites**, zero failures/errors/skips, **922 s**, all companions including
+**1182 page assertions**, 16 ownership cases and ten fresh starts (204 assertions). Lint
+**0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
+and restored; actual-module startup and visible refusal notices now have stronger guards.
+Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
+**17 of 25 scopes are implemented** (W01-W13, W16-W18, W24); W20 cache is next. No WEB merge,
+package, push or deployment.
+
+
 **W18 complete at host level, 2026-10-28:** retained shuffle/repeat and the shared Settings/player
 subsong choice restore without autoplay. Saved selection restores without writes; old results
 and failures cannot replace a newer view. Forced gate on **709fb71** passes **1252 tests / 170

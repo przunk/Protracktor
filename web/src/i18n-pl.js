@@ -7,6 +7,8 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Interface text changes without interrupting playback.": "Teksty interfejsu zmieniają się bez przerywania odtwarzania.",
+  "Could not save language choice: {reason}": "Nie udało się zapisać wyboru języka: {reason}",
   "Play every tune in a file": "Graj wszystkie utwory w pliku",
   "Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.": "Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.",
   "Could not save playback settings: {reason}": "Nie udało się zapisać ustawień odtwarzania: {reason}",

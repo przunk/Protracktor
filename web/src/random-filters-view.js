@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { setUiText, setUiAttribute } from './ui-text.js';
 import { PLATFORMS } from './random-scope.js';
-import { t } from './i18n.js';
+import { message as uiMessageText } from './i18n.js';
 
 /** Presentation only; verified counts and selection outlive this panel. */
 export class RandomFiltersView {
@@ -58,10 +59,10 @@ export class RandomFiltersView {
   }
 
   render(scope, { availability, loading, failed }, downloading) {
-    this.chips.setAttribute('aria-label', t('Choose what Random picks from'));
+    setUiAttribute(this.chips, 'aria-label', uiMessageText('Choose what Random picks from'));
     let unavailablePlatform = false;
     for (const [key, { button, label, dot, name }] of this.buttons) {
-      label.textContent = name ?? t(key === 'everything' ? 'Everything' : 'Favourites');
+      setUiText(label, name ?? uiMessageText(key === 'everything' ? 'Everything' : 'Favourites'));
       const count = key === 'favourites' ? availability?.favouriteCount : availability?.platformCounts[key.slice(9)];
       button.disabled = key !== 'everything' && !(count > 0);
       button.classList.toggle('on', key === scope);
@@ -74,17 +75,17 @@ export class RandomFiltersView {
       if (key.startsWith('platform:') && button.disabled) unavailablePlatform = true;
     }
     this.checking.hidden = !!availability && !loading && !failed;
-    this.status.textContent = t(failed ? 'Could not check available filters. Try again.' : 'Checking available filters…');
+    setUiText(this.status, uiMessageText(failed ? 'Could not check available filters. Try again.' : 'Checking available filters…'));
     this.retry.button.hidden = !failed;
-    this.retry.label.textContent = t('Retry');
+    setUiText(this.retry.label, uiMessageText('Retry'));
     this.favourites.hidden = !availability || availability.favouriteCount > 0;
-    this.reason.textContent = availability?.favouritesListed > 0
-      ? t('None of the favourites are in your Modland index. Index Modland first.')
-      : t("Favourites needs Modland's own list — 142 KB, downloaded once.");
+    setUiText(this.reason, availability?.favouritesListed > 0
+      ? uiMessageText('None of the favourites are in your Modland index. Index Modland first.')
+      : uiMessageText("Favourites needs Modland's own list — 142 KB, downloaded once."));
     this.download.button.hidden = !availability || availability.favouritesListed > 0;
     this.download.button.disabled = downloading;
-    this.download.label.textContent = t(downloading ? 'Downloading…' : 'Download');
+    setUiText(this.download.label, uiMessageText(downloading ? 'Downloading…' : 'Download'));
     this.unavailable.hidden = !availability || !unavailablePlatform;
-    this.unavailable.textContent = t('Platforms with no indexed, playable music are unavailable.');
+    setUiText(this.unavailable, uiMessageText('Platforms with no indexed, playable music are unavailable.'));
   }
 }

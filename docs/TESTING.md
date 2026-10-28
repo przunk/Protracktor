@@ -1481,3 +1481,24 @@ Compare with the preserved 1084 APK only if it is already installed or can be up
 do not uninstall/clear data or force a downgrade for this comparison. Record APK/build, device,
 Android version, cold/warm sequence and observed opening/enablement times. No on-device timing
 or performance improvement has been measured by the agent.
+
+### Live WEB language regression — W24, 2026-10-28
+
+Run `node scripts/check-ui-messages.mjs` for UI/data ownership, immutable action arguments,
+composition, Polish plural forms and retained node/attribute bindings. The full project gate runs
+page startup and interaction checks with the actual production module graph:
+`PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs`.
+The VM flag is a Node host-test requirement, not a browser installation step.
+
+The live-language fixtures drive real Settings radios and System events. They retain decoder/audio
+references, runtime bytes, elapsed listening, raw names, independent editor/context, duplicate FIFO,
+paused state and transport-message counts. They check write failures, focus/query ranges, Search
+answers/selection/suggestions, Saved places explanations and Undo, Queue rows/handles/menus, and
+held source acknowledgements/privacy prose. Requested page navigation is observed explicitly;
+jsdom reports reload requests without performing them, so unchanged references alone are not proof.
+Native comparison uses accepted `c8209b1` language/resource/controller paths and `AppLanguageTest`.
+
+Browser acceptance remains unchecked: change English/Polish/System while playing, paused, browsing,
+editing a query and inspecting another file; verify sound continuity, theme, focus, scroll, retained
+selection and meaningful accessibility labels. Repeat with an external shared link and background
+playback. Host stubs do not establish audible continuity, mobile focus or OS behaviour.

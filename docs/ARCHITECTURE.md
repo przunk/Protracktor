@@ -1672,3 +1672,28 @@ The title moved from `titleSmall` to `titleMedium` and the author from `bodySmal
 and **the dock grew to fit** rather than the text being squeezed to preserve its old height. The
 owner offered that trade before being asked for it, which is the right way round: the dock is on
 every screen, and the thing it is for is being read at a glance.
+
+### WEB live language ownership — W24, 2026-10-28
+
+Language policy (`system`, `en`, `pl`) is independent of its resolved locale. Settings changes and
+browser `languagechange` events refresh presentation in place; an explicit choice ignores later
+system changes. A refused preference write leaves the session choice usable and explains that
+it was not saved. The audio graph, decoder job, playback plan, draft and navigation are untouched.
+
+`ui-message.js` represents explicit UI meanings with action-time argument snapshots.
+`i18n.js` resolves those meanings and Polish plural forms at presentation time. `ui-text.js`
+weakly binds individual text nodes and owned accessible attributes. Replacing a fallback with a
+raw title retires its old meaning even if the letters are identical. Original markup is captured
+once, including an initially English page; later user rows are never inferred to be translations.
+State-derived labels use explicit pure formatters, while past action messages keep their original
+arguments. No renderer retains a later mutable playlist merely to translate an earlier notice.
+
+This separation preserves rows, icons, event handlers, input selection, focused controls and
+pending Undo actions. File/title/author/playlist data and backend errors stay literal. Music-source
+acknowledgements use their held bilingual table; read-only privacy prose is redrawn from the held
+policy without another request or a scroll reset. Licence texts remain as distributed.
+
+The page integration gate evaluates the actual ESM graph inside the existing host DOM/audio
+fixture. Flattening imports had hidden a missing production `catalogue` import; real-module startup
+rejects that defect. Node's VM flag belongs only to tests and adds no WEB runtime dependency.
+Host DOM and audio-message evidence do not establish real-browser sound or device behaviour.

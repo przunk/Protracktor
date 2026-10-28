@@ -31,6 +31,8 @@ const dom = new JSDOM(html, {
   pretendToBeVisual: true,
 });
 const { window } = dom;
+window.__browserErrors = [];
+dom.virtualConsole.on('jsdomError', (error) => window.__browserErrors.push(error));
 
 // The engine, the audio device and the network are not what this checks, so they are stubbed
 // exactly as far as the page touches them.
@@ -170,12 +172,17 @@ const storeSource = `const { historyMatches, HistoryPageScan } = (() => { ${hist
   + fs.readFileSync('web/src/store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 // The language module and its Polish table, inlined as the others are (W6). The table first: the
 // module's own import of it is the line that goes.
-const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
+const uiTextSource = `const { uiMessage, isUiMessage, renderUiValue, joinUiText, setUiText, makeUiText, setUiAttribute, refreshUiText } = (() => {
+  ${fs.readFileSync('web/src/ui-message.js', 'utf8').replace(/^export /gm, '')}
+  ${fs.readFileSync('web/src/ui-text.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}
+  return { uiMessage, isUiMessage, renderUiValue, joinUiText, setUiText, makeUiText, setUiAttribute, refreshUiText };
+})();`;
+const i18nSource = uiTextSource + fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
   + fs.readFileSync('web/src/i18n.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').replace(/^export /gm, '');
 const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
-const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^export /gm, '');
+const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const reorderSource = fs.readFileSync('web/src/row-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const sourceNavigationSource = fs.readFileSync('web/src/source-navigation.js', 'utf8').replace(/^export /gm, '');
@@ -258,7 +265,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, () => rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
-  .replace(/^import .*from '\.\/i18n\.js';$/gm, i18nSource)
+  .replace(/^import .*from '\.\/i18n\.js';$/gm, i18nSource + '\nconst uiMessageText = message, uiPluralText = pluralMessage;')
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
@@ -277,9 +284,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
 if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
 
+const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
+
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } }; })()`);
+  if (process.env.PROTRACKTOR_PAGE_MODULES === '1') {
+    window.__loadedModuleCount = await (await import('./page-module-loader.mjs')).loadPageModules({ dom, capture: pageCapture });
+  } else window.eval(`(async () => { ${source} \n ${pageCapture} })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -327,6 +338,7 @@ check($('status').textContent.length > 0, 'the status line says something');
     'a sheet taller than the screen scrolls inside itself, since the page does not move');
 }
 check(!!window.__api, 'the script finished loading');
+if (process.env.PROTRACKTOR_PAGE_MODULES === '1') check(window.__loadedModuleCount > 20, 'the production ESM dependency graph was evaluated without flattened module scopes');
 
 if (startupCase) {
   await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
@@ -2781,10 +2793,11 @@ if (window.__api) {
     ];
     for (const [[choice, list], want, what] of cases) check(i18n.resolveLanguage(choice, list) === want, what);
 
-    const appSource = ['web/src/app.js', 'web/src/queue-view.js', 'web/src/random-filters-view.js', 'web/src/saved-places-view.js'].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+    const appSource = fs.readdirSync('web/src').filter((file) => file.endsWith('.js'))
+      .map((file) => fs.readFileSync(`web/src/${file}`, 'utf8')).join('\n');
     const keys = new Set();
-    for (const m of appSource.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
-    for (const m of appSource.matchAll(/\btn\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
+    for (const m of appSource.matchAll(/\b(?:t|uiMessageText|message)\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
+    for (const m of appSource.matchAll(/\b(?:tn|uiPluralText|pluralMessage)\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
       keys.add(m[3].replace(/\\(['"\\])/g, '$1'));
     }
     const untranslated = [...keys].filter((k) => !i18n.hasPolish(k));
@@ -2806,8 +2819,10 @@ if (window.__api) {
       'bheld yes', 'bmeta bwarn', '${named} — Protracktor web',
       "${PUBLIC_PAGE}#${PLAY_PREFIX}${await deflateFragment(lines.join('\\n'))}",
     ]);
-    const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-      .replace(/\btn?\((?:[^()'"`]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\((?:[^()]|\([^()]*\))*\))*\)/g, 'T()');
+    const sentenceSources = ['app.js', 'queue-view.js', 'random-filters-view.js', 'saved-places-view.js']
+      .map((file) => fs.readFileSync(`web/src/${file}`, 'utf8')).join('\n');
+    const code = sentenceSources.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      .replace(/\b(?:t|tn|uiMessageText|uiPluralText|message|pluralMessage)\((?:[^()'"`]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\((?:[^()]|\([^()]*\))*\))*\)/g, 'T()');
     const loose = [];
     for (const m of code.matchAll(/'((?:[^'\\\n]|\\.)*)'|`([^`]*)`|"((?:[^"\\\n]|\\.)*)"/g)) {
       const text = m[1] ?? m[2] ?? m[3] ?? '';
@@ -3764,6 +3779,9 @@ await (await import('./check-page-browse-scroll.mjs')).default({ window, check }
 await (await import('./check-page-subsong-strip.mjs')).default({ window, check });
 
 await (await import('./check-page-playback-preferences.mjs')).default({ window, check });
+
+await (await import('./check-page-live-language.mjs')).default({ window, check });
+await (await import('./check-page-live-language-views.mjs')).default({ window, check });
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
 process.exit(failures.length ? 1 : 0);

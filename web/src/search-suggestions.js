@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { t } from './i18n.js';
+import { setUiAttribute } from './ui-text.js';
+import { message as uiMessageText } from './i18n.js';
 
 /** A text-only combobox; data refreshes never request focus or reopen a submitted field. */
 export class SearchSuggestions {
-  constructor({ root, input, submit, list, suggestions, onInput, onSubmit, onFocus = () => {} }) {
-    Object.assign(this, { root, input, submit, list, suggestions, onInput, onSubmit });
+  constructor({ root, input, submit, list, suggestions, onInput, onSubmit, onFocus = () => {},
+    inputLabel = () => uiMessageText('Search') }) {
+    Object.assign(this, { root, input, submit, list, suggestions, onInput, onSubmit, inputLabel });
     this.visible = false;
     this.allowed = false;
     this.active = -1;
@@ -78,10 +80,10 @@ export class SearchSuggestions {
     const expanded = this.visible && this.allowed && !this.root.closest('[hidden]')
       && this.input.ownerDocument.activeElement === this.input && this.items.length > 0;
     this.input.setAttribute('aria-expanded', String(expanded));
-    this.input.setAttribute('aria-label', t('Search'));
-    this.submit.setAttribute('aria-label', t('Search'));
-    this.submit.title = t('Search');
-    this.list.setAttribute('aria-label', t('Recent searches'));
+    setUiAttribute(this.input, 'aria-label', this.inputLabel);
+    setUiAttribute(this.submit, 'aria-label', uiMessageText('Search'));
+    setUiAttribute(this.submit, 'title', uiMessageText('Search'));
+    setUiAttribute(this.list, 'aria-label', uiMessageText('Recent searches'));
     this.list.hidden = !expanded;
     this.list.replaceChildren();
     if (!expanded) { this.input.removeAttribute('aria-activedescendant'); return; }

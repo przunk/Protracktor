@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { makeUiText } from './ui-text.js';
 
 export const swipeStartDistance = (minimum, slop) => Math.max(minimum, slop * 2);
 export function swipeIntent(x, y, slop, start) {
@@ -27,7 +28,7 @@ export function bindTrackGestures(row, { onAdd, onRemove, onLongPress, canSwipe 
     element.className = `swipe-reveal ${direction}`;
     element.setAttribute('aria-hidden', 'true');
     element.innerHTML = icon(glyph);
-    element.append(document.createTextNode(label));
+    element.append(makeUiText(document, label));
     row.prepend(element);
     return element;
   };

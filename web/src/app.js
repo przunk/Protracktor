@@ -4,7 +4,7 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
-import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks } from './store.js';
+import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue } from './store.js';
 import * as archive from './catalogue.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
@@ -41,10 +41,13 @@ import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searches
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
 import { SearchScopesView, searchScopeLabel } from './search-scopes-view.js';
-import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
+import { message as uiMessageText, pluralMessage as uiPluralText, t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
+
+import { uiMessage, joinUiText } from './ui-message.js';
+import { setUiText, setUiAttribute, makeUiText } from './ui-text.js';
 
 const $ = (id) => document.getElementById(id);
-const status = (text) => { $('status').textContent = text; };
+const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
 
 /**
@@ -164,7 +167,7 @@ const historyReads = new HistoryPresentationReads({
     learnedTitles = new Map([...rows].flatMap(([id, row]) => row.name?.trim() ? [[id, row.name.trim()]] : []));
     repaintHistoryPresentation();
   },
-  failed: (error) => status(t('Could not read History: {reason}', { reason: error.message })),
+  failed: (error) => status(uiMessageText('Could not read History: {reason}', { reason: error.message })),
 });
 
 function sampleListening(completed = false) {
@@ -189,7 +192,7 @@ async function clearHistory() {
   listeningTrack = null;
   sourceBrowseRoute = null;
   await historyBrowser.clear(() => played.clear(),
-    (error) => showNote(t('Could not clear History: {reason}', { reason: error.message })));
+    (error) => showNote(uiMessageText('Could not clear History: {reason}', { reason: error.message })));
 }
 
 function requestHistoryPresentation() {
@@ -210,8 +213,8 @@ function playedBadge() {
   badge.className = 'played-before';
   badge.hidden = true;
   badge.setAttribute('role', 'img');
-  badge.setAttribute('aria-label', t('Played before'));
-  badge.title = t('Played before');
+  setUiAttribute(badge, 'aria-label', uiMessageText('Played before'));
+  setUiAttribute(badge, 'title', uiMessageText('Played before'));
   badge.textContent = '✓';
   return badge;
 }
@@ -240,7 +243,7 @@ function repaintHistoryPresentation() {
   }
   const note = $('np-played');
   note.hidden = clearing || !infoPresentation || historyPresentation.get(infoPresentation.url)?.listened !== true;
-  if (!note.hidden) note.textContent = t('Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.');
+  if (!note.hidden) setUiText(note, uiMessageText('Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.'));
   for (const row of [...$('queue').children, ...$('browselist').children]) row.repaintTitle?.();
   if (queueView && !$('playback-panel').hidden) queueView.render(playbackPlan());
   browseSelectionView?.render();
@@ -375,7 +378,7 @@ function applyPlaybackResult(result, intent = null) {
       stopForLeaving();
       rowState = null;
       renderNothingPlaying();
-      $('title').textContent = t('Nothing playing');
+      setUiText($('title'), uiMessageText('Nothing playing'));
       $('sub').textContent = '—';
       setPlaying(false);
       break;
@@ -391,7 +394,7 @@ function enqueueTrack(entry, historyOrigin = false) {
   schedule = schedule.enqueue(entry, historyOrigin);
   render();
   setPlaying(playing);
-  showNote(t('Added to queue: {name}', { name: entry.name }));
+  showNote(uiMessageText('Added to queue: {name}', { name: entry.name }));
   return true;
 }
 
@@ -418,12 +421,12 @@ function removeQueueOccurrence(row, generation) {
     : removeSourceOccurrence(playbackPlan(), row.id, generation, options);
   if (!result.undo) return;
   applyPlaybackResult(result);
-  showUndo(t('Removed {name}', { name: row.track.name }), () => undoPlaybackQueue({ kind: 'remove', token: result.undo }));
+  showUndo(uiMessageText('Removed {name}', { name: row.track.name }), () => undoPlaybackQueue({ kind: 'remove', token: result.undo }));
 }
 
 function clearPlaybackQueue() {
   const token = playbackPlan().clear();
-  if (!token) { showNote(t('Queue is already clear.')); return; }
+  if (!token) { showNote(uiMessageText('Queue is already clear.')); return; }
   ++scheduleIntent;
   const runtime = { random, away };
   if (random) {
@@ -435,14 +438,14 @@ function clearPlaybackQueue() {
   adoptPlan(token.after);
   render();
   setPlaying(playing);
-  showUndo(t('Queue cleared'), () => undoPlaybackQueue({ kind: 'clear', token, runtime }));
+  showUndo(uiMessageText('Queue cleared'), () => undoPlaybackQueue({ kind: 'clear', token, runtime }));
 }
 
 function undoPlaybackQueue(undo) {
   if (!undo) return false;
   let restored = undo.kind === 'clear' ? undo.token.undo(playbackPlan()) : undoQueueRemoval(playbackPlan(), undo.token);
   hideUndo();
-  if (!restored) { showNote(t('Playback changed; this action can no longer be undone.')); return true; }
+  if (!restored) { showNote(uiMessageText('Playback changed; this action can no longer be undone.')); return true; }
   if (undo.kind === 'clear') {
     random = undo.runtime.random;
     away = undo.runtime.away;
@@ -556,8 +559,8 @@ function movePlaylistRow(id, target) {
 function playlistMoveMenu(row, anchor) {
   const at = playlistRows.indexOf(row);
   showMenu([
-    [t('Move earlier'), () => movePlaylistRow(row.id, playlistRows[at - 1].id), at > 0, ICON.up],
-    [t('Move later'), () => movePlaylistRow(row.id, playlistRows[at + 1].id), at + 1 < playlistRows.length, ICON.down],
+    [uiMessageText('Move earlier'), () => movePlaylistRow(row.id, playlistRows[at - 1].id), at > 0, ICON.up],
+    [uiMessageText('Move later'), () => movePlaylistRow(row.id, playlistRows[at + 1].id), at + 1 < playlistRows.length, ICON.down],
   ], anchor);
 }
 
@@ -567,10 +570,13 @@ function showEditor() {
   setPlaying(playing);
 }
 
+/** Only the protected phone view has a live app label; editable playlist names are literal. */
+function playlistCaption(id, name) { return id === PHONE ? uiMessageText('From the phone') : name; }
+
 function showPlaybackList() {
   showSessionView(random ? 'random' : away?.kind ?? null);
   editorShown = false;
-  if (!random && !away) $('playlistname').textContent = sourcePlaylistName;
+  if (!random && !away) setUiText($('playlistname'), playlistCaption(sourcePlaylistId, sourcePlaylistName));
   setDirty(workspace.editor.dirty);
   render();
 }
@@ -760,9 +766,8 @@ async function begin() {
   // `audioWorklet` being undefined three lines down, which reads as a broken engine rather than as
   // the wrong address (`docs/PLAN_HANDOFF.md` §4).
   if (!isSecureContext) {
-    $('error').textContent =
-      t('audio needs https or localhost — this address cannot start a decoder');
-    status(t('open this page on localhost, or through a tunnel with https'));
+    setUiText($('error'), uiMessageText('audio needs https or localhost — this address cannot start a decoder'));
+    status(uiMessageText('open this page on localhost, or through a tunnel with https'));
     throw new Error('insecure context');
   }
   // Created on a click, because a browser will not let audio start without one. The *first* tune
@@ -782,7 +787,7 @@ async function begin() {
     console.warn('audioSession.type=playback', error);
   }
   context = new AudioContext({ sampleRate: 44100 });
-  status(t('loading the engine…'));
+  status(uiMessageText('loading the engine…'));
   // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome
   // does not even run the worklet until the context does, so this is said now rather than when a
   // tune opens, which there it would not do -- the page would fetch and then sit silent.
@@ -842,7 +847,7 @@ function onWorklet(message) {
       engineReady = true;
       // Recorded when an index is built and compared when one is read, exactly as the phone does.
       engineFingerprint = message.backends;
-      status(t('engine ready — {backends}', { backends: message.backends }));
+      status(uiMessageText('engine ready — {backends}', { backends: message.backends }));
       readyWaiters.splice(0).forEach((resolve) => resolve());
       reconsiderStoredIndexes();
       break;
@@ -882,7 +887,7 @@ function onWorklet(message) {
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
-        status(t('⚠ this decoder wants {wanted} Hz and the page is running at {rate} Hz — it will play {ratio}× fast', {
+        status(uiMessageText('⚠ this decoder wants {wanted} Hz and the page is running at {rate} Hz — it will play {ratio}× fast', {
           wanted: message.preferredRate, rate: message.rate, ratio: (message.rate / message.preferredRate).toFixed(3),
         }));
       } else {
@@ -890,7 +895,7 @@ function onWorklet(message) {
         // front of it, so it has to be replaced when the track changes -- otherwise "Tune 2 of
         // 2" from a `.sndh` two files ago sits under a tune that has one (`docs/STATUS.md` C28).
         // A sentence about the wrong file is worse than no sentence.
-        status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${tn(subsongCount, '{n} tune in this file', '{n} tunes in this file')}` : ''));
+        status(joinUiText(`${message.rate} Hz`, subsongCount > 1 ? joinUiText(" · ", uiPluralText(subsongCount, '{n} tune in this file', '{n} tunes in this file')) : ''));
       }
       $('sub').textContent = describeLine(fields);
       tuneCanSeek = !!message.canSeek;
@@ -923,7 +928,7 @@ function onWorklet(message) {
       render();
       // Errors stay above the transport. The status line moved into Now Playing because it is the
       // machine talking to itself; a decoder refusing a file is the machine talking to the listener.
-      $('error').textContent = explainFailure(message.reason, currentTrack());
+      setUiText($('error'), explainFailure(message.reason, currentTrack()));
       $('sub').textContent = '—';
       // **And Now Playing stops describing the last file that worked.** A refusal that leaves
       // the panel showing another track's fields reads as the wrong tune playing.
@@ -1119,15 +1124,15 @@ function renderNames(fields) {
   const instruments = namesOf(fields.instrument_names);
   const samples = namesOf(fields.sample_names);
   const lists = [];
-  if (instruments.length) lists.push([t('Instrument names'), instruments]);
+  if (instruments.length) lists.push([uiMessageText('Instrument names'), instruments]);
   if (samples.length && samples.join(NAME_SEPARATOR) !== instruments.join(NAME_SEPARATOR)) {
-    lists.push([t('Sample names'), samples]);
+    lists.push([uiMessageText('Sample names'), samples]);
   }
   for (const [label, names] of lists) {
     const details = document.createElement('details');
     const summary = document.createElement('summary');
     summary.innerHTML = iconSvg(ICON.expand);
-    summary.append(`${label} (${names.length})`);
+    summary.append(makeUiText(document, joinUiText(label, ` (${names.length})`)));
     const digits = Math.max(2, String(names.length).length);
     const pre = document.createElement('pre');
     pre.textContent = names.map((name, i) => `${String(i + 1).padStart(digits, '0')} ${name}`).join('\n');
@@ -1219,10 +1224,10 @@ function describeLine(fields, entry = currentTrack()) {
  * the one fact about the tune rather than about the file; the machine's own vocabulary last.
  */
 const FIELD_ORDER = [
-  ['format', t('Format')], ['tracker', t('Tracker')], ['artist', t('Artist')], ['album', t('Album')],
-  ['publisher', t('Publisher')], ['composer', t('Composer')], ['hardware', t('Hardware')],
-  ['channels', t('Channels')], ['patterns', t('Patterns')], ['instruments', t('Instruments')],
-  ['samples', t('Samples')], ['subsongs', t('Subsongs')],
+  ['format', uiMessageText('Format')], ['tracker', uiMessageText('Tracker')], ['artist', uiMessageText('Artist')], ['album', uiMessageText('Album')],
+  ['publisher', uiMessageText('Publisher')], ['composer', uiMessageText('Composer')], ['hardware', uiMessageText('Hardware')],
+  ['channels', uiMessageText('Channels')], ['patterns', uiMessageText('Patterns')], ['instruments', uiMessageText('Instruments')],
+  ['samples', uiMessageText('Samples')], ['subsongs', uiMessageText('Subsongs')],
 ];
 
 /**
@@ -1255,14 +1260,14 @@ function explainFailure(reason, entry) {
   // "nothing claimed it", which is true and useless when the phone plays the file perfectly.
   if (formatTable && entry?.name && archive.onPhone(formatTable)(entry.name)
       && !archive.playable(formatTable, absentHere())(entry.name)) {
-    return t('{name}: this browser build has no decoder for this format — it plays on the phone', { name: entry.name });
+    return uiMessageText('{name}: this browser build has no decoder for this format — it plays on the phone', { name: entry.name });
   }
   // A file this build claims and a decoder still refused: say what Modland calls it (A51), the
   // phone's `open_failed_modland_lists`.
   const listedAs = archive.modlandFormatOf(entry?.url);
   if (!listedAs) return reason;
   const closed = /[.!?]$/.test(reason.trimEnd()) || !reason.trim() ? reason.trimEnd() : `${reason.trimEnd()}.`;
-  return `${closed} ${t('Modland lists it as {format}.', { format: listedAs })}`.trim();
+  return joinUiText(closed.trim() ? closed.trim() + ' ' : '', uiMessageText('Modland lists it as {format}.', { format: listedAs }));
 }
 
 /**
@@ -1275,7 +1280,7 @@ function renderNothingPlaying() {
   ++descriptionGeneration;
   infoPresentation = null;
   repaintHistoryPresentation();
-  $('np-title').textContent = currentTrack()?.name || t('Nothing playing');
+  setUiText($('np-title'), currentTrack()?.name || uiMessageText('Nothing playing'));
   $('np-message').hidden = true;
   $('np-names').replaceChildren();
   const list = $('fields');
@@ -1283,7 +1288,7 @@ function renderNothingPlaying() {
   const dt = document.createElement('dt');
   dt.textContent = '—';
   const dd = document.createElement('dd');
-  dd.textContent = t('nothing has played yet');
+  setUiText(dd, uiMessageText('nothing has played yet'));
   list.append(dt, dd);
   subsongStripView?.clear();
   $('subsongbar').hidden = true;
@@ -1298,15 +1303,15 @@ function renderCurrentNowPlaying() {
 function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { playedBefore = false } = {}) {
   infoPresentation = playedBefore ? entry : null;
   requestHistoryPresentation();
-  $('np-title').textContent = fields.title || entry?.name || t('Nothing playing');
+  setUiText($('np-title'), fields.title || entry?.name || uiMessageText('Nothing playing'));
   const list = $('fields');
   list.replaceChildren();
   const rows = [];
   // Where it came from and what the file is called, which the title stops showing once the tune's
   // own name has been read out of it.
-  if (entry) rows.push([t('File'), [whereOf(entry), fileOf(entry)].filter(Boolean).join('/')]);
+  if (entry) rows.push([uiMessageText('File'), [whereOf(entry), fileOf(entry)].filter(Boolean).join('/')]);
   const year = releaseYear(fields);
-  if (year) rows.push([t('Year'), year]);
+  if (year) rows.push([uiMessageText('Year'), year]);
   // The author where the file is silent, as the phone fills it from its song database: the folder
   // Modland files the tune under. What the file says always wins.
   const known = { ...fields, artist: authorOf(entry, fields) };
@@ -1316,7 +1321,7 @@ function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { p
   }
   for (const [label, value] of rows) {
     const dt = document.createElement('dt');
-    dt.textContent = label;
+    setUiText(dt, label);
     const dd = document.createElement('dd');
     dd.textContent = value;
     list.append(dt, dd);
@@ -1388,7 +1393,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     dockFields = {};
     renderNothingPlaying();
     $('title').textContent = entry.name;
-    $('sub').textContent = t('press play');
+    setUiText($('sub'), uiMessageText('press play'));
     $('seek').value = 0;
     $('elapsed').textContent = clock(0);
     $('remaining').textContent = barTotal();
@@ -1443,7 +1448,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   $('remaining').textContent = clockTotal(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
-  $('sub').textContent = t('fetching…');
+  setUiText($('sub'), uiMessageText('fetching…'));
   $('error').textContent = '';
 
   let bytes;
@@ -1464,14 +1469,14 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
       // the queue's own copy zero bytes long, and the second play of that row sent nothing and
       // threw. Measured: one transfer, `byteLength` 0. A `.slice` of twenty kilobytes is not worth
       // reasoning about; a queue that empties itself as it plays is.
-      $('sub').textContent = t('from the phone…');
+      setUiText($('sub'), uiMessageText('from the phone…'));
       bytes = entry.data.slice(0);
     } else {
       // A Random pick read ahead was fetched while the tune before it played, which is the point of
       // reading ahead: a pick that has not been fetched is a gap between tracks. Used once.
       bytes = ready ? await ready : null;
       if (!bytes) {
-        $('sub').textContent = t('fetching…');
+        setUiText($('sub'), uiMessageText('fetching…'));
         const response = await fetch(entry.url, { signal: abort.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         bytes = await response.arrayBuffer();
@@ -1484,11 +1489,11 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     // wipe the newer controller -- leaving a download nobody can call off and a button that lies
     // about what it will do.
     if (loading === abort) { loading = null; setPlaying(false); }
-    if (e.name === 'AbortError') { $('sub').textContent = t('stopped'); return; }
+    if (e.name === 'AbortError') { setUiText($('sub'), uiMessageText('stopped')); return; }
     if (random && !manualCurrent() && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
-    $('error').textContent = t('could not fetch it: {reason}', { reason: e.message });
+    setUiText($('error'), uiMessageText('could not fetch it: {reason}', { reason: e.message }));
     $('sub').textContent = '—';
     return;
   }
@@ -1500,9 +1505,9 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   //
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
-  $('sub').textContent = engineReady
-    ? t('{size} KB — opening…', { size: (bytes.byteLength / 1024).toFixed(0) })
-    : t('{size} KB — waiting for the engine…', { size: (bytes.byteLength / 1024).toFixed(0) });
+  setUiText($('sub'), engineReady
+    ? uiMessageText('{size} KB — opening…', { size: (bytes.byteLength / 1024).toFixed(0) })
+    : uiMessageText('{size} KB — waiting for the engine…', { size: (bytes.byteLength / 1024).toFixed(0) }));
 
   // **Asked before the bytes are handed over, because handing them over detaches them** -- the
   // postMessage below transfers the buffer, and a moment later this page does not have it. The
@@ -1532,9 +1537,9 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     if (context?.state === 'suspended') { openWatchdog = setTimeout(expire, 10_000); return; }
     loading = null;
     setPlaying(false);
-    $('error').textContent = engineReady
-      ? t('the decoder took the file and never answered — check the browser console')
-      : t('the engine never finished loading, so nothing can be opened — check the browser console');
+    setUiText($('error'), engineReady
+      ? uiMessageText('the decoder took the file and never answered — check the browser console')
+      : uiMessageText('the engine never finished loading, so nothing can be opened — check the browser console'));
     $('sub').textContent = '—';
   }, 10_000);
 }
@@ -1631,14 +1636,14 @@ function setPlaying(on) {
   $('nowkeep').hidden = (!manualCurrent() && editorOwnsPlayback()) || !currentTrack() || workspace.editor.id === PHONE;
   const tune = $('dock-tune');
   tune.hidden = !currentTrack() || $('seek').dataset.opened !== '1' || subsongCount <= 1;
-  tune.textContent = tune.hidden ? '' : t('Tune {n} of {count}', { n: currentSubsong + 1, count: subsongCount });
+  setUiText(tune, tune.hidden ? '' : uiMessageText('Tune {n} of {count}', { n: currentSubsong + 1, count: subsongCount }));
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
   // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
   const stopping = (loading || drawing) && !firstTouch;
   $('playglyph').setAttribute('d', stopping ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = stopping ? t('Stop loading') : on ? t('Pause') : t('Play');
+  setUiAttribute($('playpause'), 'title', stopping ? uiMessageText('Stop loading') : on ? uiMessageText('Pause') : uiMessageText('Play'));
   $('playpause').disabled = !currentTrack() && !schedule.pending.length && workspace.context.source.kind !== 'random';
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -1682,11 +1687,12 @@ async function renderEmpty() {
     held = !!(modland?.tracks || asma?.tracks);
   } catch { /* nothing readable is nothing held */ }
   if (asked !== emptyAsked || !showing()) { if (!showing()) box.hidden = true; return; }
-  $('emptybody').textContent = held
-    ? t('Browse the catalogues this browser holds, send tunes from your phone with the pairing code, or paste some links.')
-    : t('Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline — or send tunes from your phone with the pairing code.');
+  setUiText($('emptybody'), held
+    ? uiMessageText('Browse the catalogues this browser holds, send tunes from your phone with the pairing code, or paste some links.')
+    : uiMessageText('Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline — or send tunes from your phone with the pairing code.'));
   const action = $('emptyaction');
-  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download) + (held ? t('Browse') : t('Get some music to browse'));
+  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download);
+  action.append(makeUiText(document, held ? uiMessageText('Browse') : uiMessageText('Get some music to browse')));
   action.onclick = async () => {
     browsePath = [];
     showPanel('browse');
@@ -1752,7 +1758,7 @@ function render() {
       tick.type = 'checkbox';
       tick.className = 'tick';
       tick.checked = selected.has(entry);
-      tick.setAttribute('aria-label', t('Select {name}', { name: entry.name }));
+      setUiAttribute(tick, 'aria-label', uiMessageText('Select {name}', { name: entry.name }));
       n.replaceChildren(tick);
     }
     if (randomView && !selected.size) {
@@ -1776,8 +1782,8 @@ function render() {
 
     const menu = document.createElement('button');
     menu.className = 'rowmenu';
-    menu.title = t('More');
-    menu.setAttribute('aria-label', t('More for {name}', { name: entry.name }));
+    setUiAttribute(menu, 'title', uiMessageText('More'));
+    setUiAttribute(menu, 'aria-label', uiMessageText('More for {name}', { name: entry.name }));
     menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
     // Stopped here, or opening the menu would also start the track underneath it.
     menu.onclick = (event) => { event.stopPropagation(); openRowMenu(descriptor.entry, menu, playlistRows.indexOf(descriptor)); };
@@ -1789,7 +1795,7 @@ function render() {
       if (title.textContent !== shown.name) title.textContent = shown.name;
       const source = transient ? displaySourceLine(shown) : whereOf(entry);
       if (meta.textContent !== source) meta.textContent = source;
-      menu.setAttribute('aria-label', t('More for {name}', { name: shown.name }));
+      setUiAttribute(menu, 'aria-label', uiMessageText('More for {name}', { name: shown.name }));
     };
     li.repaintTitle();
 
@@ -1813,8 +1819,8 @@ function render() {
     let disposeReorder;
     if (canReorderPlaylist() && tracks.length > 1) {
       const grip = document.createElement('button');
-      grip.className = 'queue-grip'; grip.classList.add('playlist-grip'); grip.innerHTML = iconSvg(ICON.grip); grip.append(t('Reorder'));
-      grip.setAttribute('aria-label', t('Reorder {name}', { name: entry.name }));
+      grip.className = 'queue-grip'; grip.classList.add('playlist-grip'); grip.innerHTML = iconSvg(ICON.grip); grip.append(makeUiText(grip.ownerDocument, uiMessageText('Reorder')));
+      setUiAttribute(grip, 'aria-label', uiMessageText('Reorder {name}', { name: entry.name }));
       grip.onclick = (event) => { event.stopPropagation(); playlistMoveMenu(descriptor, grip); };
       grip.onkeydown = (event) => {
         if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
@@ -1838,17 +1844,17 @@ function render() {
   }
   renderingPlaylist = false;
   updateSelectBar();
-  $('count').textContent = tracks.length
-    ? tn(tracks.length, '{n} track', '{n} tracks')
-    : t('nothing yet');
-  if (randomView) $('count').textContent = tn(tracks.length, '{n} played at random', '{n} played at random');
+  setUiText($('count'), tracks.length
+    ? uiPluralText(tracks.length, '{n} track', '{n} tracks')
+    : uiMessageText('nothing yet'));
+  if (randomView) setUiText($('count'), uiPluralText(tracks.length, '{n} played at random', '{n} played at random'));
   // What the session is, not always History's words: a tune sent here said "1 from your history".
   if (away && !editorShown && !randomView) {
-    $('count').textContent = {
-      history: tn(queue.length, '{n} from your history', '{n} from your history'),
-      browse: tn(queue.length, '{n} from Browse', '{n} from Browse'),
-      link: tn(queue.length, '{n} sent to you', '{n} sent to you'),
-    }[away.kind] ?? String(queue.length);
+    setUiText($('count'), {
+      history: uiPluralText(queue.length, '{n} from your history', '{n} from your history'),
+      browse: uiPluralText(queue.length, '{n} from Browse', '{n} from Browse'),
+      link: uiPluralText(queue.length, '{n} sent to you', '{n} sent to you'),
+    }[away.kind] ?? String(queue.length));
   }
   if (randomView) renderRandomHeading();
   queueView?.render(playbackPlan());
@@ -1883,7 +1889,7 @@ async function bytesOf(entry) {
 async function saveFile(entry) {
   try {
     const bytes = await bytesOf(entry);
-    if (!bytes) { status(t('that one stayed on the phone — there is nothing here to save')); return; }
+    if (!bytes) { status(uiMessageText('that one stayed on the phone — there is nothing here to save')); return; }
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
     const a = document.createElement('a');
     a.href = url;
@@ -1892,9 +1898,9 @@ async function saveFile(entry) {
     // Revoked on a timer rather than immediately: the click is asynchronous inside the browser and
     // revoking in the same tick has been known to hand the user a zero-byte file.
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    status(t('Saved {name}', { name: a.download }));
+    status(uiMessageText('Saved {name}', { name: a.download }));
   } catch (e) {
-    status(t('could not save it: {reason}', { reason: e.message }));
+    status(uiMessageText('could not save it: {reason}', { reason: e.message }));
   }
 }
 
@@ -1907,14 +1913,14 @@ async function saveFile(entry) {
  * nothing at all.
  */
 async function copyLink(entry) {
-  if (!entry.url) { status(t('that one stayed on the phone — it has no address')); return; }
+  if (!entry.url) { status(uiMessageText('that one stayed on the phone — it has no address')); return; }
   try {
     await navigator.clipboard.writeText(entry.url);
-    showNote(t('Link copied'));
+    showNote(uiMessageText('Link copied'));
   } catch {
     // A browser that refuses the clipboard without a gesture it recognises, or an insecure context.
     // Showing the address is worse than copying it and much better than silence.
-    showNote(t('The browser would not copy it — the address is in Now Playing'));
+    showNote(uiMessageText('The browser would not copy it — the address is in Now Playing'));
     status(entry.url);
   }
 }
@@ -1946,11 +1952,11 @@ async function informAbout(entry, { playedBefore = true } = {}) {
   showPanel('nowplaying');
   $('np-title').textContent = entry.name;
   $('fields').replaceChildren();
-  status(t('reading it…'));
+  status(uiMessageText('reading it…'));
   try {
     const bytes = await bytesOf(entry);
     if (!owns()) return;
-    if (!bytes) { status(t('that one stayed on the phone — there is nothing to read')); return; }
+    if (!bytes) { status(uiMessageText('that one stayed on the phone — there is nothing to read')); return; }
     await start();
     if (!owns()) return;
     const id = ++describeAsk;
@@ -1964,13 +1970,13 @@ async function informAbout(entry, { playedBefore = true } = {}) {
     node.port.postMessage({ type: 'describe', id, name: fileOf(entry), bytes }, [bytes]);
     const described = await answer;
     if (!owns()) return;
-    if (!described) { status(t('the decoder took the file and never answered')); return; }
+    if (!described) { status(uiMessageText('the decoder took the file and never answered')); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
     renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry, { playedBefore });
     $('np-title').textContent = describeFields(described.describe).title || entry.name;
-    status(t('{name} — not playing, just described', { name: entry.name }));
+    status(uiMessageText('{name} — not playing, just described', { name: entry.name }));
   } catch (e) {
-    if (owns()) status(t('could not read it: {reason}', { reason: e.message }));
+    if (owns()) status(uiMessageText('could not read it: {reason}', { reason: e.message }));
   }
 }
 
@@ -2012,23 +2018,23 @@ function openRowMenu(entry, anchor, at = visibleTracks().indexOf(entry)) {
   const record = randomView, tracks = visibleTracks();
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
-    [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
-    [t('Information'), () => informAbout(mainDisplay(entry), { playedBefore: !!randomView }), !entry.local, ICON.info],
+    [uiMessageText('Select'), () => startSelecting(entry), !entry.local, ICON.check],
+    [uiMessageText('Information'), () => informAbout(mainDisplay(entry), { playedBefore: !!randomView }), !entry.local, ICON.info],
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
-    [t('Add to playlist'), () => openAddTo([plain(mainDisplay(entry))]), !entry.local, ICON.playlistAdd],
-    [t('Add to queue'), () => enqueueTrack(mainDisplay(entry), historyOrigin), !entry.local, ICON.playlistAdd],
+    [uiMessageText('Add to playlist'), () => openAddTo([plain(mainDisplay(entry))]), !entry.local, ICON.playlistAdd],
+    [uiMessageText('Add to queue'), () => enqueueTrack(mainDisplay(entry), historyOrigin), !entry.local, ICON.playlistAdd],
     // On every list, as on the phone, not in Browse alone.
-    [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
+    [uiMessageText('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
     // Share uses the same actions as Now Playing.
     shareEntry(() => mainDisplay(entry), anchor, () => openRowMenu(entry, anchor, at)),
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
-  if (record) items.push([t('Remove from this list'), () => removeRememberedRandomAt(at, record, tracks), true, ICON.remove]);
+  if (record) items.push([uiMessageText('Remove from this list'), () => removeRememberedRandomAt(at, record, tracks), true, ICON.remove]);
   // **A playlist of the user's own can lose a row**, as on the phone. "From the phone" is what
   // the phone sent and is never edited here; a session's list is not a playlist.
   if (editorShown && workspace.editor.id !== PHONE) {
-    items.push([t('Remove from this playlist'), () => removeFromPlaylist(editorTracks().indexOf(entry)), true, ICON.remove]);
+    items.push([uiMessageText('Remove from this playlist'), () => removeFromPlaylist(editorTracks().indexOf(entry)), true, ICON.remove]);
   }
   showMenu(items, anchor);
 }
@@ -2044,7 +2050,7 @@ function showMenu(items, anchor) {
     const button = document.createElement('button');
     // An icon and its name, never the name alone -- the phone's menu has both, and so must this.
     button.innerHTML = iconSvg(icon);
-    button.append(label);
+    button.append(makeUiText(document, label));
     // **A row this browser cannot do answers with why** rather than going dead: greyed like the
     // rest, and a press says what is missing (`refusal`, a function, since the reason is known
     // only once asked). Rows with nothing to explain are plainly disabled.
@@ -2133,7 +2139,7 @@ async function saveQueue({ explicit = false } = {}) {
   });
   try { return await operation; }
   catch (error) {
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message }));
     return false;
   }
 }
@@ -2201,13 +2207,13 @@ function setRandomScope(value) {
   if (randomView) renderRandomHeading();
   renderRandomFilters();
   randomScopeWrites = randomScopeWrites.catch(() => {}).then(() => settings.set('randomScope', next))
-    .catch((error) => { if (asked === randomScopeAsked) showNote(t('Could not save the Random filter: {reason}', { reason: error.message })); });
+    .catch((error) => { if (asked === randomScopeAsked) showNote(uiMessageText('Could not save the Random filter: {reason}', { reason: error.message })); });
 }
 async function downloadRandomFavourites() {
   if (downloading.has('modland-favourites')) return;
   await downloadStarted('modland-favourites');
   try { await randomCatalogue.downloadFavourites(); }
-  catch (error) { showNote(t('Could not download Modland favourites: {reason}', { reason: error.message })); }
+  catch (error) { showNote(uiMessageText('Could not download Modland favourites: {reason}', { reason: error.message })); }
   finally { await downloadEnded('modland-favourites'); }
 }
 
@@ -2222,12 +2228,12 @@ let randomSource = Math.random;
  * somewhere the playlist is not, and a way back to it.
  */
 const SESSION = {
-  random: { title: t('Playing at random'), chip: t('Random'), icon: () => ICON.dice },
-  history: { title: t('Playing from your history'), chip: t('History'), icon: () => ICON.history },
+  random: { title: uiMessageText('Playing at random'), chip: uiMessageText('Random'), icon: () => ICON.dice },
+  history: { title: uiMessageText('Playing from your history'), chip: uiMessageText('History'), icon: () => ICON.history },
   // The phone's "Playing from search", widened to every Browse list: a folder plays the same way.
-  browse: { title: t('Playing from Browse'), chip: t('Browse'), icon: () => ICON.search },
+  browse: { title: uiMessageText('Playing from Browse'), chip: uiMessageText('Browse'), icon: () => ICON.search },
   // A tune sent here as a link (Share with Protracktor): shown to you, not yet yours.
-  link: { title: t('Playing a tune sent to you'), chip: t('Sent'), icon: () => ICON.web },
+  link: { title: uiMessageText('Playing a tune sent to you'), chip: uiMessageText('Sent'), icon: () => ICON.web },
 };
 
 function showSessionView(kind) {
@@ -2241,22 +2247,22 @@ function showSessionView(kind) {
   const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
-    $('sessiontitle').textContent = digressing ? t('Browsing author') : title;
+    setUiText($('sessiontitle'), digressing ? uiMessageText('Browsing author') : title);
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
   $('sessionicon').hidden = kind === 'random';
   $('random-dice').hidden = kind !== 'random';
   $('randomhint').hidden = kind !== 'random';
-  $('random-leave').innerHTML = kind === 'random'
-    ? iconSvg(ICON.cloud) + t('Browse') : iconSvg(ICON.playlist) + t('Playlist');
+  $('random-leave').innerHTML = iconSvg(kind === 'random' ? ICON.cloud : ICON.playlist);
+  $('random-leave').append(makeUiText(document, uiMessageText(kind === 'random' ? 'Browse' : 'Playlist')));
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
   if (digressing) $('randomscope').textContent = away.author;
   $('randomscope').hidden = kind !== 'random' && !digressing;
   $('random-filter').hidden = kind !== 'random';
   // Selecting a playlist changes the editor; transport keeps its current source.
-  $('playlistname').textContent = kind ? (digressing ? t('Browsing') : SESSION[kind].chip) : workspace.editor.name;
+  setUiText($('playlistname'), kind ? (digressing ? uiMessageText('Browsing') : SESSION[kind].chip) : playlistCaption(workspace.editor.id, workspace.editor.name));
   setDirty(workspace.editor.dirty);
 }
 
@@ -2282,13 +2288,13 @@ async function openRandom() {
 function renderRandomHeading() {
   const r = randomView;
   if (!r) return;
-  $('sessiontitle').textContent = random === r && !manualCurrent() ? t('Playing at random') : t('Random');
-  $('randomscope').textContent = randomScopeLabel();
+  setUiText($('sessiontitle'), random === r && !manualCurrent() ? uiMessageText('Playing at random') : uiMessageText('Random'));
+  setUiText($('randomscope'), randomScopeLabel);
   const empty = !r.history.playedPicks.length;
   $('randomnote').hidden = !empty;
-  if (empty) $('randomnote').textContent = random === r && drawing ? t('Picking a tune…')
-    : r.exhausted ? t('Nothing to pick from. Index a catalogue, or widen the filter.')
-    : t('No tracks in this Random list yet.');
+  if (empty) setUiText($('randomnote'), random === r && drawing ? uiMessageText('Picking a tune…')
+    : r.exhausted ? uiMessageText('Nothing to pick from. Index a catalogue, or widen the filter.')
+    : uiMessageText('No tracks in this Random list yet.'));
 }
 
 function invalidateRandomWork(r) {
@@ -2351,7 +2357,7 @@ async function fillAhead(r = random) {
 
 function playRememberedRandomAt(at, r, tracks) {
   if (r !== rememberedRandom || r.history.playedPicks !== tracks) {
-    showNote(t('This Random list has changed. Try again.')); return;
+    showNote(uiMessageText('This Random list has changed. Try again.')); return;
   }
   if (!r.history.select(at)) return;
   away = null;
@@ -2388,7 +2394,7 @@ async function rollRandom({ intent = ++scheduleIntent, placement = 'append', aut
     return activateContext(context.withOrder(order), placement, autoPlay);
   } catch (error) {
     if (random === r && scheduleIntent === intent && error.name !== 'AbortError')
-      showNote(t('could not read it: {reason}', { reason: error.message }));
+      showNote(uiMessageText('could not read it: {reason}', { reason: error.message }));
   } finally {
     // An old session must not dismiss a newer foreground draw's busy state.
     if (random === r && (scheduleIntent === intent || !drawing)) {
@@ -2423,7 +2429,7 @@ function setDirty(value) {
 
 async function saveEdits() {
   const saved = await saveQueue({ explicit: true });
-  if (saved) status(t('Saved'));
+  if (saved) status(uiMessageText('Saved'));
   return saved;
 }
 
@@ -2440,10 +2446,10 @@ async function discardEdits() {
     if (asked !== editorAsked || workspace.editor.id !== id) return false;
     changeEditorTracks(hydratePlaylistTracks(saved?.tracks ?? []), { dirty: false });
     render();
-    status(t('Changes discarded'));
+    status(uiMessageText('Changes discarded'));
     return true;
   } catch (error) {
-    if (asked === editorAsked) showNote(t('could not read it: {reason}', { reason: error.message }));
+    if (asked === editorAsked) showNote(uiMessageText('could not read it: {reason}', { reason: error.message }));
     return false;
   }
 }
@@ -2550,8 +2556,8 @@ function removeRows(ats) {
   }
   lastRemoval = { removed, playlist: workspace.editor.id, wasCurrent, current };
   render();
-  showUndo(removed.length === 1 ? t('Removed {name}', { name: removed[0].track.name })
-    : tn(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
+  showUndo(removed.length === 1 ? uiMessageText('Removed {name}', { name: removed[0].track.name })
+    : uiPluralText(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
 }
 
 function undoRemoval() {
@@ -2617,7 +2623,7 @@ function holdToSelect(row, currentEntry) {
     onLongPress: () => { swallowRowClick = true; startSelecting(currentEntry()); },
     canSwipe: () => selected.size === 0 && !playlistReorder?.active,
     canLongPress: () => !playlistReorder?.active,
-    icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue'),
+    icon: (kind) => iconSvg(ICON[kind]), addLabel: uiMessageText('Add to queue'),
   });
 }
 
@@ -2641,10 +2647,10 @@ function updateSelectBar() {
   const browsing = !$('browse').hidden;
   const count = browsing ? browseSelection.count : selected.size;
   $('selectbar').hidden = !count || !browsing && document.querySelector('main').hidden;
-  $('selectcount').textContent = tn(count, '{n} selected', '{n} selected');
+  setUiText($('selectcount'), uiPluralText(count, '{n} selected', '{n} selected'));
   const direct = $('sel-add-current');
   direct.hidden = !browsing || workspace.editor.id === PHONE;
-  direct.querySelector('span').textContent = t('Add to {name}', { name: workspace.editor.name });
+  setUiText(direct.querySelector('span'), uiMessageText('Add to {name}', { name: workspace.editor.name }));
   // Delete only where rows can go: one of the user's own playlists, not the phone's, not a
   // session's list.
   $('sel-delete').hidden = browsing || !editorShown || workspace.editor.id === PHONE;
@@ -2674,7 +2680,7 @@ async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has
   } catch (error) {
     if (pendingAdd === snapshot) pendingAdd = null;
     if (asked === addAsked && panel === panelVisit && (!browse || owner === browseSelectionOwner())) {
-      showNote(t('Could not read playlists: {reason}', { reason: error.message }));
+      showNote(uiMessageText('Could not read playlists: {reason}', { reason: error.message }));
     }
     return;
   }
@@ -2692,8 +2698,7 @@ async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has
     li.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); li.click(); } };
     list.append(li);
   }
-  $('addtonote').textContent = tn(tracks.length, '{n} track to add.', '{n} tracks to add.')
-    + (targets.length ? '' : ' ' + t('There is no other playlist yet — make one.'));
+  setUiText($('addtonote'), addToCaption(tracks.length, targets.length > 0));
   showPanel('addto', { preserveBrowse: browse });
 }
 
@@ -2702,11 +2707,17 @@ async function openAddTo(tracks = visibleTracks().filter((entry) => selected.has
  * twice** -- the phone's `appendTracks` rule. Another playlist is written at once, as the phone
  * writes it; the one a session was started from is an edit of it and waits for Save like any other.
  */
+function addToCaption(count, haveTargets) {
+  return joinUiText(uiPluralText(count, '{n} track to add.', '{n} tracks to add.'), haveTargets ? ''
+    : joinUiText(' ', uiMessageText('There is no other playlist yet — make one.')));
+}
+
 async function addTracksTo(id, newName = null) {
   const tracks = pendingAdd, asked = addAsked, fromBrowse = addFromBrowse;
   if (!tracks?.length || addingRequest === tracks) return;
   addingRequest = tracks; setAddBusy(true);
-  const note = $('addtonote').textContent; $('addtonote').textContent = t('Adding…');
+  const haveTargets = $('addtolist').childElementCount > 0;
+  setUiText($('addtonote'), uiMessageText('Adding…'));
   try {
     if (id && id === workspace.editor.id) addToShowing(tracks);
     else {
@@ -2721,16 +2732,16 @@ async function addTracksTo(id, newName = null) {
         const next = { ...target, tracks: [...(target.tracks ?? []), ...adding] };
         if (id) await playlists.save(next); else await playlists.create(next);
         retainPlaylistTracks(tracks);
-        status(t('Added {n} to {name}', { n: adding.length, name: target.name })
-          + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
+        status(joinUiText(uiMessageText('Added {n} to {name}', { n: adding.length, name: target.name }), adding.length < tracks.length ? uiMessageText(', {n} already there', { n: tracks.length - adding.length }) : ''));
       });
     }
     if (asked === addAsked && pendingAdd === tracks) { closeAddTo(); if (!fromBrowse) clearSelection(); }
   } catch (error) {
-    if (asked === addAsked) showNote(t('Could not add tracks: {reason}', { reason: error.message }));
+    if (asked === addAsked) showNote(uiMessageText('Could not add tracks: {reason}', { reason: error.message }));
   } finally {
     if (asked === addAsked && addingRequest === tracks) {
-      addingRequest = null; setAddBusy(false); $('addtonote').textContent = note;
+      addingRequest = null; setAddBusy(false);
+      setUiText($('addtonote'), addToCaption(tracks.length, haveTargets));
     }
   }
 }
@@ -2760,8 +2771,7 @@ function addToShowing(tracks) {
     return true;
   }));
   if (adding.length) { changeEditorTracks([...target, ...adding]); render(); }
-  status(t('Added {n} to {name}', { n: adding.length, name: workspace.editor.name })
-    + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
+  status(joinUiText(uiMessageText('Added {n} to {name}', { n: adding.length, name: workspace.editor.name }), adding.length < tracks.length ? uiMessageText(', {n} already there', { n: tracks.length - adding.length }) : ''));
   return adding.length;
 }
 
@@ -2775,10 +2785,13 @@ function showingHas(url) {
 // The files are staged beside the engine by `scripts/stage-web-legal.mjs`: the licence table, the
 // texts its `web` rows name, and the privacy policy. Fetched when asked for, never before.
 
+// Read-only policy prose changes from its already fetched bilingual source.
+let refreshLegalLanguage = null;
+
 /** Says, in the sheet, that something the page should carry is not there -- never a blank sheet. */
 function legalMissing(what) {
   const p = document.createElement('p');
-  p.textContent = t("{what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.", { what });
+  setUiText(p, uiMessageText("{what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.", { what }));
   $('legalbody').replaceChildren(p);
 }
 
@@ -2798,26 +2811,28 @@ async function pointSourceAtBuild() {
  * the same table. Each website is a link with its mark and its word, as every action here is.
  */
 async function renderSources() {
-  $('legaltitle').textContent = t('Music sources');
+  refreshLegalLanguage = null;
+  setUiText($('legaltitle'), uiMessageText('Music sources'));
   $('legalback').hidden = true;
   const table = await fetch('../vendor/notices/sources.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  if (table === null) { legalMissing(t('The music sources table')); return; }
+  if (table === null) { legalMissing(uiMessageText('The music sources table')); return; }
   const body = $('legalbody');
   body.replaceChildren();
-  for (const source of parseSources(table, language() === 'pl')) {
+  const polish = new Map(parseSources(table, true).map((source) => [source.id, source.text]));
+  for (const source of parseSources(table, false)) {
     const row = document.createElement('div');
     row.className = 'source';
     const name = document.createElement('strong');
     name.textContent = source.name;
     const text = document.createElement('small');
-    text.textContent = source.text;
+    setUiText(text, () => language() === 'pl' ? polish.get(source.id) ?? source.text : source.text);
     const link = document.createElement('a');
     link.className = 'outlined';
     link.href = source.url;
     link.target = '_blank';
     link.rel = 'noopener';
     link.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z"/></svg>';
-    link.append(t('Website'));
+    link.append(makeUiText(link.ownerDocument, uiMessageText('Website')));
     row.append(name, text, link);
     body.append(row);
   }
@@ -2825,10 +2840,11 @@ async function renderSources() {
 }
 
 async function renderLicences() {
-  $('legaltitle').textContent = t('Open-source licences');
+  refreshLegalLanguage = null;
+  setUiText($('legaltitle'), uiMessageText('Open-source licences'));
   $('legalback').hidden = true;
   const table = await fetch('../vendor/notices/components.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  if (table === null) { legalMissing(t('The licence table')); return; }
+  if (table === null) { legalMissing(uiMessageText('The licence table')); return; }
   const body = $('legalbody');
   body.replaceChildren();
   for (const component of parseNotices(table, 'web')) {
@@ -2845,6 +2861,7 @@ async function renderLicences() {
 
 /** One component's licence files, as written. Back returns to the list. */
 async function renderComponent(component) {
+  refreshLegalLanguage = null;
   $('legaltitle').textContent = component.name;
   const back = $('legalback');
   back.hidden = false;
@@ -2854,34 +2871,37 @@ async function renderComponent(component) {
   for (const file of component.files) {
     const text = await fetch(`../vendor/${file}`).then((r) => (r.ok ? r.text() : null)).catch(() => null);
     const pre = document.createElement('pre');
-    pre.textContent = text ?? t('({file} is missing beside the engine)', { file: file.slice(file.lastIndexOf('/') + 1) });
+    setUiText(pre, text ?? uiMessageText('({file} is missing beside the engine)', { file: file.slice(file.lastIndexOf('/') + 1) }));
     body.append(pre);
   }
   body.scrollTop = 0;
 }
 
 async function renderPrivacy() {
-  $('legaltitle').textContent = t('Privacy policy');
+  refreshLegalLanguage = null;
+  setUiText($('legaltitle'), uiMessageText('Privacy policy'));
   $('legalback').hidden = true;
   const markdown = await fetch('../vendor/legal/privacy-policy.md').then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  if (markdown === null) { legalMissing(t('The privacy policy')); return; }
+  if (markdown === null) { legalMissing(uiMessageText('The privacy policy')); return; }
   const body = $('legalbody');
-  body.replaceChildren();
-  let list = null;
-  // The policy's own section in the language in use: it is written in both.
-  for (const block of privacyBlocks(markdown, language() === 'pl')) {
-    if (block.kind === 'bullet') {
-      if (!list) { list = document.createElement('ul'); body.append(list); }
-      const li = document.createElement('li');
-      li.textContent = block.text;
-      list.append(li);
-      continue;
+  const draw = () => {
+    const scroll = body.scrollTop;
+    body.replaceChildren();
+    let list = null;
+    for (const block of privacyBlocks(markdown, language() === 'pl')) {
+      if (block.kind === 'bullet') {
+        if (!list) { list = document.createElement('ul'); body.append(list); }
+        const li = document.createElement('li'); li.textContent = block.text; list.append(li);
+      } else {
+        list = null;
+        const el = document.createElement(block.kind === 'heading' ? 'h3' : 'p');
+        el.textContent = block.text; body.append(el);
+      }
     }
-    list = null;
-    const el = document.createElement(block.kind === 'heading' ? 'h3' : 'p');
-    el.textContent = block.text;
-    body.append(el);
-  }
+    body.scrollTop = scroll;
+  };
+  refreshLegalLanguage = draw;
+  draw();
   body.scrollTop = 0;
 }
 
@@ -2896,38 +2916,38 @@ async function renderSettings() {
   list.replaceChildren();
   const row = (label, value) => {
     const dt = document.createElement('dt');
-    dt.textContent = label;
+    setUiText(dt, label);
     const dd = document.createElement('dd');
-    dd.textContent = value;
+    setUiText(dd, value);
     list.append(dt, dd);
   };
-  row(t('Decoders in this build'), engineFingerprint || t('the engine has not started yet'));
+  row(uiMessageText('Decoders in this build'), engineFingerprint || uiMessageText('the engine has not started yet'));
   // **Storage in this browser** (W10), the phone's storage section: each download, what it holds,
   // and a way to let go of it -- nothing downloaded here is undeletable, and saying how much there
   // is without saying how to be rid of it is half an answer. Asked before, because each can be
   // fetched again but not in a moment; answered at the press, and said once (C76, C77).
   const heading = document.createElement('dt');
   heading.className = 'storagehead';
-  heading.textContent = t('Storage in this browser');
+  setUiText(heading, uiMessageText('Storage in this browser'));
   list.append(heading);
-  const INDEX_GONE = t('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched, and its tunes will not play.');
+  const INDEX_GONE = uiMessageText('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched, and its tunes will not play.');
   const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
     sets.push({
       key: source,
-      label: t('{source} index', { source: archive.sourceName(source) }),
-      held: held?.tracks ? tn(held.tracks, '{count} tune', '{count} tunes', { count: held.tracks.toLocaleString() }) : null,
-      absent: t('not downloaded — Browse offers it'),
+      label: uiMessageText('{source} index', { source: archive.sourceName(source) }),
+      held: held?.tracks ? uiPluralText(held.tracks, '{count} tune', '{count} tunes', { count: held.tracks.toLocaleString() }) : null,
+      absent: uiMessageText('not downloaded — Browse offers it'),
       consequence: INDEX_GONE,
       remove: () => archive.forgetIndex(source),
     });
   }
   const favourites = await randomCatalogue.favouritesMeta();
-  sets.push({ key: 'modland-favourites', label: t('Modland favourites'),
-    held: favourites?.listed ? tn(favourites.listed, '{count} tune', '{count} tunes', { count: favourites.listed.toLocaleString() }) : null,
-    absent: t('not downloaded — Random offers it'),
-    consequence: t('It can be downloaded again from Random. Until then the Favourites filter is unavailable.'),
+  sets.push({ key: 'modland-favourites', label: uiMessageText('Modland favourites'),
+    held: favourites?.listed ? uiPluralText(favourites.listed, '{count} tune', '{count} tunes', { count: favourites.listed.toLocaleString() }) : null,
+    absent: uiMessageText('not downloaded — Random offers it'),
+    consequence: uiMessageText('It can be downloaded again from Random. Until then the Favourites filter is unavailable.'),
     remove: async () => { await randomCatalogue.clearFavourites(); if (randomScope === 'favourites') setRandomScope('everything'); },
   });
   const lengths = await archive.songLengthsMeta();
@@ -2935,32 +2955,32 @@ async function renderSettings() {
   const songTunes = (lengths?.tunes ?? 0) + (metadata?.tunes ?? 0);
   sets.push({
     key: 'song-metadata',
-    label: t('Song metadata'),
-    held: songTunes ? tn(songTunes, '{count} tune', '{count} tunes', { count: songTunes.toLocaleString() }) : null,
-    absent: t('not downloaded — Browse offers it; until then a SID stops at the length below'),
-    consequence: t('It can be downloaded again from Browse. Until then tunes show no length, author or year unless the file itself says.'),
+    label: uiMessageText('Song metadata'),
+    held: songTunes ? uiPluralText(songTunes, '{count} tune', '{count} tunes', { count: songTunes.toLocaleString() }) : null,
+    absent: uiMessageText('not downloaded — Browse offers it; until then a SID stops at the length below'),
+    consequence: uiMessageText('It can be downloaded again from Browse. Until then tunes show no length, author or year unless the file itself says.'),
     remove: async () => { await archive.clearSongLengths(); await archive.clearSongMetadata(); },
   });
   for (const set of sets) {
     const dt = document.createElement('dt');
-    dt.textContent = set.label;
+    setUiText(dt, set.label);
     const dd = document.createElement('dd');
     if (set.held) {
-      dd.append(`${set.held} · `);
+      dd.append(makeUiText(document, joinUiText(set.held, ' · ')));
       const remove = document.createElement('button');
       remove.className = 'plain';
       remove.innerHTML = iconSvg(ICON.remove);
-      remove.append(t('Delete'));
+      remove.append(makeUiText(remove.ownerDocument, uiMessageText('Delete')));
       remove.onclick = async () => {
-        if (!confirm(`${t('Delete the {what}?', { what: set.label })}\n\n${set.consequence}`)) return;
-        dd.textContent = t('deleting…');
+        if (!confirm(`${uiMessageText('Delete the {what}?', { what: set.label })}\n\n${set.consequence}`)) return;
+        setUiText(dd, uiMessageText('deleting…'));
         deletingCatalogues.add(set.key);
         refreshRandomAvailability();
         try {
           await set.remove();
-          showNote(t('{what} deleted', { what: set.label }));
+          showNote(uiMessageText('{what} deleted', { what: set.label }));
         } catch (error) {
-          showNote(t('Could not delete {what}: {reason}', { what: set.label, reason: error.message }));
+          showNote(uiMessageText('Could not delete {what}: {reason}', { what: set.label, reason: error.message }));
         } finally {
           deletingCatalogues.delete(set.key);
           refreshRandomAvailability();
@@ -2969,22 +2989,22 @@ async function renderSettings() {
       };
       dd.append(remove);
     } else {
-      dd.textContent = set.absent;
+      setUiText(dd, set.absent);
     }
     list.append(dt, dd);
   }
 
   const { usage, quota } = await estimate();
-  row(t('Stored here'), usage
-    ? t('{used} MB of {quota} GB this browser offered', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
-    : t('nothing yet'));
+  row(uiMessageText('Stored here'), usage
+    ? uiMessageText('{used} MB of {quota} GB this browser offered', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
+    : uiMessageText('nothing yet'));
 }
 
 /** Six seconds, the length of a Material snackbar with an action. */
 function showUndo(text, action = undoRemoval) {
   const id = ++noticeId;
   undoAction = () => { if (id === noticeId) action(); };
-  $('snacktext').textContent = text;
+  setUiText($('snacktext'), text);
   $('snackundo').hidden = false;
   $('snacksend').hidden = true;
   $('snackbar').hidden = false;
@@ -3000,7 +3020,7 @@ function showUndo(text, action = undoRemoval) {
  */
 function showNote(text) {
   hideUndo();
-  $('snacktext').textContent = text;
+  setUiText($('snacktext'), text);
   $('snackundo').hidden = true;
   $('snacksend').hidden = true;
   $('snackbar').hidden = false;
@@ -3014,7 +3034,7 @@ function showNote(text) {
  */
 function showSend(text) {
   hideUndo();
-  $('snacktext').textContent = text;
+  setUiText($('snacktext'), text);
   $('snackundo').hidden = true;
   $('snacksend').hidden = false;
   $('snackbar').hidden = false;
@@ -3028,6 +3048,7 @@ function hideUndo() {
   clearTimeout(undoTimer);
   lastRemoval = null;
   $('snackbar').hidden = true;
+  setUiText($('snacktext'), '');
 }
 
 /**
@@ -3047,14 +3068,14 @@ function skipFailedPick(reason) {
   r.failures = (r.failures ?? 0) + 1;
   if (r.failures > RANDOM_FAILURES) {
     r.failures = 0;
-    status(t('Several picks in a row would not open. Stopping here.'));
+    status(uiMessageText('Several picks in a row would not open. Stopping here.'));
     return false;
   }
   const failed = currentTrack();
   removeRandomAt(index, r);
   rowState = index >= 0 ? 'selected' : null;
   render();
-  status(t('skipped {name} — {reason}', { name: failed?.name ?? t('a pick'), reason }));
+  status(uiMessageText('skipped {name} — {reason}', { name: failed?.name ?? uiMessageText('a pick'), reason }));
   $('error').textContent = '';
   nextFile();
   return true;
@@ -3067,7 +3088,7 @@ function skipFailedPick(reason) {
  */
 function removeRememberedRandomAt(at, r, tracks) {
   if (r !== rememberedRandom || tracks !== r.history.playedPicks) {
-    showNote(t('This Random list has changed. Try again.')); return;
+    showNote(uiMessageText('This Random list has changed. Try again.')); return;
   }
   removeRandomAt(at, r);
 }
@@ -3165,7 +3186,7 @@ function dropSession() {
   random = null;
   away = null;
   showSessionView(null);
-  $('playlistname').textContent = session.stash.name;
+  setUiText($('playlistname'), playlistCaption(workspace.editor.id, session.stash.name));
 }
 
 
@@ -3224,13 +3245,13 @@ function setQueue(urls, at = 0, { persist = true } = {}) {
   adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
   setDirty(wasDirty);
   showSessionView(null);
-  if (persist) rememberEditorSelection(workspace.editor.id).catch((error) => showNote(t('could not save the playlist: {reason}', { reason: error.message })));
+  if (persist) rememberEditorSelection(workspace.editor.id).catch((error) => showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message })));
   render();
   setPlaying(false);
   if (persist) remember();
   const entry = currentTrack();
-  $('title').textContent = entry?.name ?? t('Nothing playing');
-  $('sub').textContent = entry ? t('press play') : '—';
+  setUiText($('title'), entry?.name ?? uiMessageText('Nothing playing'));
+  setUiText($('sub'), entry ? uiMessageText('press play') : '—');
   nameTheTab(entry);
 }
 
@@ -3318,21 +3339,21 @@ function renderQueueSourceAction() {
   const navigable = hasSourceView(source);
   $('queue-source').hidden = !navigable;
   $('queue-source-plain').hidden = navigable;
-  $('queue-source-plain').textContent = playbackSourceLabel(source);
-  $('queue-source').setAttribute('aria-label', t('Go to source: {name}', { name: playbackSourceLabel(source) }));
+  setUiText($('queue-source-plain'), () => playbackSourceLabel(source));
+  setUiAttribute($('queue-source'), 'aria-label', () => t('Go to source: {name}', { name: playbackSourceLabel(source) }));
 }
 
 /** One History presenter is shared by a live page and a captured playback-source view. */
 function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
-  $('browsetitle').textContent = t('History');
+  setUiText($('browsetitle'), uiMessageText('History'));
   const phrase = trimQuery(historyBrowser.state.query);
-  if (!total && !rows.length) note.textContent = phrase ? t('No History entries match this phrase.')
-    : t('Nothing played yet. What the page plays is kept here, one row a tune.');
-  else note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+  if (!total && !rows.length) setUiText(note, phrase ? uiMessageText('No History entries match this phrase.')
+    : uiMessageText('Nothing played yet. What the page plays is kept here, one row a tune.'));
+  else setUiText(note, uiPluralText(total, '{n} tune, most recent first.', '{n} tunes, most recent first.'));
   if (historyPageCount(total) > 1) {
     const { first, last } = historyPageRange(historyBrowser.state.page, total);
     $('historypager').hidden = false;
-    $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() });
+    setUiText($('historyrange'), uiMessageText('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() }));
     $('history-newer').disabled = historyBrowser.state.page === 0;
     $('history-older').disabled = historyBrowser.state.page >= historyPageCount(total) - 1;
   }
@@ -3341,18 +3362,18 @@ function renderHistoryRows(list, note, rows, total, row, savedRoute = null) {
   for (const entry of rows) {
     const at = tracks.findIndex((track) => track.url === entry.url);
     if (at >= 0) trackRow(list, tracks[at], [entry.meta?.replace('Modland/', ''),
-      entry.playCount > 1 ? tn(entry.playCount, 'played {n} time', 'played {n} times') : ''].filter(Boolean).join(' · '),
+      entry.playCount > 1 ? uiPluralText(entry.playCount, 'played {n} time', 'played {n} times') : ''].filter(Boolean).reduce((text, part, at) => joinUiText(text, at ? ' · ' : '', part), ''),
       () => playFromBrowse(tracks, at, 'history', route));
     else {
       row(entry.name, entry.playCount > 1 ? `×${entry.playCount}` : '', null);
       const node = list.lastElementChild; node.dataset.url = entry.url; node.classList.add('gone');
       node.prepend(browseLeading(entry.url));
-      node.title = t("Played from the phone's copy — the page does not keep those");
+      setUiAttribute(node, 'title', uiMessageText("Played from the phone's copy — the page does not keep those"));
     }
   }
   markPlayingIn(list);
   requestHistoryPresentation();
-  if (total || phrase) row(t('Clear the history'), null, clearHistory, ICON.remove);
+  if (total || phrase) row(uiMessageText('Clear the history'), null, clearHistory, ICON.remove);
 }
 
 /** Capture route fields only; transport and live index/cache/download ownership stay separate. */
@@ -3369,11 +3390,11 @@ async function openQueueSource() {
   const request = ++sourceNavigationAsked;
   const current = () => request === sourceNavigationAsked && !$('playback-panel').hidden
     && sameSourceView(workspace.context.source, expected);
-  const unavailable = () => { if (current()) showNote(t('The playback source is no longer available.')); };
+  const unavailable = () => { if (current()) showNote(uiMessageText('The playback source is no longer available.')); };
   if (expected.kind === 'playlist') {
     let known;
     try { known = await playlists.get(expected.id); }
-    catch (error) { if (current()) showNote(t('could not read it: {reason}', { reason: error.message })); return; }
+    catch (error) { if (current()) showNote(uiMessageText('could not read it: {reason}', { reason: error.message })); return; }
     if (!current()) return;
     const ids = known ? [known.id] : expected.id === PHONE ? [PHONE] : [];
     if (sourceDestination(expected, { playlistIds: ids }) !== 'playlist') { unavailable(); return; }
@@ -3415,7 +3436,7 @@ async function openQueueSource() {
 
 function playbackSourceLabel(source) {
   switch (source.kind) {
-    case 'playlist': return source.id === workspace.editor.id ? workspace.editor.name
+    case 'playlist': return source.id === PHONE ? t('From the phone') : source.id === workspace.editor.id ? workspace.editor.name
       : source.id === sourcePlaylistId ? sourcePlaylistName : source.name;
     case 'random': return t('Random');
     case 'collection': return source.path === 'search' ? source.query || t('Search') : source.origin === 'link' ? t('Sent to you') : source.origin === 'history' ? t('History') : source.query || source.path || t('Browse');
@@ -3448,7 +3469,7 @@ async function renderPlaylists() {
     const name = document.createElement('div');
     name.className = 'pname';
     // "From the phone" is named by the page, in its language; its stored name is the English one.
-    name.textContent = playlist.id === PHONE ? t('From the phone') : playlist.name;
+    setUiText(name, playlist.id === PHONE ? uiMessageText('From the phone') : playlist.name);
     li.append(count, name);
 
     // Everything that can be done *to* a playlist, behind the same three dots a track row uses.
@@ -3457,7 +3478,7 @@ async function renderPlaylists() {
       const more = document.createElement('button');
       more.className = 'pmenu';
       more.innerHTML = iconSvg(ICON.more);
-      more.setAttribute('aria-label', t('More for {name}', { name: playlist.name }));
+      setUiAttribute(more, 'aria-label', uiMessageText('More for {name}', { name: playlistCaption(playlist.id, playlist.name) }));
       more.onclick = (event) => { event.stopPropagation(); openPlaylistMenu(playlist, more); };
       li.append(more);
     }
@@ -3467,19 +3488,19 @@ async function renderPlaylists() {
   }
 
   const { usage, quota } = await estimate();
-  $('storageline').textContent = usage
-    ? t('This browser is holding {used} MB of {quota} GB it offered.', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
-    : t('Nothing stored yet.');
+  setUiText($('storageline'), usage
+    ? uiMessageText('This browser is holding {used} MB of {quota} GB it offered.', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
+    : uiMessageText('Nothing stored yet.'));
 }
 
 /** Export is read-only; renaming and deleting remain limited to browser-owned lists. */
 function openPlaylistMenu(playlist, anchor) {
   const items = [
-    [t('Export'), () => exportPlaylist(playlist.id, playlist.id === PHONE ? t('From the phone') : playlist.name), true, ICON.save],
+    [uiMessageText('Export'), () => exportPlaylist(playlist.id, playlist.id === PHONE ? t('From the phone') : playlist.name), true, ICON.save],
   ];
   if (playlist.id !== PHONE) items.push(
-    [t('Rename'), () => renamePlaylist(playlist), true, ICON.rename],
-    [t('Delete'), () => deletePlaylist(playlist), true, ICON.remove],
+    [uiMessageText('Rename'), () => renamePlaylist(playlist), true, ICON.rename],
+    [uiMessageText('Delete'), () => deletePlaylist(playlist), true, ICON.remove],
   );
   showMenu(items, anchor);
 }
@@ -3497,9 +3518,9 @@ const playlistTransfer = new PlaylistTransfer({
 async function exportPlaylist(id, label) {
   try {
     const result = await playlistTransfer.export(id, label);
-    if (result.kind === 'empty') { showNote(t('There is nothing in this playlist.')); return; }
+    if (result.kind === 'empty') { showNote(uiMessageText('There is nothing in this playlist.')); return; }
     downloadFile(new File([result.text], result.filename, { type: 'audio/x-mpegurl;charset=utf-8' }));
-  } catch (error) { showNote(t('Could not export the playlist: {reason}', { reason: error.message })); }
+  } catch (error) { showNote(uiMessageText('Could not export the playlist: {reason}', { reason: error.message })); }
 }
 
 function readPlaylistInput(file) {
@@ -3520,17 +3541,17 @@ $('playlist-file').onchange = async () => {
   if (!file) return;
   try {
     const result = await playlistTransfer.import(await readPlaylistInput(file), file.name);
-    if (result.kind === 'unreadable') { showNote(t('Could not read the playlist file.')); return; }
-    if (result.kind === 'no-tracks') { showNote(t('The file contains no tracks.')); return; }
+    if (result.kind === 'unreadable') { showNote(uiMessageText('Could not read the playlist file.')); return; }
+    if (result.kind === 'no-tracks') { showNote(uiMessageText('The file contains no tracks.')); return; }
     retainPlaylistTracks(result.tracks);
     let refreshFailure = null;
     try { if (!$('playlists').hidden) await renderPlaylists(); }
     catch (error) { refreshFailure = error; }
     const message = result.found < result.offered
-      ? t('Imported {found} of {offered} into “{name}”; the rest are not available in this browser.', result)
-      : tn(result.found, 'Imported {n} track into “{name}”.', 'Imported {n} tracks into “{name}”.', result);
-    showNote(refreshFailure ? message + ' ' + t('Could not refresh playlists: {reason}', { reason: refreshFailure.message }) : message);
-  } catch (error) { showNote(t('Could not import the playlist: {reason}', { reason: error.message })); }
+      ? uiMessageText('Imported {found} of {offered} into “{name}”; the rest are not available in this browser.', result)
+      : uiPluralText(result.found, 'Imported {n} track into “{name}”.', 'Imported {n} tracks into “{name}”.', result);
+    showNote(refreshFailure ? joinUiText(message, ' ', uiMessageText('Could not refresh playlists: {reason}', { reason: refreshFailure.message })) : message);
+  } catch (error) { showNote(uiMessageText('Could not import the playlist: {reason}', { reason: error.message })); }
 };
 
 async function renamePlaylist(playlist) {
@@ -3545,7 +3566,7 @@ async function renamePlaylist(playlist) {
     });
     if (!renamed) return;
   } catch (error) {
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message }));
     return;
   }
   if (sourcePlaylistId === playlist.id) sourcePlaylistName = name;
@@ -3569,7 +3590,7 @@ async function deletePlaylist(playlist) {
   try { await writePlaylist(playlist.id, () => playlists.remove(playlist.id)); }
   catch (error) {
     deletedPlaylists.delete(playlist.id);
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message }));
     return;
   }
   // Its unsaved edits went with it; there is nothing left to ask about.
@@ -3591,7 +3612,7 @@ async function switchTo(id, { preservePlayback = false, requireExisting = false,
   let playlist;
   try { playlist = await playlists.get(id); }
   catch (error) {
-    if (asked === editorAsked) showNote(t('could not read it: {reason}', { reason: error.message }));
+    if (asked === editorAsked) showNote(uiMessageText('could not read it: {reason}', { reason: error.message }));
     return false;
   }
   if (asked !== editorAsked || !canActivate()) return false;
@@ -3605,7 +3626,7 @@ async function switchTo(id, { preservePlayback = false, requireExisting = false,
   refreshStashes();
   showEditor();
   try { await rememberEditorSelection(id); }
-  catch (error) { showNote(t('could not save the playlist: {reason}', { reason: error.message })); }
+  catch (error) { showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message })); }
   return asked === editorAsked;
 }
 
@@ -3640,9 +3661,9 @@ const searchBrowser = new SearchBrowser({
   run: (request, signal) => librarySearch.run(request, signal),
   changed: () => {
     if (browsePath[0] === 'search') void renderBrowse().catch((error) =>
-      showNote(t('could not search: {reason}', { reason: error.message })));
+      showNote(uiMessageText('could not search: {reason}', { reason: error.message })));
   },
-  failed: (error) => showNote(t('could not search: {reason}', { reason: error.message })),
+  failed: (error) => showNote(uiMessageText('could not search: {reason}', { reason: error.message })),
 });
 function retireSearchAvailability() {
   ++searchAvailabilityAsked; searchAvailabilityController?.abort(); searchAvailabilityController = null;
@@ -3678,9 +3699,9 @@ const historyBrowser = new HistoryBrowser({
   read: (query, page, signal) => played.read(query, page, signal),
   changed: () => {
     if (browsePath[0] === 'history') void renderBrowse().catch((error) =>
-      showNote(t('Could not read History: {reason}', { reason: error.message })));
+      showNote(uiMessageText('Could not read History: {reason}', { reason: error.message })));
   },
-  failed: (error) => showNote(t('Could not read History: {reason}', { reason: error.message })),
+  failed: (error) => showNote(uiMessageText('Could not read History: {reason}', { reason: error.message })),
 });
 $('historysearch').oninput = () => {
   if (browsePath[0] !== 'history') return;
@@ -3700,7 +3721,7 @@ const recentSearches = new RecentSearchHistory({
 $('browsesubmit').innerHTML = iconSvg(ICON.search);
 searchSuggestions = new SearchSuggestions({
   root: $('browsequery'), input: $('browsesearch'), submit: $('browsesubmit'), list: $('search-suggestions'),
-  suggestions: (typed) => recentSearches.suggestions(typed),
+  suggestions: (typed) => recentSearches.suggestions(typed), inputLabel: searchInputLabel,
   onInput: () => {
     clearTimeout(searchTimer); ++searchAsked;
     submittedSearchQuery = null; sourceBrowseRoute = null;
@@ -3709,20 +3730,24 @@ searchSuggestions = new SearchSuggestions({
   onSubmit: submitSearch,
   onFocus: () => recentSearches.ready.then(() => {
     if (recentSearches.readError && !$('browsequery').hidden && document.activeElement === $('browsesearch')) {
-      showNote(t('could not read recent searches: {reason}', { reason: recentSearches.readError.message }));
+      showNote(uiMessageText('could not read recent searches: {reason}', { reason: recentSearches.readError.message }));
     }
   }),
 });
 
 function showSearchQuery(visible) { searchSuggestions.setVisible(visible); }
 
+function searchInputLabel() {
+  return uiMessageText('Search: {scope}', { scope: searchScopeLabel(searchBrowser.state.scope, archive.sourceName, archive.sources()) });
+}
+
 function submitSearch(query) {
-  recentSearches.record(query).catch((error) => showNote(t('could not save recent searches: {reason}', { reason: error.message })));
+  recentSearches.record(query).catch((error) => showNote(uiMessageText('could not save recent searches: {reason}', { reason: error.message })));
   const task = runSearch(query);
   const asked = searchAsked;
   return task.catch((error) => {
     if (asked === searchAsked && browsePath[0] === 'search') {
-      $('browsenote').textContent = t('could not search: {reason}', { reason: error.message });
+      setUiText($('browsenote'), uiMessageText('could not search: {reason}', { reason: error.message }));
     }
   });
 }
@@ -3775,7 +3800,7 @@ async function renderBrowse(resolved = null) {
   if (digressing) {
     $('browsedigression').innerHTML = iconSvg(ICON.detour)
       + '<div class="text"><div class="title"></div><div class="meta"></div></div>';
-    $('browsedigression').querySelector('.title').textContent = t('Browsing author');
+    setUiText($('browsedigression').querySelector('.title'), uiMessageText('Browsing author'));
     $('browsedigression').querySelector('.meta').textContent = away.author;
   }
   $('browseback').hidden = browsePath.length === 0;
@@ -3789,18 +3814,18 @@ async function renderBrowse(resolved = null) {
   $('search-scopes').hidden = digressing || browsePath[0] !== 'search';
   if (browsePath[0] === 'search') {
     if ($('browsesearch').value !== searchBrowser.state.query) $('browsesearch').value = searchBrowser.state.query;
-    const label = t('Search: {scope}', { scope: searchScopeLabel(searchBrowser.state.scope, archive.sourceName, archive.sources()) });
-    $('browsesearch').setAttribute('aria-label', label); $('browsesearch').placeholder = label; renderSearchScopes();
+    setUiAttribute($('browsesearch'), 'aria-label', searchInputLabel);
+    setUiAttribute($('browsesearch'), 'placeholder', searchInputLabel); renderSearchScopes();
   }
   $('browseclose').hidden = digressing;
   $('historypager').hidden = true;
   $('historyquery').hidden = browsePath[0] !== 'history';
   if (browsePath[0] === 'history') {
-    $('browsetitle').textContent = t('History');
+    setUiText($('browsetitle'), uiMessageText('History'));
     const input = $('historysearch');
     if (input.value !== historyBrowser.state.query) input.value = historyBrowser.state.query;
-    input.setAttribute('aria-label', t('Search History'));
-    input.placeholder = t('Search History');
+    setUiAttribute(input, 'aria-label', uiMessageText('Search History'));
+    setUiAttribute(input, 'placeholder', uiMessageText('Search History'));
     list.setAttribute('aria-busy', String(historyBrowser.state.loading));
   } else list.removeAttribute('aria-busy');
 
@@ -3814,7 +3839,7 @@ async function renderBrowse(resolved = null) {
     li.dataset.browseKey = `folder:${identity}`;
     const label = document.createElement('div');
     label.className = 'bname';
-    label.textContent = name;
+    setUiText(label, name);
     const number = document.createElement('div');
     number.className = 'bcount';
     number.textContent = count == null ? '' : count.toLocaleString();
@@ -3846,10 +3871,10 @@ async function renderBrowse(resolved = null) {
     text.className = 'btext';
     const label = document.createElement('div');
     label.className = 'bname';
-    label.textContent = name;
+    setUiText(label, name);
     const meta = document.createElement('div');
     meta.className = 'bmeta';
-    meta.textContent = detail;
+    setUiText(meta, detail);
     text.append(label, meta);
     li.append(text);
     li.insertAdjacentHTML('afterbegin', iconSvg(icon));
@@ -3862,7 +3887,8 @@ async function renderBrowse(resolved = null) {
     if (browsePath[0] === 'search') renderSearchRows(list, note, route);
     else if (browsePath[0] === 'history') renderHistoryRows(list, note, route.historyRows ?? route.results.map((track) => ({ ...track, replayable: true })), route.historyTotal, row, route);
     else {
-      $('browsetitle').textContent = browsePath[0] === 'search' ? t('Search') : route.title;
+      setUiText($('browsetitle'), browsePath.length >= 3
+        ? joinUiText(browsePath[1], ' / ', browsePath[2] || uiMessageText('(no author)')) : route.title);
       note.textContent = route.note;
       route.results.forEach((track, at) => trackRow(list, track, track.meta ?? sourceOf(track.url),
         () => playFromBrowse(route.results, at, 'browse', route), { folder: browsePath[0] === 'search' }));
@@ -3876,15 +3902,15 @@ async function renderBrowse(resolved = null) {
     // places -- the dice and the record of what played -- then search. No local folders: a browser
     // cannot list a phone's storage, and the page's ways in for those are the pairing code and
     // pasted links.
-    $('browsetitle').textContent = t('Browse');
-    domainRow(t('Online catalogues'), t('Browse the archives — indexed once, then browsable offline'), async () => {
+    setUiText($('browsetitle'), uiMessageText('Browse'));
+    domainRow(uiMessageText('Online catalogues'), uiMessageText('Browse the archives — indexed once, then browsable offline'), async () => {
       browsePath = ['catalogues'];
       await renderBrowse();
     }, ICON.cloud, 'catalogues');
-    domainRow(t('Saved places'), t('Author and game folders to return to later.'), openSavedPlaces, ICON.bookmarkFilled, 'saved');
-    domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice, 'random');
-    domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history, 'history');
-    domainRow(t('Search'), t('Across the catalogues this browser holds'), async () => {
+    domainRow(uiMessageText('Saved places'), uiMessageText('Author and game folders to return to later.'), openSavedPlaces, ICON.bookmarkFilled, 'saved');
+    domainRow(uiMessageText('Random'), uiMessageText('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice, 'random');
+    domainRow(uiMessageText('History'), uiMessageText('Tunes you have played, most recent first'), openHistory, ICON.history, 'history');
+    domainRow(uiMessageText('Search'), uiMessageText('Across the catalogues this browser holds'), async () => {
       browsePath = ['search'];
       await renderBrowse();
       $('browsesearch').focus();
@@ -3893,7 +3919,7 @@ async function renderBrowse(resolved = null) {
   }
 
   if (browsePath[0] === 'saved') {
-    $('browsetitle').textContent = t('Saved places');
+    setUiText($('browsetitle'), uiMessageText('Saved places'));
     renderSavedPlaces();
     return;
   }
@@ -3912,11 +3938,11 @@ async function renderBrowse(resolved = null) {
   if (browsePath[0] === 'history') {
     if (!historyBrowser.active) { await historyBrowser.open(); return; }
     const state = historyBrowser.state;
-    if (state.loading) { note.textContent = t('Loading History…'); return; }
+    if (state.loading) { setUiText(note, uiMessageText('Loading History…')); return; }
     if (state.failed) {
-      note.textContent = t('Could not load History. Please try again.');
-      row(t('Retry'), null, () => historyBrowser.setQuery(state.query), ICON.refresh);
-      if (trimQuery(state.query) || state.total) row(t('Clear the history'), null, clearHistory, ICON.remove);
+      setUiText(note, uiMessageText('Could not load History. Please try again.'));
+      row(uiMessageText('Retry'), null, () => historyBrowser.setQuery(state.query), ICON.refresh);
+      if (trimQuery(state.query) || state.total) row(uiMessageText('Clear the history'), null, clearHistory, ICON.remove);
       return;
     }
     renderHistoryRows(list, note, state.rows, state.total, row);
@@ -3941,7 +3967,7 @@ async function renderBrowse(resolved = null) {
     const authors = await archive.authors(format, source);
     if (visit !== searchAsked) return;
     for (const { name, count } of authors) {
-      row(name || t('(no author)'), count, async () => {
+      row(name || uiMessageText('(no author)'), count, async () => {
         browsePath = [source, format, name];
         await renderBrowse();
       }, null, name);
@@ -3950,7 +3976,7 @@ async function renderBrowse(resolved = null) {
   }
 
   const [, format, author] = browsePath;
-  $('browsetitle').textContent = `${format} / ${author || t('(no author)')}`;
+  setUiText($('browsetitle'), joinUiText(format, " / ", author || uiMessageText('(no author)')));
   const tracks = resolved?.key && savedPlaceId(resolved.key) === savedPlaceId(key)
     ? resolved.tracks : await archive.tracksIn(format, author, source);
   if (visit !== searchAsked) return;
@@ -4000,10 +4026,10 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
     const there = workspace.editor.id !== PHONE && showingHas(track.url);
     add.disabled = there;
     add.innerHTML = iconSvg(there ? ICON.check : ICON.playlistAdd);
-    add.append(there ? t('Added') : t('Add'));
+    add.append(makeUiText(add.ownerDocument, there ? uiMessageText('Added') : uiMessageText('Add')));
     const into = workspace.editor.name;
-    add.title = there ? t('Already in {name}', { name: into })
-      : workspace.editor.id === PHONE ? t('Add to one of your playlists') : t('Add to {name}', { name: into });
+    setUiAttribute(add, 'title', there ? uiMessageText('Already in {name}', { name: into })
+      : workspace.editor.id === PHONE ? uiMessageText('Add to one of your playlists') : uiMessageText('Add to {name}', { name: into }));
   };
   paintAdd();
   li.repaintAdd = paintAdd;
@@ -4016,7 +4042,7 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   const more = document.createElement('button');
   more.className = 'bmore';
   more.innerHTML = iconSvg(ICON.more);
-  more.setAttribute('aria-label', t('More for {name}', { name: track.name }));
+  setUiAttribute(more, 'aria-label', uiMessageText('More for {name}', { name: track.name }));
   more.onclick = (event) => {
     event.stopPropagation();
     openBrowseMenu(track, more, folder, shown, owner);
@@ -4025,9 +4051,9 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
     const display = shown();
     if (name.textContent !== display.name) name.textContent = display.name;
     const source = !historyOrigin && learnedTitles.has(track.url) ? displaySourceLine(display) : meta ?? '';
-    if (where.textContent !== source) where.textContent = source;
-    where.hidden = !source;
-    more.setAttribute('aria-label', t('More for {name}', { name: display.name }));
+    setUiText(where, source);
+    where.hidden = !String(source);
+    setUiAttribute(more, 'aria-label', uiMessageText('More for {name}', { name: display.name }));
   };
   li.repaintTitle();
   li.append(browseLeading(track.url), text, add, more);
@@ -4052,7 +4078,7 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
     onLongPress: () => browseSelection.start(owner, track.url),
     canSwipe: () => !browseSelection.active,
     canLongPress: () => browseSelection.accepts(owner, track.url),
-    icon: (kind) => iconSvg(ICON[kind]), addLabel: t('Add to queue') });
+    icon: (kind) => iconSvg(ICON[kind]), addLabel: uiMessageText('Add to queue') });
   li._selectionRow = { owner, track, node: li, add, more, shown, text, dispose };
 }
 
@@ -4060,14 +4086,14 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
 function openBrowseMenu(track, anchor, folder, shown = () => displayTrack(track), owner = browseSelectionOwner()) {
   const historyOrigin = browsePath[0] === 'history';
   const items = [
-    [t('Select'), () => browseSelection.start(owner, track.url), browseSelection.accepts(owner, track.url), ICON.check],
-    [t('Add to another playlist'), () => openAddTo([plain(shown())], { browse: true }), true, ICON.playlistAdd],
-    [t('Add to queue'), () => enqueueTrack(shown(), historyOrigin), true, ICON.playlistAdd],
-    [t('Information'), () => informAbout(shown()), true, ICON.info],
+    [uiMessageText('Select'), () => browseSelection.start(owner, track.url), browseSelection.accepts(owner, track.url), ICON.check],
+    [uiMessageText('Add to another playlist'), () => openAddTo([plain(shown())], { browse: true }), true, ICON.playlistAdd],
+    [uiMessageText('Add to queue'), () => enqueueTrack(shown(), historyOrigin), true, ICON.playlistAdd],
+    [uiMessageText('Information'), () => informAbout(shown()), true, ICON.info],
   ];
   // Where the tune lives, and what else is there. Pointless from inside that very folder.
   if (folder && authorFolderOf(track)) {
-    items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
+    items.push([uiMessageText('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
   items.push(shareEntry(shown, anchor, () => openBrowseMenu(track, anchor, folder, shown, owner)));
   showMenu(items, anchor);
@@ -4115,7 +4141,7 @@ async function staleSentence(held) {
   const moved = held.total === undefined
     || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
   return partial && moved
-    ? t('This index was built for a different set of formats than this page now plays, and was built before indexes kept everything. Downloading it again (5.76 MB) is the last time that will be needed: what it stores then no longer depends on which formats this build can open.')
+    ? uiMessageText('This index was built for a different set of formats than this page now plays, and was built before indexes kept everything. Downloading it again (5.76 MB) is the last time that will be needed: what it stores then no longer depends on which formats this build can open.')
     : '';
 }
 
@@ -4128,15 +4154,15 @@ async function staleSentence(held) {
 function holding({ tracks, total, complete } = {}) {
   if (!total || !tracks) return '';
   const rest = total - tracks;
-  if (rest <= 0) return t("This browser holds all {total} of Modland's tunes.", { total: total.toLocaleString() });
+  if (rest <= 0) return uiMessageText("This browser holds all {total} of Modland's tunes.", { total: total.toLocaleString() });
   // **"Holds" and "offers" became different numbers** at `docs/ROADMAP_FORMATS.md` step 0: the
   // index keeps the whole archive and the page offers what it can open. Said that way round
   // because it is the useful half — a format arriving later needs no download, and the sentence
   // should not imply one.
   const numbers = { total: total.toLocaleString(), tracks: tracks.toLocaleString(), rest: rest.toLocaleString() };
   return complete
-    ? t("This browser holds all {total} of Modland's tunes and can play {tracks} of them. The other {rest} are in formats it cannot open yet — they are already here if it learns one.", numbers)
-    : t("This browser holds {tracks} of Modland's {total} tunes. The other {rest} are in formats it cannot open.", numbers);
+    ? uiMessageText("This browser holds all {total} of Modland's tunes and can play {tracks} of them. The other {rest} are in formats it cannot open yet — they are already here if it learns one.", numbers)
+    : uiMessageText("This browser holds {tracks} of Modland's {total} tunes. The other {rest} are in formats it cannot open.", numbers);
 }
 
 /*
@@ -4167,7 +4193,7 @@ async function downloadIndex() {
     await downloadEnded('modland');
   } catch (e) {
     await downloadEnded('modland');
-    note.textContent = t('the index could not be downloaded: {reason}', { reason: e.message });
+    setUiText(note, uiMessageText('the index could not be downloaded: {reason}', { reason: e.message }));
   }
 }
 
@@ -4188,7 +4214,7 @@ async function downloadAsmaIndex() {
     await downloadEnded('asma');
   } catch (e) {
     await downloadEnded('asma');
-    note.textContent = t('the ASMA list could not be downloaded: {reason}', { reason: e.message });
+    setUiText(note, uiMessageText('the ASMA list could not be downloaded: {reason}', { reason: e.message }));
   }
 }
 
@@ -4212,7 +4238,7 @@ async function downloadDatabase(what, run) {
     await run({});
     return true;
   } catch (e) {
-    note.textContent = t('the {what} could not be downloaded: {reason}', { what: what.toLowerCase(), reason: e.message });
+    setUiText(note, uiMessageText('the {what} could not be downloaded: {reason}', { what: uiMessage(() => String(what).toLowerCase()), reason: e.message }));
     return false;
   }
 }
@@ -4225,8 +4251,8 @@ async function downloadDatabase(what, run) {
  */
 async function downloadSongMetadata() {
   await downloadStarted(SONG_METADATA);
-  await downloadDatabase(t('SID song lengths'), archive.downloadSongLengths);
-  await downloadDatabase(t('Song metadata'), archive.downloadSongMetadata);
+  await downloadDatabase(uiMessageText('SID song lengths'), archive.downloadSongLengths);
+  await downloadDatabase(uiMessageText('Song metadata'), archive.downloadSongMetadata);
   await downloadEnded(SONG_METADATA);
 }
 
@@ -4271,14 +4297,14 @@ function downloadButton(key, held, label, onclick) {
     // moment a download started. The word is for a screen reader now.
     busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
     busy.setAttribute('role', 'status');
-    busy.setAttribute('aria-label', t('indexing…'));
+    setUiAttribute(busy, 'aria-label', uiMessageText('indexing…'));
     return busy;
   }
   const button = document.createElement('button');
   button.className = 'bdl';
   button.innerHTML = iconSvg(held ? ICON.refresh : ICON.download);
-  button.setAttribute('aria-label', label);
-  button.title = label;
+  setUiAttribute(button, 'aria-label', label);
+  setUiAttribute(button, 'title', label);
   button.onclick = (event) => { event.stopPropagation(); onclick(); };
   return button;
 }
@@ -4292,19 +4318,19 @@ function heldRow(list, { name, detail, warning = '', held, key, label, ondownloa
   text.className = 'btext';
   const title = document.createElement('div');
   title.className = 'bname';
-  title.textContent = name;
+  setUiText(title, name);
   text.append(title);
   // **Nothing drawn before it is known** (the phone's C74): a detail of null is "not read yet".
   if (detail != null) {
     const meta = document.createElement('div');
     meta.className = 'bmeta';
-    meta.textContent = detail;
+    setUiText(meta, detail);
     text.append(meta);
   }
   if (warning) {
     const warn = document.createElement('div');
     warn.className = 'bmeta bwarn';
-    warn.textContent = warning;
+    setUiText(warn, warning);
     text.append(warn);
   }
   li.append(heldMark(held), text, downloadButton(key, held, label, ondownload));
@@ -4321,7 +4347,7 @@ function heldRow(list, { name, detail, warning = '', held, key, label, ondownloa
 }
 
 async function renderCatalogues(list, note, canRender = () => true) {
-  $('browsetitle').textContent = t('Online catalogues');
+  setUiText($('browsetitle'), uiMessageText('Online catalogues'));
   // Everything is read first, then drawn at once: no row appears and then changes its mind.
   const held = {};
   for (const source of archive.sources()) held[source] = await archive.meta(source);
@@ -4335,13 +4361,13 @@ async function renderCatalogues(list, note, canRender = () => true) {
 
   const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
   const about = {
-    modland: t('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
-    asma: t('ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.'),
+    modland: uiMessageText('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
+    asma: uiMessageText('ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.'),
   };
-  const said = [
+  const said = joinUiText(...[
     held.modland?.tracks ? holding(held.modland) : about.modland,
     held.asma?.tracks ? '' : about.asma,
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).flatMap((text, index) => index ? [' ', text] : [text]));
 
   for (const source of archive.sources()) {
     const here = held[source];
@@ -4349,12 +4375,12 @@ async function renderCatalogues(list, note, canRender = () => true) {
     heldRow(rows, {
       name,
       detail: here?.tracks
-        ? tn(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
-        : t('Not indexed yet — tap the arrow to download its index ({size})', { size: sizes[source] ?? t('a download') }),
+        ? uiPluralText(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
+        : uiMessageText('Not indexed yet — tap the arrow to download its index ({size})', { size: sizes[source] ?? uiMessageText('a download') }),
       warning: source === 'modland' ? stale : '',
       held: !!here?.tracks,
       key: source,
-      label: here?.tracks ? t('Update the index for {name}', { name }) : t('Download the index for {name}', { name }),
+      label: here?.tracks ? uiMessageText('Update the index for {name}', { name }) : uiMessageText('Download the index for {name}', { name }),
       ondownload: source === 'asma' ? downloadAsmaIndex : downloadIndex,
       onopen: here?.tracks ? async () => { browsePath = [source]; await renderBrowse(); } : null,
     });
@@ -4365,18 +4391,18 @@ async function renderCatalogues(list, note, canRender = () => true) {
   // reach a browser (`docs/PLAN_WEB_PARITY.md`).
   const complete = !!(lengths?.tunes && metadata?.tunes);
   const group = heldRow(rows, {
-    name: t('Song metadata'),
+    name: uiMessageText('Song metadata'),
     detail: complete
-      ? tn(lengths.tunes + metadata.tunes, '{count} tune', '{count} tunes', { count: (lengths.tunes + metadata.tunes).toLocaleString() })
-      : t('Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)'),
+      ? uiPluralText(lengths.tunes + metadata.tunes, '{count} tune', '{count} tunes', { count: (lengths.tunes + metadata.tunes).toLocaleString() })
+      : uiMessageText('Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)'),
     held: complete,
     key: SONG_METADATA,
-    label: complete ? t('Update the song metadata') : t('Download the song metadata'),
+    label: complete ? uiMessageText('Update the song metadata') : uiMessageText('Download the song metadata'),
     ondownload: downloadSongMetadata,
   });
   group.classList.add('groupstart');
   // A note that says the same thing is left alone rather than rewritten.
-  if (note.textContent !== said) note.textContent = said;
+  setUiText(note, said);
   list.replaceChildren(rows);
 }
 
@@ -4388,14 +4414,14 @@ async function runSearch(query) {
 }
 
 function renderSearchRows(list, note, savedRoute = null) {
-  $('browsetitle').textContent = t('Search');
+  setUiText($('browsetitle'), uiMessageText('Search'));
   const state = searchBrowser.state;
   list.setAttribute('aria-busy', String(state.loading));
   if (!state.result || state.loading || state.failed) { list.replaceChildren(); renderedSearchResult = null; }
-  if (state.loading) { note.textContent = t('searching…'); return; }
-  if (state.failed) { note.textContent = t('could not search: {reason}', { reason: state.failed.message }); return; }
+  if (state.loading) { setUiText(note, uiMessageText('searching…')); return; }
+  if (state.failed) { setUiText(note, uiMessageText('could not search: {reason}', { reason: state.failed.message })); return; }
   const result = state.result;
-  if (!result) { note.textContent = t('Press Search or Enter to search.'); return; }
+  if (!result) { setUiText(note, uiMessageText('Press Search or Enter to search.')); return; }
   if (renderedSearchResult !== result) {
     list.replaceChildren();
     const tracks = result.tracks.filter((track) => !track.local);
@@ -4409,7 +4435,7 @@ function renderSearchRows(list, note, savedRoute = null) {
         const row = document.createElement('li'); row.className = 'gone'; row.dataset.url = track.url;
         const title = document.createElement('div'); title.className = 'bname'; title.textContent = track.name;
         const reason = document.createElement('div'); reason.className = 'bmeta';
-        reason.textContent = t("Played from the phone's copy — the page does not keep those");
+        setUiText(reason, uiMessageText("Played from the phone's copy — the page does not keep those"));
         row.append(title, reason); list.append(row);
       }
     }
@@ -4418,14 +4444,15 @@ function renderSearchRows(list, note, savedRoute = null) {
   for (const row of list.children) { row.repaintAdd?.(); row.repaintTitle?.(); }
   markPlayingIn(list); requestHistoryPresentation();
   let description = result.fallbackNote ?? (result.tracks.length
-    ? tn(result.tracks.length, '{n} matching track.', '{n} matching tracks.') : t('No tracks match this search.'));
-  const sources = [...(searchesPlaylists(result.scope) ? [t('Saved playlists')] : []), ...result.held.map(({ source }) => archive.sourceName(source))];
-  if (sources.length) description += ' ' + t('Searched: {sources}.', { sources: sources.join(', ') });
-  if (result.catalogueMatches) description += ' ' + t('{n} catalogue entries match; showing up to 2000.', { n: result.catalogueMatches.toLocaleString() });
-  if (result.playlistCapped) description += ' ' + t('Showing up to 2000 saved tracks. Narrow the search for more.');
-  if (!result.held.length && state.scope.kind === 'online') description += ' ' + t('No catalogue index is held. Download one in Online catalogues.');
-  if (searchBrowser.staleAnswer) description += ' ' + t('Filters changed. Press Search to update the results.');
-  if (note.textContent !== description) note.textContent = description;
+    ? uiPluralText(result.tracks.length, '{n} matching track.', '{n} matching tracks.') : uiMessageText('No tracks match this search.'));
+  const sources = [...(searchesPlaylists(result.scope) ? [uiMessageText('Saved playlists')] : []), ...result.held.map(({ source }) => archive.sourceName(source))];
+  if (sources.length) description = joinUiText(description, ' ', uiMessageText('Searched: {sources}.', {
+    sources: joinUiText(...sources.flatMap((value, index) => index ? [', ', value] : [value])) }));
+  if (result.catalogueMatches) description = joinUiText(description, ' ', uiMessageText('{n} catalogue entries match; showing up to 2000.', { n: result.catalogueMatches.toLocaleString() }));
+  if (result.playlistCapped) description = joinUiText(description, ' ', uiMessageText('Showing up to 2000 saved tracks. Narrow the search for more.'));
+  if (!result.held.length && state.scope.kind === 'online') description = joinUiText(description, ' ', uiMessageText('No catalogue index is held. Download one in Online catalogues.'));
+  if (searchBrowser.staleAnswer) description = joinUiText(description, ' ', uiMessageText('Filters changed. Press Search to update the results.'));
+  setUiText(note, description);
 }
 
 $('tab-browse').onclick = async () => {
@@ -4497,19 +4524,19 @@ async function newPlaylist() {
   const id = `p${Date.now().toString(36)}`;
   try { await playlists.save({ id, name, tracks: [], index: 0 }); }
   catch (error) {
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message }));
     return false;
   }
   if (asked !== editorAsked) return false;
   await switchTo(id);
-  status(t('{name} — empty. Browse for something to put in it.', { name }));
+  status(uiMessageText('{name} — empty. Browse for something to put in it.', { name }));
   return true;
 }
 
 $('newlist').onclick = async () => { if (await newPlaylist()) renderPlaylists(); };
 
 $('saveas').onclick = async () => {
-  if (!visibleTracks().length) { status(t('there is nothing in the queue to save')); return; }
+  if (!visibleTracks().length) { status(uiMessageText('there is nothing in the queue to save')); return; }
   if (!(await settleUnsaved())) return;
   const name = prompt(t('Call it what?'), t('My playlist'));
   if (!name) return;
@@ -4520,14 +4547,14 @@ $('saveas').onclick = async () => {
   const id = `p${Date.now().toString(36)}`;
   try { await playlists.save({ id, name, tracks, index: at }); }
   catch (error) {
-    showNote(t('could not save the playlist: {reason}', { reason: error.message }));
+    showNote(uiMessageText('could not save the playlist: {reason}', { reason: error.message }));
     return;
   }
   retainPlaylistTracks(runtimeTracks);
   if (asked !== editorAsked) return;
   await switchTo(id);
   renderPlaylists();
-  status(t('Saved as {name}', { name }));
+  status(uiMessageText('Saved as {name}', { name }));
 };
 
 $('nowcard').onclick = () => {
@@ -4583,7 +4610,7 @@ $('load').onclick = () => {
   // thrown away, silently, and until then the screen would show a queue the phone does not have.
   // The same holds for every function that writes into the showing list.
   if (workspace.editor.id === PHONE) {
-    $('pastenote').textContent = t('This would replace what the phone sent. Switch to one of your own playlists first, or make an empty one — the name at the top left opens them.');
+    setUiText($('pastenote'), uiMessageText('This would replace what the phone sent. Switch to one of your own playlists first, or make an empty one — the name at the top left opens them.'));
     return;
   }
   $('pastenote').textContent = '';
@@ -4602,7 +4629,7 @@ $('playpause').onclick = async () => {
     drawing = false;
     stopForLeaving();
     setPlaying(false);
-    status(t('Stopped loading.'));
+    status(uiMessageText('Stopped loading.'));
     return;
   }
   if (workspace.context.source.kind === 'none' && schedule.consumed && schedule.pending.length) { nextFile(); return; }
@@ -4629,8 +4656,8 @@ $('playpause').onclick = async () => {
   if (loading) {
     stopForLeaving();
     setPlaying(false);
-    $('sub').textContent = t('stopped');
-    status(t('Stopped loading.'));
+    setUiText($('sub'), uiMessageText('stopped'));
+    status(uiMessageText('Stopped loading.'));
     return;
   }
   await start();
@@ -4657,7 +4684,7 @@ const hasPreviousSubsong = () => currentSubsong > 0;
 
 function goToSubsong(index) {
   node?.port.postMessage({ type: 'subsong', index });
-  status(t('Tune {n} of {count}', { n: index + 1, count: subsongCount }));
+  status(uiMessageText('Tune {n} of {count}', { n: index + 1, count: subsongCount }));
 }
 
 /** The next file, past whatever is left inside this one. What a long press means. */
@@ -4766,14 +4793,10 @@ holdToSkipFile($('prev'), previousFile);
 function showFallback() {
   const minutes = Math.round(fallbackSeconds / 60);
   $('fallback').value = String(minutes);
-  $('fallbackvalue').textContent = tn(minutes, '{n} minute', '{n} minutes');
+  setUiText($('fallbackvalue'), uiPluralText(minutes, '{n} minute', '{n} minutes'));
 }
 /**
- * Settings → Language and Theme (W6, W7), the app's two choices. **A new language reloads the page**:
- * every sentence already on screen was written in the old one, and redrawing them all in place is a
- * second way to render the page that nothing else would exercise. The queue comes back from
- * storage; what was playing stops, and the setting says so. **A theme needs no reload** -- the
- * colours follow `data-theme` (see `index.html`).
+ * Language updates owned UI messages in place. Theme colours follow data-theme independently.
  */
 function showChoices() {
   for (const input of document.querySelectorAll('input[name="language"]')) input.checked = input.value === languageChoice;
@@ -4783,10 +4806,24 @@ function showChoices() {
 }
 for (const input of document.querySelectorAll('input[name="language"]')) {
   input.onchange = () => {
-    try { localStorage.setItem('protracktor.language', input.value); } catch { /* private window */ }
-    location.reload();
+    const choice = LANGUAGE_CHOICES.includes(input.value) ? input.value : 'system';
+    if (choice === languageChoice) return;
+    languageChoice = choice;
+    let failure = null;
+    try { localStorage.setItem('protracktor.language', choice); } catch (error) { failure = error; }
+    refreshLanguage();
+    for (const radio of document.querySelectorAll('input[name="language"]')) radio.checked = radio.value === choice;
+    if (failure) showNote(uiMessageText('Could not save language choice: {reason}', { reason: failure.message }));
   };
 }
+function refreshLanguage() {
+  const resolved = resolveLanguage(languageChoice, navigator.languages?.length ? navigator.languages : [navigator.language]);
+  if (resolved === language()) return;
+  useLanguage(resolved);
+  translateStatic(document.body);
+  if (!$('legal').hidden) refreshLegalLanguage?.();
+}
+window.addEventListener('languagechange', () => { if (languageChoice === 'system') refreshLanguage(); });
 for (const input of document.querySelectorAll('input[name="theme"]')) {
   input.onchange = () => {
     try { localStorage.setItem('protracktor.theme', input.value); } catch { /* private window */ }
@@ -4807,21 +4844,25 @@ $('fallback').oninput = () => {
 };
 showFallback();
 
+function repeatCaption(mode) {
+  return mode === 'one' ? uiMessageText('Repeat one') : mode === 'all' ? uiMessageText('Repeat all') : uiMessageText('Repeat off');
+}
+
 function renderPlaybackModes() {
   $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
   $('settings-allsubsongs').checked = playAllSubsongs;
   $('shuffle').classList.toggle('on', shuffle);
   $('shuffle').setAttribute('aria-pressed', String(shuffle));
-  $('shuffle').title = shuffle ? t('Shuffle on') : t('Shuffle off');
+  setUiAttribute($('shuffle'), 'title', shuffle ? uiMessageText('Shuffle on') : uiMessageText('Shuffle off'));
   $('repeat').classList.toggle('on', repeat !== 'off');
   $('repeat').setAttribute('aria-pressed', String(repeat !== 'off'));
   $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
-  $('repeat').title = repeat === 'one' ? t('Repeat one') : repeat === 'all' ? t('Repeat all') : t('Repeat off');
+  setUiAttribute($('repeat'), 'title', repeatCaption(repeat));
 }
 
 function savePlaybackPreference(name, value) {
   const failure = playbackPreferences.write(name, value);
-  if (failure) showNote(t('Could not save playback settings: {reason}', { reason: failure.message }));
+  if (failure) showNote(uiMessageText('Could not save playback settings: {reason}', { reason: failure.message }));
 }
 
 function setPlayAllSubsongs(on) {
@@ -4829,7 +4870,7 @@ function setPlayAllSubsongs(on) {
   playAllSubsongs = on;
   savePlaybackPreference('playAllSubsongs', on);
   setPlaying(playing);
-  status(playAllSubsongs ? t('Next walks this file first') : t('Next moves to the next file'));
+  status(playAllSubsongs ? uiMessageText('Next walks this file first') : uiMessageText('Next moves to the next file'));
 }
 $('allsubsongs').onclick = () => setPlayAllSubsongs(!playAllSubsongs);
 $('settings-allsubsongs').onchange = () => setPlayAllSubsongs($('settings-allsubsongs').checked);
@@ -4842,7 +4883,7 @@ $('shuffle').onclick = () => {
   adoptPlan(new PlaybackPlan(context, schedule));
   savePlaybackPreference('shuffle', shuffle);
   setPlaying(playing);
-  status(shuffle ? t('Shuffle on') : t('Shuffle off'));
+  status(shuffle ? uiMessageText('Shuffle on') : uiMessageText('Shuffle off'));
 };
 
 $('repeat').onclick = () => {
@@ -4851,7 +4892,7 @@ $('repeat').onclick = () => {
   adoptPlan(new PlaybackPlan(workspace.context.withOrder(workspace.context.order.withRepeat(mode)), schedule));
   savePlaybackPreference('repeat', repeat);
   setPlaying(playing);
-  status($('repeat').title);
+  status(repeatCaption(repeat));
 };
 /*
   Volume. The slider is a **percentage of loudness, not of amplitude** -- halving the amplitude of
@@ -4882,7 +4923,7 @@ function applyVolume() {
   paint($('volume'));
   const silent = muted || level === 0;
   $('volglyph').setAttribute('d', silent ? VOLUME_OFF : VOLUME_ON);
-  $('mute').title = silent ? t('Unmute') : t('Mute');
+  setUiAttribute($('mute'), 'title', silent ? uiMessageText('Unmute') : uiMessageText('Mute'));
   // `setTargetAtTime` rather than an assignment: a gain that jumps clicks, and a slider dragged
   // across produces a hundred jumps. 15 ms is under a frame and above the click.
   if (gain) gain.gain.setTargetAtTime(amplitude(), context.currentTime, 0.015);
@@ -4895,7 +4936,7 @@ function setVolume(value) {
   // look like the control had stopped working.
   if (level > 0) muted = false;
   applyVolume();
-  status(t('Volume {level}%', { level }));
+  status(uiMessageText('Volume {level}%', { level }));
 }
 
 $('volume').oninput = () => setVolume(Number($('volume').value));
@@ -4904,7 +4945,7 @@ $('mute').onclick = () => {
   // speaker icon means when the sound is already off.
   if (level === 0) { level = 100; muted = false; } else { muted = !muted; }
   applyVolume();
-  status(muted || level === 0 ? t('Muted') : t('Volume {level}%', { level }));
+  status(muted || level === 0 ? uiMessageText('Muted') : uiMessageText('Volume {level}%', { level }));
 };
 applyVolume();
 
@@ -4980,7 +5021,7 @@ $('seek').onchange = () => {
   seekSpinner = setTimeout(() => {
     if (!seekPending) return;
     $('elapsed').classList.add('seeking');
-    $('elapsed').setAttribute('aria-label', t('Seeking'));
+    setUiAttribute($('elapsed'), 'aria-label', uiMessageText('Seeking'));
   }, SEEK_SPINNER_AFTER_MS);
   node?.port.postMessage({ type: 'seek', seconds: target });
 };
@@ -5043,12 +5084,11 @@ async function fromFragment() {
     if (!$('pair').hidden) showPanel(null);
     workspace = workspace.selectPlaylist({ id: PHONE, name: t('From the phone'), tracks: [] });
     setQueue(entries);
-    $('playlistname').textContent = t('From the phone');
+    setUiText($('playlistname'), uiMessageText('From the phone'));
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
-    status(tn(lines.length - ghosts, '{n} track from the link', '{n} tracks from the link') +
-           (ghosts ? tn(ghosts, ', and {n} that stayed on the phone', ', and {n} that stayed on the phone') : ''));
+    status(joinUiText(uiPluralText(lines.length - ghosts, '{n} track from the link', '{n} tracks from the link'), ghosts ? uiPluralText(ghosts, ', and {n} that stayed on the phone', ', and {n} that stayed on the phone') : ''));
   } catch (e) {
-    if (asked === fragmentAsked) status(t('the link could not be read: {reason}', { reason: e.message }));
+    if (asked === fragmentAsked) status(uiMessageText('the link could not be read: {reason}', { reason: e.message }));
   }
 }
 
@@ -5076,14 +5116,14 @@ async function deflateFragment(text) {
  * and the heading says where it came from, and a panel over both was one more thing to close.
  */
 function playSentTune(tracks) {
-  if (!tracks.length) { status(t('the link names nothing this page can play')); return; }
+  if (!tracks.length) { status(uiMessageText('the link names nothing this page can play')); return; }
   openAway(tracks, 0, 'link');
   // The heading names what arrived: one tune, or the list of them (`docs/BACKLOG.md` A38).
-  if (tracks.length > 1) $('sessiontitle').textContent = t('Playing tunes sent to you');
+  if (tracks.length > 1) setUiText($('sessiontitle'), uiMessageText('Playing tunes sent to you'));
   showPanel(null);
   status(tracks.length === 1
-    ? t('{name} — sent to this player', { name: tracks[0].name })
-    : tn(tracks.length, '{n} tune — sent to this player', '{n} tunes — sent to this player'));
+    ? uiMessageText('{name} — sent to this player', { name: tracks[0].name })
+    : uiPluralText(tracks.length, '{n} tune — sent to this player', '{n} tunes — sent to this player'));
 }
 
 /**
@@ -5097,7 +5137,7 @@ function playSentTune(tracks) {
  */
 let firstTouch = null;
 let dockFields = null;
-const TAP_HINT = t('Tap anywhere to play');
+const TAP_HINT = uiMessageText('Tap anywhere to play');
 
 /**
  * Waiting for the page to be used, **said in the dock**: the status line lives in Now Playing,
@@ -5105,8 +5145,8 @@ const TAP_HINT = t('Tap anywhere to play');
  */
 function waitForTouch() {
   startOnFirstTouch();
-  $('sub').textContent = TAP_HINT;
-  status(t('A browser starts no sound until the page is touched.'));
+  setUiText($('sub'), TAP_HINT);
+  status(uiMessageText('A browser starts no sound until the page is touched.'));
   setPlaying(playing);
 }
 
@@ -5128,10 +5168,10 @@ function startOnFirstTouch() {
     } else {
       setPlaying(playing);
     }
-    if ($('sub').textContent === TAP_HINT) {
-      $('sub').textContent = opened && dockFields ? describeLine(dockFields) : t('opening…');
+    if ($('sub').textContent === String(TAP_HINT)) {
+      setUiText($('sub'), opened && dockFields ? describeLine(dockFields) : uiMessageText('opening…'));
     }
-    status(t('Playing'));
+    status(uiMessageText('Playing'));
   };
   for (const type of events) addEventListener(type, firstTouch, true);
 }
@@ -5153,7 +5193,7 @@ function canSendToWeb(entry) {
  */
 async function sendToWeb(entries) {
   const tunes = (Array.isArray(entries) ? entries : [entries]).filter(canSendToWeb);
-  if (!tunes.length) { status(t('none of those have an address another browser could open')); return; }
+  if (!tunes.length) { status(uiMessageText('none of those have an address another browser could open')); return; }
   const lines = tunes.map((entry) => {
     const address = entry.url.startsWith(MODLAND_FILES)
       ? entry.url.slice(MODLAND_FILES.length).split('/').map(decodeURIComponent).join('/')
@@ -5176,9 +5216,9 @@ async function sendToWeb(entries) {
   }
   try {
     await navigator.clipboard.writeText(link);
-    showNote(t('Link copied'));
+    showNote(uiMessageText('Link copied'));
   } catch {
-    showNote(t('The browser would not copy it — the link is in Now Playing'));
+    showNote(uiMessageText('The browser would not copy it — the link is in Now Playing'));
     status(link);
   }
 }
@@ -5207,7 +5247,7 @@ let aacSupport = null;   // null: not yet known; then true or false
 })();
 function audioShareWorks() { return aacSupport !== false; }
 function audioShareRefusal() {
-  return aacSupport === false ? t('This browser cannot make an audio file. Chrome, Edge and Safari can.') : '';
+  return aacSupport === false ? uiMessageText('This browser cannot make an audio file. Chrome, Edge and Safari can.') : '';
 }
 
 /** How long a shared tune may run: the phone's setting, kept per browser. */
@@ -5234,12 +5274,12 @@ let madeAudio = null;
 function shareItems(entry, back = null) {
   return [
     // Back to the menu this came from, where there was one: a row's menu, not Now Playing.
-    ...(back ? [[t('Back'), back, true, ICON.back]] : []),
-    [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
+    ...(back ? [[uiMessageText('Back'), back, true, ICON.back]] : []),
+    [uiMessageText('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
     // A row that stayed on the phone has no bytes to render, which is not this browser's fault.
-    [t('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
-    [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
-    [t('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+    [uiMessageText('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
+    [uiMessageText('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
+    [uiMessageText('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
   ];
 }
 
@@ -5254,17 +5294,17 @@ function shareEntry(entry, anchor, reopen) {
   // Drawn on the next turn: the press that chose Share is still on its way up to the page's
   // click-away, which would close a menu drawn now under a button that is no longer in it.
   const next = (draw) => () => setTimeout(draw);
-  return [t('Share'), next(() => showMenu(shareItems(shown(), next(reopen)), anchor)), live, ICON.share];
+  return [uiMessageText('Share'), next(() => showMenu(shareItems(shown(), next(reopen)), anchor)), live, ICON.share];
 }
 
 async function shareAsAudio(entry) {
-  if (exporting) { showNote(t('Still preparing the previous tune as audio.')); return; }
+  if (exporting) { showNote(uiMessageText('Still preparing the previous tune as audio.')); return; }
   exporting = true;
   const name = entry.name || entry.file || 'tune';
-  showNote(t('Preparing {name} as audio…', { name }));
+  showNote(uiMessageText('Preparing {name} as audio…', { name }));
   try {
     const bytes = await bytesOf(entry);
-    if (!bytes) { showNote(t('that one stayed on the phone — there is nothing here to save')); return; }
+    if (!bytes) { showNote(uiMessageText('that one stayed on the phone — there is nothing here to save')); return; }
     const decoderName = fileOf(entry);
     const knownLengths = await songLengthsFor(decoderName, bytes);
     // The subsong playing, when this is the tune that plays; else the one the file opens at.
@@ -5276,7 +5316,7 @@ async function shareAsAudio(entry) {
       exportWorker.postMessage({ bytes, name: decoderName, subsong, knownLengths, limitMinutes: shareMinutes }, [bytes]);
     });
     if (!answer.ok) {
-      showNote(t('Could not turn {name} into audio.', { name }));
+      showNote(uiMessageText('Could not turn {name} into audio.', { name }));
       status(answer.reason);
       return;
     }
@@ -5287,13 +5327,13 @@ async function shareAsAudio(entry) {
     // by now -- rendering takes seconds, and a share sheet opened without a fresh press is refused.
     // Where it cannot, the file is saved, as "Save the file" saves one.
     if (navigator.canShare?.({ files: [madeAudio] })) {
-      showSend(t('Ready to send: {name}', { name: fileName }));
+      showSend(uiMessageText('Ready to send: {name}', { name: fileName }));
     } else {
       downloadFile(madeAudio);
-      showNote(t('Saved {name}', { name: fileName }));
+      showNote(uiMessageText('Saved {name}', { name: fileName }));
     }
   } catch (error) {
-    showNote(t('Could not turn {name} into audio.', { name }));
+    showNote(uiMessageText('Could not turn {name} into audio.', { name }));
     status(String(error?.message ?? error));
   } finally {
     exporting = false;
@@ -5309,7 +5349,7 @@ async function sendAudio() {
   } catch (error) {
     if (error?.name === 'AbortError') return;   // the share sheet was closed; nothing to say
     downloadFile(file);
-    showNote(t('Saved {name}', { name: file.name }));
+    showNote(uiMessageText('Saved {name}', { name: file.name }));
   }
 }
 
@@ -5351,7 +5391,7 @@ async function pair() {
   } catch {
     // **Said, not left blank**: a page on a static host (GitHub Pages, say) has no pairing service
     // at all -- everything else works there, and this is the one thing that cannot.
-    $('pairnote').textContent = t('This page is served without its pairing service, so a phone cannot send to it here. A page run with scripts/serve-web.mjs has one.');
+    setUiText($('pairnote'), uiMessageText('This page is served without its pairing service, so a phone cannot send to it here. A page run with scripts/serve-web.mjs has one.'));
     $('pairurl').textContent = '';
     $('qr').replaceChildren();
     return;
@@ -5365,8 +5405,8 @@ async function pair() {
   // Scalable, so the sheet decides its size: a fixed 5-pixel cell ran past a phone's width.
   $('qr').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0, scalable: true });
 
-  const ready = t('Scan this with Protracktor on your phone to send it a playlist.');
-  $('pairnote').textContent = ready;
+  const ready = uiMessageText('Scan this with Protracktor on your phone to send it a playlist.');
+  setUiText($('pairnote'), ready);
 
   let since = 0;
   let failures = 0;
@@ -5381,7 +5421,7 @@ async function pair() {
       if (!answer.ok) throw new Error(`HTTP ${answer.status}`);
       const body = await answer.json();
       failures = 0;
-      $('pairnote').textContent = ready;
+      setUiText($('pairnote'), ready);
       if (typeof body.seq === 'number') since = body.seq;
       if (body.message) receive(JSON.parse(body.message));
     } catch (error) {
@@ -5390,8 +5430,7 @@ async function pair() {
       // which is how a small convenience becomes somebody's battery.
       failures += 1;
       const wait = Math.min(1000 * 2 ** Math.min(failures, 4), 15_000);
-      $('pairnote').textContent =
-        t('Not reaching the pairing service — trying again in {seconds}s.', { seconds: Math.round(wait / 1000) });
+      setUiText($('pairnote'), uiMessageText('Not reaching the pairing service — trying again in {seconds}s.', { seconds: Math.round(wait / 1000) }));
       await new Promise((resume) => setTimeout(resume, wait));
     }
   }
@@ -5405,7 +5444,7 @@ function receive(message) {
   if (workspace.editor.dirty) {
     settleUnsaved().then((go) => {
       if (go) applyReceive(message);
-      else status(t('A queue arrived from the phone and was not loaded, to keep your unsaved changes.'));
+      else status(uiMessageText('A queue arrived from the phone and was not loaded, to keep your unsaved changes.'));
     });
     return;
   }
@@ -5438,10 +5477,9 @@ function applyReceive(message) {
   );
   // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
   refreshStashes();
-  $('playlistname').textContent = t('From the phone');
+  setUiText($('playlistname'), uiMessageText('From the phone'));
   const stranded = message.queue.filter((row) => row.local).length;
-  status(tn(message.queue.length - stranded, '{n} track from the phone — press play', '{n} tracks from the phone — press play') +
-         (stranded ? tn(stranded, ', and {n} that stayed on it', ', and {n} that stayed on it') : ''));
+  status(joinUiText(uiPluralText(message.queue.length - stranded, '{n} track from the phone — press play', '{n} tracks from the phone — press play'), stranded ? uiPluralText(stranded, ', and {n} that stayed on it', ', and {n} that stayed on it') : ''));
 }
 
 /**
@@ -5546,16 +5584,16 @@ savedPlaces = new SavedPlaces({ store: bookmarks, availability: savedCatalogue.s
   },
   notice: (notice) => {
     switch (notice) {
-      case 'saved': showNote(t('Place saved for later.')); break;
-      case 'already-saved': showNote(t('This place is already saved.')); break;
-      case 'removed': showNote(t('Bookmark removed. Music and playlists are unchanged.')); break;
-      case 'unavailable': showNote(t('This saved place is unavailable. Its bookmark has been kept.')); break;
-      case 'failed': showNote(t('Could not update saved places. Please try again.')); break;
+      case 'saved': showNote(uiMessageText('Place saved for later.')); break;
+      case 'already-saved': showNote(uiMessageText('This place is already saved.')); break;
+      case 'removed': showNote(uiMessageText('Bookmark removed. Music and playlists are unchanged.')); break;
+      case 'unavailable': showNote(uiMessageText('This saved place is unavailable. Its bookmark has been kept.')); break;
+      case 'failed': showNote(uiMessageText('Could not update saved places. Please try again.')); break;
       default: throw new TypeError(`SavedPlaces.notice(${notice})`);
     }
   },
   removed: (undo) => {
-    const text = t('Bookmark removed. Music and playlists are unchanged.');
+    const text = uiMessageText('Bookmark removed. Music and playlists are unchanged.');
     if (undo) showUndo(text, undo); else showNote(text);
   } });
 savedPlaces.refresh();
@@ -5582,7 +5620,7 @@ played.subscribe(() => {
   repaintHistoryPresentation();
   requestHistoryPresentation();
 });
-played.onFailure((error) => status(t('Could not save History: {reason}', { reason: error.message })));
+played.onFailure((error) => status(uiMessageText('Could not save History: {reason}', { reason: error.message })));
 playlists.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 catalogue.subscribe(() => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
 window.addEventListener('focus', () => { if (!$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability(); });
@@ -5592,8 +5630,8 @@ holdBarLabels();
 document.fonts?.ready.then(holdBarLabels);
 if (!location.hash.slice(1)) showPanel('pair');
 
-status(t('ready — press Play or load some URLs'));
-if (restoredPlaybackPreferences.failure) showNote(t('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
+status(uiMessageText('ready — press Play or load some URLs'));
+if (restoredPlaybackPreferences.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
 pair();
 
 /**
@@ -5626,13 +5664,13 @@ formatsReady().catch(() => {});
       setQueue(tracks, playlist.index ?? 0, { persist: false });
       showPanel(null);
       status(playlist.tracks?.length
-        ? t('{name} — where you left it', { name: playlist.name })
-        : t('{name} — empty. Browse for something to put in it.', { name: playlist.name }));
+        ? uiMessageText('{name} — where you left it', { name: playlist.name })
+        : uiMessageText('{name} — empty. Browse for something to put in it.', { name: playlist.name }));
     }
   } catch (e) {
     // A private window, storage turned off, a second tab holding an old version. The page works
     // without any of this and saying so is better than a dialog nobody can act on.
-    if (asked === editorAsked) status(t('this browser is not keeping playlists: {reason}', { reason: e.message }));
+    if (asked === editorAsked) status(uiMessageText('this browser is not keeping playlists: {reason}', { reason: e.message }));
   }
   fromFragment();
 })();

@@ -54,16 +54,22 @@ export default async function checkBrowseScroll({ window, check }) {
     check(await until(() => $('browsetitle').textContent === 'Modland' && named('Protracker')) && list.scrollTop === 40,
       'a second actual Back restores the independently remembered format');
 
-    const authors = archive.authors; let release;
-    archive.authors = () => new Promise((resolve) => { release = resolve; });
+    const read = api.catalogueStore.get; let release, held = false;
+    api.catalogueStore.get = async function (key) {
+      const value = await read.call(this, key);
+      if (!held && key === 'modland:authors:Protracker') {
+        held = true; await new Promise((resolve) => { release = resolve; });
+      }
+      return value;
+    };
     try {
       named('Protracker').click(); await until(() => typeof release === 'function');
       $('browseback').click(); await until(() => $('browsetitle').textContent === 'Modland' && named('Protracker'));
       const top = list.scrollTop;
-      release(await authors('Protracker', 'modland')); await settle(80);
+      release(); await settle(80);
       check($('browsetitle').textContent === 'Modland' && !!named('AHX') && !named('Scroll 11') && list.scrollTop === top,
         'a late author result cannot replace or scroll the newer Back destination');
-    } finally { archive.authors = authors; }
+    } finally { release?.(); api.catalogueStore.get = read; }
     list.scrollTop = 50; await root();
     check(list.scrollTop === 0, 'a genuinely fresh Browse visit resets the prior session to the top');
     check(api.planNow().context === plan.context && api.scheduleNow() === plan.schedule && window.__toWorklet.length === commands,

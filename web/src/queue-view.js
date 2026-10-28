@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { t } from './i18n.js';
+import { joinUiText } from './ui-message.js';
+import { setUiText, setUiAttribute, makeUiText } from './ui-text.js';
+import { message as uiMessageText } from './i18n.js';
 import { bindTrackGestures } from './row-gestures.js';
 import { PendingReorder } from './queue-reorder.js';
 
@@ -46,13 +48,13 @@ export class QueueView {
     const pending = this.plan.schedule.pending;
     const at = row.kind === 'manual' ? pending.findIndex((entry) => entry.id === row.request.id) : -1;
     const items = [
-      [t('Information'), () => this.onInfo(this.displayTrack(row.track)), !row.track.local, 'info'],
-      [t('Add to queue'), () => this.onAdd(this.displayTrack(row.track), this.historyOrigin(row)), !row.track.local, 'add'],
-      [t('Remove'), () => this.onRemove(row, node._generation), true, 'remove'],
+      [uiMessageText('Information'), () => this.onInfo(this.displayTrack(row.track)), !row.track.local, 'info'],
+      [uiMessageText('Add to queue'), () => this.onAdd(this.displayTrack(row.track), this.historyOrigin(row)), !row.track.local, 'add'],
+      [uiMessageText('Remove'), () => this.onRemove(row, node._generation), true, 'remove'],
     ];
     if (at >= 0) {
-      items.push([t('Move earlier'), () => this.onMove(row.request.id, pending[at - 1].id), at > 0, 'up']);
-      items.push([t('Move later'), () => this.onMove(row.request.id, pending[at + 1].id), at + 1 < pending.length, 'down']);
+      items.push([uiMessageText('Move earlier'), () => this.onMove(row.request.id, pending[at - 1].id), at > 0, 'up']);
+      items.push([uiMessageText('Move later'), () => this.onMove(row.request.id, pending[at + 1].id), at + 1 < pending.length, 'down']);
     }
     this.onMenu(items, anchor);
   }
@@ -77,7 +79,7 @@ export class QueueView {
       }
     };
     node._disposeGesture = bindTrackGestures(node, {
-      icon: this.icon, addLabel: t('Add to queue'), removeLabel: t('Remove'),
+      icon: this.icon, addLabel: uiMessageText('Add to queue'), removeLabel: uiMessageText('Remove'),
       onAdd: () => this.onAdd(this.displayTrack(node._row.track), this.historyOrigin(node._row)),
       onRemove: () => this.onRemove(node._row, node._generation),
       onLongPress: () => this.onInfo(this.displayTrack(node._row.track)),
@@ -105,14 +107,14 @@ export class QueueView {
     if (title.textContent !== shown.name) title.textContent = shown.name;
     const subtitle = this.subtitle(shown);
     if (meta.textContent !== subtitle) meta.textContent = subtitle;
-    text.setAttribute('aria-label', `${shown.name}${row.kind === 'manual' ? ` · ${t('Manually queued')}` : ''}`);
+    setUiAttribute(text, 'aria-label', joinUiText(shown.name, row.kind === 'manual' ? joinUiText(" · ", uiMessageText('Manually queued')) : ''));
     text.setAttribute('aria-disabled', row.track.local ? 'true' : 'false');
     const at = row.kind === 'manual' ? this.plan.schedule.pending.findIndex((entry) => entry.id === row.request.id) : -1;
     if (at >= 0 && this.plan.schedule.pending.length > 1) {
       if (!node._grip) {
         const grip = node.ownerDocument.createElement('button');
         grip.className = 'queue-grip';
-        grip.innerHTML = this.icon('grip'); grip.append(t('Reorder'));
+        grip.innerHTML = this.icon('grip'); grip.append(makeUiText(grip.ownerDocument, uiMessageText('Reorder')));
         grip.onclick = (event) => { event.stopPropagation(); this.menu(node, grip); };
         grip.onkeydown = (event) => {
           if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
@@ -126,14 +128,14 @@ export class QueueView {
         node._grip = grip;
         node._disposeReorder = this.reorder.bind(grip, node, row.request.id);
       }
-      node._grip.setAttribute('aria-label', t('Reorder {name}', { name: shown.name }));
+      setUiAttribute(node._grip, 'aria-label', uiMessageText('Reorder {name}', { name: shown.name }));
     } else if (node._grip) { node._disposeReorder(); node._grip.remove(); node._grip = null; }
   }
 
   render(plan) {
     this.rendering = true;
     this.plan = plan;
-    this.source.textContent = this.sourceLabel(plan.context.source);
+    setUiText(this.source, () => this.sourceLabel(this.plan.context.source));
     const rows = plan.schedule.rows(plan.context);
     const hasSource = rows.some((row) => row.kind === 'source');
     const keyOf = (row) => row.kind === 'source' ? `${plan.schedule.generation}:${row.key}` : row.key;

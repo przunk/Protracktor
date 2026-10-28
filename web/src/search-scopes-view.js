@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { setUiText, setUiAttribute } from './ui-text.js';
 import { PLATFORMS } from './random-scope.js';
-import { t } from './i18n.js';
+import { message as uiMessageText, t } from './i18n.js';
 
-const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
+const setText = (node, text) => { setUiText(node, text); };
 
 export function searchScopeLabel(scope, sourceName, sourceIds = null) {
   const join = (names) => `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2}` : ''}`;
@@ -49,20 +50,20 @@ export class SearchScopesView {
     root.replaceChildren(this.tiles, this.catalogues, this.platforms, this.status, this.retry.button);
   }
   render(scope, { value, loading, failed }) {
-    this.tiles.setAttribute('aria-label', t('Search scope'));
-    this.catalogues.setAttribute('aria-label', t('Online catalogues'));
-    this.platforms.setAttribute('aria-label', t('By platform'));
+    setUiAttribute(this.tiles, 'aria-label', uiMessageText('Search scope'));
+    setUiAttribute(this.catalogues, 'aria-label', uiMessageText('Online catalogues'));
+    setUiAttribute(this.platforms, 'aria-label', uiMessageText('By platform'));
     this.catalogues.hidden = scope.kind !== 'online'; this.platforms.hidden = scope.kind !== 'platform';
     const relevant = scope.kind === 'online' || scope.kind === 'platform';
     this.status.hidden = !relevant;
-    setText(this.status, t(failed ? 'Could not check search scopes. Try again.' : loading || !value
+    setText(this.status, uiMessageText(failed ? 'Could not check search scopes. Try again.' : loading || !value
       ? 'Checking search sources…' : scope.kind === 'online' && !value.catalogues.length
         ? 'No catalogue index is held. Download one in Online catalogues.'
         : scope.kind === 'platform' ? 'Platforms with no indexed, playable music are unavailable.'
           : 'No catalogue selected means all indexed catalogues.'));
     this.retry.button.hidden = !relevant || !failed;
     for (const [key, { button, text, label }] of this.buttons) {
-      setText(text, ['playlists', 'online', 'platform', 'retry'].includes(key) ? t(label) : label);
+      setText(text, ['playlists', 'online', 'platform', 'retry'].includes(key) ? uiMessageText(label) : label);
       const parts = key.split(':');
       const selected = parts.length === 1 ? key === scope.kind : scope.ids.includes(parts[1]);
       button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected));

@@ -79,7 +79,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W21 | Complete offline ASMA | Pending |
 | W22 | Grouped downloads and Stop | Pending |
 | W23 | Legacy Modland request recovery | Pending |
-| W24 | Language changes without interrupting playback | Pending |
+| W24 | Language changes without interrupting playback | Implemented; forced full gate passed |
 | W25 | Browser Media Session and external controls | Pending; C104 reopened by scope selection |
 
 ## W01 analysis
@@ -1359,3 +1359,98 @@ W18 is implemented at host level. This completion changes documentation/message 
 production, engine, schema and versionName are unchanged. Physical browser behaviour remains
 unchecked. Continue W24 live language, then retained cache/downloads and shared DSP scopes.
 No WEB merge, package, APK, push or deployment.
+
+## W24 — Language without interrupting playback analysis, 2026-10-28
+
+Reference **c8209b1**: `AppLanguage`, `AppLocale`, all four `AppLanguageTest` cases, MainActivity's
+attach/onCreate/language callback and ProtracktorApp's saved destinations. Native language selection
+rebuilds resources while retaining the application-scoped controller; C25 prevents replaying the
+old external intent. Missing/obsolete choices follow System, explicit en/pl survive storage and
+selecting the same policy is a no-op. Editable playlist names remain user data in their creation
+language. W18 is verified and committed before this scope.
+
+Parity checklist:
+- Change en/pl/System in place, retain the selected policy separately from its resolved language,
+  follow system-language changes only in System, and persist without page reload. A refused save
+  explains the failure while the session's choice remains usable. Preserve the theme and panel.
+- Keep AudioContext, decoder, elapsed/listening state, current file/subsong, playback context,
+  manual occurrence IDs, playlist draft/selection and runtime bytes. Never replay a handoff intent,
+  simulate transport clicks, submit a Search or refetch music merely to change text.
+- Refresh static and dynamic labels, accessible attributes, menus, source headers, counters,
+  metadata field names, statuses and visible Undo/error text. Keep raw titles/authors/filenames/
+  editable playlist names and engine/network reasons intact, including strings identical to UI
+  translation keys. Preserve focused controls, query values/ranges, rows and scroll ownership.
+- Use canonical message keys with snapshots of action arguments, not reverse translation or
+  callbacks over a later mutable playlist. Weak bindings belong to actual text nodes so replacing
+  them with raw user data retires their UI meaning. Bound attribute ownership must be explicit.
+  No global DOM prototype hooks, inferred translations or new external dependency.
+- Exercise actual radio and System events with live audio, menus, inspected/live metadata, source
+  routes, loading/error outcomes and asynchronous completions. Detect requested reloads explicitly:
+  jsdom does not actually navigate, so unchanged fake audio references alone would miss one.
+  Port native language cases, demonstrate broken semantic/ownership/continuity guards fail,
+  restore and run full gate/lint. Real-browser playback/rendering/background acceptance stays open.
+
+Implementation now uses explicit semantic messages and weak presentation bindings. Local editing analysis uses the parser already
+embedded in Node, with no installed or shipped parser dependency; it is not a runtime feature.
+
+### W24 module-integration finding
+
+A new bootstrap probe loads the real ESM graph in the same jsdom context, using the existing
+network/audio/storage stubs rather than inlining dependencies into the app's scope. It fails
+before the fix: `catalogue` is referenced by application subscriptions but is not imported from
+store.js. The earlier inlined page configuration supplied this name globally and could not detect
+the missing production import. The import is now explicit. Source/negative logs are under ignored
+`user/web-parity-verification/w24/`; post-fix module startup and full ESM interaction checks pass; the full project gate/lint are
+pending. Earlier stage records remain evidence of their stated host paths, not real-module or
+physical-browser acceptance. The VM module API is an existing Node test capability; no production
+parser, dependency or runtime flag is shipped with WEB.
+
+### W24 implementation checkpoint
+
+Sixteen message/ownership cases and 46 actual-page language assertions pass through real ESM.
+Visible Search selection/query/suggestions, Saved places explanations and Undo, Queue grips/menus,
+source acknowledgements and policy prose update without replaying their actions. Raw names that
+match canonical UI keys remain literal. The audio context, current file bytes, plan, editor,
+duplicate request IDs and paused state are retained. Five seconds of qualifying playback can span
+a language change. System policy and refused saves follow the native language contract.
+
+Eleven controlled faults are rejected and restored: mutable message/composition arguments, recapturing
+user rows, keeping a stale text owner, the missing production import, a requested browser reload,
+a flattened Undo message, accepting a late author-store result after Back, an unbound Storage
+label and restoring an old-language destination caption after a failed write. Earlier before-fix startup and mutable-argument failures are retained.
+The integration gate now evaluates production modules instead of relying on flattened scopes; the
+Browse stale-read fixture holds its actual store read rather than replacing a module export.
+Full forced gate/lint are pending. Physical browser appearance/audio/keyboard/background behaviour
+are unchecked. No Android production, schema, dependency, version, merge or deployment change.
+
+The first forced gate on `895d112` was interrupted after 141 seconds of unit execution, before
+completion, when review found the remaining Storage-label and failed-destination-caption writes.
+It is not a passing gate. Both paths now have real-control checks and detected negative controls;
+the final candidate requires a fresh complete run.
+
+Final preflight also passes ten actual-module fresh starts (**204 bootstrap assertions**), all
+**1182 page assertions**, and the affected ownership/presentation companions. The first complete
+attempt on `0859fd4` passed **1252 native tests / 170 suites**, 31 tasks executed, 470 seconds, then
+stopped at the denied-preference startup fixture. That fixture inspected snackbar text after its
+visible lifetime; W24 now clears retired text, exposing the weak old assertion. It observes the
+actual visible notice during bootstrap instead. Replacing the production snackbar with a status
+message fails this stronger guard; restored code passes. This is not a passing full project gate.
+A fresh forced gate and lint are required on the final test-corrected candidate.
+
+### W24 completed host verification — 2026-10-28
+
+Tested candidate **7d321acdce2f749a2284a1926f2e651394ddd944** passes the forced full gate:
+**1252 tests / 170 suites**, zero failures/errors/skips, **922 seconds**. All 31 native tasks
+execute (467.3 seconds); all companions run, including real-WASM/audio, migrations, ten actual-ESM
+fresh starts (**204 bootstrap assertions**), **16 UI ownership cases**, **1182 page assertions**,
+PWA and 11 server cases. Lint passes in **85.5 seconds**, **0 errors / 79 warnings**. All **694**
+tracked app/test/build/rule input hashes match the recorded candidate. Evidence is kept locally
+under `user/web-parity-verification/w24/`, including the earlier interrupted/failing attempts.
+
+The 46 live-language page cases preserve playback/paused state, file buffers, independent editor
+and source, duplicate requests, query/selection/focus, menus, Undo and held bilingual prose.
+Eleven controlled faults are rejected and restored. Native comparison remains c8209b1; Android
+production is unchanged. Real browser rendering, sound, touch, OS/background and accessibility
+behaviour remain unchecked. W24 is implemented at host level; W01-W13/W16-W18/W24 total 17 of 25
+scopes. Continue W20 retained music, then the remaining download and DSP stages. No WEB merge,
+version change, package, push or deployment is part of this checkpoint.

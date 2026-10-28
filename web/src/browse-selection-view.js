@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { t, tn } from './i18n.js';
+import { setUiText, setUiAttribute } from './ui-text.js';
+import { message as uiMessageText, pluralMessage as uiPluralText } from './i18n.js';
 
 /** Selection decorates existing rows; it never rebuilds a list or owns playback. */
 export class BrowseSelectionView {
@@ -21,10 +22,10 @@ export class BrowseSelectionView {
   render() {
     const selecting = this.model.active;
     this.header.hidden = !this.rows.length;
-    this.count.textContent = selecting ? tn(this.model.count, '{n} selected', '{n} selected')
-      : tn(this.rows.length, '{n} track', '{n} tracks');
+    setUiText(this.count, selecting ? uiPluralText(this.model.count, '{n} selected', '{n} selected')
+      : uiPluralText(this.rows.length, '{n} track', '{n} tracks'));
     this.all.hidden = !selecting;
-    this.all.querySelector('span').textContent = this.model.all ? t('Select none') : t('Select all');
+    setUiText(this.all.querySelector('span'), this.model.all ? uiMessageText('Select none') : uiMessageText('Select all'));
     for (const row of this.rows) {
       const slot = row.node.querySelector('.track-leading');
       row.node.classList.toggle('ticked', this.model.has(row.track.url));
@@ -38,7 +39,7 @@ export class BrowseSelectionView {
           slot.replaceChildren(box);
         }
         box.checked = this.model.has(row.track.url);
-        box.setAttribute('aria-label', t('Select {name}', { name: row.shown().name }));
+        setUiAttribute(box, 'aria-label', uiMessageText('Select {name}', { name: row.shown().name }));
       } else if (slot.querySelector('input')) {
         const focused = slot.contains(row.node.ownerDocument.activeElement);
         slot.replaceWith(this.leading(row.track.url));

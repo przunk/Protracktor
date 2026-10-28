@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { t } from './i18n.js';
+import { setUiAttribute } from './ui-text.js';
+import { message as uiMessageText } from './i18n.js';
 import { followSubsong, selectSubsong } from './subsong-strip.js';
 
 /** Keyed chips and deferred visibility work belong to one open strip, never to playback itself. */
@@ -42,7 +43,7 @@ export class SubsongStripView {
     for (let index = 0; index < count; index++) {
       const button = this.strip.children[index];
       button.setAttribute('aria-pressed', String(index === current));
-      button.setAttribute('aria-label', t('Tune {n} of {count}', { n: index + 1, count }));
+      setUiAttribute(button, 'aria-label', uiMessageText('Tune {n} of {count}', { n: index + 1, count }));
     }
     this.show();
   }

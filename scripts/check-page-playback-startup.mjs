@@ -27,8 +27,14 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   await store.playlists.save({ id: 'startup-list', name: 'Stored playlist', tracks, index: 1 });
   await store.playlists.save({ id: 'newer-list', name: 'Newer choice', tracks: [tracks[0]], index: 0 });
   if (name !== 'empty') await store.settings.set('active', 'startup-list');
-  const state = window.__startup = { writes: [], preferenceWrites: [], choice, tracks,
+  const state = window.__startup = { writes: [], preferenceWrites: [], notices: [], choice, tracks,
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
+  // Cold module evaluation can outlast a snackbar. Observe its visible lifetime, not hidden text.
+  const bar = window.document.getElementById('snackbar'), caption = window.document.getElementById('snacktext');
+  const notices = new window.MutationObserver(() => {
+    if (!bar.hidden && caption.textContent) state.notices.push(caption.textContent);
+  });
+  notices.observe(bar, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
   const transaction = IDBDatabase.prototype.transaction;
   IDBDatabase.prototype.transaction = function (stores, mode, ...rest) {
     if (mode === 'readwrite') state.writes.push(...(typeof stores === 'string' ? [stores] : stores));
@@ -45,7 +51,7 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   };
   if (name.startsWith('delayed')) window.navigator.storage.persisted = () => new Promise((resolve) => { state.release = () => resolve(true); });
   if (name === 'fragment') window.location.hash = deflateSync('https://example.test/explicit-link.mod').toString('base64url');
-  state.cleanup = () => { IDBDatabase.prototype.transaction = transaction; window.Storage.prototype.setItem = set; window.Storage.prototype.getItem = get; };
+  state.cleanup = () => { notices.disconnect(); IDBDatabase.prototype.transaction = transaction; window.Storage.prototype.setItem = set; window.Storage.prototype.getItem = get; };
 }
 
 export async function verify({ window, check, name }) {
@@ -94,6 +100,6 @@ export async function verify({ window, check, name }) {
     check(api.contextNow() === null && window.__toWorklet.length === 0 && $('playpause').title === 'Play', `${name}: startup never constructs audio or opens a decoder`);
     check(!api.dirtyNow(), `${name}: restored modes are not playlist content edits`);
     check(state.preferenceWrites.length === 0, `${name}: initialization does not write defaults over saved preferences`);
-    if (name === 'denied') check($('snacktext').textContent.includes('playback preference read refused'), 'a refused playback read is explained while the saved playlist still restores paused');
+    if (name === 'denied') check(state.notices.some((text) => text.includes('playback preference read refused')), 'a refused playback read is visibly explained while the saved playlist still restores paused');
   } finally { state.cleanup(); }
 }
