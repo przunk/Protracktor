@@ -44,6 +44,12 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**Resumed 2026-10-28:** rebase onto accepted develop **c8209b1**, retaining all WEB application
+changes byte-for-byte. New Android comparisons use that reference, including the accepted -18
+LUFS policy for W15. Original branch preserved at `backup/web-parity-before-resume-20261028`;
+resumed head **dc8c850**, **865 page checks passed**. W09 starts next; W03 remains partially
+integrated until History/Search scope work. No WEB merge or deployment is approved.
+
 Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.
 All twenty-five scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md), with mandatory
 Android code/test comparison and a final retry of skipped items. No merge/deployment is authorized.

@@ -10,6 +10,22 @@ push, publication, APK, release version change or AMP integration is part of thi
 
 ## Reference and storage allocation
 
+### Resume — 2026-10-28
+
+Resume the remaining scopes after integrating Android appearance/clock changes into develop
+**c8209b1ab79976ec28d27e1da447055756c7ca29**. Use that accepted Android reference for new
+comparisons. The WEB branch was rebased from **488d3a9** onto develop; original history remains
+at `backup/web-parity-before-resume-20261028`. The duplicated report-only C122/C123/C124 commit
+was omitted because develop already includes the reports and newer findings. Both documentation
+insertions were retained during conflicts. The entire `web/` tree equals the preserved original.
+Resumed head: **dc8c850229f1478bd686cf448d0ecad83413e0ad**. All **865 page checks** pass after
+the rebase; this is not a new combined Android/WEB full-gate claim.
+
+Android's accepted normalization target is now **-18 LUFS**, superseding the initial W15 plan's
+-23 LUFS after the 2026-10-27 policy change. Retain its caps/peak guard and keep the slider/AMP
+experiments separate. W01/W02/W04-W08 are retained; W03 query/scope integration and W09-W25 remain
+open. No WEB merge, deployment or additional APK is authorized by this resume.
+
 Android reference is the baseline commit above. Read production code and existing Kotlin/native
 tests for each scope; port their actual scenarios and expected results to WEB checks. Shared
 fixtures are preferred where they express the same rule. Existing historical plans can describe
