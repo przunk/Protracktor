@@ -159,6 +159,8 @@ run_check "Playback preferences" playback-preferences node scripts/check-playbac
 run_check "Music cache budget" cache-budget node scripts/check-cache-budget.mjs
 run_check "Music transfer deadlines" music-download node scripts/check-music-download.mjs
 run_check "Remote music ownership" remote-music node scripts/check-remote-music.mjs
+run_check "Playback read-ahead" playback-read-ahead node scripts/check-playback-read-ahead.mjs
+run_check "Folder prefetch" folder-prefetch node scripts/check-folder-prefetch.mjs
 run_check "Playlist file transfer" playlist-transfer node scripts/check-playlist-transfer.mjs
 run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs

@@ -6,6 +6,8 @@
 
 // Transport-only copies retain a pending save's immutable content snapshot.
 const frozen = (values) => Object.isFrozen(values) ? values : Object.freeze([...values]);
+// A speculative read and the later Next must share one new shuffled lap.
+const nextShuffledLaps = new WeakMap();
 const trackId = (track) => track.url ?? track.id;
 const sameTracks = (a, b) => a.length === b.length && a.every((track, i) => trackId(track) === trackId(b[i]));
 const checkedIndex = (tracks, index) => {
@@ -84,8 +86,11 @@ export class PlayOrder {
     });
     const unchanged = sameTracks(this.tracks, tracks);
     const shuffleFrom = unchanged ? this.shuffleFrom : history[cursor] ?? null;
-    return this.copy({ tracks, history, cursor, shuffleFrom,
+    const updated = this.copy({ tracks, history, cursor, shuffleFrom,
       indices: unchanged ? this.indices : dealt(tracks, this.shuffle, shuffleFrom, this.random) });
+    const preparedLap = unchanged ? nextShuffledLaps.get(this) : null;
+    if (preparedLap) nextShuffledLaps.set(updated, preparedLap.copy({ tracks }));
+    return updated;
   }
 
   advanced() {
@@ -95,8 +100,14 @@ export class PlayOrder {
     const next = this.indices.indexOf(this.currentIndex) + 1;
     if (next < this.indices.length) return this.appended(this.indices[next]);
     if (this.repeat !== 'all') return null;
-    const lap = this.shuffle ? this.copy({ shuffleFrom: null,
-      indices: dealt(this.tracks, true, null, this.random) }) : this;
+    let lap = this;
+    if (this.shuffle) {
+      lap = nextShuffledLaps.get(this);
+      if (!lap) {
+        lap = this.copy({ shuffleFrom: null, indices: dealt(this.tracks, true, null, this.random) });
+        nextShuffledLaps.set(this, lap);
+      }
+    }
     return lap.appended(lap.indices[0]);
   }
 

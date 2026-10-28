@@ -27,7 +27,7 @@ export default async function checkModlandRecovery({ window, check }) {
     return Promise.resolve(new window.Response(new Uint8Array([41 + alternate, 99]), { status: original >= 0 ? 404 : 200 }));
   };
   try {
-    api.showPanel(null); await api.discardEdits(); await api.musicNow().clear();
+    api.showPanel(null); await api.discardEdits(); api.clearPlaybackQueue(); await api.musicNow().clear();
     await api.storeNow.save({ id: 'modland-legacy-ui', name: 'Legacy files', tracks, index: 0 });
     await api.choosePlaylist('modland-legacy-ui');
     for (let i = 0; i < tracks.length; i++) {
@@ -36,7 +36,8 @@ export default async function checkModlandRecovery({ window, check }) {
       check(await until(() => opens().length > before && opens().at(-1).name === tracks[i].file),
         `the real playlist tap recovers ${tracks[i].file} through the shared downloader`);
       if (opens().length === before) continue;
-      check(new Uint8Array(opens().at(-1).bytes)[0] === 41 + i && requests.slice(-2).join('|') === [originals[i], alternatives[i]].join('|'),
+      check(new Uint8Array(opens().at(-1).bytes)[0] === 41 + i
+        && requests.filter((url) => url === originals[i] || url === alternatives[i]).join('|') === [originals[i], alternatives[i]].join('|'),
         `the original then recovered request supply exact bytes for ${tracks[i].file}`);
       api.onWorklet({ type: 'opened', requestId: opens().at(-1).requestId,
         describe: `title\tLegacy ${i}\nartist\tUnknown\nformat\tTest`, duration: 90, subsongs: 1, current: 0, canSeek: true, rate: 44100 });

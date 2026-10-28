@@ -75,7 +75,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
 | W17 | Browse position and subsong following | Implemented in W17a/W17b; full host gate passes; browser acceptance unchecked |
 | W18 | Playback-mode/settings restoration | Implemented; forced full gate passed; browser acceptance unchecked |
-| W19 | Read-ahead and prefetch controls | Pending |
+| W19 | Read-ahead and prefetch controls | Implemented; forced complete gate passed; browser acceptance unchecked |
 | W20 | Persistent music cache and offline marks | Implemented; forced full gate passed; browser acceptance unchecked |
 | W21 | Complete offline ASMA | Implemented; forced full gate passed; browser acceptance unchecked |
 | W22 | Grouped downloads and Stop | Pending |
@@ -1730,3 +1730,65 @@ W23 is implemented at host level: **20 of 25 scopes** (W01-W13, W16-W18, W20-W21
 Browser CORS, offline permanence, rendering and audible playback remain unchecked. Continue W19,
 W22, W14/W15 and W25, then the final requirements/commit audit and WEB package. No WEB merge,
 version change, push or deployment has occurred.
+
+## W19 — Shared playback read-ahead and folder policy, 2026-10-29
+
+Reference **c8209b1**: PlaybackReadAhead, FolderPrefetch, BrowseCache and their existing tests;
+PlaybackController's candidate selection, load, queue/mode changes and Browse lifetime; Settings
+CacheAhead controls. Android playback code and database versions are unchanged; the shared
+privacy source now describes retained music and speculative browser downloads in both languages.
+
+The common owner replaces Random's separate byte promises. Upcoming candidates are the first
+three distinct files from pending manual FIFO followed by the source's prepared successors
+(one for a finite source, three for Random). Completed buffers are consume-on-open, limited to
+4 MiB per file and 8 MiB total. Replacement cancels speculative waiters and rejects late results;
+it does not abort a foreground caller sharing the transfer. Current/wanted files protect the
+persistent LRU. Explicit queue edits, real opens and mode changes refresh prediction without
+changing History, source selection, startup or inactive views.
+
+A before-fix reproduction found that independently predicting and then advancing past a shuffled
+Repeat All lap could deal different permutations. One prepared lap now belongs to the immutable
+PlayOrder; metadata-only copies preserve it, while real order/mode changes invalidate it. This
+preserves one shuffled traversal per actual lap rather than copying native's incidental random
+number consumption on independent peeks.
+
+Only a loaded Modland author's folder qualifies for bulk preparation: cached files are free,
+planning stops at the first file exceeding the 100 MiB folder budget, and three workers start in
+row order. Leaving cancels unstarted work; already shared transfers may finish into the cache.
+The current folder, policy and generation own publication, including synchronous observer
+reentrancy. Progress uses the existing leading slot without replacing selection, focus or rows.
+
+The retained Wi-Fi only / Always / Off policy gates folders, independently of chosen-playback
+read-ahead. The [Network Information specification](https://wicg.github.io/netinfo/) exposes
+bearer/performance information, not Android's unmetered-network authority. Consequently the WEB
+default pauses folder downloads with a visible explanation; Always explicitly enables them.
+This is a documented capability fallback, not an inference from wifi/effectiveType/saveData.
+Settings restore without startup writes; refused storage remains visible with a usable runtime
+choice. No new server, dependency, schema, endpoint or user-data upload is introduced.
+
+Focused evidence: **12 read-ahead cases, 15 folder/policy/lifetime cases, 70 playback-context
+cases**, **24 native tests / two suites**, **1287 actual-ESM page assertions**, and **15 fresh
+starts / 339 assertions**. Eight folder planning rows are shared with production Kotlin through
+a declared Gradle input. Removing a row fails both readers; restoring it reruns the same native
+command without a rerun flag. Seven controlled faults are detected and restored, including the
+actual opened hook, unknown-network boundary and late hidden-folder publication. Observer and
+shuffle-preview regressions fail before their fixes. Focused legacy page integration also passes.
+At this preflight checkpoint the forced complete gate/lint were pending. Browser rendering,
+touch, real network/CORS, quota, audible gaps and background behaviour remain unchecked.
+
+
+### W19 completed host gate — 2026-10-29
+
+Tested source **bc9796487fe79d4952a164aa9b04f339af599bf3** passes the forced complete project gate:
+**1257 tests / 172 suites**, zero failures/errors/skips, **994 s** overall. All **31** native unit
+tasks executed (477.7 s); all configured companions passed, including **1287 actual-ESM page
+assertions**, **fifteen fresh starts / 339 assertions**, the new read-ahead/folder checks, actual
+WASM/audio, migrations, PWA and eleven server checks. Lint: **0 errors / 79 warnings**, **84.6 s**.
+All **728** source/test/build-input hashes match, including the shared privacy source. Full logs,
+JUnit, lint and receipt were archived before further test work. The final amendment changes only
+documentation; Android playback code, WASM, schema versions and release version remain unchanged.
+
+W19 is implemented at host level: **21 of 25 scopes** (W01-W13, W16-W21, W23-W24). Continue W22,
+W14/W15 and W25, then the requirements/commit/exclusion audit, any worthwhile fixes and the final
+WEB package. No scope has been skipped. Browser CORS, quota, rendering, touch, sound and background
+acceptance remain unchecked. No WEB merge, push, deployment or additional APK has occurred.

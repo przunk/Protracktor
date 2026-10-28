@@ -1,5 +1,27 @@
 # Architecture
 
+## WEB speculative music ownership — branch candidate, 2026-10-29
+
+PlaybackReadAhead owns completed, consume-on-open RAM buffers (4 MiB/file, 8 MiB total).
+PlaybackController's native candidate rule is represented once by readAheadCandidates: distinct
+pending manual FIFO, then source successors, at most three files. The app selects successors;
+the model owns eviction, cancellation and publication generations. RemoteMusic owns shared
+network work and retained bytes; retiring a speculative waiter cannot cancel an independent
+foreground load. Random has no second byte cache. A weak memo of the next shuffled PlayOrder
+lap lets prediction and actual Next share a permutation without mutating historical state.
+
+FolderPrefetch owns a loaded Modland author-folder snapshot and its ordered three-worker,
+100 MiB plan. Cached files do not spend that plan. Policy is rechecked before each start;
+replacement rejects late progress and cancels waiters. Existing row slots show progress without
+recreating the list. Queue overlays retain the underlying Browse lifetime; leaving Browse ends it.
+
+CacheAheadPreferences persists only explicit Wi-Fi only / Always / Off changes. That choice gates
+bulk folder work, not the next files of playback already selected. Android uses unmetered status;
+the [browser specification](https://wicg.github.io/netinfo/) supplies no equivalent authority.
+The adapter therefore reports unknown: Wi-Fi only visibly pauses folder work, Always opts in.
+Physical bearer names or throughput classes never silently authorize data spending. Startup does
+not fetch speculative music or write defaults. [Reference and checks](WEB_IMPLEMENTATION.md#w19--shared-playback-read-ahead-and-folder-policy-2026-10-29).
+
 ## WEB playback preferences — branch candidate, 2026-10-28
 
 `PlaybackPreferences` reads shuffle, repeat and the existing play-all key synchronously before
@@ -509,7 +531,7 @@ plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary ass
 | Native replay installation | `ReplayDownloads` runs in the existing controller scope; controller owns progress, native configuration and the background dispatcher | **Extracted:** guarded sc68 then UADE downloads, activation and combined notice. Native calls remain controller-bound, including startup/post-delete UADE configuration; construction performs no download or native initialization |
 | Downloaded-data removal | `LibraryMaintenance` runs cache, catalogue index/archive, metadata and replay deletion in the controller's existing scope; stores/cache and native configuration retain their owners | **Extracted:** `LibraryMaintenanceState` publishes into the existing flows; `AndroidMaintenanceFiles` and `AndroidMaintenanceText` bind file operations and notices. No new deletion target, scope or state copy; playback and local user data remain outside this workflow |
 | Random history (C97) | `RandomHistory` owns the heard boundary, cursor, speculative tail and generation; the controller owns catalogue IO and playback | Scope changes discard only unheard entries. Next walks history; explicit re-roll appends a fresh pick. Serialized fills reject obsolete results after each suspension, including the small-pool fallback. Background replenishment never publishes speculative rows |
-| Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. The existing no-missing-bytes early return remains before cancellation |
+| Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. Preparation retires old work before checking whether all wanted bytes are held; late results also need the current generation |
 | Browse cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns Browse cache marks and both observers, including cancellation and stale-result protection | **Extracted:** `BrowseCache` combines `OnPhone` source checks with `FolderPrefetch` planning/execution. Narrow file/progress operations reuse the same remote cache and Browse writer; no new scope, cache or policy copy |
 | Android service | `PlaybackService` owns its coroutine scope, platform media session, notification and optional floating-controls window; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
 | Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |

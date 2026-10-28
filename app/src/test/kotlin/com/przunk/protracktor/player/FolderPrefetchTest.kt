@@ -162,5 +162,25 @@ class FolderPrefetchTest {
         val manifest = java.io.File(here, "app/src/main/AndroidManifest.xml").readText()
         assertTrue(manifest.contains("android.permission.ACCESS_NETWORK_STATE"))
     }
+
+    @Test fun `shared WEB folder plans match native budgets and ordering`() {
+        val root = generateSequence(java.io.File(".").absoluteFile) { it.parentFile }
+            .first { java.io.File(it, "settings.gradle.kts").isFile }
+        val lines = java.io.File(root, "docs/rules/folder-prefetch-cases.tsv").readLines()
+        val count = lines.first { it.startsWith("# cases: ") }.substringAfter(": ").toInt()
+        val rows = lines.filter { it.isNotBlank() && !it.startsWith("#") }
+        assertEquals("case\tsizes\tcached\tbudget\texpected", rows.first())
+        require(count > 0)
+        assertEquals("A shared folder case is missing", count, rows.size - 1)
+        fun ids(value: String): List<String> = if (value == "-") emptyList() else value.split(',').map { "t$it" }
+        rows.drop(1).forEach { line ->
+            val fields = line.split('\t')
+            assertEquals(5, fields.size)
+            val sizes = if (fields[1] == "-") emptyList() else fields[1].split(',').map(String::toLong)
+            val tracks = sizes.mapIndexed { index, size -> FolderPrefetch.Candidate("t$index", size) }
+            assertEquals(fields[0], ids(fields[4]), FolderPrefetch.plan(tracks, ids(fields[2]).toSet(), fields[3].toLong()))
+        }
+    }
+
 }
 

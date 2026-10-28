@@ -995,6 +995,7 @@
       <input type="search" id="historysearch" placeholder="Search History" aria-label="Search History" aria-controls="browselist" autocomplete="off">
     </div>
     <p class="note" id="browsenote" aria-live="polite"></p>
+    <p class="note" id="folder-prefetch-note" role="status" hidden></p>
     <div id="browse-selection-head" class="browse-selection-head" hidden>
       <span id="browse-selection-count" aria-live="polite"></span>
       <button class="action" id="browse-select-all" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 7 3 3 7-7 1.4 1.4L10 17l-4.4-4.4L7 12z"/></svg><span>Select all</span></button>
@@ -1229,9 +1230,16 @@
         <p class="storage">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</p>
       </div>
 
-      <!--
-        Language and theme change presentation while the live player retains its state.
-      -->
+      <fieldset class="setting choice">
+        <legend>Cache folders ahead</legend>
+        <p class="storage">When you open a Modland author's folder, its tracks are downloaded in the background, three at a time and up to 100 MB per folder, so they play without waiting.</p>
+        <label><input type="radio" name="cacheahead" value="wifi"> Wi-Fi only</label>
+        <label><input type="radio" name="cacheahead" value="always"> Always</label>
+        <label><input type="radio" name="cacheahead" value="off"> Off</label>
+        <p class="storage">This browser cannot check network data limits. Wi-Fi only pauses folder downloads; choose Always to enable them. The next tracks in your playback list are still prepared automatically.</p>
+      </fieldset>
+
+      <!-- Language and theme retain the live player. -->
       <fieldset class="setting choice">
         <legend>Language</legend>
         <p class="storage">Interface text changes without interrupting playback.</p>

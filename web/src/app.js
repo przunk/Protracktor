@@ -10,6 +10,8 @@ import { RemoteMusic } from './remote-music.js';
 import { OfflineAsma } from './offline-asma.js';
 import { AsmaView } from './asma-view.js';
 import { MusicCacheView } from './music-cache-view.js';
+import { PlaybackReadAhead, readAheadCandidates, READ_AHEAD_COUNT } from './playback-read-ahead.js';
+import { FolderPrefetch, CacheAheadPreferences } from './folder-prefetch.js';
 import { freedCacheBytes } from './cache-budget.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
@@ -55,6 +57,7 @@ const $ = (id) => document.getElementById(id);
 const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
 let remoteMusic = null, musicCacheView = null, offlineAsma = null, asmaView = null;
+let readAhead = null, folderPrefetch = null, browsedFolder = null;
 
 /**
  * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
@@ -104,6 +107,8 @@ let index = -1;
  */
 const playbackPreferences = new PlaybackPreferences(() => localStorage);
 const restoredPlaybackPreferences = playbackPreferences.read();
+const cacheAheadPreferences = new CacheAheadPreferences(() => localStorage);
+const restoredCacheAhead = cacheAheadPreferences.read();
 let shuffle = restoredPlaybackPreferences.value.shuffle;
 let repeat = restoredPlaybackPreferences.value.repeat; // off -> all -> one
 const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
@@ -402,6 +407,7 @@ function enqueueTrack(entry, historyOrigin = false) {
   render();
   setPlaying(playing);
   showNote(uiMessageText('Added to queue: {name}', { name: entry.name }));
+  prefetchUpcoming();
   return true;
 }
 
@@ -428,6 +434,7 @@ function removeQueueOccurrence(row, generation) {
     : removeSourceOccurrence(playbackPlan(), row.id, generation, options);
   if (!result.undo) return;
   applyPlaybackResult(result);
+  prefetchUpcoming();
   showUndo(uiMessageText('Removed {name}', { name: row.track.name }), () => undoPlaybackQueue({ kind: 'remove', token: result.undo }));
 }
 
@@ -436,6 +443,7 @@ function clearPlaybackQueue() {
   if (!token) { showNote(uiMessageText('Queue is already clear.')); return; }
   ++scheduleIntent;
   const runtime = { random, away };
+  readAhead?.clear();
   if (random) {
     invalidateRandomWork(random);
   }
@@ -464,6 +472,7 @@ function undoPlaybackQueue(undo) {
   adoptPlan(restored);
   render();
   setPlaying(playing);
+  if (random) fillAhead(random).catch(() => {}); else prefetchUpcoming();
   return true;
 }
 
@@ -518,6 +527,7 @@ function changeEditorTracks(tracks, { dirty = true } = {}) {
   const owns = editorOwnsPlayback();
   workspace = workspace.editTracks(tracks, { dirty });
   if (owns) applyTransportOrder();
+  if (owns && dirty && (playing || loading || $('seek').dataset.opened === '1')) prefetchUpcoming();
   refreshStashes();
   setDirty(dirty);
 }
@@ -912,6 +922,7 @@ function onWorklet(message) {
       // tune with no click on this page, and a browser keeps the audio suspended until there is one
       // -- so the button says play, which is the press that makes the sound, rather than pause,
       // which would have stopped a tune nobody could hear yet.
+      prefetchUpcoming();
       if (context?.state === 'suspended') {
         setPlaying(false);
         waitForTouch();
@@ -1408,9 +1419,8 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     render();
     return;
   }
-  // The selected load owns this promise before awaiting startup. Clear only drops speculation.
-  const ready = !entry.data ? random?.bytes.get(entry.url) : null;
-  if (ready) random.bytes.delete(entry.url);
+  // Take before startup can yield: Clear must not discard the selected load's buffer.
+  const ready = !heldBytesOf(entry) ? readAhead?.take(entry.url) : null;
   const asked = ++playAsked;
   openingHistoryTicket = played.generation;
   delete $('seek').dataset.opened;
@@ -1880,10 +1890,14 @@ function paintDownloadedMusic() {
     const primary = leading.querySelector('.leading-primary');
     if (!primary) continue; // Selection owns the whole slot.
     const url = leading.dataset.cacheUrl;
-    const state = remoteMusic?.has(url) || offlineAsma?.has(url) ? 'retained' : held.has(url) ? 'tab' : '';
+    const state = folderPrefetch?.state.fetching.includes(url) ? 'fetching'
+      : remoteMusic?.has(url) || offlineAsma?.has(url) ? 'retained' : held.has(url) ? 'tab' : '';
     if (primary.dataset.copy === state) continue;
     primary.dataset.copy = state;
-    if (state) {
+    if (state === 'fetching') {
+      primary.innerHTML = '<span class="spinner" aria-hidden="true"></span>'; primary.setAttribute('role', 'img');
+      setUiAttribute(primary, 'aria-label', uiMessageText('Caching ahead'));
+    } else if (state) {
       primary.innerHTML = iconSvg(ICON.onPhone); primary.setAttribute('role', 'img');
       setUiAttribute(primary, 'aria-label', state === 'retained' ? uiMessageText('Downloaded copy — available offline') : uiMessageText('Available in this tab'));
     } else {
@@ -2208,6 +2222,7 @@ function prepareChangedRandom() {
   invalidateRandomWork(r);
   r.table = null;
   if (random === r) {
+    prefetchUpcoming();
     if (wasDrawing) { ++scheduleIntent; drawing = false; rollRandom(); }
     else fillAhead(r).catch(() => {});
   }
@@ -2231,7 +2246,7 @@ async function downloadRandomFavourites() {
   finally { await downloadEnded('modland-favourites'); }
 }
 
-const RANDOM_AHEAD = 3;   // Android READ_AHEAD
+const RANDOM_AHEAD = READ_AHEAD_COUNT;
 const RANDOM_DRAWS = 4;   // Android OVERDRAW
 const RANDOM_FAILURES = 8;
 let randomSource = Math.random;
@@ -2315,7 +2330,6 @@ function invalidateRandomWork(r) {
   r.history.changeScope();
   r.fillController.abort();
   r.fillController = new AbortController();
-  r.bytes.clear();
 }
 
 /** Dice resets the session, unlike RandomHistory.reroll, which only prepares a fresh tail. */
@@ -2328,7 +2342,7 @@ async function rerollRandom() {
   stopForLeaving();
   away = null;
   const r = rememberedRandom = { sessionId: ++nextRandomSession, stash: editorStash(), history: new RandomHistory(),
-    table: null, bytes: new Map(), fillController: new AbortController(), exhausted: false };
+    table: null, fillController: new AbortController(), exhausted: false };
   const context = new PlaybackContext({ source: { kind: 'random', session: r.sessionId },
     order: new PlayOrder({ shuffle, repeat, random: randomSource }) });
   adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context)));
@@ -2355,18 +2369,48 @@ async function fillRandom(r, ahead) {
   }, { signal });
 }
 
+/** Prepare the native pending-FIFO/source order without adopting it or touching History. */
+function prefetchUpcoming() {
+  if (!readAhead) return;
+  let wanted = [];
+  switch (workspace.context.source.kind) {
+    case 'random': wanted = random?.history.upcoming(READ_AHEAD_COUNT) ?? []; break;
+    case 'playlist': case 'collection': {
+      const next = playableStep({ kind: 'context', step: workspace.context.next() }, true);
+      if (next.step.kind === 'play') wanted = [next.step.context.current];
+      break;
+    }
+    case 'none': case 'external': break;
+    default: throw new TypeError(workspace.context.source.kind);
+  }
+  void readAhead.prepare(readAheadCandidates(schedule.pending.map((request) => request.track), wanted)).catch(() => {});
+}
+
+function renderCacheAhead() {
+  if (!folderPrefetch) return;
+  for (const radio of document.querySelectorAll('input[name="cacheahead"]')) radio.checked = radio.value === folderPrefetch.mode;
+  const note = $('folder-prefetch-note'), blocked = folderPrefetch.state.blocked;
+  note.hidden = !blocked;
+  setUiText(note, blocked === 'unknown'
+    ? uiMessageText('Wi-Fi only is paused because this browser cannot check network data limits. Choose Always in Settings to download folders ahead.')
+    : blocked === 'metered' ? uiMessageText('Folder downloads are paused on a metered network.') : '');
+}
+
+function refreshFolderPrefetch(preserveBrowse = false) {
+  if (!folderPrefetch) return;
+  const visible = preserveBrowse || !$('browse').hidden || !$('playback-panel').hidden && queueUnderlying === 'browse';
+  const folder = visible && browsedFolder?.key === JSON.stringify(browsePath) ? browsedFolder : null;
+  folderPrefetch.setFolder(folder?.key ?? null, folder?.tracks ?? []);
+  renderCacheAhead();
+}
+
 /** The heard record is never extended by speculation. Inactive views do not fetch music. */
 async function fillAhead(r = random) {
   if (!r) return;
   const generation = r.history.generation;
   await fillRandom(r, RANDOM_AHEAD);
   if (random !== r || generation !== r.history.generation) return;
-  const upcoming = r.history.upcoming(RANDOM_AHEAD);
-  const keep = new Set([...upcoming.map((track) => track.url), currentTrack()?.url]);
-  for (const url of r.bytes.keys()) if (!keep.has(url)) r.bytes.delete(url);
-  for (const track of upcoming) if (!r.bytes.has(track.url)) {
-    r.bytes.set(track.url, bytesOf(track).catch(() => null));
-  }
+  prefetchUpcoming();
 }
 
 function playRememberedRandomAt(at, r, tracks) {
@@ -2387,7 +2431,7 @@ async function rollRandom({ intent = ++scheduleIntent, placement = 'append', aut
   r.advanceIntent = intent;
   drawing = true;
   schedule = schedule.finishCurrent();
-  stopForLeaving();
+  stopForLeaving({ preserveReadAhead: true });
   setPlaying(false);
   render();
   let pick;
@@ -3193,7 +3237,8 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
 }
 
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
-function stopForLeaving() {
+function stopForLeaving({ preserveReadAhead = false } = {}) {
+  if (!preserveReadAhead) readAhead?.clear();
   sampleListening();
   listening.forget();
   listeningTrack = null;
@@ -3336,6 +3381,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   if (!which) renderEmpty();
   if (randomFiltersView) requestRandomFilterRefresh();
   updateSelectBar();
+  refreshFolderPrefetch(preserveBrowse);
 }
 
 function openPlaybackQueue() {
@@ -3370,6 +3416,7 @@ function closePlaybackQueue({ focus = false } = {}) {
   if (focus) $('showqueue').focus();
   if (focus && !$('browse').hidden && browsePath[0] === 'search') void refreshSearchAvailability();
   requestRandomFilterRefresh();
+  refreshFolderPrefetch();
 }
 
 
@@ -3812,6 +3859,8 @@ async function renderBrowse(resolved = null) {
   // Whatever a search still running would draw is no longer wanted.
   const visit = ++searchAsked;
   const selectionOwner = browseSelectionOwner();
+  const folderKey = browsePath[0] === 'modland' && browsePath.length === 3 ? JSON.stringify(browsePath) : null;
+  if (browsedFolder?.key !== folderKey) { browsedFolder = null; refreshFolderPrefetch(); }
   const scrollVisit = browseScrollView?.begin(selectionOwner);
   if (browseSelection.owner !== selectionOwner) browseSelectionView?.sync(selectionOwner, []);
   try {
@@ -3922,6 +3971,7 @@ async function renderBrowse(resolved = null) {
 
   if (sourceBrowseRoute) {
     const route = sourceBrowseRoute;
+    if (folderKey) browsedFolder = { key: folderKey, tracks: route.results };
     if (browsePath[0] === 'search') renderSearchRows(list, note, route);
     else if (browsePath[0] === 'history') renderHistoryRows(list, note, route.historyRows ?? route.results.map((track) => ({ ...track, replayable: true })), route.historyTotal, row, route);
     else {
@@ -4018,6 +4068,7 @@ async function renderBrowse(resolved = null) {
   const tracks = resolved?.key && savedPlaceId(resolved.key) === savedPlaceId(key)
     ? resolved.tracks : await archive.tracksIn(format, author, source);
   if (visit !== searchAsked) return;
+  if (folderKey) browsedFolder = { key: folderKey, tracks };
   const route = captureBrowseRoute(tracks);
   tracks.forEach((track, i) => {
     // **The whole author is what next and previous walk**, which is what the phone does: a person
@@ -4031,6 +4082,7 @@ async function renderBrowse(resolved = null) {
       const loading = !sourceBrowseRoute && (browsePath[0] === 'history' ? historyBrowser.state.loading
         : browsePath[0] === 'search' ? searchBrowser.state.loading : false);
       browseScrollView?.finish(scrollVisit, { loading });
+      refreshFolderPrefetch();
     }
   }
 }
@@ -4925,6 +4977,7 @@ $('shuffle').onclick = () => {
   savePlaybackPreference('shuffle', shuffle);
   setPlaying(playing);
   status(shuffle ? uiMessageText('Shuffle on') : uiMessageText('Shuffle off'));
+  prefetchUpcoming();
 };
 
 $('repeat').onclick = () => {
@@ -4933,6 +4986,7 @@ $('repeat').onclick = () => {
   adoptPlan(new PlaybackPlan(workspace.context.withOrder(workspace.context.order.withRepeat(mode)), schedule));
   savePlaybackPreference('repeat', repeat);
   setPlaying(playing);
+  prefetchUpcoming();
   status(repeatCaption(repeat));
 };
 /*
@@ -5594,7 +5648,8 @@ queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'),
   sourceLabel: playbackSourceLabel, displayTrack, subtitle: displaySourceLine,
   onPlaySource: playSourceOccurrence, onPlayManual: playManualRequest, onAdd: enqueueTrack,
   onRemove: removeQueueOccurrence, onInfo: informAbout,
-  onMove: (id, target) => { schedule = schedule.moveRequest(id, target); render(); setPlaying(playing); },
+  onMove: (id, target) => { const before = schedule; schedule = schedule.moveRequest(id, target);
+    render(); setPlaying(playing); if (schedule !== before) prefetchUpcoming(); },
   onMenu: (items, anchor) => showMenu(items.map(([label, action, enabled, icon]) =>
     [label, action, enabled, ICON[icon]]), anchor),
 });
@@ -5676,7 +5731,21 @@ window.addEventListener('focus', () => { void offlineAsma.refresh(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void offlineAsma.refresh(); });
 
 remoteMusic = new RemoteMusic({ cache: musicCache, fetch: (...args) => fetch(...args),
-  inUse: () => [currentTrack()?.url, ...(random?.bytes.keys() ?? [])].filter(Boolean) });
+  inUse: () => [currentTrack()?.url, ...(readAhead?.ids ?? [])].filter(Boolean) });
+readAhead = new PlaybackReadAhead(async (track, options) => {
+  try { return await bytesOf(track, options); } catch (error) { if (options.signal.aborted) throw error; return null; }
+});
+folderPrefetch = new FolderPrefetch({ mode: restoredCacheAhead.value,
+  cached: (url) => remoteMusic.has(url) || !!heldBytesOf({ url }),
+  fetch: async (track, options) => await bytesOf(track, options) != null,
+  changed: () => { paintDownloadedMusic(); renderCacheAhead(); } });
+for (const radio of document.querySelectorAll('input[name="cacheahead"]')) radio.onchange = () => {
+  folderPrefetch.setMode(radio.value);
+  const failure = cacheAheadPreferences.write(folderPrefetch.mode);
+  renderCacheAhead();
+  if (failure) showNote(uiMessageText('Could not save folder download settings: {reason}', { reason: failure.message }));
+};
+renderCacheAhead();
 remoteMusic.subscribe(() => { paintDownloadedMusic(); if (musicCacheView?.body.isConnected) musicCacheView.render(remoteMusic.state); });
 window.addEventListener('focus', () => { void remoteMusic.refresh(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void remoteMusic.refresh(); });
@@ -5688,6 +5757,7 @@ if (!location.hash.slice(1)) showPanel('pair');
 
 status(uiMessageText('ready — press Play or load some URLs'));
 if (restoredPlaybackPreferences.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
+if (restoredCacheAhead.failure) showNote(uiMessageText('Could not restore folder download settings: {reason}', { reason: restoredCacheAhead.failure.message }));
 pair();
 
 /**

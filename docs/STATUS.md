@@ -44,6 +44,25 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W19 complete at host level, 2026-10-29:** bounded common playback read-ahead and policy-gated
+Modland folder preparation pass the forced full gate on **bc97964**: **1257 tests / 172 suites**,
+zero failures/errors/skips, **994 s**, all 31 native unit tasks executed and all companions,
+**1287 actual-ESM page assertions**, fifteen fresh starts / 339 assertions. Lint: **0 errors /
+79 warnings**, 84.6 s; all **728** input hashes match. Logs/JUnit/lint are archived. Default folder
+policy explains the browser's unavailable unmetered-network status; selected-playback preparation
+stays independent. Android playback code/WASM/schema/version are unchanged; shared privacy copy
+is updated. Browser rendering, touch, CORS, quota, sound and background acceptance remain unchecked.
+
+**W19 pre-gate implementation checkpoint, 2026-10-29:** shared bounded playback read-ahead replaces
+Random's byte promises; Modland author-folder prefetch has ordered three-worker execution,
+100 MiB planning, cancellation and retained Wi-Fi only / Always / Off controls. Browser default
+pauses folder bulk downloads with an explanation because unmetered-network status is unavailable.
+Chosen-playback preparation is independent. Focused checks cover 12 read-ahead, 15 folder and
+70 context cases; native 24 tests/two suites, actual page 1287 assertions, fifteen fresh starts
+339 assertions. Controlled faults and shared-input invalidation are verified. Full gate/lint
+were still pending at this checkpoint; see the completed gate above. Physical browser acceptance
+remains unchecked.
+
 **W23 complete at host level, 2026-10-29:** the shared reader recovers one moved Modland
 unknown-author path only after HTTP404, preserving nested formats, canonical encoding and original
 playlist/History/cache IDs. Tested **7b1743e** passes the forced complete gate: **1256 tests /
@@ -78,7 +97,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**20 of 25 scopes are implemented** (W01-W13, W16-W18, W20-W21, W23-W24); W19 read-ahead is next. No WEB merge,
+**21 of 25 scopes have completed host verification** (W01-W13, W16-W21, W23-W24); W22 is next. No WEB merge,
 package, push or deployment.
 
 

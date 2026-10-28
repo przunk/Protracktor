@@ -16,6 +16,9 @@ const cases = {
   all: { raw: { shuffle: '0', repeat: 'all', allsubsongs: '1' }, shuffle: false, repeat: 'all', all: true },
   legacy: { raw: { allsubsongs: '1' }, shuffle: false, repeat: 'off', all: true },
   denied: { raw: {}, shuffle: false, repeat: 'off', all: false },
+  'prefetch-always': { raw: { cacheAhead: 'always' }, shuffle: false, repeat: 'off', all: false, folderMode: 'always' },
+  'prefetch-off': { raw: { cacheAhead: 'off' }, shuffle: false, repeat: 'off', all: false, folderMode: 'off' },
+  'prefetch-denied': { raw: {}, shuffle: false, repeat: 'off', all: false, folderMode: 'wifi' },
   delayed: { raw: { shuffle: '1', repeat: 'one' }, shuffle: true, repeat: 'one', all: false },
   'delayed-failure': { raw: { shuffle: '1', repeat: 'one' }, shuffle: true, repeat: 'one', all: false },
   fragment: { raw: { shuffle: '1', repeat: 'all' }, shuffle: true, repeat: 'all', all: false },
@@ -41,10 +44,8 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   if (name === 'cache') await store.musicCache.write(tracks[1].url, await new window.Response(new Uint8Array([21, 22, 23, 24])).blob());
   const state = window.__startup = { writes: [], preferenceWrites: [], notices: [], choice, tracks,
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
-  if (name === 'cache' || name === 'asma') {
-    const fetch = window.fetch; state.trackRequests = 0;
-    window.fetch = (...args) => { if (String(args[0]) === tracks[1].url) state.trackRequests++; return fetch(...args); };
-  }
+  const fetch = window.fetch; state.trackRequests = 0;
+  window.fetch = (...args) => { if (tracks.some((track) => track.url === String(args[0]))) state.trackRequests++; return fetch(...args); };
   // Cold module evaluation can outlast a snackbar. Observe its visible lifetime, not hidden text.
   const bar = window.document.getElementById('snackbar'), caption = window.document.getElementById('snacktext');
   const notices = new window.MutationObserver(() => {
@@ -59,11 +60,15 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   };
   const set = window.Storage.prototype.setItem, get = window.Storage.prototype.getItem;
   window.Storage.prototype.setItem = function (key, value) {
-    if (/^protracktor\.(shuffle|repeat|allsubsongs)$/.test(key)) state.preferenceWrites.push([key, value]);
+    if (/^protracktor\.(shuffle|repeat|allsubsongs|cacheAhead)$/.test(key)) state.preferenceWrites.push([key, value]);
     return set.call(this, key, value);
   };
   if (name === 'denied') window.Storage.prototype.getItem = function (key) {
     if (/^protracktor\.(shuffle|repeat|allsubsongs)$/.test(key)) throw new Error('playback preference read refused');
+    return get.call(this, key);
+  };
+  if (name === 'prefetch-denied') window.Storage.prototype.getItem = function (key) {
+    if (key === 'protracktor.cacheAhead') throw new Error('folder download preference read refused');
     return get.call(this, key);
   };
   if (name.startsWith('delayed')) window.navigator.storage.persisted = () => new Promise((resolve) => { state.release = () => resolve(true); });
@@ -109,6 +114,9 @@ export async function verify({ window, check, name }) {
       check(state.writes.every((name) => name === 'remoteMusic'), 'restoring a saved playlist performs no initialization database writes');
     }
     const order = api.planNow().context.order, { choice } = state;
+    check(api.folderAheadNow().mode === (choice.folderMode ?? 'wifi')
+      && document.querySelector(`input[name="cacheahead"][value="${choice.folderMode ?? 'wifi'}"]`).checked,
+      `${name}: startup restores the folder policy without changing playback or writing defaults`);
     check(order.shuffle === choice.shuffle && order.repeat === choice.repeat, `${name}: restored transport modes match native defaults and saved values`);
     check(api.editorNow().order.shuffle === choice.shuffle && api.editorNow().order.repeat === choice.repeat, `${name}: visible editor and initial context receive the same restored modes`);
     check($('shuffle').getAttribute('aria-pressed') === String(choice.shuffle), `${name}: restored shuffle presentation is explicit`);
@@ -116,6 +124,7 @@ export async function verify({ window, check, name }) {
     if (choice.repeat === 'one') check($('repeat').querySelector('path').getAttribute('d') !== state.initialRepeatGlyph, 'restored Repeat One uses its own glyph before any click');
     check($('settings-allsubsongs').checked === choice.all && $('allsubsongs').getAttribute('aria-checked') === String(choice.all), `${name}: both subsong controls reflect the one restored preference`);
     check(api.contextNow() === null && window.__toWorklet.length === 0 && $('playpause').title === 'Play', `${name}: startup never constructs audio or opens a decoder`);
+    check(state.trackRequests === 0, `${name}: restoring a playlist or folder policy never fetches speculative music`);
     check(!api.dirtyNow(), `${name}: restored modes are not playlist content edits`);
     check(state.preferenceWrites.length === 0, `${name}: initialization does not write defaults over saved preferences`);
     if (name === 'cache' || name === 'asma') {
@@ -128,5 +137,7 @@ export async function verify({ window, check, name }) {
       if (opened) api.onWorklet({ type: 'opened', requestId: opened.requestId, describe: '', duration: 90, rate: 44100, subsongs: 1, current: 0, canSeek: true });
     }
     if (name === 'denied') check(state.notices.some((text) => text.includes('playback preference read refused')), 'a refused playback read is visibly explained while the saved playlist still restores paused');
+    if (name === 'prefetch-denied') check(state.notices.some((text) => text.includes('folder download preference read refused')),
+      'a refused folder preference read explains its safe default without starting downloads');
   } finally { state.cleanup(); }
 }

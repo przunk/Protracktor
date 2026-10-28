@@ -307,5 +307,38 @@ test('transport availability does not consume randomness or deal a new lap durin
   assert.ok(calls > before, 'the real advance, rather than a view read, deals the new lap');
 });
 
+test('an upcoming-file preview and actual Next share one fresh shuffled lap', () => {
+  let calls = 0; const values = [0.99, 0.99, 0, 0];
+  const last = new PlayOrder({ tracks, shuffle: true, repeat: 'all', indices: [0, 1, 2], history: [2], cursor: 0,
+    random: () => values[calls++ % values.length] });
+  const active = new PlaybackContext({ source: { kind: 'playlist', id: 'A' }, order: last });
+  const preview = active.next(); const next = active.next();
+  assert.equal(preview.context.current.url, 'a'); assert.equal(next.context.current.url, 'a'); assert.equal(calls, 2);
+  assert.equal(last.current.url, 'c'); assert.equal(active.order, last); assert(Object.isFrozen(last));
+});
+
+test('learning titles retains a prepared new lap without another random draw', () => {
+  let calls = 0;
+  const last = new PlayOrder({ tracks, shuffle: true, repeat: 'all', indices: [0, 1, 2], history: [2], cursor: 0,
+    random: () => { calls++; return 0.99; } });
+  const preview = last.advanced();
+  const learned = last.withTracks(tracks.map((track) => ({ ...track, name: 'Learned ' + track.url })));
+  const next = learned.advanced();
+  assert.equal(next.current.url, preview.current.url); assert.equal(next.current.name, 'Learned ' + next.current.url); assert.equal(calls, 2);
+});
+
+test('a prepared shuffled lap still plays each occurrence once before dealing the following lap', () => {
+  let calls = 0;
+  const last = new PlayOrder({ tracks, shuffle: true, repeat: 'all', indices: [0, 1, 2], history: [2], cursor: 0,
+    random: () => { calls++; return 0.41; } });
+  last.advanced(); let active = last.advanced();
+  const visited = [active.current.url];
+  for (let i = 0; i < 2; i++) { active = active.advanced(); visited.push(active.current.url); }
+  assert.equal(new Set(visited).size, 3); assert.equal(calls, 2);
+  active.advanced(); assert.equal(calls, 4);
+  assert.equal(last.withRepeat('off').advanced(), null);
+  const one = last.withRepeat('one'); assert.equal(one.ended(), one);
+});
+
 assert.ok(checks > 0);
 console.log(`${checks} playback-context checks passed.`);

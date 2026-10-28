@@ -92,13 +92,14 @@ export default async function checkRememberedRandom({ window, check }) {
     'Previous from manual playback restores the parked Random occurrence and synchronizes its heard cursor');
 
   // Clear can run in the first microtask gap after a prepared heard-row selection.
-  const prepared = deferred(), selectedPick = initial.history.playedPicks[0];
-  initial.bytes.set(selectedPick.url, prepared.promise);
+  const selectedPick = initial.history.playedPicks[0], ahead = api.aheadNow(), read = ahead.read;
+  ahead.read = async () => new ArrayBuffer(24);
+  try { await ahead.prepare([selectedPick]); } finally { ahead.read = read; }
   rows()[0].click(); api.clearPlaybackQueue();
   const clearLoad = api.actualNow();
-  prepared.resolve(new ArrayBuffer(24)); await settle();
+  await settle();
   check(api.sourceNow().kind === 'none' && api.actualNow() === clearLoad && lastOpen().bytes.byteLength === 24,
-    'Clear in the AudioContext start gap preserves the already adopted Random byte promise');
+    'Clear in the AudioContext start gap preserves the already adopted Random buffer');
   opened(); $('snackundo').click(); await settle();
 
   // Active History must not lend replay-without-recording semantics to a visible Random row.

@@ -31,6 +31,9 @@ export default async function checkSavedPlaces({ window, check }) {
   const open = window.__toWorklet.filter((message) => message.type === 'open').at(-1);
   window.__workletPort.onmessage({ data: { type: 'opened', requestId: open.requestId, duration: 90, subsongs: 1, describe: '', rate: 44100 } });
   api.enqueueTrack({ name: 'Manual kept', url: 'https://example.test/bookmarks/manual.mod' });
+  // The explicit queue action owns its read-ahead; start measuring Bookmark after that fixture settles.
+  for (let n = 0; n < 200 && !api.musicNow().has('https://example.test/bookmarks/manual.mod'); n++) await settle(10);
+  check(api.musicNow().has('https://example.test/bookmarks/manual.mod'), 'the queued fixture finishes its independent read-ahead before Bookmark measurement');
   const plan = api.planNow(), messages = window.__toWorklet.length;
   const random = api.rememberedRandomNow(), heard = random?.history.playedPicks;
   let requests = 0; const fetch = window.fetch;

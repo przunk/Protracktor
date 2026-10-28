@@ -1,5 +1,29 @@
 # What only a phone can prove
 
+## WEB W19 read-ahead — browser checks pending, 2026-10-29
+
+Run `node scripts/check-playback-read-ahead.mjs`, `node scripts/check-folder-prefetch.mjs` and
+`node scripts/check-playback-context.mjs`; the complete page suite drives the real playlist Next,
+manual FIFO, Clear, Browse and Settings handlers. Shared folder rows also run against production
+Kotlin FolderPrefetchTest as a declared Gradle input. Fault controls must detect stale publication,
+wrong FIFO priority, missing total budget, skipped over-budget rows, unknown-network permission,
+missing real opened hook and hidden-folder work. Finish with the forced complete gate and lint.
+
+Browser trial remains unchecked:
+
+- Play a finite list, then Next; verify its prepared successor, manual FIFO priority, duplicates,
+  shuffled Repeat All boundary and uninterrupted current playback when Clear retires speculation.
+- Open a Modland author's folder. The default Wi-Fi only choice must explain why automatic
+  folder downloads are paused in this browser. Always starts up to three files concurrently;
+  Off stops new starts. Leaving ends pending folder work; existing shared downloads may finish.
+- During progress, select rows, scroll, retain keyboard focus and open/close Queue over Browse.
+  Spinner and offline-copy marks must update in place, with no shifted controls or stale folder.
+- Reload with each policy, including refused storage. Restore the choice without initial music
+  requests or autoplay; report refusal while keeping the selected runtime choice usable. Changing
+  PL/EN updates the live explanation without changing playback, selection or scroll.
+- Check actual mobile network/CORS, cache quota, touch scrolling, audible transitions and background
+  behaviour. Host DOM/stream tests establish none of these physical-browser properties.
+
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
 
