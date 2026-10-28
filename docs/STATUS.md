@@ -100,9 +100,9 @@ reported use; those multiple differences do not isolate a cause. See
 platform Force Dark in the production theme and opt out of MIUI inversion with Xiaomi's documented
 `force_dark_google=true` application metadata. Keep the app's Light/Dark/System selection.
 The packaged-metadata regression test failed before this change on API 29; both resource checks
-then passed on API 29/30 (four cases). Full verification and a release APK are being prepared.
-The cause and effectiveness on the affected Redmi remain
-unconfirmed until device testing, planned for Thursday. C123 remains open.
+then passed on API 29/30 (four cases). Full verification and a release APK are recorded below.
+The cause and effectiveness on the affected Redmi remain unconfirmed until device testing,
+planned for Thursday, 2026-10-29. C123 remains open.
 
 The same candidate includes a revised Light fallback palette, requested 2026-10-28: cool neutral
 surfaces, dark text and muted blue/teal accents. Dark and the API 31+ wallpaper-colour preference
@@ -110,7 +110,18 @@ are retained. Disable **System colour palette** to view this fallback on a Pixel
 resource/layout/theme checks pass; the contrast check fails when action text is deliberately
 changed to white, then the original colour is restored. Five host component previews were
 generated and visually inspected in English/Polish and Light/Dark; they do not reproduce MIUI.
-Full tests/lint and a release APK are pending. No merge or phone acceptance yet.
+Clean source **b8717bb** passed the forced full gate: **1228 tests / 162 suites**, zero
+failures/errors/skips; all 31 unit-test tasks executed, 446.9 s; whole gate **621 s**. Companion
+checks passed and fresh lint reported **0 errors / 79 warnings**, 87.3 s. Minified, test-signed
+release **1.4.0 (1339)** built in **106 s**:
+[APK](../dist/protracktor-release-1.4.0-1339-b8717bb-20261028-011415.apk), **11,975,431 bytes**,
+SHA-256 `e690dc82fc5ea72b14cc629ae0c4b7ea65596f3fd8e648baabb5c4cf04894a6f`.
+Signature, version, non-debuggable flag, ZIP CRC/16KB alignment and both packaged recolouring
+opt-outs were checked. All 281 recorded application/build input hashes still match the candidate.
+[Light component preview](../dist/protracktor-light-preview-b8717bb.png).
+**Partially checked overall:** host checks pass; actual Redmi/Pixel behaviour and palette
+acceptance remain unverified. No merge, push or publication. Later documentation commits do not
+relabel this APK.
 
 ## C124 Icons are uneven on Redmi Note 8 Pro
 

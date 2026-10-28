@@ -176,7 +176,7 @@ foreground failed the contrast assertion, and the original palette was restored.
 generated and inspected five host previews: titles/captions are legible, related controls align,
 and Dark retains its prior palette. In a crowded five-action row, long captions may ellipsize
 under the existing one-line policy; their full accessibility labels and touch actions remain.
-Full verification and the release APK are pending at this checkpoint.
+Full verification and the release APK are recorded below.
 
 ### C124 candidate — 2026-10-28
 
@@ -205,3 +205,43 @@ are user-reported evidence. **Unchecked:** crash reproduction, actual cause, exa
 configuration, runtime colour values, and any fix on either phone.
 The initial discussion changed documentation only. The candidate above changes resources and
 configuration; its device result is still unverified. No merge, push or release publication.
+
+### Final host verification and APK — 2026-10-28
+
+Source **b8717bbaf4b61e8c8920a51f897d2d10a9372b29**, unmerged
+`fix/redmi-theme-action-alignment`. VersionName **1.4.0** and schema **23** are retained.
+
+- **Checked:** forced full gate, **1228 tests / 162 suites**, zero failures/errors/skips.
+  All 31 unit-test tasks executed; 446.9 s for that stage, **621 s** overall. Store metadata,
+  runner/release fixtures, page/engine/SAP/database/native audio/icon/PWA/server checks passed.
+  Fresh lint: **0 errors / 79 warnings**, **87.3 s**.
+- **Checked:** three preview tests generated five host renders, inspected by the agent.
+  The deliberately white action label failed the contrast assertion before restoring the
+  candidate palette. These are host checks, not device reproductions.
+- **Checked:** minified release APK, test certificate, **1.4.0 (1339)**, build **106 s**,
+  **11,975,431 bytes**. Signature, ZIP CRC, 16KB ZIP alignment and non-debuggable/version fields
+  verified. Packaged application metadata contains `force_dark_google=true`, and the actual
+  window theme contains `forceDarkAllowed=false`. Three native ABIs are present: arm64-v8a,
+  armeabi-v7a and x86_64. All 281 recorded application/build input hashes match the candidate.
+- **Unchecked:** the original MIUI cause, effective device rendering and visual acceptance on
+  the Redmi or Pixel. C123/C124 remain open; C122 remains under observation. No merge or push.
+
+[Release APK](../dist/protracktor-release-1.4.0-1339-b8717bb-20261028-011415.apk), SHA-256
+`e690dc82fc5ea72b14cc629ae0c4b7ea65596f3fd8e648baabb5c4cf04894a6f`.
+[Light preview](../dist/protracktor-light-preview-b8717bb.png). Private evidence is under ignored
+`user/redmi-appearance-verification/`. Subsequent documentation commits do not change the
+source identity or version recorded in this APK.
+
+### Device check — planned for Thursday, 2026-10-29
+
+1. Redmi: system Dark, app Light. Inspect Playlist, Random, Settings, dock and system-bar icon
+   contrast; reopen the application. Titles, captions and metadata should remain readable on
+   light surfaces, with the selected app theme retained. Record the MIUI build and per-app
+   recolouring settings with the result.
+2. Compare explicit app Light/Dark and System against both system modes. System should follow
+   the device; explicit selections should preserve their app palette.
+3. Polish labels: compare WEB/Settings and Playlist/Filter widths and icon axes. After a playlist
+   edit, check all five actions remain visible and usable, including at an enlarged font size.
+   Crowded one-line captions may ellipsize; touch targets and full accessibility labels remain.
+4. Pixel: choose Light and disable **System colour palette** to inspect the new fallback.
+   Re-enable the switch to compare wallpaper colours, and check Dark separately.
