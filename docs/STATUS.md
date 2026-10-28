@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-27 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123 light-theme colours and C124 uneven icons reported on Redmi Note 8 Pro; source/screenshot analysis recorded; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-28 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 candidates and a revised Light palette await phone verification on fix/redmi-theme-action-alignment; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -94,7 +94,7 @@ remain dark. Source images remain ignored under `user/bug/`. MIUI forced darkeni
 source-supported hypothesis strengthened by this configuration, requiring a device comparison,
 not an established cause. A Pixel 7 on stock Android 16 with English labels looks correct in
 reported use; those multiple differences do not isolate a cause. See
-[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No code fix or device verification is claimed.
+[the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md). No verified phone fix is claimed.
 
 **Candidate prepared 2026-10-28, unmerged `fix/redmi-theme-action-alignment`:** explicitly disable
 platform Force Dark in the production theme and opt out of MIUI inversion with Xiaomi's documented
@@ -103,6 +103,14 @@ The packaged-metadata regression test failed before this change on API 29; both 
 then passed on API 29/30 (four cases). Full verification and a release APK are being prepared.
 The cause and effectiveness on the affected Redmi remain
 unconfirmed until device testing, planned for Thursday. C123 remains open.
+
+The same candidate includes a revised Light fallback palette, requested 2026-10-28: cool neutral
+surfaces, dark text and muted blue/teal accents. Dark and the API 31+ wallpaper-colour preference
+are retained. Disable **System colour palette** to view this fallback on a Pixel. Eleven focused
+resource/layout/theme checks pass; the contrast check fails when action text is deliberately
+changed to white, then the original colour is restored. Five host component previews were
+generated and visually inspected in English/Polish and Light/Dark; they do not reproduce MIUI.
+Full tests/lint and a release APK are pending. No merge or phone acceptance yet.
 
 ## C124 Icons are uneven on Redmi Note 8 Pro
 
@@ -114,7 +122,7 @@ The agent inspected both screenshots on 2026-10-27. Different action-pill widths
 (e.g. Playlist versus Filter), shifting their centre axes despite a shared right edge.
 Polish label lengths and available layout width are relevant candidates: button width has a
 minimum, not an equal-width group contract. Consistent adaptive sizing within related groups
-is proposed; no code fix or device verification has been performed. See
+is implemented by the candidate below; device verification is pending. See
 [the investigation](REDMI_NOTE_8_PRO_INVESTIGATION.md).
 
 **Candidate prepared 2026-10-28, unmerged `fix/redmi-theme-action-alignment`:** size playlist

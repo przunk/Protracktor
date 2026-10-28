@@ -121,8 +121,9 @@ supports checking rendering-time recolouring, as well as inherited text styles a
 The confirmed system-Dark/app-Light configuration strengthens the MIUI recolouring hypothesis
 without proving it. Dynamic-colour differences between the phones do not justify unreadable text.
 
-The activity's XML theme is `android:Theme.Material.NoActionBar`. It has no explicit Force Dark
-opt-out; the manifest also lacks Xiaomi's documented opt-out metadata. Standard Android Force Dark
+Before this candidate, the activity's XML theme, `android:Theme.Material.NoActionBar`, had no
+explicit Force Dark opt-out; the manifest also lacked Xiaomi's documented opt-out metadata.
+Standard Android Force Dark
 normally excludes a dark platform theme, so absence of an opt-out is not itself proof that it ran.
 Xiaomi additionally documents MIUI colour inversion and a manufacturer-specific opt-out for apps
 that already manage their own dark theme. See the
@@ -154,6 +155,28 @@ sized button backgrounds. The candidate below implements this direction; its app
 either phone remains unchecked.
 
 ## Verification state
+
+### Light palette candidate — 2026-10-28
+
+The requested visual revision is separate from the recolouring opt-outs: a different palette
+alone cannot stop MIUI transforming text. `ui/theme/LightColors.kt` provides cool near-white
+surfaces, dark ink and restrained blue/teal accents. Existing Material roles distribute the
+palette across the UI without per-widget colour overrides. System wallpaper colours still take
+precedence when enabled on API 31+; below API 31 the Light fallback is always used. Keep Dark
+unchanged. To compare the new palette on a Pixel, select Light and disable System colour palette.
+
+Contrast checks cover enabled foreground/container pairs, secondary text on all surface levels,
+and active outlines. Theme-selection checks exercise Light against system Dark and both System
+variants on API 29. Host previews cover English/Polish Playlist, dirty actions and Random in
+Light/Dark; they are component previews without MIUI or a real playback engine. Final verification
+results and the device checklist are recorded after the build.
+
+Eleven focused checks passed across the three new test classes. A deliberately white action
+foreground failed the contrast assertion, and the original palette was restored. The agent
+generated and inspected five host previews: titles/captions are legible, related controls align,
+and Dark retains its prior palette. In a crowded five-action row, long captions may ellipsize
+under the existing one-line policy; their full accessibility labels and touch actions remain.
+Full verification and the release APK are pending at this checkpoint.
 
 ### C124 candidate — 2026-10-28
 

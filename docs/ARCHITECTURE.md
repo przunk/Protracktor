@@ -1354,6 +1354,15 @@ question from light-or-dark — *where do the colours come from* rather than *ho
 and the platform below 12 has no palette to take, so offering a switch there would be a promise it
 cannot keep. On by default where it exists, because that is what a Material app is expected to do.
 
+**The app owns its theme colours (C123, 2026-10-28 candidate).** The unmerged
+`fix/redmi-theme-action-alignment` declares platform Force Dark disabled and Xiaomi's documented
+`force_dark_google=true` opt-out. Compose still chooses Light, Dark or System; OEM transformation
+must not recolour an already selected scheme. MIUI effectiveness remains pending a phone test.
+Its custom Light fallback uses cool neutral surfaces, dark ink and muted blue/teal accents in
+`ui/theme/LightColors.kt`. Keep colour roles together rather than overriding individual widgets.
+Android 12+ wallpaper colours still take precedence when System colour palette is enabled;
+the Dark fallback remains unchanged. This is a candidate palette pending visual acceptance.
+
 **One scrolling screen with sections, not a tree.** With this little in it a tree is ceremony, and
 every extra tap stands between somebody and the thing they came to change.
 
