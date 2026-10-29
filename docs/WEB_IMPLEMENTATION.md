@@ -2250,3 +2250,9 @@ unprivileged nested-process run could not resolve its Git metadata; the permitte
 passes, and metadata mismatch is now an explicit refusal rather than a misleading package.
 This host tooling evidence does not verify a decoder or browser. Final real-WASM packaging and
 the complete gate after all audit corrections remain pending.
+
+Final stylesheet inspection found Saved places actions referring to an undeclared background
+token. Their container/content now use the existing secondary-container pair, matching Native
+`LabelledAction` in `SavedPlacesScreen`. A direct shipped-stylesheet reference check fails before
+and passes after correction. This is a CSS declaration check, not rendered colour/device evidence;
+the existing PL/EN, theme and Saved places browser checklist remains open.
