@@ -150,6 +150,7 @@ fi
 "$SCRIPT_DIR/check-store-metadata.sh"
 run_check "Test-runner fixtures" runner python3 "$SCRIPT_DIR/check-test-runner.py"
 run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.sh"
+run_check "WEB package fixtures" web-package node scripts/check-web-package.mjs
 
 # These domain cases need only Node, not a browser/DOM dependency or a compiled WASM engine.
 run_check "Track selection" track-selection node scripts/check-track-selection.mjs

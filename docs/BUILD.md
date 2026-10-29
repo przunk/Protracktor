@@ -491,6 +491,21 @@ That check adapts browser transport/speaker output; it is not listening or phone
 After complete verification, `./scripts/package-web.sh` places the WEB archive in `dist/` and
 stages current legal notices, source identity and PWA assets. Packaging is separate from deployment.
 
+The WEB archive name includes the short source SHA, an optional `dirty` marker and a timestamp;
+the final output line gives its absolute path and exact byte size. `vendor/legal/build.json`
+retains the full source SHA and dirty state, checked against the checkout before packaging.
+GNU tar normalizes ordering, ownership, modes and timestamps to the source commit; gzip omits its
+variable header. Identical source identity and input bytes therefore reproduce the same archive
+bytes despite checkout/staging dates and non-executable source permissions. Filename timestamps
+remain distinct so repeated builds do not overwrite one another. The development packager uses
+Git, Node, GNU tar and gzip; the receiving host still needs only Node to run the player.
+
+`node scripts/check-web-package.mjs`, included in the full gate, executes the actual scripts in a
+disposable repository. It compares two archives after changing input dates/modes, verifies runtime
+files, notices and the launcher, checks dirty-source identity/PWA invalidation, and refuses a
+missing engine or mismatched source metadata. Its tiny engine is a packaging fixture, not a
+decoder test. Actual engine/API checks and the final real-WASM bundle verification are separate.
+
 ## Telling a green suite from a green suite that ran
 
 `./scripts/test-protracktor.sh` prints how the result was reached, because Gradle has two ways of

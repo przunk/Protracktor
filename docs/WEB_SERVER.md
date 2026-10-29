@@ -5,7 +5,7 @@
 The page and the pairing service are one small node program. It needs **node and nothing else** —
 no build tools, no Emscripten, no Android SDK. The engine is compiled to WebAssembly on a
 development machine and copied; that is what WebAssembly is for, and it is why a Pi can serve a
-player built from seven C and C++ decoders.
+player using the shared C and C++ decoder engine.
 
 ## What to copy
 
@@ -16,7 +16,10 @@ scripts/package-web.sh          # makes dist/protracktor-web-*.tar.gz
 
 The archive holds `web/` (the page, the vendored QR encoder, the built `engine.wasm`, and beside it
 the licence texts and the privacy policy the page's Settings show), `scripts/serve-web.mjs`, this
-file, and the licence. About 3 MB.
+file, an executable `run.sh` launcher, and the licence. The build reports the exact size and
+SHA-256. The filename identifies its source SHA and build timestamp; `dirty` means it includes
+uncommitted source changes. Repeated packages with identical input bytes and Git identity have
+identical archive contents and hashes.
 
 On the other machine:
 

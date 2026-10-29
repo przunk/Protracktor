@@ -64,6 +64,9 @@ pass. A stale-row swipe/click failure from that broad run has a subsequent W02 c
 suppression survives row replacement, stale nodes cannot play and fresh keyboard input resets
 suppression. Both new guards fail before correction; all 33 focused edit/gesture checks and the
 1368-assertion full page run pass afterward. Final complete checks/package remain pending.
+WEB packaging now reproduces archive bytes for the same inputs/Git identity and marks dirty
+sources in both filename and metadata. Actual-script fixtures verify contents, identity and
+refusals. These checks use a tiny engine fixture; final real-engine packaging is still pending.
 
 **W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
 gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native

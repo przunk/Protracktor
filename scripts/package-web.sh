@@ -4,10 +4,7 @@
 #
 # Everything the web player needs, in one archive, for a machine that is not this one.
 #
-# **The engine is built here and copied, not built there.** Compiling seven decoders through
-# Emscripten needs a 1.5 GB toolchain and the better part of an hour; the result is one 2.6 MB
-# `.wasm` that runs identically anywhere, because that is what WebAssembly is for. A Raspberry Pi
-# needs node and nothing else.
+# Compile the engine on the development checkout; the receiving machine only needs Node.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,7 +16,22 @@ cd "$(dirname "$0")/.."
 node scripts/stage-web-legal.mjs
 node scripts/stage-web-pwa.mjs
 
-OUT="dist/protracktor-web-$(date +%Y%m%d-%H%M%S).tar.gz"
+commit="$(git rev-parse HEAD)"
+revision="$(git rev-parse --short HEAD)"
+epoch="$(git show -s --format=%ct HEAD)"
+dirty_suffix=""
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then dirty_suffix="-dirty"; fi
+node --input-type=module - "$commit" "$dirty_suffix" <<'SOURCE'
+import fs from 'node:fs';
+const [commit, dirty] = process.argv.slice(2);
+const build = JSON.parse(fs.readFileSync('web/vendor/legal/build.json', 'utf8'));
+if (build.commit !== commit || build.dirty !== Boolean(dirty)) {
+  console.error('❌ staged source identity does not match this checkout; no WEB package was made');
+  process.exit(1);
+}
+SOURCE
+OUT="$PWD/dist/protracktor-web-${revision}${dirty_suffix}-$(date +%Y%m%d-%H%M%S-%N).tar.gz"
+[[ ! -e "$OUT" ]] || { echo "❌ artifact already exists: $OUT"; exit 1; }
 mkdir -p dist
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -49,9 +61,17 @@ chmod +x "$STAGE/protracktor-web/run.sh"
 # Serving them is conveying them, so the offer of source travels in the archive (docs/LICENSES.md).
 cp LICENSE "$STAGE/protracktor-web/"
 
-tar -czf "$OUT" -C "$STAGE" protracktor-web
-echo "📦 $OUT  ($(du -h "$OUT" | cut -f1))"
-echo
+# Build timestamps and checkout permissions do not identify source. Normalize archive metadata,
+# including gzip's header, so identical inputs and source identity yield identical bytes.
+find "$STAGE" -type d -exec chmod 755 {} +
+find "$STAGE" -type f -exec chmod 644 {} +
+chmod 755 "$STAGE/protracktor-web/run.sh"
+LC_ALL=C tar --format=gnu --sort=name --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
+    -cf - -C "$STAGE" protracktor-web | gzip -n > "$OUT"
+
+echo "Source: ${commit}${dirty_suffix:+ (dirty)}"
+echo "SHA-256: $(sha256sum "$OUT" | cut -d' ' -f1)"
 echo "On the other machine:"
 echo "    tar xzf $(basename "$OUT")"
 echo "    cd protracktor-web && node scripts/serve-web.mjs"
+echo "📦 $OUT ($(stat -c %s "$OUT") bytes)"

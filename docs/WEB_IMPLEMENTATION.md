@@ -2239,3 +2239,14 @@ production-ESM guards fail before correction and all **33 edit/gesture event che
 The full actual-ESM page run then passes **1368 assertions**, including the original physical
 swipe check. Existing duplicate, manual FIFO, transport, language and normalization assertions are
 retained. These are host event/PCM checks; final complete project gate and browser trial remain.
+
+The final-delivery review also reproduced nondeterministic packaging: identical source bytes with
+different file dates/permissions produced different archives. The packager now normalizes tar
+metadata/order and the gzip header, preserves the source commit/dirty state, refuses mismatched
+staged identity, and announces an absolute source-labelled artifact path/byte size. Its actual
+script fixture passes two-build hash equality, distinct filenames, runtime/legal/launcher/mode
+checks, dirty-source/PWA invalidation and missing-engine/source-mismatch refusals. The first
+unprivileged nested-process run could not resolve its Git metadata; the permitted complete run
+passes, and metadata mismatch is now an explicit refusal rather than a misleading package.
+This host tooling evidence does not verify a decoder or browser. Final real-WASM packaging and
+the complete gate after all audit corrections remain pending.
