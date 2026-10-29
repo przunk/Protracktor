@@ -1,5 +1,27 @@
 # Architecture
 
+## WEB library download lifetimes — branch candidate, 2026-10-29
+
+LibraryDownloads is the common owner for the approved five-step plan, step locks, immutable
+progress and the selected operation's AbortController. Individual actions use the same providers.
+An already-running independent step is observed without borrowing its cancellation authority;
+completion is reconciled only into the run that requested it. Retry retains successful rows and
+restarts failed/pending ones. Stopping does not undo a completed atomic publication.
+
+DownloadPickerView retains its controls across progress and live language changes. Closing the
+overlay or pressing Escape returns to the original view/opener and ends presentation only.
+Tab/Shift-Tab are scoped to the actual dialog, including Close. Source/FIFO/editor and the audio host have
+independent lifetimes. dataset-download captures a previous installation before network/parse
+work and publishes rows plus metadata through catalogue.replacePrefix's guarded transaction.
+Quota/cancellation cannot leave an empty or partially replaced dataset. Explicit index downloads
+wait for earlier local compatibility work before capturing their guard; that work remains shared
+when one waiting download is cancelled.
+
+The approved WEB plan contains Modland/favourites, complete ASMA, HVSC durations and songdb
+credits only. Its 47 MiB estimate omits excluded songdb/UADE durations. WEB uses the temporarily
+permitted canonical HVSC website file because native's byte-identical DeepSID copy lacks CORS.
+No proxy, schema or dependency is added. [Sources, parity and verification](WEB_IMPLEMENTATION.md#w22--selected-library-downloads-2026-10-29).
+
 ## WEB speculative music ownership — branch candidate, 2026-10-29
 
 PlaybackReadAhead owns completed, consume-on-open RAM buffers (4 MiB/file, 8 MiB total).

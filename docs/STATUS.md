@@ -44,6 +44,26 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W22 complete at host level, 2026-10-29:** a common selected-download runner and stable
+picker implement missing defaults, estimates, step progress, Stop, partial retention and Retry.
+Individual actions share locks/publication; cancelling a selected run preserves independent work
+and current playback. Atomic writes fix reproduced quota loss and ignored parse cancellation;
+compatibility sequencing and actual Close icon taps have regression guards. Focused checks pass
+14 model, 26 dataset, 17 component and 40 actual-gesture cases; shared plans pass native 29 tests /
+four suites, with missing-row invalidation proved. WEB retains the separately permitted HVSC
+website source at its working canonical alias; actual GET/CORS and byte identity with native's
+DeepSID copy are verified. Modal dismissal restores its originating view/focus; keyboard navigation
+stays within the dialog. The complete page preflight passes **1327 actual-ESM assertions** and
+40 focused legacy gesture assertions; fifteen controlled source faults are detected and restored.
+The forced complete gate on **9546ba5** passes **1258 tests / 172 suites**, zero failures/errors/skips,
+**995 s**, all 31 native unit tasks executed and all companions, including **1327 actual-ESM page
+assertions** and fifteen fresh starts / 339 assertions. Lint: **0 errors / 79 warnings**, 108.7 s.
+All **736 source/test/build inputs plus one temporary verification configuration** match their
+frozen hashes; logs/JUnit/lint are archived. Test workers used C1-only JIT on the existing JDK17
+after the archived normal-JIT run suffered host JVM SIGSEGV; no tests, application configuration
+or shared tools were changed. The closed scope count is **22/25**; browser appearance, touch,
+quota, sound and background acceptance remain unchecked.
+
 **W19 complete at host level, 2026-10-29:** bounded common playback read-ahead and policy-gated
 Modland folder preparation pass the forced full gate on **bc97964**: **1257 tests / 172 suites**,
 zero failures/errors/skips, **994 s**, all 31 native unit tasks executed and all companions,
@@ -97,7 +117,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**21 of 25 scopes have completed host verification** (W01-W13, W16-W21, W23-W24); W22 is next. No WEB merge,
+**22 of 25 scopes have completed host verification** (W01-W13, W16-W24); W14/W15 and W25 remain. No WEB merge,
 package, push or deployment.
 
 

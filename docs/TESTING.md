@@ -1,5 +1,33 @@
 # What only a phone can prove
 
+## WEB W22 selected downloads — browser checks pending, 2026-10-29
+
+Host companions: `node scripts/check-library-downloads.mjs`,
+`node scripts/check-dataset-downloads.mjs`, `node scripts/check-download-picker.mjs`; the page
+suite drives actual empty-list/catalogue actions, Download, Stop, Retry, Close icon, Escape and
+live language controls. Shared download-plan rows also run against production Kotlin DownloadPlan.
+Removing a row must fail both readers and invalidate Gradle's declared input without a new command.
+Controlled faults cover the real event path as well as cancellation, order, locks and storage.
+
+Real browser trial remains unchecked:
+
+- Start without indexes. Open the empty-playlist offer, inspect three checked choices and the
+  approximate 47 MB total, then close without fetching. With everything held, no choice should be
+  checked and disabled Download should explain what to select. Refresh remains an explicit choice.
+- While music plays, choose Modland and metadata, change selections and start. Check stable controls
+  and current-step progress; scrolling/large text must leave Stop reachable. Closing via its icon,
+  the scrim or Escape must keep work running and return focus to the originating view's action.
+  Tab/Shift-Tab must wrap within the dialog, including Close. Reopen the same frozen selection.
+- Interrupt a later request. Earlier completed datasets must remain browsable. Stop should report
+  retained/unfinished work and start nothing later; Retry should fetch only failed/pending substeps.
+  Check another tab's existing user data and current audio/source/FIFO/editor remain intact.
+- Refuse storage or disconnect during refresh. Old data must survive with an explicit partial
+  outcome. Do not infer success from a spinner stopping. Test the canonical HVSC request in the
+  actual browser; host Origin-bearing GET/CORS headers and identical SHA are partial evidence.
+- Switch PL/EN, use keyboard/touch and check both themes at narrow/wide sizes. Native comparison
+  covers behaviour; host DOM identities and stylesheet checks do not establish physical layout,
+  audible continuity, mobile network conditions or browser background lifetime.
+
 ## WEB W19 read-ahead — browser checks pending, 2026-10-29
 
 Run `node scripts/check-playback-read-ahead.mjs`, `node scripts/check-folder-prefetch.mjs` and

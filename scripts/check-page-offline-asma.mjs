@@ -92,7 +92,7 @@ export default async function checkOfflineAsma({ window, check }) {
     await until(() => api.asmaNow().state.bytes > 0 && !asmaRow()?.querySelector('.spinner'));
     const snapshot = await api.asmaStore.ticket();const objectStore = window.IDBObjectStore ?? globalThis.IDBObjectStore, put = objectStore.prototype.put;
     objectStore.prototype.put = function(...args) {if(this.name==='asmaArchives'&&args[0]?.id==='asma')throw new DOMException('ASMA page quota refused','QuotaExceededError');return put.apply(this,args);};
-    try {asmaRow().querySelector('.bdl').click();check(await until(() => $('browsenote').textContent.includes('ASMA page quota refused')),
+    try {asmaRow().querySelector('.bdl').click();check(await until(() => !$('snackbar').hidden && $('snacktext').textContent.includes('ASMA page quota refused')),
       'an actual archive-save refusal is visibly explained by the download action');}
     finally {objectStore.prototype.put=put;}
     check(await api.asmaStore.ticket() === snapshot && new TextDecoder().decode(await api.bytesOf({url:target})) === 'SAP Robots',

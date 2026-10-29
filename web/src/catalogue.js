@@ -14,6 +14,7 @@
 
 import { catalogue, asmaArchive } from './store.js';
 import { downloadMusic } from './music-download.js';
+import { checkDownload, downloadSnapshot, commitDownload } from './dataset-download.js';
 import { MODLAND_FILE_BASE, encodeCataloguePath } from './catalogue-urls.js';
 import { zipDirectory, validateZip } from './zip-archive.js';
 import { md5, parseSongLengths } from './songlengths.js';
@@ -340,28 +341,28 @@ export function toRecords(text, source = MODLAND, isPlayable = () => true) {
  * can be 60,572 C64 tunes with nothing on screen to say why.
  */
 export async function downloadModland({
-  fingerprint = '', isPlayable = () => true, onProgress = null,
+  fingerprint = '', isPlayable = () => true, onProgress = null, signal,
 } = {}) {
+  const expected = await downloadSnapshot(`${MODLAND}:`, signal);
   onProgress?.({ stage: 'fetching' });
-  const response = await fetch(INDEX_URL);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const bytes = await response.arrayBuffer();
+  const bytes = await downloadMusic((...args) => fetch(...args), INDEX_URL, { signal, onProgress });
+  checkDownload(signal);
 
   onProgress?.({ stage: 'reading' });
   const text = await unzipOnly(bytes);
+  checkDownload(signal);
 
   onProgress?.({ stage: 'sorting' });
   const { records, tracks, total, buckets, formats, platformCounts } = toRecords(text, MODLAND, isPlayable);
   const key = keyFor(MODLAND);
 
-  onProgress?.({ stage: 'storing', done: 0, total: records.length });
-  await catalogue.replacePrefix(`${MODLAND}:`, [...records, {
+  await commitDownload(`${MODLAND}:`, [...records, {
     // **`complete`, the way the phone's `catalogues` row records it.** An index written before step
     // 0 holds only what an older build accepted, so a format added afterwards genuinely is missing
     // rows here and no local pass can supply them. One written since holds the archive.
     key: key.meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
     platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
-  }]);
+  }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
 }
@@ -692,7 +693,8 @@ export function asmaFileUrl(id) {
 // server answers HEAD without its CORS filter, so a HEAD says there is no
 // `Access-Control-Allow-Origin` when a GET sends one.
 
-const SONG_LENGTHS_URL = 'https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5';
+// WEB keeps the permitted website copy: the native DeepSID URL has no CORS. See PLAN_CATALOGUES.
+const SONG_LENGTHS_URL = 'https://www.hvsc.de/download/C64Music/DOCUMENTS/Songlengths.md5';
 
 /** Everything song lengths store lives under, so one `clear` takes all of it. */
 const LENGTHS = 'lengths:';
@@ -728,36 +730,20 @@ export async function clearSongLengths() {
  * databases the page downloads whole -- HVSC's lengths and songdb's metadata -- because a page that
  * says nothing for ten seconds reads as a page that has stopped.
  */
-async function fetchText(url, encoding, onProgress) {
-  onProgress?.({ stage: 'fetching', done: 0, total: 0 });
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const total = Number(response.headers.get('content-length')) || 0;
-  if (!response.body) return new TextDecoder(encoding).decode(new Uint8Array(await response.arrayBuffer()));
-  const reader = response.body.getReader();
-  const chunks = [];
-  let done = 0;
-  for (;;) {
-    const read = await reader.read();
-    if (read.done) break;
-    chunks.push(read.value);
-    done += read.value.length;
-    onProgress?.({ stage: 'fetching', done, total });
-  }
-  const joined = new Uint8Array(done);
-  let at = 0;
-  for (const chunk of chunks) { joined.set(chunk, at); at += chunk.length; }
-  return new TextDecoder(encoding).decode(joined);
+async function fetchText(url, encoding, onProgress, signal) {
+  const bytes = await downloadMusic((...args) => fetch(...args), url, { signal, onProgress });
+  checkDownload(signal); return new TextDecoder(encoding).decode(bytes);
 }
 
-export async function downloadSongLengths({ onProgress = null } = {}) {
+export async function downloadSongLengths({ onProgress = null, signal } = {}) {
+  const expected = await downloadSnapshot(LENGTHS, signal);
   // **Latin-1, not UTF-8.** The file is a list of hex keys and digits, but the comment lines above
   // them carry composer names with accents in whatever eight-bit encoding HVSC has always used.
   // Decoding as UTF-8 throws on those bytes in strict mode and replaces them otherwise; either
   // way the comments are not read, and the entries must not be risked for them.
-  const text = await fetchText(SONG_LENGTHS_URL, 'latin1', onProgress);
+  const text = await fetchText(SONG_LENGTHS_URL, 'latin1', onProgress, signal);
 
-  onProgress?.({ stage: 'reading' });
+  onProgress?.({ stage: 'reading' }); checkDownload(signal);
   const entries = parseSongLengths(text);
   if (entries.length === 0) throw new Error('the song length database was empty');
 
@@ -771,10 +757,8 @@ export async function downloadSongLengths({ onProgress = null } = {}) {
 
   // **Replaced wholesale, not merged**, the same rule the phone keeps: HVSC publishes corrections
   // as well as additions, so a merge would keep a length its own publisher has withdrawn.
-  await catalogue.clear(LENGTHS);
   const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
-  await catalogue.putAll(records, 64, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{ key: `${LENGTHS}meta`, tunes: entries.length, at: Date.now() }]);
+  await commitDownload(LENGTHS, [...records, { key: `${LENGTHS}meta`, tunes: entries.length, at: Date.now() }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tunes: entries.length });
   return { tunes: entries.length };
 }
@@ -819,9 +803,10 @@ export async function clearSongMetadata() { await catalogue.clear(SONGDB); }
  * Fetches songdb's metadata and stores it, **replaced wholesale**: the publisher corrects as well as
  * adds, and a merge would keep a row it has withdrawn.
  */
-export async function downloadSongMetadata({ onProgress = null } = {}) {
-  const text = await fetchText(SONGDB_METADATA_URL, 'utf-8', onProgress);
-  onProgress?.({ stage: 'reading' });
+export async function downloadSongMetadata({ onProgress = null, signal } = {}) {
+  const expected = await downloadSnapshot(SONGDB, signal);
+  const text = await fetchText(SONGDB_METADATA_URL, 'utf-8', onProgress, signal);
+  onProgress?.({ stage: 'reading' }); checkDownload(signal);
   const entries = parseSongDbMetadata(text);
   if (entries.length === 0) throw new Error('the song metadata was empty');
   const shards = new Map();
@@ -831,10 +816,8 @@ export async function downloadSongMetadata({ onProgress = null } = {}) {
     if (!held) { held = {}; shards.set(shard, held); }
     held[key] = [author, publisher, album, year];
   }
-  await catalogue.clear(SONGDB);
   const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
-  await catalogue.putAll(records, 16, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{ key: `${SONGDB}meta`, tunes: entries.length, at: Date.now() }]);
+  await commitDownload(SONGDB, [...records, { key: `${SONGDB}meta`, tunes: entries.length, at: Date.now() }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tunes: entries.length });
   return { tunes: entries.length };
 }

@@ -78,7 +78,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W19 | Read-ahead and prefetch controls | Implemented; forced complete gate passed; browser acceptance unchecked |
 | W20 | Persistent music cache and offline marks | Implemented; forced full gate passed; browser acceptance unchecked |
 | W21 | Complete offline ASMA | Implemented; forced full gate passed; browser acceptance unchecked |
-| W22 | Grouped downloads and Stop | Pending |
+| W22 | Grouped downloads and Stop | Implemented; full host gate passed, browser acceptance pending |
 | W23 | Legacy Modland request recovery | Implemented; forced full gate passed; browser acceptance unchecked |
 | W24 | Language changes without interrupting playback | Implemented; forced full gate passed |
 | W25 | Browser Media Session and external controls | Pending; C104 reopened by scope selection |
@@ -1792,3 +1792,107 @@ W19 is implemented at host level: **21 of 25 scopes** (W01-W13, W16-W21, W23-W24
 W14/W15 and W25, then the requirements/commit/exclusion audit, any worthwhile fixes and the final
 WEB package. No scope has been skipped. Browser CORS, quota, rendering, touch, sound and background
 acceptance remain unchecked. No WEB merge, push, deployment or additional APK has occurred.
+
+## W22 — Selected library downloads, 2026-10-29
+
+Reference **c8209b1**: DownloadPlan, DownloadSizes, LibraryDownloads and DownloadPicker; all eight
+original DownloadPlanTest, thirteen LibraryDownloadsTest and two DownloadSizesTest cases, plus
+the shared privacy parser's five tests. Android playback code and database versions are unchanged.
+
+Parity checklist:
+
+- Offer Modland, ASMA and Song metadata; initially select only missing choices. Modland includes
+  its favourites; metadata means HVSC durations and songdb credits. Excluded songdb/UADE lengths,
+  replay routines and other catalogues are not offered or fetched.
+- Keep the fixed native substep order, independent of checkbox order. The approximate WEB costs
+  are 6 + 1 + 20 + 5 + 15 MiB, **47 MiB** together. Credits-only metadata deliberately excludes
+  the separate duration table included in Android's larger estimate.
+- Freeze selection during the run. Preserve checkbox/button identity, focus, the fixed progress
+  slot, reserved status line and primary-button width across progress and Download/Stop changes.
+  An empty selection is disabled with an explanation. Close, icon taps and Escape dismiss
+  presentation, return to the originating view and restore its opener's focus without stopping work.
+  Tab/Shift-Tab stay within the actual dialog, including its Close control.
+- Stop cancels the selected operation and prevents later starts. Committed datasets survive;
+  independent failures do not erase successes or prevent other chosen substeps. Retry only failed
+  or pending substeps, without fetching their successful siblings again.
+- Individual and grouped actions share step implementations and locks. Observe an already-busy
+  independent action's eventual result without taking its cancellation ownership. Late results
+  cannot describe a newer run, and Stop does not cancel another action.
+- Replace a complete dataset and its counts in one guarded transaction. Quota, cancellation,
+  parsing failure and a stale snapshot leave the old dataset and unrelated user data intact.
+- Preserve current playback/source/FIFO/editor/audio context. Downloads do not open a decoder,
+  record a play or silently start at initialization. Keep PL/EN and accessible labelled controls.
+
+LibraryDownloads owns the plan, immutable progress and operation lifetimes. DownloadPickerView
+owns stable controls; dataset-download supplies common cancellable setup waits and guarded atomic
+publication. Existing catalogue readers and the bounded transfer path remain the data owners.
+The actual empty-playlist offer opens missing choices; Online catalogues exposes the same picker.
+Completion closes its presentation and gives one summary; reopening exposes unfinished Retry.
+
+Before-fix host reproductions confirmed that metadata quota failure could erase the old dataset
+and cancellation during parsing was ignored. Atomic replacement now protects index, favourites,
+HVSC and credits. A real-button race also showed a finishing local compatibility rebuild could
+invalidate a fresh index download; explicit installation now waits for that shared predecessor
+before capturing its publication guard. Cancelling the waiter leaves shared compatibility work
+alive. Overlay delegation now recognizes the Close button's SVG descendants; the actual icon
+gesture failed before that correction. Android's existing absent stopped-notice test documents a
+known native defect; WEB reports the required stopped/partial outcome rather than copying it.
+
+### Browser source boundary
+
+Android's DeepSID file has no CORS header on an actual Origin-bearing GET. The project's
+[existing agreement](PLAN_CATALOGUES.md) retains HVSC's website copy
+for WEB until a browser-compatible replacement exists. The old hvsc.c64.org alias currently
+fails hostname validation; no TLS exception is introduced. The official
+[www.hvsc.de file](https://www.hvsc.de/download/C64Music/DOCUMENTS/Songlengths.md5) returns HTTP200
+and `Access-Control-Allow-Origin: *` for the normal GET, and supports ranged GET too. Its
+**5,205,150 bytes** have SHA-256
+`3f2bb5c14e3396fb20979cb017421386dc9e32162999974ad1e4f0a230dc397e`, exactly matching Android's
+DeepSID copy. The production reader parses and atomically retains **61,157** entries from that
+actual payload. Browser/native source addresses therefore differ while the dataset is identical.
+The privacy source discloses the canonical WEB host in both languages. No relay, new service,
+credential, archive crawl or maintainer contact is introduced. Headers are host evidence of
+server capability, not proof of a real browser session.
+
+Focused host evidence: **14 model cases**, **26 production dataset/waiter cases**, **17 component
+DOM assertions** and **40 actual application gesture assertions** pass. Nine shared plan rows
+run against production Kotlin; removing a row fails WEB and native (14 tests before fail-fast),
+then restoration passes **29 native tests / four suites** with the same command and no rerun
+flag. Fifteen deliberately broken planning, locking, Stop/Retry, stale publication, atomicity and
+actual Download/Stop/dismiss/Close/focus/compatibility behaviours are detected and restored.
+The old ASMA refusal guard now observes the visible common snackbar; all original playback,
+draft and cross-tab continuity assertions remain. These focused checks precede the completed
+project gate recorded below. Real browser rendering, touch, quota, CORS, audio
+and background acceptance remain unchecked.
+
+
+### W22 integrated preflight
+
+The final actual-ESM page preflight passes **1327 assertions**, including every existing ASMA
+continuity guard and the new origin/focus/keyboard scenarios. The focused legacy adapter passes
+**40 gesture assertions** without a second locale state. Model/data/component checks pass
+**14 / 26 / 17**, and all **fifteen** controlled source faults are detected with exact restoration.
+A separate fresh-start preflight passed fifteen scenarios / 339 assertions. The subsequent forced
+gate repeated startup against the frozen final source; its result is recorded below. Real browser
+appearance, touch, quota, audible continuity and background lifetime remain unchecked.
+
+
+### W22 complete project gate
+
+Tested source **9546ba5df57d66d1b72f8c3e378146cf32d15090**, forced complete project gate:
+**1258 tests / 172 native suites**, zero failures/errors/skips, **995 s**; all **31 unit tasks
+executed**. Every companion ran, including **1327 actual-ESM page assertions**, fifteen fresh
+starts / **339 assertions**, model/data/component **14 / 26 / 17**, real WASM/export checks,
+archive/storage migrations, PWA and eleven local-server cases. Lint: **0 errors / 79 warnings**,
+108.7 s. All **736 source/test/build input hashes and the temporary verification configuration**
+match. Logs, JUnit, lint and identity receipts are retained locally.
+
+The preceding normal-JIT attempt failed after host JVM SIGSEGV, with four interrupted cases;
+that failed run is archived separately. The successful repeat used the same JDK17 and complete
+test selection with temporary test-worker `-XX:TieredStopAtLevel=1`. Lint followed its ordinary
+project path; no production or shared-environment configuration was changed.
+
+W22 completes host verification for **22 of 25 scopes**: W01-W13 and W16-W24. Continue W14,
+W15 and W25, then the final requirements/commit/exclusion audit and WEB package. No skipped
+scope, merge, publication, APK or version change. Physical browser rendering, touch, quota,
+CORS execution, audible continuity and background behaviour remain unchecked.

@@ -161,6 +161,8 @@ run_check "Music transfer deadlines" music-download node scripts/check-music-dow
 run_check "Remote music ownership" remote-music node scripts/check-remote-music.mjs
 run_check "Playback read-ahead" playback-read-ahead node scripts/check-playback-read-ahead.mjs
 run_check "Folder prefetch" folder-prefetch node scripts/check-folder-prefetch.mjs
+run_check "Grouped download rules" library-downloads node scripts/check-library-downloads.mjs
+run_check "Atomic dataset downloads" dataset-downloads node scripts/check-dataset-downloads.mjs
 run_check "Playlist file transfer" playlist-transfer node scripts/check-playlist-transfer.mjs
 run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
 run_check "Playback context" playback-context node scripts/check-playback-context.mjs
@@ -188,6 +190,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Browse selection presentation" browse-selection-view node scripts/check-browse-selection-view.mjs
     run_check "Playlist import storage" playlist-transfer-store node scripts/check-playlist-transfer-store.mjs
     run_check "Search suggestions" search-suggestions node scripts/check-search-suggestions.mjs
+    run_check "Download picker presentation" download-picker node scripts/check-download-picker.mjs
     run_check "Search scopes presentation" search-scopes-view node scripts/check-search-scopes-view.mjs
     run_check "Library search storage" library-search-store node scripts/check-library-search-store.mjs
     run_check "Recent search storage" recent-searches-store node scripts/check-recent-searches-store.mjs

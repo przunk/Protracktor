@@ -103,8 +103,9 @@ catalogue indexes, retained music copies, an explicitly downloaded full ASMA arc
 in that browser's own storage, on that device. Recent-search
 suggestions are matched locally; typing alone does not save a query. The page sends
 nothing to the developer and has no analytics, advertising or account. For what the user browses,
-downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org` and, for song
-metadata the user downloads, `raw.githubusercontent.com`, as the app does,
+downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org`,
+`www.hvsc.de` for downloaded SID durations and, for song metadata the user downloads,
+`raw.githubusercontent.com`, as the app does,
 and those archives see the same requests described above. The server hosting the page sees the
 requests for the page itself and whatever the app sends to it (above). Clearing the site's data in
 the browser removes everything the page kept.
@@ -238,7 +239,8 @@ pełne archiwum ASMA oraz ustawienia w pamięci tej przeglądarki, na tym urząd
 wyszukiwania są dopasowywane lokalnie; samo pisanie nie zapisuje zapytania. Niczego nie wysyła do
 twórcy i nie ma analityki, reklam ani
 konta. Dla tego, co użytkownik przegląda, pobiera lub odtwarza, łączy się z `modland.com`,
-`asma.atari.org`, `hvsc.c64.org` oraz — dla pobieranych metadanych utworów —
+`asma.atari.org`, `hvsc.c64.org`, `www.hvsc.de` dla pobieranych długości utworów SID
+oraz — dla pobieranych metadanych utworów —
 `raw.githubusercontent.com`, tak jak aplikacja, a te archiwa widzą te same zapytania, co
 opisane wyżej. Serwer udostępniający stronę widzi zapytania o samą stronę oraz to, co aplikacja do
 niego wysyła (wyżej). Wyczyszczenie danych witryny w przeglądarce usuwa wszystko, co strona

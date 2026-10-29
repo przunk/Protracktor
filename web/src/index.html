@@ -766,6 +766,24 @@
   /* Two ways to a new playlist, equal -- the phone's pair of outlined buttons. Side by side where they
      fit, one above the other where they do not: on a phone "Save this queue as…" ran out of its own
      outline and off the sheet (owner, 2026-09-11). */
+  #download-data-offer { margin: 10px 16px; }
+  #downloads .sheet { display: flex; flex-direction: column; overflow: hidden; }
+  #download-picker-body { display: flex; flex-direction: column; min-height: 0; }
+  .download-choices { border: 0; padding: 0; margin: 0; min-height: 0; overflow-y: auto; }
+  .download-choices legend { margin: 10px 0; }
+  .download-choice { display: grid; grid-template-columns: auto minmax(0, 1fr) 24px;
+                     gap: 12px; align-items: center; padding: 12px 0; min-height: 56px; }
+  .download-choice input { accent-color: var(--primary); width: 20px; height: 20px; }
+  .download-choice-text { min-width: 0; }
+  .download-choice-text > * { display: block; overflow-wrap: anywhere; }
+  .download-choice-text .storage { margin-top: 4px; }
+  .download-choice-text > .storage:last-child { min-height: 1.4em; }
+  .download-choice-progress { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .download-actions { display: flex; flex-direction: column; align-items: center; gap: 8px;
+                      padding: 12px 0 16px; flex-shrink: 0; }
+  .download-actions .outlined { flex: none; width: 55%; min-width: min(12rem, 100%); max-width: 100%;
+                                box-sizing: border-box; white-space: normal; }
+  .download-actions .outlined > span { min-width: 0; overflow-wrap: anywhere; }
   .sheetbuttons { display: flex; flex-wrap: wrap; gap: 8px; }
   .outlined { flex: 1 1 14em; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
               background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
@@ -996,6 +1014,9 @@
     </div>
     <p class="note" id="browsenote" aria-live="polite"></p>
     <p class="note" id="folder-prefetch-note" role="status" hidden></p>
+    <div class="sheetbuttons" id="download-data-offer" hidden>
+      <button class="outlined" id="choose-downloads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Downloads</button>
+    </div>
     <div id="browse-selection-head" class="browse-selection-head" hidden>
       <span id="browse-selection-count" aria-live="polite"></span>
       <button class="action" id="browse-select-all" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 7 3 3 7-7 1.4 1.4L10 17l-4.4-4.4L7 12z"/></svg><span>Select all</span></button>
@@ -1370,6 +1391,16 @@
         somebody you trust, runs.</p>
       <div class="sheetbuttons"><button class="outlined" id="pair-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Privacy policy</button></div>
       <button class="text-button" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="downloads" hidden role="dialog" aria-modal="true" aria-labelledby="downloads-title">
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2 id="downloads-title">Downloads</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <div id="download-picker-body"></div>
     </div>
   </div>
 

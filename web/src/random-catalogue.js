@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { catalogue } from './store.js';
+import { downloadMusic } from './music-download.js';
+import { downloadSnapshot, commitDownload } from './dataset-download.js';
 import * as archive from './catalogue.js';
 import { PLATFORM_FINGERPRINT, countPlatformBucket, platformForCatalogueRow, parseModlandFavourites, storedRandomScope } from './random-scope.js';
 
@@ -13,16 +15,14 @@ export async function favouritesMeta() { return catalogue.get(`${FAVOURITES}meta
 export async function clearFavourites() { accepted = null; await catalogue.clear(FAVOURITES); }
 
 export async function downloadFavourites({ signal, onProgress } = {}) {
+  const expected = await downloadSnapshot(FAVOURITES, signal);
   onProgress?.({ stage: 'fetching' });
-  const response = await fetch(FAVOURITES_URL, { signal });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const bytes = await response.arrayBuffer();
+  const bytes = await downloadMusic((...args) => fetch(...args), FAVOURITES_URL, { signal, onProgress });
   checkAbort(signal);
   const paths = [...new Set(parseModlandFavourites(new TextDecoder().decode(bytes)))];
   if (!paths.length) throw new Error('The list contains no favourite paths.');
-  onProgress?.({ stage: 'storing' });
-  await catalogue.replacePrefix(FAVOURITES, [{ key: `${FAVOURITES}paths`, paths },
-    { key: `${FAVOURITES}meta`, listed: paths.length, at: Date.now() }], { signal });
+  await commitDownload(FAVOURITES, [{ key: `${FAVOURITES}paths`, paths },
+    { key: `${FAVOURITES}meta`, listed: paths.length, at: Date.now() }], expected, { signal, onProgress });
   accepted = null;
   onProgress?.({ stage: 'done', listed: paths.length });
   return paths.length;

@@ -12,6 +12,9 @@ import { AsmaView } from './asma-view.js';
 import { MusicCacheView } from './music-cache-view.js';
 import { PlaybackReadAhead, readAheadCandidates, READ_AHEAD_COUNT } from './playback-read-ahead.js';
 import { FolderPrefetch, CacheAheadPreferences } from './folder-prefetch.js';
+import { LibraryDownloads } from './library-downloads.js';
+import { DownloadPickerView, downloadStepLabel } from './download-picker-view.js';
+import { checkDownload, waitForDownload } from './dataset-download.js';
 import { freedCacheBytes } from './cache-budget.js';
 import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-context.js';
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
@@ -58,6 +61,8 @@ const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
 let remoteMusic = null, musicCacheView = null, offlineAsma = null, asmaView = null;
 let readAhead = null, folderPrefetch = null, browsedFolder = null;
+let libraryDownloads = null, downloadPicker = null;
+let downloadPickerReturn = null;
 
 /**
  * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
@@ -835,6 +840,8 @@ async function begin() {
  * happening is the difference between a bug report and a shrug.
  */
 let engineReady = false;
+// A fresh install must capture its guard after earlier local compatibility writes.
+let indexReconsideration = Promise.resolve();
 
 /** Which decoders this build carries. An index is only as good as the set that filtered it. */
 let engineFingerprint = '';
@@ -866,7 +873,7 @@ function onWorklet(message) {
       engineFingerprint = message.backends;
       status(uiMessageText('engine ready — {backends}', { backends: message.backends }));
       readyWaiters.splice(0).forEach((resolve) => resolve());
-      reconsiderStoredIndexes();
+      indexReconsideration = indexReconsideration.then(reconsiderStoredIndexes);
       break;
     case 'opened': {
       loading = null;
@@ -1690,6 +1697,7 @@ async function renderEmpty() {
   action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download);
   action.append(makeUiText(document, held ? uiMessageText('Browse') : uiMessageText('Get some music to browse')));
   action.onclick = async () => {
+    if (!held) { await openDownloadPicker(action); return; }
     browsePath = [];
     showPanel('browse');
     await renderBrowse();
@@ -2238,13 +2246,7 @@ function setRandomScope(value) {
   randomScopeWrites = randomScopeWrites.catch(() => {}).then(() => settings.set('randomScope', next))
     .catch((error) => { if (asked === randomScopeAsked) showNote(uiMessageText('Could not save the Random filter: {reason}', { reason: error.message })); });
 }
-async function downloadRandomFavourites() {
-  if (downloading.has('modland-favourites')) return;
-  await downloadStarted('modland-favourites');
-  try { await randomCatalogue.downloadFavourites(); }
-  catch (error) { showNote(uiMessageText('Could not download Modland favourites: {reason}', { reason: error.message })); }
-  finally { await downloadEnded('modland-favourites'); }
-}
+async function downloadRandomFavourites() { return runIndividualDownloads('favourites', ['favourites']); }
 
 const RANDOM_AHEAD = READ_AHEAD_COUNT;
 const RANDOM_DRAWS = 4;   // Android OVERDRAW
@@ -3369,6 +3371,8 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   $('playlists').hidden = which !== 'playlists';
   $('addto').hidden = which !== 'addto';
   $('settings').hidden = which !== 'settings';
+  $('downloads').hidden = which !== 'downloads';
+  if (which !== 'downloads') downloadPickerReturn = null;
   $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
   if (which === 'nowplaying') subsongStripView?.show();
@@ -3876,6 +3880,7 @@ async function renderBrowse(resolved = null) {
         || sourceBrowseRoute.historyQuery !== historyBrowser.state.query))) sourceBrowseRoute = null;
   const list = $('browselist');
   const note = $('browsenote');
+  $('download-data-offer').hidden = browsePath[0] !== 'catalogues';
   // These presenters preserve complete catalogue rows and unchanged Search results in place.
   const inPlace = browsePath[0] === 'catalogues' || browsePath[0] === 'search';
   if (browsePath[0] !== 'search') renderedSearchResult = null;
@@ -4255,96 +4260,90 @@ function holding({ tracks, total, complete } = {}) {
     : uiMessageText("This browser holds {tracks} of Modland's {total} tunes. The other {rest} are in formats it cannot open.", numbers);
 }
 
-/*
-  **Progress is the row's spinner, and nothing else** (the owner, 2026-09-23). The note under the
-  heading used to narrate each download -- "storing 40,000 of 515,509…", then a result -- and with
-  several started at once every one of them wrote over the others. It now says only what is held,
-  which the list redraws when a download ends, and what went wrong: a failure left unsaid would be
-  a press that did nothing.
-*/
-async function downloadIndex() {
-  const note = $('browsenote');
-  await downloadStarted('modland');
-  try {
-    // Which formats to keep depends on which decoders this engine has, and only the engine can say.
-    // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
-    if (!engineReady) {
-      await start();
-      await whenEngineReady();
-    }
-    const table = await formatsReady();
-    await archive.downloadModland({
-      fingerprint: archive.indexFingerprint(engineFingerprint, table),
-      // **The verdict, not the filter.** Every row the archive lists is stored; this decides which
-      // of them this build offers (`docs/ROADMAP_FORMATS.md` step 0), and a build that learns a
-      // format re-decides the stored rows instead of fetching them again.
-      isPlayable: archive.playable(table, absentHere()),
-    });
-    await downloadEnded('modland');
-  } catch (e) {
-    await downloadEnded('modland');
-    setUiText(note, uiMessageText('the index could not be downloaded: {reason}', { reason: e.message }));
-  }
+/** Download-only setup waits may be cancelled without stopping the shared live engine. */
+async function downloadFormatPolicy({ signal } = {}) {
+  if (!engineReady) { await waitForDownload(start(), signal); await waitForDownload(whenEngineReady(), signal); }
+  const table = await waitForDownload(formatsReady(), signal);
+  await waitForDownload(indexReconsideration, signal);
+  checkDownload(signal);
+  return { fingerprint: archive.indexFingerprint(engineFingerprint, table), isPlayable: archive.playable(table, absentHere()) };
 }
 
-/** Browse → Download the full ASMA archive and its derived index for offline playback. */
+function reportDownloads(result) {
+  const done = result.rows.filter((row) => row.status === 'done').length;
+  const failed = result.rows.filter((row) => row.status === 'failed');
+  const pending = result.rows.length - done - failed.length;
+  const summary = result.phase === 'stopped'
+    ? uiMessageText('Downloads stopped: {done} completed, {pending} unfinished.', { done, pending: pending + failed.length })
+    : failed.length || pending
+      ? uiMessageText('Downloads finished: {done} completed, {failed} failed, {pending} unfinished.', { done, failed: failed.length, pending })
+      : uiPluralText(done, 'Downloaded {count} dataset.', 'Downloaded {count} datasets.', { count: done });
+  showNote(failed.length ? joinUiText(summary, ' ', downloadStepLabel(failed[0].id), ': ', failed[0].error.message) : summary);
+}
+
+async function runSelectedDownloads(selected, { retry = false } = {}) {
+  const job = retry ? libraryDownloads.retry() : libraryDownloads.start(selected);
+  if (!job) { showNote(uiMessageText('Downloads are already running, or nothing is selected.')); return; }
+  const result = await job;
+  if (!libraryDownloads.running && !$('downloads').hidden) await dismissDownloadPicker();
+  reportDownloads(result);
+}
+
+const individualDownloadGroups = new Set();
+async function runIndividualDownloads(group, ids, { dependent = false } = {}) {
+  if (individualDownloadGroups.has(group)) { showNote(uiMessageText('Already downloading')); return; }
+  individualDownloadGroups.add(group);
+  try {
+    const rows = [];
+    for (const id of ids) {
+      const { completion, ...result } = await libraryDownloads.executeStep(id);
+      rows.push({ id, ...result });
+      if (dependent && result.status !== 'done') break;
+    }
+    reportDownloads({ phase: 'finished', rows });
+  } finally { individualDownloadGroups.delete(group); }
+}
+
+async function downloadIndex() { return runIndividualDownloads('modland', ['modland', 'favourites'], { dependent: true }); }
 async function downloadAsmaArchive() {
-  if (downloading.has('asma') || deletingCatalogues.has('asma')) return;
-  const note = $('browsenote');
-  await downloadStarted('asma');
+  if (deletingCatalogues.has('asma')) { showNote(uiMessageText('ASMA is being deleted. Try again.')); return; }
+  return runIndividualDownloads('asma', ['asma']);
+}
+async function downloadSongMetadata() { return runIndividualDownloads('songmetadata', ['songlengths', 'trackmetadata']); }
+
+let downloadPickerAsked = 0;
+async function openDownloadPicker(opener) {
+  const asked = ++downloadPickerAsked, visit = panelVisit;
   try {
-    if (!engineReady) {
-      await start();
-      await whenEngineReady();
-    }
-    const table = await formatsReady();
-    await archive.downloadAsma({
-      fingerprint: archive.indexFingerprint(engineFingerprint, table),
-      isPlayable: archive.playable(table, absentHere()),
-    });
-    await downloadEnded('asma');
-  } catch (e) {
-    await downloadEnded('asma');
-    setUiText(note, uiMessageText('ASMA could not be downloaded: {reason}', { reason: e.message }));
-  }
+    const [modland, asma, lengths, credits] = await Promise.all([archive.meta('modland'), archive.meta('asma'),
+      archive.songLengthsMeta(), archive.songMetadataMeta()]);
+    if (asked !== downloadPickerAsked || visit !== panelVisit) return;
+    downloadPicker.selectMissing({ modland: !!modland?.tracks, asma: !!asma?.tracks,
+      songmetadata: !!(lengths?.tunes && credits?.tunes) });
+    downloadPickerReturn = { view: $('browse').hidden ? null : 'browse', opener };
+    showPanel('downloads');
+    $('downloads').querySelector('input:not(:disabled),button:not(:disabled)')?.focus();
+  } catch (error) { showNote(uiMessageText('Could not read downloaded data: {reason}', { reason: error.message })); }
 }
 
-/**
- * Browse → SID song lengths: HVSC's hand-timed durations (`archive.downloadSongLengths`).
- *
- * **The one download here that is not a list of tunes.** A SID is a program and has no length in
- * it; HVSC's is a person's stopwatch, 61,157 of them, and without it the page played every SID
- * until the fallback in Settings stopped it (`docs/STATUS.md` C56).
- *
- * No engine and no format table, unlike the two above: this is keyed on the MD5 of a file, so
- * nothing about it depends on what this build can decode.
- */
-/**
- * Downloads one of the databases the page takes whole, saying how far it has got. [what] names it
- * in the sentence that ends it, [run] is the archive's download.
- */
-async function downloadDatabase(what, run) {
-  const note = $('browsenote');
-  try {
-    await run({});
-    return true;
-  } catch (e) {
-    setUiText(note, uiMessageText('the {what} could not be downloaded: {reason}', { what: uiMessage(() => String(what).toLowerCase()), reason: e.message }));
-    return false;
-  }
+async function dismissDownloadPicker() {
+  if ($('downloads').hidden) return;
+  const origin = downloadPickerReturn;
+  showPanel(origin?.view ?? null);
+  const visit = panelVisit;
+  if (origin?.view === 'browse') await renderBrowse();
+  if (visit === panelVisit && origin?.opener?.isConnected && !origin.opener.closest('[hidden]'))
+    origin.opener.focus({ preventScroll: true });
 }
 
-/**
- * **Song metadata, one press** (the phone's A52 D1): everything the page can use of what a file
- * cannot say about itself -- HVSC's SID lengths and songdb's author, publisher, album and year --
- * under one row and one tick. Each part is still its own download underneath, so one that fails
- * says which.
- */
-async function downloadSongMetadata() {
-  await downloadStarted(SONG_METADATA);
-  await downloadDatabase(uiMessageText('SID song lengths'), archive.downloadSongLengths);
-  await downloadDatabase(uiMessageText('Song metadata'), archive.downloadSongMetadata);
-  await downloadEnded(SONG_METADATA);
+function reflectDownloadBusy(keys) {
+  downloading.clear();
+  for (const id of keys) {
+    downloading.add(id === 'favourites' ? 'modland-favourites' : id);
+    if (id === 'songlengths' || id === 'trackmetadata') downloading.add(SONG_METADATA);
+  }
+  requestRandomFilterRefresh();
+  void redrawCatalogues();
 }
 
 // --- the catalogues, as the phone draws them (W8) ------------------------------------------------
@@ -4359,8 +4358,6 @@ const downloading = new Set();
 async function redrawCatalogues() {
   if (!$('browse').hidden && browsePath[0] === 'catalogues') await renderBrowse();
 }
-async function downloadStarted(key) { downloading.add(key); requestRandomFilterRefresh(); await redrawCatalogues(); }
-async function downloadEnded(key) { downloading.delete(key); requestRandomFilterRefresh(); await redrawCatalogues(); }
 
 /**
  * Whether a downloadable set is here, as the row's first mark: a tick in a disc, in the accent
@@ -4682,8 +4679,9 @@ $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 // people reach for all three and a dialog that only answers one of them feels stuck.
 for (const overlay of document.querySelectorAll('.overlay')) {
   overlay.addEventListener('click', (event) => {
-    if (event.target === overlay || event.target.hasAttribute('data-close')) {
+    if (event.target === overlay || event.target.closest?.('[data-close]')) {
       if (overlay.id === 'unsaved') answerUnsaved(false);
+      else if (overlay.id === 'downloads') void dismissDownloadPicker();
       else if (overlay.id === 'addto') closeAddTo(); else showPanel(null);
     }
   });
@@ -4691,6 +4689,7 @@ for (const overlay of document.querySelectorAll('.overlay')) {
 addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!$('unsaved').hidden) { answerUnsaved(false); return; }
+  if (!$('downloads').hidden) { void dismissDownloadPicker(); return; }
   if (!$('playback-panel').hidden) { closePlaybackQueue({ focus: true }); return; }
   if (!$('addto').hidden) closeAddTo(); else showPanel(null);
 });
@@ -5653,6 +5652,23 @@ queueView = new QueueView({ root: $('playback-panel'), list: $('playback-list'),
   onMenu: (items, anchor) => showMenu(items.map(([label, action, enabled, icon]) =>
     [label, action, enabled, ICON[icon]]), anchor),
 });
+libraryDownloads = new LibraryDownloads({
+  modland: async (options) => archive.downloadModland({ ...await downloadFormatPolicy(options), ...options }),
+  favourites: (options) => randomCatalogue.downloadFavourites(options),
+  asma: async (options) => {
+    if (deletingCatalogues.has('asma')) throw new Error(String(uiMessageText('ASMA is being deleted. Try again.')));
+    return archive.downloadAsma({ ...await downloadFormatPolicy(options), ...options });
+  },
+  songlengths: (options) => archive.downloadSongLengths(options),
+  trackmetadata: (options) => archive.downloadSongMetadata(options),
+}, { busyChanged: reflectDownloadBusy });
+downloadPicker = new DownloadPickerView({ root: $('download-picker-body'), runner: libraryDownloads,
+  icon: (name) => iconSvg(name === 'stop' ? STOP_GLYPH : ICON[name]),
+  onStart: (selected) => void runSelectedDownloads(selected), onStop: () => libraryDownloads.stop(),
+  onRetry: () => void runSelectedDownloads([], { retry: true }),
+});
+$('choose-downloads').onclick = () => void openDownloadPicker($('choose-downloads'));
+
 randomFiltersView = new RandomFiltersView($('randomfilter'), {
   icon: (kind) => iconSvg(ICON[kind]),
   onPick: (scope) => { setRandomScope(scope); $('randomfilter').hidden = true; renderRandomFilters(); },
