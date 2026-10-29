@@ -53,6 +53,10 @@ PWA install and cache-miss requests now verify generated asset digests, preventi
 older engine/script from entering the new revision. Generated-worker/real-Fetch checks reproduce
 both gaps before correction and pass afterward, including old-cache preservation and unsupported
 integrity fallback. Actual browser PWA update acceptance remains unchecked.
+Playlist removal/Undo now preserves duplicate occurrence positions and IDs instead of mapping
+equal URLs to the last row. Ten production-ESM event assertions fail before correction; all 28
+event checks and 75 model cases pass afterward, with existing transport/reorder companions.
+These results use an adapted decoder port; physical browser playback remains unchecked.
 
 **W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
 gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native

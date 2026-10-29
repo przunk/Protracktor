@@ -1893,3 +1893,14 @@ ports Native deterministic colour/format rules into one cached local PNG with pa
 There is no additional store, network artwork request, transport model or dependency. Browser-owned
 session routing/background limits and Native exceptions are recorded in the
 [W25 contract](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
+## WEB playlist occurrence mapping — final audit, 2026-10-29
+
+`PlayOrder.withTracks` and `PlaybackContext.withOrder` share one occurrence matcher: retained
+object references first, then stable FIFO identity matching for replaced metadata. A deletion
+or Undo supplies the exact old position of each surviving row; new/restored rows use null and
+receive fresh source IDs. This explicit mapping distinguishes repeated references to the same
+object, which neither a URL map nor reference matching alone can identify. History and source
+IDs use the same mapping. Transport-only updates preserve occurrence keys, and existing live
+reorder retains its explicit positional permutation. Playlist edits do not rebuild the manual
+FIFO or issue decoder commands unless the currently playing row itself is removed.

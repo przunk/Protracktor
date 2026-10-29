@@ -249,6 +249,46 @@ test('editing the selected source playlist keeps its order linked to transport',
   assert.equal(before.context.next().context.current, tracks[1]);
 });
 
+for (const repeatedObject of [false, true]) {
+  test(`removing an unrelated row preserves duplicate occurrence history (${repeatedObject ? 'shared' : 'distinct'} references)`, () => {
+    const a = { url: 'a', name: 'First A' }, second = repeatedObject ? a : { ...a, name: 'Second A' };
+    const rows = [a, tracks[1], second, tracks[2]];
+    const before = new PlaybackWorkspace().selectPlaylist({ id: 'duplicates', tracks: rows }).playPlaylist(0);
+    const changed = before.editTracks(rows.slice(0, 3));
+    assert.equal(changed.context.order.currentIndex, 0);
+    assert.equal(changed.context.currentEntryId, before.context.currentEntryId);
+    assert.equal(changed.context.next().context.current.url, 'b');
+    const visits = before.context.order.withShuffle(true).startAt(0).jumpTo(2).jumpTo(1);
+    const edited = visits.withTracks(rows.slice(0, 3));
+    assert.deepEqual(edited.history, visits.history);
+    assert.equal(edited.previous().currentIndex, 2);
+    assert.equal(edited.previous().previous().currentIndex, 0);
+  });
+  test(`positional removal and Undo retain the surviving duplicate's identity (${repeatedObject ? 'shared' : 'distinct'} references)`, () => {
+    const a = { url: 'a', name: 'First A' }, second = repeatedObject ? a : { ...a, name: 'Second A' };
+    const rows = [a, tracks[1], second, tracks[2]];
+    const before = new PlaybackWorkspace().selectPlaylist({ id: 'duplicates', tracks: rows }).playPlaylist(2);
+    const changed = before.editTracks(rows.slice(1), { positions: [1, 2, 3] });
+    assert.equal(changed.context.order.currentIndex, 1);
+    assert.equal(changed.context.currentEntryId, before.context.currentEntryId);
+    assert.deepEqual(changed.context.entryIds, [1, 2, 3]);
+    const restored = changed.editTracks(rows, { positions: [null, 0, 1, 2] });
+    assert.equal(restored.context.order.currentIndex, 2);
+    assert.equal(restored.context.currentEntryId, before.context.currentEntryId);
+    assert.equal(new Set(restored.context.entryIds).size, 4);
+  });
+}
+test('metadata copies keep duplicate positions while malformed edit mappings are rejected', () => {
+  const a = { url: 'a', name: 'A' }, rows = [a, tracks[1], a];
+  const before = order(rows).startAt(0).jumpTo(2);
+  const copies = before.withTracks(rows.map(track => ({ ...track, name: 'Learned ' + track.name })));
+  assert.deepEqual(copies.history, before.history);
+  assert.equal(copies.previous().currentIndex, 1);
+  assert.throws(() => before.withTracks(rows, [0, 0, 2]), TypeError);
+  assert.throws(() => before.withTracks(rows, [0, 1]), TypeError);
+  assert.throws(() => before.withTracks(rows, [0, 1, 9]), TypeError);
+});
+
 test('a save snapshots the selected editor rather than its unrelated playback source', () => {
   const b = selectedA().selectPlaylist({ id: 'B', tracks: [tracks[2]] }).editTracks([tracks[2], tracks[1]]);
   const snapshot = b.saveSnapshot();

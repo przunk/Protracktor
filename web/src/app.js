@@ -553,9 +553,9 @@ function applyTransportOrder() {
   repeat = state.repeat;
 }
 
-function changeEditorTracks(tracks, { dirty = true } = {}) {
+function changeEditorTracks(tracks, { dirty = true, positions } = {}) {
   const owns = editorOwnsPlayback();
-  workspace = workspace.editTracks(tracks, { dirty });
+  workspace = workspace.editTracks(tracks, { dirty, positions });
   if (owns) applyTransportOrder();
   if (owns && dirty && (playing || loading || $('seek').dataset.opened === '1')) prefetchUpcoming();
   refreshStashes();
@@ -2673,14 +2673,15 @@ function removeRows(ats) {
   const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < rows.length).sort((a, b) => a - b);
   if (!sorted.length) return;
   const owns = editorOwnsPlayback() && !manualCurrent();
-  const current = rows[workspace.editor.order.currentIndex];
+  const currentIndex = workspace.editor.order.currentIndex;
   const removed = sorted.map((at) => ({ at, track: rows[at] }));
   const wasCurrent = owns && sorted.includes(index);
-  changeEditorTracks(rows.filter((_, i) => !sorted.includes(i)));
+  const positions = rows.map((_, i) => i).filter(i => !sorted.includes(i));
+  changeEditorTracks(positions.map(i => rows[i]), { positions });
   if (wasCurrent) {
     parkEditedSourceAt(Math.min(sorted[0], queue.length - 1));
   }
-  lastRemoval = { removed, playlist: workspace.editor.id, wasCurrent, current };
+  lastRemoval = { removed, playlist: workspace.editor.id, wasCurrent, currentIndex };
   render();
   showUndo(removed.length === 1 ? uiMessageText('Removed {name}', { name: removed[0].track.name })
     : uiPluralText(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
@@ -2691,11 +2692,19 @@ function undoRemoval() {
   hideUndo();
   if (!removal || removal.playlist !== workspace.editor.id || !editorShown) return;
   const tracks = [...editorTracks()];
-  for (const { at, track } of removal.removed) tracks.splice(Math.min(at, tracks.length), 0, track);
+  const positions = tracks.map((_, index) => index);
+  let restoredCurrent = -1;
+  for (const { at, track } of removal.removed) {
+    const target = Math.min(at, tracks.length);
+    if (restoredCurrent >= target) restoredCurrent++;
+    tracks.splice(target, 0, track);
+    positions.splice(target, 0, null);
+    if (at === removal.currentIndex) restoredCurrent = target;
+  }
   const owns = editorOwnsPlayback();
-  changeEditorTracks(tracks);
+  changeEditorTracks(tracks, { positions });
   if (removal.wasCurrent && owns) {
-    parkEditedSourceAt(queue.indexOf(removal.current));
+    parkEditedSourceAt(restoredCurrent);
   }
   render();
 }

@@ -2202,3 +2202,18 @@ responses, matching responses, cache misses, failed updates and unsupported inte
 subpath, other-app cache, Range, pairing and remote-request isolation checks still pass. Cache
 Storage is modelled in this host check; Fetch/network/integrity verification is real, not a claim
 about physical-browser rendering or installation. Final integrated verification remains pending.
+
+W01/W12 generic playlist edits collapsed every equal-URL history entry onto the last row and
+could give a surviving later duplicate the removed earlier row's identity. A retained-object/FIFO
+occurrence match now backs metadata replacements; actual deletion/Undo pass explicit positional
+maps, including when several rows hold the same object. Surviving source IDs, shuffle history,
+manual requests, elapsed position and decoder commands remain stable. Undo of the current removal
+parks its original occurrence without starting audio. Invalid positional maps are refused.
+
+The Native comparison includes `TrackEditing` remove/restore and `PlayQueue.withTracks`. The
+latter also collapses duplicate IDs; ordinary Native imports deduplicate membership, while legacy
+WEB duplicate playlists remain valid. That aliasing defect is not ported as a parity requirement;
+Android production is unchanged. Before correction **10 actual-ESM event assertions** fail;
+afterward all **19 behaviour / 28 total event checks** and **75 context cases** pass. Existing
+schedule, playback-effect, reorder, Random-history and source-navigation checks also pass. The
+new event path is part of the complete gate. Final integrated verification remains pending.

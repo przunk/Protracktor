@@ -10,6 +10,39 @@ const frozen = (values) => Object.isFrozen(values) ? values : Object.freeze([...
 const nextShuffledLaps = new WeakMap();
 const trackId = (track) => track.url ?? track.id;
 const sameTracks = (a, b) => a.length === b.length && a.every((track, i) => trackId(track) === trackId(b[i]));
+
+// Prefer retained objects, then match metadata copies in occurrence order. Explicit edit positions
+// disambiguate deletion when two rows contain the very same object, which identity alone cannot do.
+function trackPositions(before, after, positions) {
+  if (positions == null) {
+    const pool = (key, accepts = () => true) => {
+      const values = new Map();
+      before.forEach((track, index) => {
+        if (!accepts(index)) return;
+        const id = key(track);
+        if (!values.has(id)) values.set(id, []);
+        values.get(id).push(index);
+      });
+      for (const indices of values.values()) indices.reverse();
+      return values;
+    };
+    const references = pool(track => track);
+    positions = after.map(track => references.get(track)?.pop() ?? null);
+    const retained = new Set(positions);
+    const identities = pool(trackId, index => !retained.has(index));
+    positions = positions.map((old, index) => old ?? identities.get(trackId(after[index]))?.pop() ?? null);
+  }
+  const used = new Set();
+  if (positions.length !== after.length) throw new TypeError('Edit positions must match the track list');
+  positions.forEach((old, index) => {
+    if (old === null) return;
+    if (!Number.isInteger(old) || old < 0 || old >= before.length || used.has(old)
+      || trackId(before[old]) !== trackId(after[index])) throw new TypeError('Invalid playback occurrence mapping');
+    used.add(old);
+  });
+  return positions;
+}
+
 const checkedIndex = (tracks, index) => {
   if (!Number.isInteger(index) || index < 0 || index >= tracks.length) throw new RangeError(`No track at ${index}`);
   return index;
@@ -74,17 +107,18 @@ export class PlayOrder {
       indices: dealt(this.tracks, shuffle, this.currentIndex, this.random) });
   }
 
-  withTracks(tracks) {
-    const byId = new Map(tracks.map((track, index) => [trackId(track), index]));
+  withTracks(tracks, positions) {
+    positions = trackPositions(this.tracks, tracks, positions);
+    const byPosition = new Map(positions.map((old, index) => [old, index]));
     const history = [];
     let cursor = -1;
     this.history.forEach((oldIndex, position) => {
-      const index = byId.get(trackId(this.tracks[oldIndex] ?? {}));
+      const index = byPosition.get(oldIndex);
       if (index == null) return;
       history.push(index);
       if (position <= this.cursor) cursor = history.length - 1;
     });
-    const unchanged = sameTracks(this.tracks, tracks);
+    const unchanged = positions.length === this.tracks.length && positions.every((old, index) => old === index);
     const shuffleFrom = unchanged ? this.shuffleFrom : history[cursor] ?? null;
     const updated = this.copy({ tracks, history, cursor, shuffleFrom,
       indices: unchanged ? this.indices : dealt(tracks, this.shuffle, shuffleFrom, this.random) });
@@ -159,17 +193,12 @@ export class PlaybackContext {
   omit(id) { return !this.entryIds.includes(id) || this.omitted.includes(id) ? this : this.copy({ omitted: [...this.omitted, id] }); }
   restore(id) { return this.copy({ omitted: this.omitted.filter((omitted) => omitted !== id) }); }
 
-  withOrder(order) {
+  withOrder(order, positions) {
     if (order === this.order) return this;
-    if (sameTracks(this.order.tracks, order.tracks)) return this.copy({ order });
-    const old = new Map();
-    this.order.tracks.forEach((track, index) => {
-      const id = trackId(track);
-      if (!old.has(id)) old.set(id, []);
-      old.get(id).push(this.entryIds[index]);
-    });
+    if (positions == null && sameTracks(this.order.tracks, order.tracks)) return this.copy({ order });
+    positions = trackPositions(this.order.tracks, order.tracks, positions);
     let nextEntryId = this.nextEntryId;
-    const entryIds = order.tracks.map((track) => old.get(trackId(track))?.shift() ?? nextEntryId++);
+    const entryIds = positions.map(old => old === null ? nextEntryId++ : this.entryIds[old]);
     return this.copy({ order, entryIds, nextEntryId, omitted: this.omitted.filter((id) => entryIds.includes(id)) });
   }
 
@@ -286,10 +315,10 @@ export class PlaybackWorkspace {
     return this.activate(new PlaybackContext({ source, order }));
   }
 
-  editTracks(tracks, { dirty = true } = {}) {
-    const order = this.editor.order.withTracks(tracks);
+  editTracks(tracks, { dirty = true, positions } = {}) {
+    const order = this.editor.order.withTracks(tracks, positions);
     return this.copy({ editor: { ...this.editor, order, dirty, revision: this.editor.revision + 1 },
-      context: this.context.belongsTo(this.editor.id) ? this.context.withOrder(order) : this.context });
+      context: this.context.belongsTo(this.editor.id) ? this.context.withOrder(order, positions) : this.context });
   }
 
   saveSnapshot() {
