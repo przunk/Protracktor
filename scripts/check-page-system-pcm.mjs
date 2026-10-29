@@ -21,6 +21,38 @@ export async function verify({window,check}) {
   $('queue').querySelector('li.track').click();
   window.document.body.click();
   assert(await until(live));
+  for (const normalized of [false, true]) {
+   if ($('settings-normalization').checked !== normalized) $('settings-normalization').click();
+   assert(await until(() => bridge.processor.normalizationEnabled === normalized));
+   const fresh = track(`held-source-${normalized}.mod`);
+   await api.storeNow.save({ id: 'held-source', name: 'Held source', tracks: [fresh], index: 0 });
+   await api.choosePlaylist('held-source');
+   check(bridge.callback().some(value => Math.abs(value) > .001), 'viewing another playlist keeps the old source sounding');
+   const fetch = window.fetch;
+   let release;
+   window.fetch = (url, options) => String(url) === fresh.url
+    ? new Promise(resolve => { release = () => resolve(fetch(url, options)); }) : fetch(url, options);
+   const count = await window.__played.count();
+   try {
+    $('queue').querySelector('li.track').click();
+    assert(await until(() => release));
+    check(bridge.processor.handle === 0 && bridge.callback().every(value => value === 0),
+     `an explicit source selection closes old PCM before its held fetch (${normalized ? 'normalized' : 'original'})`);
+    check(await window.__played.count() === count, 'a selected file awaiting bytes does not enter History');
+    await handlers.pause();
+    const deliver = release; release = null; deliver();
+    await new Promise(resolve => setTimeout(resolve, 25));
+    check(bridge.processor.handle === 0 && bridge.callback().every(value => value === 0)
+     && await window.__played.count() === count, 'Pause rejects the late selected fetch without reopening PCM or History');
+   } finally { window.fetch = fetch; release?.(); }
+   await handlers.play();
+   assert(await until(() => live() && api.actualNow().url === fresh.url));
+   check(bridge.callback().some(value => Math.abs(value) > .001), 'explicit Play after cancellation opens the selected source normally');
+  }
+  if ($('settings-normalization').checked) $('settings-normalization').click();
+  await api.choosePlaylist('system-pcm');
+  $('queue').querySelector('li.track').click();
+  assert(await until(() => live() && api.actualNow().url === tracks[0].url));
   const handle=bridge.processor.handle,engine=bridge.processor.engine;
   check(bridge.callback().some(v=>Math.abs(v)>.001),'actual system fixture renders real WASM PCM');
   const before=engine._pt_position(handle),opens=bridge.commands.filter(m=>m.type==='open').length;

@@ -2217,3 +2217,16 @@ Android production is unchanged. Before correction **10 actual-ESM event asserti
 afterward all **19 behaviour / 28 total event checks** and **75 context cases** pass. Existing
 schedule, playback-effect, reorder, Random-history and source-navigation checks also pass. The
 new event path is part of the complete gate. Final integrated verification remains pending.
+
+W01/W25 explicit source selection now closes the previous worklet handle before awaiting startup
+or network bytes and cancels obsolete private preparation/watchdogs. Merely viewing another
+playlist still preserves playback. This matches `PlaybackController.load`, which closes its track
+before reading the selected file. Final old-source loudness/closed notifications retain their
+original identities, and the completion latch still resets only on an accepted new start.
+
+Real app/processor/WASM callbacks reproduce the old audible-fetch gap with normalization both
+Off and On. Both guards fail before correction; afterward all **24 behaviour / 33 total PCM
+checks** pass, including silent waiting, Pause/late-fetch cancellation and explicit recovery.
+The separate real normalization bridge and system-event suite pass. The broad page run exposed
+one additional stale-row swipe/click guard failure; retain it for a separate W02 audit correction
+rather than claiming a fully passing integrated candidate. Physical playback remains unchecked.

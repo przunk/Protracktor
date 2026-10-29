@@ -1488,6 +1488,10 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   const asked = ++playAsked;
   wantPlayback(true); systemStopped = false;
   loading?.abort();
+  playbackNormalization.cancelPending();
+  clearTimeout(openWatchdog);
+  // Selecting playback transfers audio ownership immediately, before the new file is fetched.
+  node?.port.postMessage({ type: 'close' });
   const abort = new AbortController();
   loading = abort;
   rowState = 'loading';
@@ -1520,16 +1524,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   duration = 0;
   endsAt = 0;
   openLengths = [];
-  // **`endedByClock` is deliberately NOT cleared here**, and clearing it here was a bug that
-  // skipped four tracks at a time (`docs/STATUS.md` C59).
-  //
-  // This function starts *loading* the next tune; the worklet goes on playing the **old** one until
-  // the new bytes arrive and open, which is a fetch away. Its position messages keep coming in that
-  // gap, still carrying the old tune's clock -- and `duration` has just been zeroed for the bar, so
-  // the limit falls back to three minutes and every one of those messages is past it. Cleared here,
-  // the guard reopened and the queue walked on once per message until the fetch finished.
-  //
-  // It is cleared where a new tune actually starts: `opened` and `subsong`.
+  // C59: only opened/subsong may release the completion latch and establish the new clock.
   $('seek').value = 0;
   paint($('seek'));
   seekLanded();

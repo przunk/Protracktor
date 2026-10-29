@@ -57,6 +57,10 @@ Playlist removal/Undo now preserves duplicate occurrence positions and IDs inste
 equal URLs to the last row. Ten production-ESM event assertions fail before correction; all 28
 event checks and 75 model cases pass afterward, with existing transport/reorder companions.
 These results use an adapted decoder port; physical browser playback remains unchecked.
+Explicit playback selection closes old PCM before fetching the new source; viewing another
+playlist still keeps it playing. Real app/worklet/WASM checks fail twice before correction
+(normalization Off/On) and pass all 33 checks afterward. Normalization/system-event companions
+pass; one stale-row swipe/click failure from the broad page run needs a separate W02 correction.
 
 **W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
 gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native
