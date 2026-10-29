@@ -8,6 +8,56 @@ as separate feature/substage commits. The ignored local GOAL.md is the execution
 Source inspection and host checks are not physical-browser acceptance. No automatic merge,
 push, publication, APK, release version change or AMP integration is part of this work.
 
+## Final technical handoff — 2026-10-30
+
+All **W01-W25** implementation scopes, the 41-commit source/requirements review and its
+corrections are complete on `feature/web-feature-parity`. The checked application/package source
+is **`abd505a11f389509e92dfab6ad3f496d0364fa1a`**. A later documentation-only commit records
+these results; it does not relabel the archive or claim another application test. Real-browser
+acceptance remains open.
+
+The fresh forced complete gate exits **0** after **1266 seconds**:
+**1266 Native tests / 173 suites**, zero failures/errors/skips, all **31**
+Native unit tasks executed, **1368 actual-ESM page assertions**, **57 engine
+checks** and every companion, including package reproducibility/refusal fixtures. Fresh lint
+executes all three analysis tasks: **0 errors / 79 warnings**, **143.4 seconds**. All **829** frozen
+inputs match before and after packaging. Logs, JUnit, lint and input hashes are retained locally.
+
+Final standalone `node scripts/check-page.mjs` also exits **0**, with **1367 assertions**. An
+earlier plain run, concurrent with Native verification, failed the last cross-tab ASMA deletion
+assertion once. The instrumented rerun, full ESM gate and final uninstrumented run pass on the
+same application source. Diagnostic archive/control/continuity values are all correct. The cause
+of that isolated failure is **not established**; both outcomes are retained as a host-test
+observation, without claiming a fix or attributing it to the environment.
+
+Candidate: [protracktor-web-abd505a-20261030-004338-244872936.tar.gz](../dist/protracktor-web-abd505a-20261030-004338-244872936.tar.gz), **1,610,081 bytes**.
+SHA-256: `88cd7b0ab3068fc69cd2f830c08f1805a089d7dde76723a1bb948b3e19f36644`.
+Two actual builds have distinct timestamped names and identical bytes/hash. The unpacked archive
+has **152 entries**, the executable launcher, README, privacy policy, licence and
+**14 components / 19 original notice files**.
+Source metadata names the checked commit with `dirty: false`.
+
+The extracted engine's **19** `_pt_*` exports match the production WASM API exactly. API-list
+SHA-256: `2f9b46c2ab3d6d9e249d060094b91dee3241de3d8eb46fa8804ac9aea4bf71d3`.
+WASM SHA-256: `b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`.
+Its decoder fingerprint reports openmpt 0.8.9+r25652.pkg, sc68 3.0.0b, ASAP 8.0.0, GME 0.6.5,
+sidplayfp 3.1.1 and minimp3 ea99364; UADE remains deliberately unavailable. The actual extracted
+WASM decodes synthetic ProTracker PCM and reaches equal Mono channels after the existing Native
+10 ms live transition. No physical sound output is implied.
+
+The extracted launcher serves the expected redirects, MIME types and exact resource bytes.
+PWA revision **`4aee30377d28a22c417e3b19916214e01fd96a4d33a084b37d4b8b167d822d9b`** matches
+the generated worker; its install fetches all **111** application assets with real Node Fetch and
+byte verification. CacheStorage is adapted for this host check; browser installation, activation
+and updates remain unchecked.
+
+The [browser trial](WEB_PARITY_CHECKLIST.md) keeps all physical checks open, including layout,
+keyboard/touch/screen-reader behaviour, sound, storage upgrades, PWA and background lifetime.
+C104 remains the documented Media Session/OS routing limitation after the final retry; callbacks
+and declared playback state cannot establish physical headset/notification delivery. No other
+implementation scope was omitted. The ten exclusions, Android schema 23, browser schema 6 and
+versionName 1.4.0 are retained. No merge, push, deployment, APK or release was performed.
+
 ## Reference and storage allocation
 
 ### Resume — 2026-10-28

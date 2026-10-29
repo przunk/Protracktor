@@ -3,7 +3,7 @@
 The consolidated [WEB parity browser trial](WEB_PARITY_CHECKLIST.md) covers W01-W25, supported
 environments, persistence/PWA updates and remaining physical-browser acceptance. Its unchecked
 boxes are not implied passes from host checks. Current source/artifact and automated results are
-in [STATUS](STATUS.md#web-feature-implementation--in-progress-2026-10-26). The complete gate also
+in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
 ## WEB W22 selected downloads — browser checks pending, 2026-10-29

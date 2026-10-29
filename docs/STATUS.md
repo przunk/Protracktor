@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-30 — WEB parity source audit complete, final verification/archive pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-30 — WEB parity technical handoff ready on abd505a, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -42,7 +42,27 @@ VersionName 1.4.0 and schema 23 are retained. The merge tree equals branch 691f8
 application inputs match checked source fbf2958; this is a source comparison, not another run.
 Master/tags, frozen WEB work and AMP are unchanged; no push, build or publication for integration.
 
-## WEB feature implementation — in progress, 2026-10-26
+## WEB feature implementation
+
+**Technical handoff ready, 2026-10-30:** all **25/25** scopes and the final 41-commit audit are
+implemented on `feature/web-feature-parity`; tested source **abd505a11f389509e92dfab6ad3f496d0364fa1a**.
+Fresh complete gate: **1266 tests / 173 suites**, zero failures/errors/skips, **1266 seconds**;
+all 31 Native unit tasks executed, **1368 ESM page assertions**, **57 engine checks** and every
+companion pass. Fresh lint executes all three analyses: **0 errors / 79 warnings**, 143.4 seconds.
+All **829** frozen inputs match; the final plain page command also passes **1367 assertions**.
+
+WEB archive: [protracktor-web-abd505a-20261030-004338-244872936.tar.gz](../dist/protracktor-web-abd505a-20261030-004338-244872936.tar.gz), **1,610,081 bytes**,
+SHA-256 `88cd7b0ab3068fc69cd2f830c08f1805a089d7dde76723a1bb948b3e19f36644`.
+Two actual builds are byte-identical; extracted engine/API/PCM, legal contents, launcher/HTTP and
+all 111 PWA asset fetches pass host checks. [Complete evidence and limits](WEB_IMPLEMENTATION.md#final-technical-handoff--2026-10-30).
+
+**Physical browser acceptance is unchecked.** Use the [browser trial](WEB_PARITY_CHECKLIST.md).
+C104 headset/OS routing remains unverified and potentially unsupported after the final retry.
+One earlier plain-run ASMA assertion failed once; instrumented, final ESM and uninstrumented
+reruns pass without a source correction. Its cause remains unknown and the observation is retained.
+This is a technical candidate on its task branch; no merge, push, deployment, APK or release.
+
+The dated checkpoints below describe earlier stages and are superseded by this handoff.
 
 **Final source audit, 2026-10-30:** W01-W25 have been traced through their feature/substage
 commits, current production paths, Native comparisons and WEB rule/event/storage/PCM checks.

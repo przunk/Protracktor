@@ -1,7 +1,7 @@
 # WEB parity browser trial
 
 Prepared: **2026-10-30**. Use the candidate source, archive and checksums recorded in
-[STATUS](STATUS.md#web-feature-implementation--in-progress-2026-10-26). This checklist does not
+[STATUS](STATUS.md#web-feature-implementation). This checklist does not
 declare a browser trial complete. Record browser/version, OS/device, tab or installed PWA,
 source SHA, language/theme and the outcome of each scenario.
 
@@ -10,6 +10,11 @@ WASM engine, with browser output/transport adapters. Native comparisons use the 
 reference `c8209b1ab79976ec28d27e1da447055756c7ca29` and existing JDK17. Automated run results are
 recorded separately in STATUS; host execution does not establish appearance, audible quality,
 touch, storage behaviour or OS routing in a physical browser.
+
+The technical candidate is source **abd505a11f389509e92dfab6ad3f496d0364fa1a** and
+[protracktor-web-abd505a-20261030-004338-244872936.tar.gz](../dist/protracktor-web-abd505a-20261030-004338-244872936.tar.gz) (**1,610,081 bytes**), SHA-256
+`88cd7b0ab3068fc69cd2f830c08f1805a089d7dde76723a1bb948b3e19f36644`.
+Later documentation commits do not identify another tested application.
 
 ## Environments to record
 
