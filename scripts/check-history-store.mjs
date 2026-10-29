@@ -131,4 +131,16 @@ await test('learned titles persist before qualification across reopen and clear 
   assert.deepEqual(await reopened.played.recent(), before);
   await reopened.played.clear(); assert.equal((await reopened.played.presentationAmong(['decoded', 'fallback', 'blank'])).size, 0); reopened.forget();
 });
+await test('persisted learned presentation uses Kotlin whitespace without changing the stored title', async () => {
+  const store = await fresh();
+  const cases = [['padded', '\u001cTitle\u001f', 'Title'], ['blank', '\u001c\u001f', ''],
+    ['bom', ' \ufeffTitle\ufeff ', '\ufeffTitle\ufeff'], ['bom-only', ' \ufeff ', '\ufeff']];
+  for (const [url, name] of cases) await store.played.record({ url, name, file: `${url}.mod` });
+  const shown = await store.played.presentationAmong(cases.map(([id]) => id));
+  for (const [id, raw, expected] of cases) {
+    assert.equal(shown.get(id).name, expected, id);
+    assert.equal((await store.played.recent()).find(row => row.url === id).name, raw);
+  }
+  store.forget();
+});
 console.log(`${checks} History storage/migration cases passed.`);

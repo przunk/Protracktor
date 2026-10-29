@@ -16,6 +16,15 @@ test('missing blank and unrelated titles retain the original object',()=>{
  const track={url:'a',name:'a.mod',meta:'Source'};
  for(const titles of [new Map(),new Map([['a','  ']]),new Map([['other','Title']])])assert.equal(learnedDisplay(track,titles),track);
 });
+test('Kotlin separator controls are blank but the BOM remains part of a learned title', () => {
+ const track = { url: 'a', name: 'a.mod', meta: 'Source' };
+ assert.equal(learnedDisplay(track, new Map([['a', '\u001c\u001f']])), track);
+ assert.equal(learnedDisplay(track, new Map([['a', '\u001cTitle\u001f']])).name, 'Title');
+ assert.equal(learnedDisplay(track, new Map([['a', '\ufeffTitle\ufeff']])).name, '\ufeffTitle\ufeff');
+ assert.equal(learnedDisplay(track, new Map([['a', '\ufeff']])).name, '\ufeff');
+ assert.equal(learnedSourceLine({ ...track, name: 'Title', file: 'a.mod', meta: '\u001c\u001f' }), 'a.mod');
+ assert.equal(learnedSourceLine({ ...track, name: 'Title', file: 'a.mod', meta: '\ufeff' }), '\ufeff/a.mod');
+});
 test('source label includes the filename once and never rewrites escaped identity',()=>{
  const track={url:'id:escaped%2Fpart',name:'file.mod',file:'file.mod',meta:'Source/file.mod'};
  const shown=learnedDisplay(track,new Map([[track.url,'  Decoded  ']]));assert.equal(shown.name,'Decoded');assert.equal(shown.meta,track.meta);assert.equal(shown.url,track.url);

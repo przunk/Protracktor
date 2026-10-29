@@ -446,7 +446,10 @@ export const played = {
           const request = store.get(id);
           request.onsuccess = () => {
             const row = request.result;
-            if (row) found.set(id, Object.freeze({ name: row.name?.trim() !== row.file ? row.name?.trim() ?? '' : '', listened: row.listened === true }));
+            if (row) {
+              const name = trimQuery(row.name ?? '');
+              found.set(id, Object.freeze({ name: name !== row.file ? name : '', listened: row.listened === true }));
+            }
           };
         }
         transaction.oncomplete = () => resolve();

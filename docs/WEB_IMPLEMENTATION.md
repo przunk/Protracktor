@@ -2177,3 +2177,17 @@ The supported callback implementation is testable on the host. Actual lock-scree
 headset/Bluetooth delivery, background lifetime and resuming after interruption remain unchecked
 and may be unavailable in a browser that does not route WebAudio as a controllable session. Keep
 C104 open for physical verification and retry this platform boundary during the final audit.
+
+## Final audit corrections — in progress, 2026-10-29
+
+W08/W25 text presentation reused JavaScript `trim`, which differs from Kotlin for separator
+controls and the BOM. Learned display/source lines, History presentation reads and artwork seed
+blankness now share the existing Kotlin-compatible text rule. Filename/title priority keeps the
+original untrimmed seed. Before correction the new guards fail all three WEB paths; afterward
+**6 learned-title**, **16 History storage** and **382 artwork cases** pass. The equivalent Native
+cases pass **10 tests / 3 suites**, zero failures/errors/skips, without Android production changes.
+The storage comparison surrounds its BOM with spaces so it tests trimming independently of the
+SQLite string codec; an earlier leading-BOM fixture exposed that distinction and is archived.
+
+These are focused correction checks, not a replacement for the final integrated gate. The final
+audit, its remaining fixes and package remain in progress; no new candidate is ready for acceptance.

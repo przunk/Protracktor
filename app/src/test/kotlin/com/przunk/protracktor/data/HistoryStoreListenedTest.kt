@@ -53,6 +53,21 @@ class HistoryStoreListenedTest {
         assertEquals(emptyMap<String, HistoryPresentation>(), store.presentationAmong(emptySet()))
     }
 
+    @Test fun `learned presentation uses Kotlin whitespace without rewriting the stored title`() = runBlocking {
+        val store = HistoryStore(RuntimeEnvironment.getApplication())
+        store.clear()
+        // Keep the BOM inside spaces to test trimming independently of SQLite's string codec.
+        val cases = listOf(Triple("padded", "\u001cTitle\u001f", "Title"),
+            Triple("blank", "\u001c\u001f", ""), Triple("bom", " \ufeffTitle\ufeff ", "\ufeffTitle\ufeff"),
+            Triple("bom-only", " \ufeff ", "\ufeff"))
+        for ((id, raw) in cases) store.record(id, raw, "", "$id.mod", "", 0)
+        val shown = store.presentationAmong(cases.map { it.first }.toSet())
+        for ((id, raw, expected) in cases) {
+            assertEquals(id, expected, shown.getValue(id).title)
+            assertEquals(raw, store.page(0, 10).first { it.trackId == id }.title)
+        }
+    }
+
     @Test fun `learned titles persist before qualification but clear with History`() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
         val store = HistoryStore(context)

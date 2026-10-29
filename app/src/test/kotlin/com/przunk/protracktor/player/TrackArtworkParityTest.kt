@@ -7,6 +7,14 @@ import org.junit.Test
 import java.io.File
 
 class TrackArtworkParityTest {
+    @Test fun `seed blankness discards separator controls and retains the BOM`() {
+        assertEquals("Title", TrackArtwork.seedFor("\u001c\u001f", "Title", "id"))
+        assertEquals("id", TrackArtwork.seedFor("\u001c\u001f", "\u001c\u001f", "id"))
+        assertEquals("\ufeff", TrackArtwork.seedFor("\ufeff", "Title", "id"))
+        assertEquals("\ufeff", TrackArtwork.seedFor("", "\ufeff", "id"))
+        assertEquals(" a.mod ", TrackArtwork.seedFor(" a.mod ", "Title", "id"))
+    }
+
     @Test fun `shared WEB covers preserve all native colours and UTF8 file seeds`() {
         val root = generateSequence(File(".").absoluteFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile }

@@ -44,6 +44,12 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**Final audit corrections, 2026-10-29:** Kotlin-compatible whitespace handling now covers learned
+titles, retained History presentation and artwork seeds. New guards fail before correction;
+6 learned-title, 16 History storage and 382 artwork checks pass afterward. The same cases pass
+10 Native tests in three suites. Further audit corrections, final full checks and WEB packaging
+are in progress; focused results do not establish readiness of the final integrated candidate.
+
 **W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
 gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native
 unit tasks executed, **1368 actual-ESM page assertions**, **57 engine checks** and every companion.

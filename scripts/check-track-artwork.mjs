@@ -51,6 +51,13 @@ test('the filename wins before a learned title and empty values fall back throug
   assert.equal(artworkSeed('  ', 'Title', 'id'), 'Title');
   assert.equal(artworkSeed('', '', 'id'), 'id');
 });
+test('Native seed blankness discards separator controls but retains BOM filename and title', () => {
+  assert.equal(artworkSeed('\u001c\u001f', 'Title', 'id'), 'Title');
+  assert.equal(artworkSeed('\u001c\u001f', '\u001c\u001f', 'id'), 'id');
+  assert.equal(artworkSeed('\ufeff', 'Title', 'id'), '\ufeff');
+  assert.equal(artworkSeed('', '\ufeff', 'id'), '\ufeff');
+  assert.equal(artworkSeed(' a.mod ', 'Title', 'id'), ' a.mod ');
+});
 const table = parseFormats(fs.readFileSync('web/src/formats.tsv', 'utf8'));
 for (const [name, label] of [
   ['mod.elysium', 'MOD'], ['track.MoD', 'MOD'], ['mod.song.sid', 'SID'], ['.mod', 'MOD'],
@@ -124,5 +131,5 @@ test('unavailable or refused canvas falls back to the packaged icon without fetc
     assert.equal(image.type, 'image/png');
   }
 });
-assert.equal(checks, 381);
+assert.equal(checks, 382);
 console.log(`${checks} artwork cases passed`);

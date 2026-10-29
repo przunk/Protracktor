@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { trimQuery as trimText } from './query-text.js';
 
 // Mirror Native Float arithmetic so a generated cover has the same colour in both runtimes.
 const f = Math.fround;
@@ -7,7 +8,7 @@ export const ARTWORK_FOREGROUND = '#f4f1ea';
 const SATURATION = f(.55), LUMINANCE = f(.115);
 
 export function artworkSeed(fileName, title, id) {
-  return fileName?.trim() ? fileName : title?.trim() ? title : id ?? '';
+  return trimText(fileName ?? '') ? fileName : trimText(title ?? '') ? title : id ?? '';
 }
 
 export function artworkHue(seed) {
