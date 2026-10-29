@@ -1727,13 +1727,6 @@ function setPlaying(on) {
 }
 
 /**
- * The list, in the app's shape: a position, a title, and a subtitle that says where it came from.
- *
- * `ui/PlaylistScreen.kt` puts the source path in the subtitle and tints the playing row with
- * `primary`; both are reproduced here. The drag handle, the selection mode and the overflow menu
- * are phone-only and deliberately absent.
- */
-/**
  * The empty playlist's offer (W11), the phone's `EmptyPlaylist`: **nothing is said until it is known
  * what is held**, then Browse when a catalogue is here and the download when none is. Asked again
  * whenever the list or the panels change; a later ask supersedes an earlier one still reading.
@@ -1766,6 +1759,7 @@ async function renderEmpty() {
 }
 
 function render() {
+  const focusedRow = playlistRows.find(row => row.node?.querySelector('.text') === document.activeElement)?.id;
   requestHistoryPresentation();
   captureTransport();
   renderEmpty();
@@ -1865,6 +1859,12 @@ function render() {
 
     li.append(n, text, menu);
     if (!entry.local) {
+      text.tabIndex = 0;
+      text.setAttribute('role', 'button');
+      text.onkeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault(); event.stopPropagation(); li.click();
+      };
       li.onclick = () => {
         const entry = descriptor.entry, i = playlistRows.indexOf(descriptor);
         if (swallowRowClick) { swallowRowClick = false; return; }
@@ -1925,6 +1925,8 @@ function render() {
   queueView?.render(playbackPlan());
   if (queueView) renderQueueSourceAction();
   if (randomFiltersView) requestRandomFilterRefresh();
+  if (focusedRow != null && !document.querySelector('main').hidden)
+    playlistRows.find(row => row.id === focusedRow)?.node.querySelector('.text[role="button"]')?.focus({ preventScroll: true });
 }
 
 /**
@@ -2744,7 +2746,7 @@ let swallowRowClick = false;
 
 function holdToSelect(row, currentEntry) {
   row.addEventListener('pointerdown', () => { swallowRowClick = false; });
-  row.addEventListener('keydown', () => { swallowRowClick = false; });
+  row.addEventListener('keydown', () => { swallowRowClick = false; }, true);
   return bindTrackGestures(row, {
     onAdd: () => { swallowRowClick = true; enqueueTrack(mainDisplay(currentEntry()), visibleFromHistory()); },
     onLongPress: () => { swallowRowClick = true; startSelecting(currentEntry()); },
@@ -3628,6 +3630,18 @@ async function renderPlaylists() {
     count.textContent = String(playlist.tracks?.length ?? 0);
     const name = document.createElement('div');
     name.className = 'pname';
+    name.tabIndex = 0;
+    name.setAttribute('role', 'button');
+    name.onkeydown = async (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault(); event.stopPropagation();
+      if (!await choosePlaylist(playlist.id) || workspace.editor.id !== playlist.id || !editorShown
+        || document.querySelector('main').hidden) return;
+      const at = workspace.editor.order.currentIndex ?? 0;
+      const target = playlistRows[at]?.node.querySelector('.text[role="button"]')
+        ?? $('queue').querySelector('.text[role="button"]') ?? $('playlistchip');
+      target.focus({ preventScroll: true });
+    };
     // "From the phone" is named by the page, in its language; its stored name is the English one.
     setUiText(name, playlist.id === PHONE ? uiMessageText('From the phone') : playlist.name);
     li.append(count, name);

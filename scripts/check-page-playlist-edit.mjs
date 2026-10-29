@@ -77,8 +77,30 @@ export async function verify({ window, check }) {
       `swipe enqueue consumes its ${retargeted ? 'retargeted' : 'detached-row'} click without restarting playback`);
   }
   swipe(rows()[0]);
-  rows()[1].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  rows()[1].click();
+  const key = (target, value) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }));
+  const title = rows()[1].querySelector('.text'); title.focus();
+  check(title.tabIndex === 0 && title.getAttribute('role') === 'button' && window.document.activeElement === title,
+    'a playlist title has a real keyboard focus target separate from its menu and grip');
+  key(title, 'Enter');
   check(api.indexNow() === 1, 'a fresh keyboard activation is not swallowed by an unfinished swipe click');
+  const listA = api.editorNow().id, sourceA = api.planNow().context;
+  await api.storeNow.save({ id: 'keyboard-b', name: 'Keyboard B', tracks: [{ url: 'https://example.test/keyboard/b.mod', name: 'Keyboard B track' }] });
+  $('playlistchip').click();
+  check(await until(() => [...$('playlistlist').querySelectorAll('.pname')].some(node => node.textContent === 'Keyboard B')),
+    'the actual playlist switcher displays its saved keyboard destination');
+  const name = [...$('playlistlist').querySelectorAll('.pname')].find(node => node.textContent === 'Keyboard B');
+  name.focus();
+  check(name.tabIndex === 0 && name.getAttribute('role') === 'button' && window.document.activeElement === name,
+    'playlist choice has a keyboard target independent of its More button');
+  key(name, 'Enter');
+  check(await until(() => api.editorNow().id === 'keyboard-b'), 'Enter on the actual playlist name changes the viewed editor');
+  if (api.editorNow().id === listA) await api.choosePlaylist('keyboard-b');
+  check(api.planNow().context === sourceA, 'keyboard playlist choice preserves the independently playing source');
+  check(await until(() => window.document.activeElement === rows()[0].querySelector('.text')),
+    'keyboard choice moves focus into the destination list');
+  key(rows()[0].querySelector('.text'), ' ');
+  check(api.sourceNow().id === 'keyboard-b', 'Space on a playlist title deliberately transfers context rather than toggling the old source');
+  check(await until(() => window.document.activeElement === rows()[0].querySelector('.text')),
+    'source startup redraws preserve the focused playlist occurrence');
   check(window.__browserErrors.length === 0, 'duplicate edit events have no unhandled browser errors');
 }

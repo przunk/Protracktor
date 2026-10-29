@@ -78,7 +78,9 @@ PWA installation; plain HTTP on a LAN is not an equivalent installation environm
   without selecting it or disturbing independent playback.
 - [ ] **W13:** Select Browse/Search/History rows by long press/menu/checkbox. Select all/none,
   batch Add and Share use that result snapshot and source order. Back first exits selection;
-  checkbox appearance and title/cache updates retain row geometry and focus.
+  checkbox appearance and title/cache updates retain row geometry and focus. Tab to a main-list
+  title and use Enter/Space to play it. Choose another saved playlist with Enter: audio keeps
+  its old source, focus enters the viewed list and Space on its title transfers playback.
 
 ## Audio, presentation and storage
 

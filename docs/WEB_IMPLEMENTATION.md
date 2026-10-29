@@ -2350,3 +2350,21 @@ The remaining delivery requirements are the **new final frozen complete gate/lin
 Both are still pending at this audit checkpoint. The
 [consolidated browser trial](WEB_PARITY_CHECKLIST.md) records every physical acceptance item as
 unchecked. Merge, push, gh-pages publication, APK and release remain outside this handoff.
+
+### Keyboard follow-up to the final audit — 2026-10-30
+
+The input-mode pass found playable main-list titles and playlist choices with mouse actions but
+no keyboard focus target or Enter/Space handler. An earlier swipe guard sent a synthetic key
+followed by a separate click; it did not establish that the key itself reached the action.
+Seven actual-key assertions fail before correction. Titles and playlist choices now expose
+focusable button semantics, share their existing playback/selection entry points and preserve
+focus across list redraws. Choosing another playlist keeps the playing context; activating its
+track explicitly transfers that context, as in Android's PlaylistSession/ActiveQueue rules.
+The gesture suppression reset runs in capture phase so a fresh keyboard action remains usable
+after a swipe. No Native production rule or dependency changed.
+
+The focused event run and the full **1368-assertion** ESM page run pass after correction. These
+are jsdom event/focus checks, not a real keyboard, screen reader or rendered-focus trial. The
+complete gate started on `d7be376` was deliberately stopped when this gap was found: it exited
+143 and is archived as an interrupted attempt, never as a passing final run. A new frozen complete
+gate/lint and the real-engine archive are required for the corrected source.

@@ -53,6 +53,14 @@ unchecked for physical environments. The plain page command also passes after re
 legacy import adapter. A **new final forced complete gate/lint and real-engine archive are still
 pending**; previous stage receipts do not establish readiness of this corrected candidate.
 
+**Keyboard audit follow-up, 2026-10-30:** main-list titles and playlist choices now have real
+Enter/Space actions, focus targets and focus retention through redraws. Seven event guards fail
+before correction; the focused run and all **1368** ESM page assertions pass afterward. Native
+editor/context rules are retained. Physical keyboard, screen reader and focus appearance remain
+unchecked. The first final-gate attempt on `d7be376` was intentionally interrupted (exit 143) for
+this correction; it is not a passing final verification. A fresh complete gate/lint and archive
+are still required.
+
 **Final audit corrections, 2026-10-29:** Kotlin-compatible whitespace handling now covers learned
 titles, retained History presentation and artwork seeds. New guards fail before correction;
 6 learned-title, 16 History storage and 382 artwork checks pass afterward. The same cases pass
