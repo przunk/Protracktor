@@ -7,6 +7,11 @@ import { zipDirectory } from '../web/src/zip-archive.js';
 
 const globalTracks = ['a', 'b'].map((name) => ({ url: `https://example.test/playback-startup/${name}.mod`, name }));
 const cases = {
+  'normalization-on': { raw: { volumeNormalization: '1' }, shuffle: false, repeat: 'off', all: false, normalization: true },
+  'normalization-off': { raw: { volumeNormalization: '0' }, shuffle: false, repeat: 'off', all: false },
+  'normalization-malformed': { raw: { volumeNormalization: 'future-policy' }, shuffle: false, repeat: 'off', all: false },
+  'normalization-denied': { raw: {}, shuffle: false, repeat: 'off', all: false },
+  'normalization-loading': { raw: { volumeNormalization: '1' }, shuffle: false, repeat: 'off', all: false, normalization: true },
   'stereo-narrow': { raw: { stereoMix: 'narrow' }, shuffle: false, repeat: 'off', all: false, stereo: 'narrow' },
   'stereo-mono': { raw: { stereoMix: 'mono' }, shuffle: false, repeat: 'off', all: false, stereo: 'mono' },
   'stereo-malformed': { raw: { stereoMix: 'future-mode' }, shuffle: false, repeat: 'off', all: false },
@@ -51,7 +56,7 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
   const fetch = window.fetch; state.trackRequests = 0;
   window.fetch = (...args) => { if (tracks.some((track) => track.url === String(args[0]))) state.trackRequests++;
-    if (name === 'stereo-loading' && String(args[0]).endsWith('engine.wasm')) return fetch(...args).then(async (reply) => {
+    if ((name === 'stereo-loading' || name === 'normalization-loading') && String(args[0]).endsWith('engine.wasm')) return fetch(...args).then(async (reply) => {
       await new Promise((resolve) => { state.releaseEngine = resolve; }); return reply;
     });
     return fetch(...args); };
@@ -69,7 +74,7 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   };
   const set = window.Storage.prototype.setItem, get = window.Storage.prototype.getItem;
   window.Storage.prototype.setItem = function (key, value) {
-    if (/^protracktor\.(shuffle|repeat|allsubsongs|cacheAhead|stereoMix)$/.test(key)) state.preferenceWrites.push([key, value]);
+    if (/^protracktor\.(shuffle|repeat|allsubsongs|cacheAhead|stereoMix|volumeNormalization)$/.test(key)) state.preferenceWrites.push([key, value]);
     return set.call(this, key, value);
   };
   if (name === 'denied') window.Storage.prototype.getItem = function (key) {
@@ -78,6 +83,10 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   };
   if (name === 'stereo-denied') window.Storage.prototype.getItem = function (key) {
     if (key === 'protracktor.stereoMix') throw new Error('stereo mix preference read refused');
+    return get.call(this, key);
+  };
+  if (name === 'normalization-denied') window.Storage.prototype.getItem = function (key) {
+    if (key === 'protracktor.volumeNormalization') throw new Error('normalization preference read refused');
     return get.call(this, key);
   };
   if (name === 'prefetch-denied') window.Storage.prototype.getItem = function (key) {
@@ -130,6 +139,8 @@ export async function verify({ window, check, name }) {
     const selectedMix = choice.stereo ?? 'original';
     check(document.querySelector(`input[name="stereomix"][value="${selectedMix}"]`)?.checked,
       `${name}: startup restores the native global stereo choice`);
+    check($('settings-normalization').checked === (choice.normalization === true),
+      `${name}: startup restores opt-in normalization without creating audio or writing a default`);
     check(api.folderAheadNow().mode === (choice.folderMode ?? 'wifi')
       && document.querySelector(`input[name="cacheahead"][value="${choice.folderMode ?? 'wifi'}"]`).checked,
       `${name}: startup restores the folder policy without changing playback or writing defaults`);
@@ -158,6 +169,20 @@ export async function verify({ window, check, name }) {
       const width = name === 'stereo-loading' ? 0 : selectedMix === 'narrow' ? 50 : selectedMix === 'mono' ? 0 : 100;
       check(window.__workletOptions?.processorOptions.stereoWidth === width,
         'the latest selected stereo width reaches the first worklet construction after asynchronous loading');
+    }
+    if (name.startsWith('normalization-')) {
+      if (name !== 'normalization-denied') check(window.localStorage.getItem('protracktor.volumeNormalization') === (choice.raw.volumeNormalization ?? null),
+        'startup preserves the exact normalization value without rewriting a fallback');
+      else check(state.notices.some((text) => text.includes('normalization preference read refused')),
+        'a refused normalization read explains default Off without starting audio');
+      $('playpause').click();
+      if (name === 'normalization-loading') {
+        check(await until(() => !!state.releaseEngine), 'the initial engine load can be held while normalization remains usable');
+        api.showPanel('settings'); $('settings-normalization').click(); state.releaseEngine();
+      }
+      check(await until(() => !!window.__workletOptions), 'an explicit first Play constructs the normalization worklet');
+      check(window.__workletOptions?.processorOptions.normalizationEnabled === (name === 'normalization-on'),
+        'the latest opt-in value reaches the first worklet after asynchronous engine loading');
     }
     if (name === 'cache' || name === 'asma') {
       $('playpause').click();

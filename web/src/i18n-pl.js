@@ -7,6 +7,8 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  'Volume normalization': 'Normalizacja głośności',
+  'Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.': 'Zmniejsza różnice głośności między utworami. Przy pierwszym odsłuchu wyrównanie może być mniej dokładne. Nie wpływa na eksportowane audio.',
   'ASMA could not be downloaded: {reason}': 'Nie udało się pobrać ASMA: {reason}',
   'ASMA index and archive': 'Indeks i archiwum ASMA',
   'This also removes the offline ASMA archive.': 'Usunięte zostanie również archiwum ASMA do odtwarzania offline.',

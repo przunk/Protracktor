@@ -604,8 +604,21 @@ const describeOf = (bytes, name) => {
   send({ type: 'open', requestId: 41, name: 'second.mod', bytes: tinyModule });
   const deadline = Date.now() + 10000;
   while (processor.pending && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
-  check('the actual worklet drains queued opens with their original request identity',
-    replies.filter((message) => message.type === 'opened').map((message) => message.requestId).join() === '40,41');
+  check('the actual worklet drains queued decodes with their original request identity',
+    replies.filter((message) => message.type === 'decoded').map((message) => message.requestId).join() === '40,41');
+  // Preparation belongs to the latest request: the first decoder has already been replaced.
+  const pendingOutput = [[new Float32Array(128), new Float32Array(128)]];
+  processor.process([], pendingOutput);
+  check('a replaced request cannot start PCM before matching preparation',
+    !replies.some((message) => message.type === 'opened') && processor.awaitingPreparation
+      && processor.engine._pt_position(processor.handle) === 0
+      && pendingOutput[0].every((channel) => channel.every((sample) => sample === 0)));
+  send({ type: 'prepared', requestId: 40, current: 0, width: 100, profile: null });
+  check('late preparation cannot adopt the preceding decoder request',
+    !replies.some((message) => message.type === 'opened') && processor.awaitingPreparation);
+  send({ type: 'prepared', requestId: 41, current: 0, width: 100, profile: null });
+  check('only the current prepared decoder acknowledges opened with its original identity',
+    replies.filter((message) => message.type === 'opened').map((message) => message.requestId).join() === '41');
   send({ type: 'subsong', index: 0 });
   send({ type: 'seek', seconds: 0 });
   processor.process([], [[new Float32Array(128), new Float32Array(128)]]);

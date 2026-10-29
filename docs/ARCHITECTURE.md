@@ -1837,3 +1837,40 @@ The shared [mode cases](rules/stereo-mix-cases.tsv) bind Kotlin and JS defaults/
 is an explicit native test input. Production PCM/worklet tests cover asymmetric, correlated and
 opposite-phase input, multiple sample rates, retargeting, paused changes and independent handles.
 The browser audio device and encoder require separate real-browser acceptance.
+
+## WEB volume normalization — W15 implementation, 2026-10-29
+
+Each WASM handle owns the same VolumeNormalizer used by Android. Mixing precedes normalization;
+its existing -18 LUFS target, gating, partial/complete boost limits, linked sample-peak guard and
+gain transitions are unchanged. Fresh handles default Off, including description and export
+decoders. Seeking/restarting retains gain and metering but invalidates whole-song continuity;
+successful subsong changes reset the old trim, and live stereo changes reset measurement rather
+than restarting playback. Numeric profile snapshots avoid serializing native strings per callback.
+
+The audio worklet opens a file privately and publishes its actual selected subsong through
+`decoded`. PlaybackNormalization owns a source snapshot, prepares that exact index off the audio
+thread, and answers with `prepared`; only then does the worklet publish `opened` and allow first
+PCM. This is also the Off path. A pause while waiting remains a pause, and both sides reject stale
+request/subsong/width facts. Source/History publication remains at `opened`. The open watchdog
+retires the request and closes private work, so late completion cannot revive a timed-out start.
+An engine-wide initialization refusal cancels all pending source snapshots as well.
+Old profile/close messages retain the old request ID and are routed before visible-source filtering.
+
+LoudnessPreparation serializes separate-decoder analyses and preserves Native's actual/-1 warming
+identities. LoudnessAnalyser owns one lazily created module worker and transferred private bytes;
+the worker calls the shared native analysis helper with its existing cooperative 200 ms / 20-second
+prefix limits. A five-second browser worker safety deadline also bounds initialization and an
+uncooperative backend call. Creation/load/analysis/cache errors fall back to live metering rather
+than rejecting playable music. Cancellation terminates the private worker; Off releases its idle
+engine. Only selected playback read-ahead warms profiles, never catalogue/folder scans.
+
+LoudnessProfiles retains at most 512 CRC-checked Native-format records in the existing settings
+store, using an atomic read/modify/write across tabs. Complete beats partial; otherwise longer wins,
+and an inferior observation does not promote an entry. Keys bind length-prefixed filename/main-file
+bytes to the actual WASM digest, subsong and stereo width. WEB does not invent companion decoding.
+Hash failure disables reusable identities; invalid/unwritable profiles are optional misses. History
+and fetched-music Clear preserve these derived statistics; site-data removal clears them.
+
+Implementation and focused host evidence are recorded in the WEB ledger. Full W15 gate/lint and
+physical-browser acceptance remain separate; the latter includes output quality, worker scheduling,
+mobile background lifetime and audio encoding.

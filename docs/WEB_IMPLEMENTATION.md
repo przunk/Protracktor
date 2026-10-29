@@ -71,7 +71,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W12 | Playlist reorder and import/export | Implemented in W12a/W12b; full host gate passes; browser acceptance unchecked |
 | W13 | Bulk Browse/Search/History actions | Implemented; full host gate passes; browser acceptance unchecked |
 | W14 | Original/Narrow/Mono | Implemented; forced complete gate passed; browser acceptance unchecked |
-| W15 | Playback volume normalization | Pending |
+| W15 | Playback volume normalization | Implemented; forced complete host gate passed; browser acceptance unchecked |
 | W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
 | W17 | Browse position and subsong following | Implemented in W17a/W17b; full host gate passes; browser acceptance unchecked |
 | W18 | Playback-mode/settings restoration | Implemented; forced full gate passed; browser acceptance unchecked |
@@ -1963,3 +1963,115 @@ W14 closes host verification for **23/25 scopes** (W01-W14 and W16-W24). Continu
 the final requirements/commit/exclusion audit and WEB package. Browser appearance, touch, sound
 quality, encoder, routing and background acceptance remain unchecked. No version/schema change,
 APK, merge or publication.
+
+## W15 — Shared playback normalization, implementation checkpoint, 2026-10-29
+
+Reference **c8209b1**: LoudnessProfile/Profiles/Preparation, controller read-ahead and
+prepare/remember/refresh paths, the physical Settings switch tests, NativeEngine/Player control
+and callback paths, and shared loudness/analysis headers. The accepted -18 LUFS target supersedes
+the initial plan's -23 LUFS. Native production DSP, Android preferences and schema are unchanged.
+
+Parity checklist and implementation:
+
+- Global opt-in Off/On, default Off, fixed -18 LUFS, English/Polish and visible persistence
+  refusals. No startup writes/autoplay, target slider, crossfeed or changes to system volume.
+- Use the exact shared meter, normalizer and prefix helper. Usable input requires finite
+  seconds >=0.4, LUFS [-70,30] and positive finite peak. Preserve +6 dB partial / +12 dB complete
+  boost caps, -36 dB attenuation floor, linked -2 dBFS sample-peak ceiling, conservative 0.5
+  fallback and live probe/retry behaviour. The gain slew is 100 ms per unit gain; larger changes
+  may take longer. Mixing precedes normalization; no second JS audio algorithm.
+- A separate decoder in one cancellable module worker uses the native cooperative 200 ms /
+  twenty-second prefix limits, with a separate five-second browser worker safety deadline.
+  Worker/load/cache/hash failures fall back safely. Only selected playback/read-ahead prepares
+  measurements; catalogue and folder caches do not scan audio. Off releases the analysis worker.
+- All opens use decoded -> prepared -> opened, including Off. Measure the actual selected
+  subsong rather than assuming zero; defer first PCM and History/listening publication until
+  adoption. Reject stale request/index/width/configuration results on both transport sides;
+  preserve pause during preparation and live changes. Caller/cache bytes are never detached.
+- Best usable facts survive restarts in a CRC-checked 512-record cache. Atomic settings-store
+  updates preserve concurrent tabs' better/independent measurements. Content identity includes
+  length-prefixed main-file bytes/name, actual WASM revision, subsong and stereo width. Complete
+  beats partial, otherwise longer wins; inferior writes do not promote records. History/music
+  Clear preserves profiles; site-data removal clears them. No schema migration or companion
+  decoding is introduced.
+- Seek/restart retain established trim and input metering but invalidate completeness. A new
+  subsong resets the old trim; live stereo changes reset measurement, preserving audible gain
+  continuity. Only uninterrupted natural EOF can publish whole-song listening. Old measurements
+  keep their own source identity after selection changes; progress snapshots do not rewrite
+  disk continually. Fresh description/export handles remain Original/Off.
+
+The normal project build produces WASM SHA-256
+`b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`, identical to the isolated
+candidate. Focused public checks pass **35 profile/identity**, **11 preference**, **11 storage**,
+**25 preparation**, **15 playback-ownership**, **6 real-worker**, **8 real-worklet** and **36
+native-WASM PCM/policy cases**. Sixteen PCM cases compare exact decoded input with a standalone
+native-header executable at 32/44.1/48/96 kHz (PCM tolerance 5e-6, loudness 1e-5 LU). Twelve
+Original and two export streams remain byte-identical to the retained pre-stereo baseline.
+
+Three shared fixtures add native validation, exact binary/CRC and UTF-8/content/variant identity
+cases. The actual native reference runs **18 tests / three suites**. Removing one identity row
+fails both consumers and invalidates Gradle; restoring and repeating the same command without
+rerun flags executes/passes all eighteen. Logs/JUnit and source controls are retained locally.
+Eight production-source faults and one compiled native bypass are detected and exactly restored
+or isolated. Four actual-worklet controls detect broken prepared/request/width/pause safeguards.
+Actual integration controls also reject missing Settings actions, early PCM, wrong
+request/subsong identity and stale startup settings.
+
+The real ESM app/worklet/worker/WASM bridge exercises actual row/Settings actions, nonzero GME
+selection, first PCM, pause, Stop and late replies. Its real ten-second unanswered-open scenario
+reproduced an existing deadline that reported failure without retiring the request/private handle.
+The watchdog now cancels that attempt and closes its decoder; late delivery cannot start it or
+enter History. A separate global initialization-failure guard reproduced retained private startup
+ownership; failure without a request ID now cancels all pending starts, and late delivery cannot
+publish preparation. Focused Settings passes **28 ESM / 27 legacy assertions**, and **25 fresh starts /
+641 assertions** cover retained/refused/malformed choices and changes during engine loading.
+A new pause assertion initially ran before the asynchronous transport completed; it now waits
+for the paused state, preserving the original no-resume assertion.
+
+**At this implementation checkpoint, the complete page/full project gate and lint were pending.**
+The subsequent complete run below closes W15 at host level; the checkpoint count was **23/25**. Browser appearance, keyboard/touch feel, sound
+quality, real-worker scheduling on phones, routing, encoder and background acceptance remain
+unchecked. No version/schema change, APK, merge, deployment or publication.
+
+The first complete-gate attempt on **ba92fd2** passed **1262 native tests / 172 suites**, zero
+failures/errors/skips, then stopped at the Random startup helper. That helper relocates the page
+bootstrap into a temporary directory and had anchored only static dependencies; the new literal
+dynamic imports resolved relative to the temporary path. The archived failure preserves all
+793 matching frozen input hashes and fresh logs/JUnit. Resolving both forms against the real
+bootstrap restores the unchanged four Random startup/ownership assertions. Application source
+and WASM are unchanged by this test-harness correction. A fresh complete gate/lint is required.
+
+The following unchanged-source native run hit a Robolectric framework class-loading error
+(`FrameworkStatsLog`, 1054 completed / 1 failed / 1 skipped); its failure is archived without a
+hardware-cause claim. Repeating the identical source/configuration passed all **1262 tests / 172
+suites**. That full attempt also passed **1368 page assertions**, all **25 fresh-start cases** and
+the **26 real normalization bridge assertions**, but stopped in the older engine identity check.
+It expected two immediate `opened` replies despite the decoded/prepared/opened protocol. The
+updated check retains both decoded request IDs, verifies silence and zero position before
+preparation, rejects preparation for the replaced request, then accepts only the current request.
+The complete engine check passes; a process-local eager-preparation fault breaks the two relevant
+guards without changing production files or WASM. This brings the controlled-fault inventory to
+**19**. Remaining late-stage SAP/native-audio/database/PWA/icon/server preflights pass; a single
+complete forced gate/lint on the corrected candidate is still required before W15 closure.
+
+## W15 — Complete host verification, 2026-10-29
+
+The corrected candidate **90467b4ffa083534f7df1de5aa7c8153ea5c6e89** passes one complete
+forced project gate: **1262 tests / 172 suites**, zero failures/errors/skips, **1032 seconds**,
+all **31 native unit tasks executed** and every companion. This includes **1368 actual-ESM page
+assertions**, **25 cold starts / 641 assertions**, **26 real normalization bridge assertions** and
+**55 engine checks**. All **793** frozen source/test/build/artifact inputs match. Current-run
+logs, JUnit and lint are archived; no partial runs are combined into this result. After a tools
+reconnection the process handle was unavailable; completion was observed through every phase's
+exit-zero record and the script's final success summary, rather than an invented wrapper exit.
+
+Lint has **0 errors / 79 warnings**. Its valid cached analyses were reused in the complete gate
+(6.9 seconds); the preceding independent forced lint executed all 30 tasks in 207 seconds against
+identical Android/lint inputs. The existing JDK17 uses process-scoped C1-only JIT, including test
+workers; application and shared-tool settings are unchanged. Nineteen guarded source/compiled
+faults and shared-fixture invalidation/restoration evidence remain retained.
+
+W15 closes **24/25 scopes** (W01-W24) at host level. W25, the final every-commit/requirements/
+exclusions audit, final integrated checks and WEB package remain. Real browser rendering, sound,
+touch, routing, worker scheduling, encoder and background acceptance remain unchecked. No APK,
+version/schema change, merge, push or publication.

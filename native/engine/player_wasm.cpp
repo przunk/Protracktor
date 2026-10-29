@@ -16,6 +16,7 @@
 
 #include "engine.h"
 #include "stereo_mix.h"
+#include "loudness_analysis.h"
 
 #include <emscripten/emscripten.h>
 
@@ -38,6 +39,14 @@ struct Handle {
     std::string describe;
     protracktor::StereoMixer stereoMixer;
     int stereoWidth = 100;
+    protracktor::VolumeNormalizer normalizer;
+    protracktor::LoudnessProfile normalizationProfile;
+    int normalizationWidth = 100;
+    int processedWidth = 100;
+    bool normalizationEnabled = false;
+    bool normalizationDirty = false;
+    bool continuousMeasurement = true;
+    bool finished = false;
 };
 
 std::string lastError;
@@ -80,6 +89,18 @@ void guardedVoid(Work &&work) {
     }
 }
 
+int mixWidth(int percent) { return percent == 0 || percent == 50 ? percent : 100; }
+
+std::unique_ptr<protracktor::Backend> backendFromBytes(const unsigned char *bytes, int length,
+                                                     const char *name) {
+    if (!bytes || length <= 0) { lastError = "the file contains no bytes"; return nullptr; }
+    std::vector<char> copy(bytes, bytes + length);
+    std::string error;
+    auto backend = protracktor::openBackend(std::move(copy), name ? name : "", error);
+    if (!backend) lastError = error.empty() ? "no decoder claimed the file" : error;
+    return backend;
+}
+
 }  // namespace
 
 extern "C" {
@@ -89,14 +110,10 @@ EMSCRIPTEN_KEEPALIVE
 Handle *pt_open(const unsigned char *bytes, int length, const char *name) {
     lastError.clear();
     return guarded<Handle *>([&]() -> Handle * {
-        std::vector<char> copy(bytes, bytes + length);
-        std::string error;
-        auto backend = protracktor::openBackend(std::move(copy), name ? name : "", error);
-        if (!backend) {
-            lastError = error.empty() ? "no decoder claimed the file" : error;
-            return nullptr;
-        }
-        auto handle = std::make_unique<Handle>(Handle{std::move(backend), ""});
+        auto backend = backendFromBytes(bytes, length, name);
+        if (!backend) return nullptr;
+        auto handle = std::make_unique<Handle>();
+        handle->backend = std::move(backend);
         // **Inside the guard**, because this is the call that ran after the file was already open,
         // and a backend that opened a file it cannot fully read throws here rather than above.
         handle->describe = protracktor::describeOf(*handle->backend);
@@ -123,7 +140,24 @@ int pt_render(Handle *handle, int sampleRate, int frames, float *out) {
     // worklet already knows how to answer, and a decoder that throws mid-tune ends it here.
     return guarded<int>([&] {
         const auto rendered = handle->backend->render(sampleRate, static_cast<std::size_t>(frames), out);
+        const bool mixChanged = handle->processedWidth != handle->stereoWidth;
+        if (mixChanged) {
+            if (handle->normalizer.hasMeasurement()) handle->continuousMeasurement = false;
+            handle->normalizer.resetMeasurement();
+            handle->processedWidth = handle->stereoWidth;
+        }
+        if (mixChanged || handle->normalizationDirty) {
+            const bool prepared = handle->normalizationProfile.usable() &&
+                handle->normalizationWidth == handle->stereoWidth;
+            handle->normalizer.configureGain(handle->normalizationEnabled,
+                protracktor::VolumeNormalizer::gainFor(prepared ? handle->normalizationProfile :
+                    protracktor::LoudnessProfile{}), prepared);
+            if (!handle->normalizationEnabled) handle->continuousMeasurement = false;
+            handle->normalizationDirty = false;
+        }
         handle->stereoMixer.process(out, rendered, handle->stereoWidth, sampleRate);
+        handle->normalizer.process(out, rendered, sampleRate);
+        handle->finished = rendered < static_cast<std::size_t>(frames);
         return static_cast<int>(rendered);
     }, 0);
 }
@@ -131,7 +165,48 @@ int pt_render(Handle *handle, int sampleRate, int frames, float *out) {
 /** Per-handle playback width; a fresh export/description handle retains Original. */
 EMSCRIPTEN_KEEPALIVE
 void pt_set_stereo_width(Handle *handle, int percent) {
-    if (handle) handle->stereoWidth = percent == 0 || percent == 50 ? percent : 100;
+    if (handle) handle->stereoWidth = mixWidth(percent);
+}
+
+/** Controls carry their profile width; a stale profile cannot configure another mix. */
+EMSCRIPTEN_KEEPALIVE
+void pt_set_normalization(Handle *handle, int enabled, double seconds, double lufs,
+                          double peak, int complete, int width) {
+    if (!handle) return;
+    handle->normalizationEnabled = enabled != 0;
+    handle->normalizationProfile = {seconds, lufs, peak, complete == 1};
+    handle->normalizationWidth = mixWidth(width);
+    handle->normalizationDirty = true;
+}
+
+/** Numeric snapshots avoid allocating strings or touching another decoder in the callback. */
+EMSCRIPTEN_KEEPALIVE
+int pt_loudness_profile(Handle *handle, double *out) {
+    if (!handle || !out) return 0;
+    return guarded<int>([&] {
+        if (handle->normalizationDirty || handle->processedWidth != handle->stereoWidth) return 0;
+        const auto profile = handle->normalizer.profile(handle->continuousMeasurement && handle->finished);
+        out[0] = profile.seconds; out[1] = profile.lufs; out[2] = profile.peak;
+        out[3] = profile.complete ? 1.0 : 0.0;
+        return 1;
+    }, 0);
+}
+
+/** Worker/control only: its own backend and the exact native prefix budget; never startedPlaying. */
+EMSCRIPTEN_KEEPALIVE
+int pt_measure_loudness(const unsigned char *bytes, int length, const char *name,
+                        int subsong, int width, double *out) {
+    if (!out) return 0;
+    lastError.clear();
+    return guarded<int>([&] {
+        auto backend = backendFromBytes(bytes, length, name);
+        if (!backend) return 0;
+        const int selected = subsong < 0 ? backend->currentSubsong() : subsong;
+        const auto profile = protracktor::analyseLoudness(*backend, selected, mixWidth(width));
+        out[0] = profile.seconds; out[1] = profile.lufs; out[2] = profile.peak;
+        out[3] = profile.complete ? 1.0 : 0.0; out[4] = selected;
+        return 1;
+    }, 0);
 }
 
 /**
@@ -152,9 +227,14 @@ EMSCRIPTEN_KEEPALIVE int pt_can_seek(Handle *h) {
     return h ? guarded<int>([&] { return h->backend->canSeek() ? 1 : 0; }, 0) : 0;
 }
 EMSCRIPTEN_KEEPALIVE void pt_seek(Handle *h, double seconds) {
-    if (h) guardedVoid([&] { h->backend->seek(seconds); });
+    if (h) guardedVoid([&] {
+        if (!h->backend->canSeek()) return;
+        h->backend->seek(seconds); h->continuousMeasurement = false; h->finished = false;
+    });
 }
-EMSCRIPTEN_KEEPALIVE void pt_rewind(Handle *h) { if (h) guardedVoid([&] { h->backend->rewind(); }); }
+EMSCRIPTEN_KEEPALIVE void pt_rewind(Handle *h) {
+    if (h) guardedVoid([&] { h->backend->rewind(); h->continuousMeasurement = false; h->finished = false; });
+}
 EMSCRIPTEN_KEEPALIVE double pt_position(Handle *h) {
     return h ? guarded<double>([&] { return h->backend->positionSeconds(); }, 0.0) : 0.0;
 }
@@ -174,6 +254,9 @@ int pt_select_subsong(Handle *h, int index) {
     if (!h) return 0;
     return guarded<int>([&] {
         if (!h->backend->selectSubsong(index)) return 0;
+        h->normalizer.reset(); h->continuousMeasurement = true; h->finished = false;
+        h->normalizationProfile = {}; h->normalizationWidth = h->stereoWidth;
+        h->normalizationDirty = true;
         h->describe = protracktor::describeOf(*h->backend);
         return 1;
     }, 0);

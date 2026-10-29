@@ -48,6 +48,9 @@ import { BrowseScrollView } from './browse-scroll-view.js';
 import { SubsongStripView } from './subsong-strip-view.js';
 import { PlaybackPreferences } from './playback-preferences.js';
 import { StereoMixPreferences, stereoMode, stereoWidth } from './stereo-mix.js';
+import { NormalizationPreferences } from './normalization-preferences.js';
+import { PlaybackNormalization } from './playback-normalization.js';
+import { LoudnessProfiles } from './loudness-cache.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -116,6 +119,11 @@ const restoredPlaybackPreferences = playbackPreferences.read();
 const stereoMixPreferences = new StereoMixPreferences(() => localStorage);
 const restoredStereoMix = stereoMixPreferences.read();
 let stereoMix = restoredStereoMix.value;
+const normalizationPreferences = new NormalizationPreferences(() => localStorage);
+const restoredNormalization = normalizationPreferences.read();
+const playbackNormalization = new PlaybackNormalization({ enabled: restoredNormalization.value,
+  width: stereoWidth(stereoMix), cache: new LoudnessProfiles(settings), crypto: globalThis.crypto,
+  send: (message) => node?.port.postMessage(message) });
 const cacheAheadPreferences = new CacheAheadPreferences(() => localStorage);
 const restoredCacheAhead = cacheAheadPreferences.read();
 let shuffle = restoredPlaybackPreferences.value.shuffle;
@@ -820,11 +828,12 @@ async function begin() {
   if (context.state === 'suspended') waitForTouch();
 
   const wasm = await fetch('../vendor/engine.wasm').then((r) => r.arrayBuffer());
+  playbackNormalization.setEngine(wasm);
   await context.audioWorklet.addModule('./processor.js');
   node = new AudioWorkletNode(context, 'protracktor', {
     numberOfInputs: 0,
     outputChannelCount: [2],
-    processorOptions: { wasmBinary: wasm, stereoWidth: stereoWidth(stereoMix) },
+    processorOptions: { wasmBinary: wasm, stereoWidth: stereoWidth(stereoMix), normalizationEnabled: playbackNormalization.enabled },
   });
   // Through the gain, not straight to the speakers. Created here rather than at load, because
   // there is no AudioContext to create it in until the first click.
@@ -868,9 +877,14 @@ function whenEngineReady(ms = 30000) {
 }
 
 function onWorklet(message) {
+  // A replaced decoder still owns its final measurement; route it before current-view filtering.
+  if (message.type === 'loudness') { void playbackNormalization.measured(message); return; }
+  if (message.type === 'closed') { playbackNormalization.closed(message.requestId); return; }
   // An old decoder may answer after another source was selected or loading was stopped.
   if (message.requestId != null && message.requestId !== playAsked) return;
   switch (message.type) {
+    case 'decoded': return playbackNormalization.decoded(message);
+    case 'normalization-context': void playbackNormalization.context(message); break;
     case 'ready':
       engineReady = true;
       // Recorded when an index is built and compared when one is read, exactly as the phone does.
@@ -880,6 +894,7 @@ function onWorklet(message) {
       indexReconsideration = indexReconsideration.then(reconsiderStoredIndexes);
       break;
     case 'opened': {
+      playbackNormalization.opened(message.requestId);
       loading = null;
       rowState = 'playing';
       render();
@@ -939,10 +954,12 @@ function onWorklet(message) {
         waitForTouch();
         break;
       }
-      setPlaying(true);
+      setPlaying(message.playing !== false);
       break;
     }
     case 'failed':
+      if (message.requestId == null) playbackNormalization.cancelPending();
+      else playbackNormalization.closed(message.requestId);
       listening.forget();
       listeningTrack = null;
       loading = null;
@@ -1529,6 +1546,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   openLengths = lengths;
   openMetadata = metadata;
 
+  playbackNormalization.register(asked, bytes, decoderName, { signal: abort.signal });
   node.port.postMessage({ type: 'open', requestId: asked, bytes, name: decoderName }, [bytes]);
   setPlaying(false);
   announceGesture();
@@ -1542,7 +1560,10 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     if (loading !== abort) return;
     // Waiting for a touch is not a worklet that never answered: Chrome runs none until then.
     if (context?.state === 'suspended') { openWatchdog = setTimeout(expire, 10_000); return; }
-    loading = null;
+    // A timeout retires this request too: a late decode/preparation must not start it afterwards.
+    stopForLeaving({ preserveReadAhead: true });
+    rowState = 'failed';
+    render();
     setPlaying(false);
     setUiText($('error'), engineReady
       ? uiMessageText('the decoder took the file and never answered — check the browser console')
@@ -3245,6 +3266,7 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
 function stopForLeaving({ preserveReadAhead = false } = {}) {
   if (!preserveReadAhead) readAhead?.clear();
+  playbackNormalization.cancelPending();
   sampleListening();
   listening.forget();
   listeningTrack = null;
@@ -4958,12 +4980,20 @@ function setStereoMix(value) {
   if (mode === stereoMix) return;
   stereoMix = mode;
   const failure = stereoMixPreferences.write(mode);
-  node?.port.postMessage({ type: 'stereo', percent: stereoWidth(mode) });
+  playbackNormalization.setWidth(stereoWidth(mode));
   renderStereoMix();
   if (failure) showNote(uiMessageText('Could not save playback settings: {reason}', { reason: failure.message }));
 }
 for (const radio of document.querySelectorAll('input[name="stereomix"]')) radio.onchange = () => setStereoMix(radio.value);
 renderStereoMix();
+
+$('settings-normalization').checked = playbackNormalization.enabled;
+$('settings-normalization').onchange = () => {
+  const enabled = $('settings-normalization').checked;
+  playbackNormalization.setEnabled(enabled);
+  const failure = normalizationPreferences.write(enabled);
+  if (failure) showNote(uiMessageText('Could not save playback settings: {reason}', { reason: failure.message }));
+};
 
 function repeatCaption(mode) {
   return mode === 'one' ? uiMessageText('Repeat one') : mode === 'all' ? uiMessageText('Repeat all') : uiMessageText('Repeat off');
@@ -5778,7 +5808,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) void
 remoteMusic = new RemoteMusic({ cache: musicCache, fetch: (...args) => fetch(...args),
   inUse: () => [currentTrack()?.url, ...(readAhead?.ids ?? [])].filter(Boolean) });
 readAhead = new PlaybackReadAhead(async (track, options) => {
-  try { return await bytesOf(track, options); } catch (error) { if (options.signal.aborted) throw error; return null; }
+  try {
+    const bytes = await bytesOf(track, options);
+    if (bytes) await playbackNormalization.warm({ bytes, name: fileOf(track) }, options);
+    return bytes;
+  } catch (error) { if (options.signal.aborted) throw error; return null; }
 });
 folderPrefetch = new FolderPrefetch({ mode: restoredCacheAhead.value,
   cached: (url) => remoteMusic.has(url) || !!heldBytesOf({ url }),
@@ -5802,6 +5836,7 @@ if (!location.hash.slice(1)) showPanel('pair');
 
 status(uiMessageText('ready — press Play or load some URLs'));
 if (restoredStereoMix.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredStereoMix.failure.message }));
+if (restoredNormalization.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredNormalization.failure.message }));
 if (restoredPlaybackPreferences.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
 if (restoredCacheAhead.failure) showNote(uiMessageText('Could not restore folder download settings: {reason}', { reason: restoredCacheAhead.failure.message }));
 pair();

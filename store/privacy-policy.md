@@ -118,6 +118,12 @@ them; Off disables folder preparation. These folder choices do not disable prepa
 playback. Prepared files are not recorded as played. Retained music and the full ASMA download can
 be removed separately in the page; browsers may also evict stored copies under their own rules.
 
+Optional volume normalization measures music on this device, including prepared upcoming tracks,
+without sending audio or measurements anywhere. It retains at most 512 derived loudness profiles,
+identified by file content, filename, subsong, stereo choice and decoder revision. These statistics
+are independent of History and retained music copies; clearing either does not remove the profiles.
+Clearing the site's data removes them. Normalization does not change exported audio.
+
 A public copy of the web page is served by GitHub Pages at `https://przunk.github.io/Protracktor/`.
 GitHub receives the requests for that page under its own privacy statement. That copy has no
 pairing service, so nothing an app sends ever reaches it.
@@ -254,6 +260,12 @@ je na wyraźne życzenie; Off je wyłącza. Te opcje folderów nie wyłączają 
 utworów wybranego odtwarzania. Przygotowane pliki nie są zapisywane jako odsłuchane. Zachowane kopie
 muzyki i pełne archiwum ASMA można usunąć osobno na stronie; przeglądarka może też samodzielnie
 usuwać przechowywane kopie według własnych zasad.
+
+Opcjonalna normalizacja głośności mierzy muzykę na tym urządzeniu, także podczas przygotowywania
+następnych utworów. Nie wysyła nigdzie dźwięku ani pomiarów. Zachowuje do 512 profili głośności,
+rozróżnianych po danych i nazwie pliku, subsongu, miksie stereo oraz wersji dekodera. Te statystyki
+są niezależne od historii i zachowanych kopii muzyki; usunięcie jednych lub drugich nie usuwa profili.
+Usuwa je wyczyszczenie danych witryny. Normalizacja nie zmienia eksportowanego audio.
 
 Publiczna kopia strony jest udostępniana przez GitHub Pages pod adresem
 `https://przunk.github.io/Protracktor/`. Zapytania o nią otrzymuje GitHub, zgodnie z własną polityką

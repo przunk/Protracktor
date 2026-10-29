@@ -7,10 +7,12 @@ import { execFileSync } from 'node:child_process';
 const root=process.cwd();
 const page=fs.readFileSync('scripts/check-page.mjs','utf8');
 const marker='const $ = (id) => window.document.getElementById(id);';
-// Resolve the real bootstrap's static dependencies before moving it into a temporary directory.
+// Keep both static and literal dynamic imports anchored to the real bootstrap after relocation.
 let prefix=page.slice(0,page.indexOf(marker)+marker.length)
   .replace(/^(import [^\n]*? from )(['"])(\.\.?\/[^'"]+)\2/gm,
     (line, statement, quote, relative) => statement + JSON.stringify(pathToFileURL(path.resolve(root,'scripts',relative)).href))
+  .replace(/\bimport\((['"])(\.\.?\/[^'"]+)\1\)/g,
+    (expression, quote, relative) => `import(${JSON.stringify(pathToFileURL(path.resolve(root,'scripts',relative)).href)})`)
   .replace("'./../web/node_modules/fake-indexeddb/auto/index.mjs'",JSON.stringify(pathToFileURL(path.join(root,'web/node_modules/fake-indexeddb/auto/index.mjs')).href));
 const temporary=fs.mkdtempSync(path.join(root,'user/web-parity-verification/w05-startup-'));
 try {

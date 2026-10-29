@@ -538,6 +538,25 @@ export const settings = {
     return found ? found.value : fallback;
   },
   set(key, value) { return tx('settings', 'readwrite', (s) => s.put({ key, value })); },
+  /** Synchronous read/modify/write in one transaction; undefined keeps the existing value. */
+  async update(key, reduce, fallback = null) {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('settings', 'readwrite'), store = transaction.objectStore('settings');
+      let failure, changed = false;
+      transaction.oncomplete = () => resolve(changed);
+      transaction.onerror = (event) => reject(failure ?? transaction.error ?? event.target?.error);
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Aborted', 'AbortError'));
+      const request = store.get(key);
+      request.onsuccess = () => {
+        try {
+          const value = reduce(request.result ? request.result.value : fallback);
+          if (value?.then) throw new TypeError('A settings update must be synchronous');
+          if (value !== undefined) { store.put({ key, value }); changed = true; }
+        } catch (error) { failure = error; transaction.abort(); }
+      };
+    });
+  },
 };
 
 /** For the checks, which need a clean database per run and no leftovers between them. */

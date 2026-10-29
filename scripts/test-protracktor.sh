@@ -179,6 +179,10 @@ run_check "Recent searches" recent-searches node scripts/check-recent-searches.m
 run_check "History filtering" history-filter node scripts/check-history-filter.mjs
 run_check "Library search" library-search node scripts/check-library-search.mjs
 run_check "Stereo mix preferences" stereo-mix node scripts/check-stereo-mix.mjs
+run_check "Volume normalization profiles" loudness-profiles node scripts/check-loudness-profiles.mjs
+run_check "Volume normalization preferences" normalization-preferences node scripts/check-normalization-preferences.mjs
+run_check "Volume normalization preparation" loudness-preparation node scripts/check-loudness-preparation.mjs
+run_check "Playback normalization ownership" playback-normalization node scripts/check-playback-normalization.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
@@ -200,6 +204,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Saved places presentation" saved-places-view node scripts/check-saved-places-view.mjs
     run_check "Music cache presentation" music-cache-view node scripts/check-music-cache-view.mjs
     run_check "Music cache storage" music-cache-store node scripts/check-music-cache-store.mjs
+    run_check "Volume normalization storage" loudness-cache node scripts/check-loudness-cache.mjs
     run_check "Offline ASMA archive" asma-archive node scripts/check-asma-archive.mjs
     run_check "Legacy Modland recovery" modland-recovery node scripts/check-modland-recovery.mjs
     run_check "Music cache migrations" music-cache-migrations node scripts/check-music-cache-migrations.mjs
@@ -225,6 +230,12 @@ fi
 if [ -f web/vendor/engine.mjs ]; then
     run_check "Worklet final playback position" worklet-listening node scripts/check-worklet-listening.mjs
     run_check "Stereo mix PCM" stereo-pcm node scripts/check-engine-stereo.mjs
+    run_check "Volume normalization PCM" loudness-pcm node scripts/check-engine-loudness.mjs
+    run_check "Volume normalization worker" loudness-worker node scripts/check-loudness-worker.mjs
+    run_check "Volume normalization worklet" loudness-worklet node scripts/check-worklet-loudness.mjs
+    if [ -d web/node_modules/jsdom ]; then
+        run_check "Volume normalization playback bridge" loudness-bridge env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_LOUDNESS_BRIDGE=1 node --experimental-vm-modules scripts/check-page.mjs
+    fi
     run_check "Stereo mix worklet" stereo-worklet node scripts/check-worklet-stereo.mjs
     run_check "Web engine checks" engine node scripts/check-engine.mjs
     engine_output="$(<"$PROTRACKTOR_LOG_PREFIX-engine.log")"

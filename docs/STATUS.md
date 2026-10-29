@@ -44,6 +44,53 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W15 complete at host level, 2026-10-29:** fixed -18 LUFS browser normalization passes the
+forced complete gate on **90467b4**: **1262 tests / 172 suites**, zero failures/errors/skips,
+**1032 seconds**, all 31 native unit tasks executed and every companion. The same run passes
+**1368 actual-ESM page assertions**, **25 cold starts / 641 assertions**, **26 real normalization
+bridge assertions** and **55 engine checks**. All **793** frozen inputs match; current-run
+logs/JUnit/lint are archived. Lint: **0 errors / 79 warnings**, valid cached analyses in the full
+gate (6.9 seconds), preceded by a forced 207-second run on identical Android/lint inputs. Existing
+JDK17 with process-scoped C1 is retained. Complete script success was observed after the tool
+handle disappeared; no wrapper exit is fabricated. **24/25 scopes are closed (W01-W24).** W25,
+final review/checks and WEB packaging remain; real-browser/device acceptance is unchecked.
+
+**Earlier W15 implementation checkpoint, 2026-10-29:** browser normalization now uses the unchanged native
+-18 LUFS DSP and separate bounded/cancellable worker analysis. Settings defaults Off; retained
+profiles use CRC-checked content/subsong/stereo/decoder identities, best-measurement replacement,
+atomic writes and a 512-record limit independent of History/music Clear. The common startup path
+defers first PCM until the actual selected subsong is prepared or falls back. Live changes preserve
+pause/source/editor/FIFO; Off releases the analysis worker. A reproduced unanswered-open timeout
+now retires its request and closes the private decoder, preventing late startup.
+
+Focused checks pass **35 shared profile/identity**, **11 preferences**, **11 storage**, **25
+preparation**, **15 playback-ownership**, **6 real-worker**, **8 real-worklet** and **36 actual-WASM
+PCM/policy cases**, including sixteen comparisons with a standalone native-header oracle. The
+actual ESM app/worker/worklet bridge passes **26 assertions**, including nonzero GME selection,
+first PCM, Stop and the real ten-second deadline. Native reference: **18 tests / three suites**;
+shared-row failure and non-cached restoration are verified. Twenty-five fresh starts pass **641
+assertions**; focused Settings passes **28 ESM / 27 legacy assertions**. Global engine failure
+also retires private startup data; its actual message-port guard failed before that correction
+and now passes. An added pause assertion
+initially raced the asynchronous transport; it now waits for the actual paused state. These focused
+checks were followed by the complete run recorded above. At this earlier checkpoint W15 was not
+yet counted complete, with 23/25 scopes closed. Physical browser appearance, listening, touch, mobile
+worker scheduling, routing and background acceptance remain unchecked.
+
+The first W15 full-gate attempt passed **1262 native tests / 172 suites**, zero failures/errors/
+skips, before its relocated Random startup bootstrap failed to resolve the new dynamic imports.
+That test path now anchors both static and dynamic imports to the project; all four unchanged
+Random startup/ownership checks pass. All **793** frozen inputs matched at failure; evidence is
+archived. This changes only test setup; the subsequent complete gate is recorded above.
+
+A subsequent identical-source run passed **1262 native tests / 172 suites**, **1368 page
+assertions**, **25 fresh starts** and the **26-assertion real normalization bridge**, then stopped
+at an old engine test expecting immediate open replies. That test now checks both decoded IDs,
+preparation silence, stale-preparation rejection and only the current opened ID. Its complete
+engine run passes and a controlled eager-preparation fault fails. An intervening Robolectric
+framework class-loading failure is archived separately; its cause remains unproven. The corrected
+candidate subsequently passed the complete gate above; no partial runs were combined into a pass.
+
 **W14 complete at host level, 2026-10-29:** Original / Narrow / Mono use the shared native
 StereoMixer through a rebuilt per-handle WASM API. Global selection persists, applies before first
 PCM and changes live without changing pause, source/FIFO/editor, position or subsong. Raw export
@@ -136,7 +183,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**23 of 25 scopes have completed host verification** (W01-W14, W16-W24); W15 and W25 remain. No WEB merge,
+**24 of 25 scopes have completed host verification** (W01-W24); W25 remains. No WEB merge,
 package, push or deployment.
 
 

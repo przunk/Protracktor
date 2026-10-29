@@ -24,6 +24,8 @@ async function processor({ width, delayed = false } = {}) {
   return { value, replies, release, send: (message) => value.port.onmessage({ data: message }),
     async opened(id) {
       for (let n = 0; n < 1000; n++) {
+        const decoded = replies.find((message) => message.type === 'decoded' && message.requestId === id);
+        if (decoded) this.send({ type: 'prepared', requestId: id, current: decoded.current, width: value.stereoWidth, profile: null });
         if (replies.some((message) => message.type === 'opened' && message.requestId === id)) return;
         if (replies.some((message) => message.type === 'failed')) throw new Error(JSON.stringify(replies));
         await new Promise((resolve) => setTimeout(resolve, 10));

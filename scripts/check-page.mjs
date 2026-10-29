@@ -171,6 +171,9 @@ window.URL.revokeObjectURL ??= (url) => objectUrls.delete(url);
 if (!window.crypto.subtle) Object.defineProperty(window.crypto, 'subtle', { value: webcrypto.subtle });
 window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
+// The legacy adapter shares the production classes and injects its own settings connection.
+window.__normalizationModules = { ...await import('../web/src/normalization-preferences.js'),
+  ...await import('../web/src/playback-normalization.js'), ...await import('../web/src/loudness-cache.js') };
 
 const queryTextSource = fs.readFileSync('web/src/query-text.js', 'utf8').replace(/^export /gm, '');
 const historyFilterSource = fs.readFileSync('web/src/history-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
@@ -222,6 +225,9 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     () => `const { FolderPrefetch, CacheAheadPreferences } = (() => { ${fs.readFileSync('web/src/folder-prefetch.js', 'utf8').replace(/^export /gm, '')}; return { FolderPrefetch, CacheAheadPreferences }; })();`)
   .replace("import { StereoMixPreferences, stereoMode, stereoWidth } from './stereo-mix.js';",
     () => `const { StereoMixPreferences, stereoMode, stereoWidth } = (() => { ${fs.readFileSync('web/src/stereo-mix.js', 'utf8').replace(/^export /gm, '')}; return { StereoMixPreferences, stereoMode, stereoWidth }; })();`)
+  .replace("import { NormalizationPreferences } from './normalization-preferences.js';", 'const { NormalizationPreferences } = window.__normalizationModules;')
+  .replace("import { PlaybackNormalization } from './playback-normalization.js';", 'const { PlaybackNormalization } = window.__normalizationModules;')
+  .replace("import { LoudnessProfiles } from './loudness-cache.js';", 'const { LoudnessProfiles } = window.__normalizationModules;')
   .replace("import { PlaybackPreferences } from './playback-preferences.js';",
     () => `const { PlaybackPreferences } = (() => { ${fs.readFileSync('web/src/playback-preferences.js', 'utf8').replace(/^export /gm, '')}; return { PlaybackPreferences }; })();`)
   .replace("import { SubsongStripView } from './subsong-strip-view.js';",
@@ -322,6 +328,8 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
 if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
+const loudnessBridge = process.env.PROTRACKTOR_LOUDNESS_BRIDGE === '1';
+if (loudnessBridge) await (await import('./check-page-loudness-bridge.mjs')).prepare({ window });
 
 const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { downloadsNow: () => libraryDownloads, aheadNow: () => readAhead, folderAheadNow: () => folderPrefetch, musicNow: () => remoteMusic, musicStore: musicCache, asmaNow: () => offlineAsma, asmaStore: asmaArchive, bytesOf, browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaArchive, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
 
@@ -381,6 +389,10 @@ if (process.env.PROTRACKTOR_PAGE_MODULES === '1') check(window.__loadedModuleCou
 
 if (startupCase) {
   await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
+  window.close(); process.exit(failures.length ? 1 : 0);
+}
+if (loudnessBridge) {
+  await (await import('./check-page-loudness-bridge.mjs')).verify({ window, check });
   window.close(); process.exit(failures.length ? 1 : 0);
 }
 
@@ -3777,6 +3789,7 @@ await (await import('./check-page-read-ahead.mjs')).default({ window, check });
 await (await import('./check-page-folder-prefetch.mjs')).default({ window, check });
 await (await import('./check-page-downloads.mjs')).default({ window, check });
 await (await import('./check-page-stereo.mjs')).default({ window, check });
+await (await import('./check-page-normalization.mjs')).default({ window, check });
 
 check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

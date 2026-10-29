@@ -1637,3 +1637,47 @@ Browser output quality, AAC encoding, mobile routing and background lifetime are
 The C121 Information filename guard waits for the actual describe request before asserting its
 original filename. Storage reads can exceed 20 ms; a fixed sleep did not synchronize the action.
 Controlled read delay must pass with the correct name, and a broken production name must fail.
+
+### WEB volume normalization — W15, 2026-10-29
+
+The public full gate includes profile/identity, preferences, atomic storage, preparation and
+playback-ownership checks. Shared validation, binary/CRC and content-key fixtures also run in
+LoudnessProfilesTest alongside the unchanged preparation and physical native Settings tests.
+Declare every fixture as a Gradle input. Remove an actual identity row to demonstrate both
+consumers fail; restore it and require the same native command to execute eighteen tests in
+three suites without rerun flags or cached results.
+
+`check-engine-loudness.mjs` uses actual packaged WASM/decoded PCM. It covers initial prepared
+gain, fallback, boost/attenuation caps, peak precedence, analysis budgets, short input,
+seek/restart, width/rate/subsong transitions and whole-song continuity. It compiles a standalone
+native-header oracle and compares decoded PCM and input statistics across four sample rates.
+`check-worklet-loudness.mjs` drives the real message/callback path for deferred startup, pause,
+stale profile packets, Off, subsong resets, old close identities and natural/seeked EOF.
+
+`check-loudness-worker.mjs` runs the actual worker handler/native analysis in real Node threads;
+its adapter supplies browser transport only. Check independent decoder position, serial reuse,
+owned transfers, cancellation, load/refusal recovery and source-buffer survival. Storage tests
+use the production IndexedDB adapter, two concurrent connections, CRC corruption, quota failure,
+complete/partial replacement, 512 entries and user-data preservation through Clear.
+
+The full gate also executes the production ESM page with
+`PROTRACKTOR_LOUDNESS_BRIDGE=1`. Browser message transports and speaker output are adapted;
+app/processor/worker/WASM, gestures and IndexedDB are real. Inspect the first PCM, cancelled
+private startup and History, a generated NSF whose actual first audible subsong is one, old
+profile identities and the real ten-second watchdog followed by late delivery. Settings checks
+cover PL/EN, keyboard focus/icon/label, live pause/source/FIFO/editor continuity and visible
+refused writes. Twenty-five fresh page processes cover retained/default/malformed/refused
+preferences and a switch during delayed engine loading. A pause assertion waits for the actual
+transport state; a fixed delay or direct setter is not equivalent evidence.
+
+Demonstrate that missing Settings actions, premature PCM, stale source/subsong/configuration,
+broken CRC/cache quality and a compiled native DSP bypass fail the relevant guards. Preserve
+exact source hashes after restoration. Rebuild the normal WASM whenever its inputs change and
+run the complete forced project gate/lint before closing W15; focused checks are partial evidence.
+
+Real-browser acceptance remains unchecked. In Settings → Volume normalization, compare quiet/loud
+tracks with On/Off, including first and repeated plays, silence/short files and separated stereo.
+Toggle while playing and paused, change stereo/subsongs, seek/restart and advance through source
+and duplicate manual requests. Reload without autoplay, test refused/offline storage and Clear,
+use keyboard/touch in PL/EN and both themes, and confirm exports retain the original audio.
+Listening, device worker scheduling, routing, encoding and background lifetime require observation.
