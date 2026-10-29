@@ -2230,3 +2230,12 @@ checks** pass, including silent waiting, Pause/late-fetch cancellation and expli
 The separate real normalization bridge and system-event suite pass. The broad page run exposed
 one additional stale-row swipe/click guard failure; retain it for a separate W02 audit correction
 rather than claiming a fully passing integrated candidate. Physical playback remains unchecked.
+
+The subsequent W02 correction retains swipe-click suppression across playlist row replacement,
+ignores activation of a stale detached row and resets suppression on fresh pointer/keyboard input.
+Rendering after enqueue had disposed the per-row capture listener while leaving its click handler
+reachable; a click retargeted to the replacement row also lost that local state. Two dedicated
+production-ESM guards fail before correction and all **33 edit/gesture event checks** pass afterward.
+The full actual-ESM page run then passes **1368 assertions**, including the original physical
+swipe check. Existing duplicate, manual FIFO, transport, language and normalization assertions are
+retained. These are host event/PCM checks; final complete project gate and browser trial remain.

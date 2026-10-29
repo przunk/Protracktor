@@ -59,5 +59,26 @@ export async function verify({ window, check }) {
     $('snackundo').click();
     check(api.indexNow() === 2 && $('playpause').title === 'Play', 'Undo parks the exact removed duplicate without auto-starting');
   }
+  await api.discardEdits(); api.showPanel(null);
+  const swipe = row => {
+    row.getBoundingClientRect = () => ({ width: 300, height: 60, top: 0 });
+    for (const [type, x] of [['pointerdown', 150], ['pointermove', 265], ['pointerup', 265]]) {
+      const event = new window.MouseEvent(type, { clientX: x, clientY: 10, bubbles: true, cancelable: true, button: 0 });
+      Object.defineProperty(event, 'pointerId', { value: 29 }); row.dispatchEvent(event);
+    }
+  };
+  for (const retargeted of [false, true]) {
+    api.clearPlaybackQueue(); await api.choosePlaylist('duplicate-edit'); await play(0);
+    const before = api.planNow(), commands = messages().length, oldRow = rows()[0];
+    swipe(oldRow);
+    (retargeted ? rows()[0] : oldRow).click();
+    check(api.scheduleNow().pending.length === 1 && api.planNow().context === before.context
+      && messages().length === commands && !api.dirtyNow(),
+      `swipe enqueue consumes its ${retargeted ? 'retargeted' : 'detached-row'} click without restarting playback`);
+  }
+  swipe(rows()[0]);
+  rows()[1].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  rows()[1].click();
+  check(api.indexNow() === 1, 'a fresh keyboard activation is not swallowed by an unfinished swipe click');
   check(window.__browserErrors.length === 0, 'duplicate edit events have no unhandled browser errors');
 }

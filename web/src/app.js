@@ -1868,6 +1868,7 @@ function render() {
       li.onclick = () => {
         const entry = descriptor.entry, i = playlistRows.indexOf(descriptor);
         if (swallowRowClick) { swallowRowClick = false; return; }
+        if (!li.isConnected || descriptor.node !== li) return;
         if (selected.size) { toggleSelected(entry); return; }
         // **A tune chosen by hand deals the shuffle again, starting at it** (the owner, 2026-09-25):
         // next walks the order from where the current tune stands in it, so a tune in the middle of
@@ -2738,18 +2739,14 @@ function syncBrowseSelection() {
   browseSelectionView?.sync(browseSelectionOwner(), [...$('browselist').children]
     .map((node) => node._selectionRow).filter(Boolean));
 }
-/**
- * The click that follows a long press, which must not also tick the row off again. **Kept outside
- * the row**, because the press re-draws the list and the click lands on the new one; and forgotten
- * at the next press, so an unfinished one cannot eat an unrelated click -- `docs/STATUS.md` C36's
- * trap, avoided here.
- */
+/** Hold/swipe suppression survives row replacement; fresh input resets it to avoid C36. */
 let swallowRowClick = false;
 
 function holdToSelect(row, currentEntry) {
   row.addEventListener('pointerdown', () => { swallowRowClick = false; });
+  row.addEventListener('keydown', () => { swallowRowClick = false; });
   return bindTrackGestures(row, {
-    onAdd: () => enqueueTrack(mainDisplay(currentEntry()), visibleFromHistory()),
+    onAdd: () => { swallowRowClick = true; enqueueTrack(mainDisplay(currentEntry()), visibleFromHistory()); },
     onLongPress: () => { swallowRowClick = true; startSelecting(currentEntry()); },
     canSwipe: () => selected.size === 0 && !playlistReorder?.active,
     canLongPress: () => !playlistReorder?.active,
