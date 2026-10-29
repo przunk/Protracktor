@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextSubsong, shouldRestart, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
+import { nextSubsong, randomNext, randomPrevious, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, historyPageCount, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played, bookmarks, catalogue, musicCache, asmaArchive } from './store.js';
 import * as archive from './catalogue.js';
 import { RemoteMusic } from './remote-music.js';
@@ -51,6 +51,8 @@ import { StereoMixPreferences, stereoMode, stereoWidth } from './stereo-mix.js';
 import { NormalizationPreferences } from './normalization-preferences.js';
 import { PlaybackNormalization } from './playback-normalization.js';
 import { LoudnessProfiles } from './loudness-cache.js';
+import { SystemMedia } from './system-media.js';
+import { TrackArtwork } from './track-artwork.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -93,7 +95,10 @@ function paint(el) {
   el.style.setProperty('--fill', span > 0 ? `${((Number(el.value) - min) / span) * 100}%` : '0%');
 }
 
+let systemMedia = null;
+const trackArtwork = new TrackArtwork(document);
 let context = null;
+const audioRunning = () => context?.state === 'running';
 let node = null;
 /**
  * The one node between the decoder and the speakers.
@@ -142,7 +147,7 @@ let tuneCanSeek = false;
  * the thumb at the far end while the time counted up beside it -- the phone's `SeekBar` (`bb385c7`).
  */
 function allowSeeking() {
-  $('seek').disabled = !(tuneCanSeek && bar().seconds > 0);
+  $('seek').disabled = !(tuneCanSeek && bar().seconds > 0 && !subsongPending);
 }
 
 /** Where the decoder itself ends a tune whose length is unknown (`ends_at`), or 0. */
@@ -177,6 +182,12 @@ function holdBarLabels() {
   for (const id of ['elapsed', 'remaining']) $(id).style.minWidth = `${width}px`;
 }
 let playing = false;
+// Loading can display Pause=false while still intending to play; late resumes must not win Pause.
+let playWanted = false, playIntent = 0, playResuming = false, systemStopped = false;
+function wantPlayback(on) {
+  playWanted = on; playResuming = false;
+  return ++playIntent;
+}
 let seeking = false;
 const listening = new ListeningSession(() => performance.now());
 let audioPosition = 0;
@@ -392,6 +403,7 @@ function applyPlaybackResult(result, intent = null) {
       break;
     }
     case 'replay':
+      wantPlayback(true); systemStopped = false;
       finished = false;
       endedByClock = false;
       beginListeningAgain();
@@ -399,6 +411,7 @@ function applyPlaybackResult(result, intent = null) {
       setPlaying(true);
       break;
     case 'stop':
+      wantPlayback(false);
       node?.port.postMessage({ type: 'pause' });
       finished = true;
       setPlaying(false);
@@ -629,6 +642,8 @@ function playEditorAt(at) {
 /** How many tunes are inside the open file, and which one is sounding. */
 let subsongCount = 1;
 let currentSubsong = 0;
+// Only the latest requested tune owns the UI while commands wait for the audio thread.
+let subsongPending = null;
 /**
  * Whether the file's other tunes are part of the queue, mirroring the phone's setting.
  *
@@ -821,6 +836,7 @@ async function begin() {
     console.warn('audioSession.type=playback', error);
   }
   context = new AudioContext({ sampleRate: 44100 });
+  context.addEventListener('statechange', publishToSystem);
   status(uiMessageText('loading the engine…'));
   // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome
   // does not even run the worklet until the context does, so this is said now rather than when a
@@ -926,7 +942,6 @@ function onWorklet(message) {
       if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
       renderCurrentNowPlaying();
-      publishToSystem(currentTrack(), fields);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
@@ -954,10 +969,11 @@ function onWorklet(message) {
         waitForTouch();
         break;
       }
-      setPlaying(message.playing !== false);
+      setPlaying(playWanted && message.playing !== false);
       break;
     }
     case 'failed':
+      wantPlayback(false);
       if (message.requestId == null) playbackNormalization.cancelPending();
       else playbackNormalization.closed(message.requestId);
       listening.forget();
@@ -982,6 +998,7 @@ function onWorklet(message) {
       setPlaying(false);
       break;
     case 'seeked':
+      if (!seekPending) break;
       if (seekNext !== null) {
         // A newer place was asked for while this one ran: go there now, spinner and all.
         node?.port.postMessage({ type: 'seek', seconds: seekNext });
@@ -992,10 +1009,11 @@ function onWorklet(message) {
       audioPosition = message.seconds;
       listening.baseline(audioPosition, playing);
       $('elapsed').textContent = clock(message.seconds);
+      publishToSystem();
       break;
     case 'position':
       // Not while a seek is under way: a position sent before it landed would pull the bar back.
-      if (!seeking && !seekPending) {
+      if (!seeking && !seekPending && !subsongPending) {
         audioPosition = message.seconds;
         sampleListening();
         const range = bar().seconds;
@@ -1003,6 +1021,7 @@ function onWorklet(message) {
         paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
         $('remaining').textContent = barTotal();
+        publishToSystem();
       }
       // **A tune ends when its length says so, whoever supplied the length.**
       //
@@ -1015,13 +1034,24 @@ function onWorklet(message) {
       // The engine's own length still wins over the fallback; what changed is that a known length
       // is now a reason to stop rather than a reason not to look.
       const limit = duration > 0 ? duration : fallbackSeconds;
-      if (!seeking && !seekPending && limit > 0 && !endedByClock && message.seconds >= limit) {
+      if (!seeking && !seekPending && !subsongPending && limit > 0 && !endedByClock && message.seconds >= limit) {
         endedByClock = true;
         trackEnded(duration > 0);
       }
       break;
     // A subsong is a different tune: its own length, often its own title.
     case 'subsong': {
+      const pending = subsongPending;
+      if (message.selectionId != null && message.selectionId !== pending?.intent) break;
+      if (pending && (message.requestedIndex ?? message.index) !== pending.index) break;
+      subsongPending = null;
+      if (message.selected === false) {
+        if (pending?.intent === playIntent) wantPlayback(pending.previousWanted);
+        allowSeeking();
+        setPlaying(playWanted && message.playing !== false);
+        setUiText($('error'), uiMessageText('could not select this tune'));
+        break;
+      }
       if (Number.isFinite(message.previousSeconds) && !seeking && !seekPending) {
         audioPosition = message.previousSeconds;
         sampleListening();
@@ -1031,6 +1061,9 @@ function onWorklet(message) {
       finished = false;
       endedByClock = false;
       currentSubsong = message.index;
+      seekLanded();
+      $('seek').value = 0; paint($('seek'));
+      $('elapsed').textContent = clock(0);
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
       {
@@ -1040,10 +1073,12 @@ function onWorklet(message) {
       allowSeeking();
       const fields = withSongDb(describeFields(message.describe));
       dockFields = fields;
-      if (fields.title) $('title').textContent = fields.title;
+      $('title').textContent = fields.title || currentTrack()?.name || 'Protracktor';
       $('sub').textContent = describeLine(fields);
       renderCurrentNowPlaying();
-      setPlaying(true);
+      $('remaining').textContent = barTotal();
+      $('error').textContent = '';
+      setPlaying(playWanted && message.playing !== false);
       break;
     }
     case 'described': {
@@ -1052,6 +1087,7 @@ function onWorklet(message) {
       break;
     }
     case 'ended':
+      if (subsongPending) break;
       if (Number.isFinite(message.seconds) && !seeking && !seekPending) audioPosition = message.seconds;
       trackEnded(true);
       break;
@@ -1068,11 +1104,13 @@ function onWorklet(message) {
  * The phone calls one `handleTrackEnded` for the same reason.
  */
 function trackEnded(confirmedEnd = false) {
-  if (drawing) return;
+  if (drawing || loading || subsongPending || $('seek').dataset.opened !== '1') return;
+  // An EOF queued before Pause must not consume another request. A later Play rewinds it.
+  if (!playWanted || !playing) { finished = true; return; }
   sampleListening(confirmedEnd);
   const inside = nextSubsong({ playAll: playAllSubsongs, subsong: currentSubsong,
     count: subsongCount, repeatOne: repeat === 'one' });
-  if (inside != null) { node?.port.postMessage({ type: 'subsong', index: inside }); return; }
+  if (inside != null) { goToSubsong(inside); return; }
   executeStep(playableStep(schedule.next(workspace.context, true), true, true));
 }
 
@@ -1292,7 +1330,7 @@ function formatsReady() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();
     })
-    .then((text) => (formatTable = archive.parseFormats(text)))
+    .then((text) => { formatTable = archive.parseFormats(text); publishToSystem(); return formatTable; })
     // Forgotten on failure, so the next caller asks again instead of inheriting a rejection for ever.
     .catch((error) => { formatTableLoading = null; throw error; });
   return formatTableLoading;
@@ -1387,30 +1425,27 @@ function renderNowPlaying(fields, subsongs, current, entry = currentTrack(), { p
   subsongStripView?.render({ key: entry?.url, count: subsongs, current });
 }
 
-/**
- * The operating system's own media controls.
- *
- * **The phone has this and the browser can too.** `PlaybackService` publishes a `MediaSession` so
- * the notification, the lock screen and a headset button work; `navigator.mediaSession` is the same
- * idea, and it is what makes a keyboard's play key reach a tab buried among twenty others. Without
- * it the page is a thing you must find before you can pause it.
- *
- * Guarded, because it is absent in older browsers and the page must not care.
- */
-function publishToSystem(entry, fields) {
-  if (!('mediaSession' in navigator)) return;
-  try {
-    navigator.mediaSession.metadata = new window.MediaMetadata({
-      title: fields?.title || entry?.name || 'Protracktor',
-      artist: authorOf(entry, fields ?? {}),
-      album: [machineOf(entry) || fields?.format, releaseYear(fields ?? {})].filter(Boolean).join(' · '),
-    });
-    navigator.mediaSession.setActionHandler('play', () => $('playpause').click());
-    navigator.mediaSession.setActionHandler('pause', () => $('playpause').click());
-    navigator.mediaSession.setActionHandler('nexttrack', () => $('next').click());
-    navigator.mediaSession.setActionHandler('previoustrack', () => $('prev').click());
-  } catch { /* an older browser; the page works without it */ }
+/** One actual-source snapshot for optional browser controls; the editor never supplies it. */
+function systemPlayback() {
+  const entry = currentTrack(), opened = $('seek').dataset.opened === '1' && !loading;
+  const active = !!entry && opened && !systemStopped && !!context && context.state !== 'closed';
+  return {
+    active, playing: playing && audioRunning(), positionRevision: playIntent,
+    canPlay: !!entry || !!schedule.pending.length || workspace.context.source.kind === 'random',
+    canPause: opened || !!loading || drawing || playResuming,
+    canNext: !drawing && (canNextFile() || playAllSubsongs && hasNextSubsong()),
+    canPrevious: canPreviousFile() || playAllSubsongs && hasPreviousSubsong(),
+    canSeek: opened && tuneCanSeek && !subsongPending, seekLimit: bar().seconds,
+    duration, position: pendingSeekTarget ?? (seeking ? Number($('seek').value) / 1000 * bar().seconds : audioPosition),
+    metadata: active ? {
+      title: dockFields?.title || entry.name || 'Protracktor',
+      artist: describeLine(dockFields ?? {}, entry), album: whereOf(entry),
+      artwork: trackArtwork.forTrack(fileOf(entry), dockFields?.title || entry.name, entry.url, formatTable),
+    } : null,
+  };
 }
+
+function publishToSystem() { systemMedia?.publish(); }
 
 /** The tab's name, so a page among twenty says what it is playing. */
 function nameTheTab(entry) {
@@ -1425,6 +1460,7 @@ function playAt(next) {
 
 async function openActualTrack(entry, { autoPlay = true } = {}) {
   if (!entry) return;
+  subsongPending = null;
   ++descriptionGeneration;
   sampleListening();
   listening.forget();
@@ -1450,6 +1486,11 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   // Take before startup can yield: Clear must not discard the selected load's buffer.
   const ready = !heldBytesOf(entry) ? readAhead?.take(entry.url) : null;
   const asked = ++playAsked;
+  wantPlayback(true); systemStopped = false;
+  loading?.abort();
+  const abort = new AbortController();
+  loading = abort;
+  rowState = 'loading';
   openingHistoryTicket = played.generation;
   delete $('seek').dataset.opened;
   subsongCount = 1;
@@ -1457,11 +1498,14 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   subsongStripView?.clear(); $('subsongbar').hidden = true;
   tuneCanSeek = false;
   allowSeeking();
+  setPlaying(false);
   try {
     await start();
   } catch (error) {
     // `start` has already said what went wrong; this stops the queue walking on regardless.
     if (asked !== playAsked) return;
+    if (loading === abort) loading = null;
+    wantPlayback(false);
     setPlaying(false);
     $('sub').textContent = '—';
     return;
@@ -1497,10 +1541,6 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
   $('error').textContent = '';
 
   let bytes;
-  loading?.abort();
-  const abort = new AbortController();
-  loading = abort;
-  rowState = 'loading';
   render();
   setPlaying(false);
   try {
@@ -1512,7 +1552,7 @@ async function openActualTrack(entry, { autoPlay = true } = {}) {
     // the older fetch finishes after the newer one has started, and clearing unconditionally would
     // wipe the newer controller -- leaving a download nobody can call off and a button that lies
     // about what it will do.
-    if (loading === abort) { loading = null; setPlaying(false); }
+    if (loading === abort) { loading = null; wantPlayback(false); setPlaying(false); }
     if (e.name === 'AbortError') { setUiText($('sub'), uiMessageText('stopped')); return; }
     if (random && !manualCurrent() && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
@@ -1665,7 +1705,6 @@ function setPlaying(on) {
   const tune = $('dock-tune');
   tune.hidden = !currentTrack() || $('seek').dataset.opened !== '1' || subsongCount <= 1;
   setUiText(tune, tune.hidden ? '' : uiMessageText('Tune {n} of {count}', { n: currentSubsong + 1, count: subsongCount }));
-  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
   // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
@@ -1689,6 +1728,7 @@ function setPlaying(on) {
   $('np-folder').disabled = !authorFolderOf(entry);
   // Dead only when nothing behind it can be done or explained -- a tune that stayed on the phone.
   $('np-share').disabled = !entry || shareItems(entry).every(([, , enabled, , refusal]) => !enabled && !refusal?.());
+  publishToSystem();
 }
 
 /**
@@ -3265,6 +3305,9 @@ function openAway(tracks, at, kind = 'history', snapshot = captureBrowseRoute(tr
 
 /** Explicit replacement/removal cancels loading as well as an already open decoder. */
 function stopForLeaving({ preserveReadAhead = false } = {}) {
+  wantPlayback(false);
+  subsongPending = null;
+  seekLanded();
   if (!preserveReadAhead) readAhead?.clear();
   playbackNormalization.cancelPending();
   sampleListening();
@@ -4736,53 +4779,71 @@ $('load').onclick = () => {
   render();
   showPanel(null);
 };
-$('playpause').onclick = async () => {
-  // Waiting for the page's first use: this press is it, whatever the tune is doing meanwhile --
-  // while it is still loading, the button would otherwise mean "stop".
-  if (firstTouch) { await firstTouch({ target: document.body }); return; }
-  // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
-  // gesture a browser insists on, and it is why a queue arriving does not play by itself.
-  if (drawing) {
-    ++scheduleIntent;
-    drawing = false;
-    stopForLeaving();
-    setPlaying(false);
-    status(uiMessageText('Stopped loading.'));
-    return;
-  }
-  if (workspace.context.source.kind === 'none' && schedule.consumed && schedule.pending.length) { nextFile(); return; }
-  if (!loading && !$('seek').dataset.opened && !playing) {
-    if (currentTrack()) { schedule = schedule.resumeCurrent(); openActualTrack(currentTrack()); }
-    else if (schedule.pending.length || random) nextFile();
-    else {
+/** Explicit intents are shared by page/keyboard/system controls, never synthetic clicks. */
+async function playPlayback() {
+  if (playing && audioRunning() || playResuming) return;
+  const intent = wantPlayback(true);
+  systemStopped = false; playResuming = true;
+  try {
+    if (firstTouch) await firstTouch({ target: document.body });
+    if (intent !== playIntent || !playWanted || playing && audioRunning()) return;
+    // Play while loading is idempotent. Pause/Stop, rather than a second Play, cancels it.
+    if (loading || drawing) return;
+    if (workspace.context.source.kind === 'none' && schedule.consumed && schedule.pending.length) return nextFile();
+    if (!$('seek').dataset.opened) {
+      if (currentTrack()) { schedule = schedule.resumeCurrent(); return openActualTrack(currentTrack()); }
+      if (schedule.pending.length || random) return nextFile();
       const at = workspace.context.visibleIndices.find((i) => !queue[i].local);
-      if (at != null) activateContext(workspace.context.jump(at), 'append');
+      if (at != null) return activateContext(workspace.context.jump(at), 'append');
+      return;
     }
-    return;
-  }
-  // **It reached the end and nothing followed, so this press means "again".** The bytes are still
-  // in the worklet, so it rewinds rather than fetching them a second time.
-  if (shouldRestart({ engineFinished: finished, position: 0, duration: 0 })) {
-    finished = false;
-    if (context?.state === 'suspended') await context.resume();
-    beginListeningAgain();
-    node?.port.postMessage({ type: 'rewind' });
+    await start();
+    if (context.state !== 'running') await context.resume();
+    if (intent !== playIntent || !playWanted) return;
+    if (context.state !== 'running') { waitForTouch(); return; }
+    if (finished) {
+      finished = false;
+      endedByClock = false;
+      beginListeningAgain();
+      node?.port.postMessage({ type: 'rewind' });
+    } else node?.port.postMessage({ type: 'play' });
     setPlaying(true);
-    return;
-  }
-  // While something is being fetched, this button means "stop waiting".
-  if (loading) {
-    stopForLeaving();
+  } catch (error) {
+    if (intent !== playIntent) return;
     setPlaying(false);
+    setUiText($('error'), uiMessageText('could not start audio: {reason}', { reason: error.message }));
+  } finally {
+    if (intent === playIntent) playResuming = false;
+    publishToSystem();
+  }
+}
+
+function pausePlayback() {
+  wantPlayback(false);
+  if (loading || drawing) {
+    ++scheduleIntent; drawing = false;
+    stopForLeaving();
     setUiText($('sub'), uiMessageText('stopped'));
     status(uiMessageText('Stopped loading.'));
-    return;
-  }
-  await start();
-  if (context.state === 'suspended') await context.resume();
-  setPlaying(!playing);
-  node.port.postMessage({ type: playing ? 'play' : 'pause' });
-};
+  } else node?.port.postMessage({ type: 'pause' });
+  setPlaying(false);
+}
+
+function stopPlayback() {
+  pausePlayback();
+  systemStopped = true;
+  publishToSystem();
+}
+
+function togglePlayback() {
+  if (firstTouch) return playPlayback();
+  if (playing || playWanted && (loading || drawing || playResuming)) return pausePlayback();
+  if (loading || drawing) return pausePlayback();
+  return playPlayback();
+}
+
+$('playpause').onclick = togglePlayback;
+
 /*
   The transport, and **the phone is the specification** — both halves of it, which this did not have.
 
@@ -4797,11 +4858,20 @@ $('playpause').onclick = async () => {
 */
 
 /** Whether there is another tune inside the open file, ahead or behind. */
-const hasNextSubsong = () => currentSubsong + 1 < subsongCount;
-const hasPreviousSubsong = () => currentSubsong > 0;
+const selectedSubsong = () => subsongPending?.index ?? currentSubsong;
+const hasNextSubsong = () => selectedSubsong() + 1 < subsongCount;
+const hasPreviousSubsong = () => selectedSubsong() > 0;
 
 function goToSubsong(index) {
-  node?.port.postMessage({ type: 'subsong', index });
+  if (!node || loading || $('seek').dataset.opened !== '1' || !Number.isInteger(index)
+    || index < 0 || index >= subsongCount || subsongPending?.index === index && playWanted) return;
+  sampleListening();
+  seekLanded(); seeking = false;
+  const previousWanted = playWanted;
+  subsongPending = { index, previousWanted, intent: wantPlayback(true) };
+  systemStopped = false;
+  allowSeeking(); setPlaying(playing);
+  node.port.postMessage({ type: 'subsong', index, selectionId: subsongPending.intent });
   status(uiMessageText('Tune {n} of {count}', { n: index + 1, count: subsongCount }));
 }
 
@@ -4869,15 +4939,19 @@ $('random-leave').onclick = async () => {
   } else endSession();
 };
 
-$('next').onclick = () => {
-  if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }
-  nextFile();
-};
+function nextPlayback() {
+  if (drawing || !canNextFile() && !(playAllSubsongs && hasNextSubsong())) return;
+  if (playAllSubsongs && hasNextSubsong()) { goToSubsong(selectedSubsong() + 1); return; }
+  return nextFile();
+}
 
-$('prev').onclick = () => {
-  if (playAllSubsongs && hasPreviousSubsong()) { goToSubsong(currentSubsong - 1); return; }
-  previousFile();
-};
+function previousPlayback() {
+  if (!canPreviousFile() && !(playAllSubsongs && hasPreviousSubsong())) return;
+  if (playAllSubsongs && hasPreviousSubsong()) { goToSubsong(selectedSubsong() - 1); return; }
+  return previousFile();
+}
+$('next').onclick = nextPlayback;
+$('prev').onclick = previousPlayback;
 
 /**
  * A long press on either skips the rest of the file.
@@ -4939,6 +5013,7 @@ function refreshLanguage() {
   if (resolved === language()) return;
   useLanguage(resolved);
   translateStatic(document.body);
+  publishToSystem();
   if (!$('legal').hidden) refreshLegalLanguage?.();
 }
 window.addEventListener('languagechange', () => { if (languageChoice === 'system') refreshLanguage(); });
@@ -5158,13 +5233,20 @@ window.addEventListener('resize', refitLines);
 reducedMotion?.addEventListener?.('change', refitLines);
 
 $('seek').oninput = () => { sampleListening(); listening.seeking(audioPosition); seeking = true; paint($('seek')); };
-$('seek').onchange = () => {
+$('seek').onchange = () => seekPlayback(Number($('seek').value) / 1000 * bar().seconds);
+
+function seekPlayback(seconds) {
+  const limit = bar().seconds;
+  if (loading || subsongPending || !$('seek').dataset.opened || !tuneCanSeek || !(limit > 0) || !Number.isFinite(seconds)) return false;
   if (!seeking) { sampleListening(); listening.seeking(audioPosition); }
   seeking = false;
   // **The bar stays where it was let go** until the worklet says the seek has landed, and a seek
   // that takes long enough to be seen waiting shows a spinner in place of the elapsed time -- the
   // phone's `SeekProgress` (Q11). A SID seeks by running its machine there, for seconds.
-  const target = (Number($('seek').value) / 1000) * bar().seconds;
+  const target = Math.max(0, Math.min(limit, seconds));
+  pendingSeekTarget = target;
+  $('seek').value = target / limit * 1000; paint($('seek'));
+  publishToSystem();
   // **The latest seek wins** (Q11). The worklet runs a seek to its end before it reads its next
   // message, so a click while one runs is not sent: it is remembered, and only the last one goes
   // when the running one lands. Ten clicks in a second are two seeks, not ten.
@@ -5177,10 +5259,12 @@ $('seek').onchange = () => {
     setUiAttribute($('elapsed'), 'aria-label', uiMessageText('Seeking'));
   }, SEEK_SPINNER_AFTER_MS);
   node?.port.postMessage({ type: 'seek', seconds: target });
-};
+  return true;
+}
 
 /** A seek asked for while another ran: only the latest is kept, and sent when that one lands. */
 let seekNext = null;
+let pendingSeekTarget = null;
 
 /** Whether a seek is under way, and the timer that shows its spinner if it takes a while. */
 let seekPending = false;
@@ -5192,10 +5276,18 @@ const SEEK_SPINNER_AFTER_MS = 300;
 function seekLanded() {
   seekPending = false;
   seekNext = null;
+  pendingSeekTarget = null;
   clearTimeout(seekSpinner);
   $('elapsed').classList.remove('seeking');
   $('elapsed').removeAttribute('aria-label');
 }
+
+systemMedia = new SystemMedia({ navigator, Metadata: window.MediaMetadata, read: systemPlayback,
+  commands: { play: playPlayback, pause: pausePlayback, stop: stopPlayback, next: nextPlayback,
+    previous: previousPlayback, seek: seekPlayback },
+  onError: (operation, error) => console.warn(`Media Session ${operation}`, error),
+});
+publishToSystem();
 
 /**
  * A queue handed over in the URL's fragment.
@@ -5306,21 +5398,19 @@ function waitForTouch() {
 function startOnFirstTouch() {
   if (firstTouch) return;
   const events = ['pointerdown', 'keydown', 'click'];
-  firstTouch = async (event) => {
+  const unlock = firstTouch = async (event) => {
     if ($('playpause').contains(event.target) || event.key === ' ') return;
-    try { await context.resume(); } catch { return; }
-    if (context.state !== 'running' || !firstTouch) return;
-    for (const type of events) removeEventListener(type, firstTouch, true);
+    const intent = playIntent, audio = context;
+    try { await audio.resume(); } catch { return; }
+    if (audio !== context || context.state !== 'running' || firstTouch !== unlock) return;
+    for (const type of events) removeEventListener(type, unlock, true);
     firstTouch = null;
+    if (intent !== playIntent || !playWanted) { setPlaying(playing); return; }
     const opened = !!$('seek').dataset.opened && !loading;
-    // Opened already (Firefox runs the worklet while suspended): this touch is the play. Not yet
-    // (Chrome does not): the open waiting in the worklet now runs, and `opened` starts it.
     if (opened && !playing) {
       setPlaying(true);
       node.port.postMessage({ type: 'play' });
-    } else {
-      setPlaying(playing);
-    }
+    } else setPlaying(playing);
     if ($('sub').textContent === String(TAP_HINT)) {
       setUiText($('sub'), opened && dockFields ? describeLine(dockFields) : uiMessageText('opening…'));
     }
@@ -5648,9 +5738,9 @@ addEventListener('keydown', (event) => {
       target?.closest?.('button,a,select,[role="button"],[contenteditable="true"]')) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   const act = {
-    ' ': () => $('playpause').click(),
-    ArrowRight: () => $('next').click(),
-    ArrowLeft: () => $('prev').click(),
+    ' ': togglePlayback,
+    ArrowRight: nextPlayback,
+    ArrowLeft: previousPlayback,
     // Up and down for volume, because that is what they do everywhere else and because the slider
     // is the one control that disappears on a narrow screen. Five per press: twenty presses from
     // silence to full is a fair trade against having to aim at an 84-pixel slider.
@@ -5690,7 +5780,7 @@ browseSelectionView = new BrowseSelectionView({ model: browseSelection,
   leading: browseLeading, changed: () => { updateSelectBar(); paintDownloadedMusic(); } });
 browseScrollView = new BrowseScrollView({ model: browseScroll, viewport: $('browselist'), visible: () => !$('browse').hidden });
 subsongStripView = new SubsongStripView({ strip: $('subsongs'), visible: () => !$('nowplaying').hidden,
-  onSelect: (index) => node?.port.postMessage({ type: 'subsong', index }) });
+  onSelect: goToSubsong });
 playlistReorder = new RowReorder({ list: document.querySelector('main'), rows: () => playlistRows,
   generation: playlistReorderOwner, move: movePlaylistRow, clampEdges: false,
   onStop: ({ id, generation, focus }) => {

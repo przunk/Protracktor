@@ -624,6 +624,19 @@ const describeOf = (bytes, name) => {
   processor.process([], [[new Float32Array(128), new Float32Array(128)]]);
   check('subsong, seek and audio-clock replies retain the active request identity',
     ['subsong', 'seeked', 'position'].every((type) => replies.some((message) => message.type === type && message.requestId === 41)));
+  send({ type: 'pause' });
+  const beforeRefusal = processor.engine._pt_position(processor.handle);
+  send({ type: 'subsong', index: 999, selectionId: 12 });
+  const refused = replies.at(-1);
+  check('a refused actual subsong preserves Pause and acknowledges its selection identity',
+    refused.type === 'subsong' && refused.selectionId === 12 && refused.requestedIndex === 999
+      && refused.selected === false && refused.playing === false && !processor.playing
+      && processor.engine._pt_position(processor.handle) === beforeRefusal);
+  send({ type: 'subsong', index: 0, selectionId: 13 });
+  const selected = replies.findLast(message => message.type === 'subsong');
+  check('a selected actual subsong restarts the decoder and returns the matching selection facts',
+    selected.type === 'subsong' && selected.selectionId === 13 && selected.requestedIndex === 0
+      && selected.index === 0 && selected.selected === true && selected.playing === true && processor.playing);
   send({ type: 'open', requestId: 42, name: 'invalid.mod', bytes: new Uint8Array([1, 2, 3]) });
   check('a decoder refusal identifies the request that actually failed',
     replies.at(-1)?.type === 'failed' && replies.at(-1)?.requestId === 42);

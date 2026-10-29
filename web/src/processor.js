@@ -218,16 +218,22 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           const previousSeconds = e._pt_position(this.handle);
           this.measurement('subsong');
           const selected = e._pt_select_subsong(this.handle, message.index);
-          if (selected) this.configureNormalization();
-          this.ended = false;
-          this.playRequested = true;
-          this.playing = !this.awaitingPreparation;
+          if (selected) {
+            this.configureNormalization();
+            this.ended = false;
+            this.playRequested = true;
+            this.playing = !this.awaitingPreparation;
+          }
           // **Answered, because a subsong is a different tune.** Its length is its own -- a GBS
           // gives each track one -- and so is its title. Without this the page kept showing the
           // first tune's duration against the third one's audio, which is the same defect
           // `selectSubsong` fixed on the phone.
           this.reply({
             type: 'subsong',
+            selectionId: message.selectionId,
+            requestedIndex: message.index,
+            selected: !!selected,
+            playing: this.playing,
             previousSeconds,
             index: e._pt_current_subsong(this.handle),
             duration: e._pt_duration(this.handle),

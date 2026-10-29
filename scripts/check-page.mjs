@@ -33,14 +33,21 @@ const dom = new JSDOM(html, {
   pretendToBeVisual: true,
 });
 const { window } = dom;
+// Canvas/font rasterization is outside jsdom. The artwork arithmetic/drawing contract has its own checks.
+window.HTMLCanvasElement.prototype.getContext = () => ({
+  fillRect() {}, fillText() {},
+  measureText() { return { width: 100, actualBoundingBoxLeft: 50, actualBoundingBoxRight: 50,
+    actualBoundingBoxAscent: 100, actualBoundingBoxDescent: 0 }; },
+});
+window.HTMLCanvasElement.prototype.toDataURL = () => 'data:image/png;base64,host-rendering-adapter';
 window.__browserErrors = [];
 dom.virtualConsole.on('jsdomError', (error) => window.__browserErrors.push(error));
 
 // The engine, the audio device and the network are not what this checks, so they are stubbed
 // exactly as far as the page touches them.
 window.qrcode = () => ({ addData() {}, make() {}, createTableTag: () => '<table></table>', createSvgTag: () => '<svg></svg>' });
-window.AudioContext = class {
-  constructor() { this.state = 'suspended'; this.audioWorklet = { addModule: async () => {} }; }
+window.AudioContext = class extends window.EventTarget {
+  constructor() { super(); this.state = 'suspended'; this.audioWorklet = { addModule: async () => {} }; }
   // Refused while `__audioBlocked` is set: a browser will not resume audio without a click on the
   // page, and a link opened from another app has had none.
   async resume() { if (!window.__audioBlocked) this.state = 'running'; }
@@ -76,10 +83,13 @@ window.AudioWorkletNode = class {
 Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
 // The operating system's media controls, recorded rather than performed.
 const handlers = {};
+window.__mediaHandlers = handlers;
+window.__mediaPositions = [];
 let metadata = null;
 window.MediaMetadata = class { constructor(fields) { Object.assign(this, fields); } };
 window.navigator.mediaSession = {
   playbackState: 'none',
+  setPositionState(value) { window.__mediaPositions.push(structuredClone(value)); },
   set metadata(value) { metadata = value; },
   get metadata() { return metadata; },
   setActionHandler(name, fn) { handlers[name] = fn; },
@@ -202,6 +212,8 @@ const i18nSource = uiTextSource + fs.readFileSync('web/src/i18n-pl.js', 'utf8').
 const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').replace(/^export /gm, '');
 const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+window.__systemMediaModules = { ...await import('../web/src/system-media.js'), ...await import('../web/src/track-artwork.js') };
+
 const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const reorderSource = fs.readFileSync('web/src/row-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const queueViewSource = fs.readFileSync('web/src/queue-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
@@ -213,6 +225,8 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { SystemMedia } from './system-media.js';", 'const { SystemMedia } = window.__systemMediaModules;')
+  .replace("import { TrackArtwork } from './track-artwork.js';", 'const { TrackArtwork } = window.__systemMediaModules;')
   .replace("import { LibraryDownloads } from './library-downloads.js';",
     () => `const { LibraryDownloads, DOWNLOAD_CHOICES, downloadSteps, downloadMegabytes, missingDownloads } = (() => { ${fs.readFileSync('web/src/library-downloads.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { LibraryDownloads, DOWNLOAD_CHOICES, downloadSteps, downloadMegabytes, missingDownloads }; })();`)
   .replace("import { DownloadPickerView, downloadStepLabel } from './download-picker-view.js';",
@@ -328,8 +342,10 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 const startupCase = process.env.PROTRACKTOR_STARTUP_CASE;
 if (startupCase) await (await import('./check-page-playback-startup.mjs')).prepare({ window, rulesSource, storeSource, name: startupCase });
+const systemMediaOnly = process.env.PROTRACKTOR_SYSTEM_MEDIA === '1';
+const systemPcmOnly = process.env.PROTRACKTOR_SYSTEM_PCM === '1';
 const loudnessBridge = process.env.PROTRACKTOR_LOUDNESS_BRIDGE === '1';
-if (loudnessBridge) await (await import('./check-page-loudness-bridge.mjs')).prepare({ window });
+if (loudnessBridge || systemPcmOnly) await (await import('./check-page-loudness-bridge.mjs')).prepare({ window });
 
 const pageCapture = "globalThis.__exportWorker = () => exportWorker; globalThis.__bookmarks = bookmarks; globalThis.__savedPlaces = savedPlaces; globalThis.__played = played; globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { downloadsNow: () => libraryDownloads, aheadNow: () => readAhead, folderAheadNow: () => folderPrefetch, musicNow: () => remoteMusic, musicStore: musicCache, asmaNow: () => offlineAsma, asmaStore: asmaArchive, bytesOf, browseSelectionNow: () => ({ owner: browseSelection.owner, count: browseSelection.count, urls: browseSelection.capture().map((track) => track.url) }), dropImportedHeld: () => retainedPlaylistTracks.clear(), searchNow: () => searchBrowser.state, searchLibraryNow: librarySearch, searchAvailabilityNow: () => searchAvailability, historyNow: () => historyBrowser.state, openHistory, recentReady: recentSearches.ready, recentQueriesNow: () => recentSearches.queries, submittedSearchNow: () => submittedSearchQuery, settingsNow: settings, pair, setQueue, entryFor, informAbout, shareAsAudio, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return p[0] === 'history' ? openHistory() : renderBrowse(); }, openRandom, rerollRandom, setRandomScope, randomScopeNow: () => randomScope, refreshRandomAvailability, randomFilterStateNow: () => randomFiltersState.state, rememberedRandomNow: () => rememberedRandom, visibleTracksNow: visibleTracks, visibleIndexNow: visibleIndex, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => workspace.editor.dirty, enqueueTrack, playManualRequest, playSourceOccurrence, clearPlaybackQueue, undoPlaybackQueue, removeQueueOccurrence, scheduleNow: () => schedule, planNow: playbackPlan, actualNow: currentTrack, editorNow: () => workspace.editor, editorShown: () => editorShown, sourceNow: () => captureTransport().source, storeNow: playlists, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaArchive, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { const context = i === index ? workspace.context : workspace.context.jump(i); adoptPlan(new PlaybackPlan(context, schedule.contextSelected(context, 'append'))); return beforeCurrent(); } };";
 
@@ -345,6 +361,17 @@ try {
 
 await new Promise((r) => setTimeout(r, 200));
 const $ = (id) => window.document.getElementById(id);
+
+// A decoder reply must follow the actual open command, not race its fetching continuation.
+async function acknowledgeOpen(action, details) {
+  const opens = () => window.__toWorklet.filter(message => message.type === 'open');
+  const before = opens().length;
+  await action();
+  for (let n = 0; n < 400 && opens().length === before; n++)
+    await new Promise(resolve => setTimeout(resolve, 5));
+  if (opens().length === before) throw Error('The fixture never reached its decoder open command');
+  window.__api.onWorklet({ type: 'opened', requestId: opens().at(-1).requestId, ...details });
+}
 
 check($('status').textContent.length > 0, 'the status line says something');
 
@@ -389,6 +416,11 @@ if (process.env.PROTRACKTOR_PAGE_MODULES === '1') check(window.__loadedModuleCou
 
 if (startupCase) {
   await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
+  window.close(); process.exit(failures.length ? 1 : 0);
+}
+if (systemMediaOnly || systemPcmOnly) {
+  const test = await import(systemPcmOnly ? './check-page-system-pcm.mjs' : './check-page-system-media.mjs');
+  await test.verify({ window, check });
   window.close(); process.exit(failures.length ? 1 : 0);
 }
 if (loudnessBridge) {
@@ -552,8 +584,8 @@ if (window.__api) {
 
   // What the operating system is told, which is how a media key reaches a buried tab.
   check(metadata?.title === 'Crazy Comets', 'the system media controls learn the title');
-  check(metadata?.artist === 'Rob Hubbard', 'and the artist');
-  check(metadata?.album === 'Amiga · 1985', 'and what it is for, and when');
+  check(metadata?.artist === $('sub').textContent && metadata.artist === 'Rob Hubbard · Amiga · 1985', 'and the same author platform and year summary as the dock');
+  check(metadata?.album === 'Modland/Protracker/4-Mat', 'and the actual source path in the album field');
 
   // **The author where the file is silent.** A plain .mod has nowhere to record one; Modland
   // files it under a folder that names them.
@@ -670,13 +702,14 @@ if (window.__api) {
     'and what Modland lists it as, after a full stop');
 
   // The keys somebody at a desk will try, and the one place they must not fire.
-  let played = 0;
-  $('playpause').addEventListener('click', () => { played += 1; });
-  window.document.body.dispatchEvent(
-    new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-  check(played === 1, 'space plays');
+  const beforeKeyboard = window.__toWorklet.filter((m) => m.type === 'open').length;
+  window.document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+  check(await reachPageState(() => window.__toWorklet.filter((m) => m.type === 'open').length === beforeKeyboard + 1),
+    'space starts the selected source through the shared transport');
+  const afterKeyboard = window.__toWorklet.length;
   $('urls').dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-  check(played === 1, 'and a space typed into the paste box stays a space');
+  await new Promise((done) => setTimeout(done, 10));
+  check(window.__toWorklet.length === afterKeyboard, 'and a space typed into the paste box stays a space');
 
   // --- volume ---------------------------------------------------------------------------------
   //
@@ -874,8 +907,8 @@ if (window.__api) {
   console.log('\nsubsongs:');
   window.__api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/a.mod',
                          'https://modland.com/pub/modules/Protracker/4-Mat/b.mod']);
-  window.__api.onWorklet({
-    type: 'opened', describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
+  await acknowledgeOpen(() => window.__api.playAt(0), {
+    describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
     canSeek: true, preferredRate: 44100, rate: 44100,
   });
   await new Promise((r) => setTimeout(r, 20));
@@ -883,14 +916,13 @@ if (window.__api) {
   check($('allsubsongs').getAttribute('aria-checked') === 'false', 'and it starts off');
 
   window.__toWorklet.length = 0;
-  $('next').click();
+  await acknowledgeOpen(() => $('next').click(), {
+    describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
   check(!window.__toWorklet.some((m) => m.type === 'subsong'),
     'with it off, next is the queue\'s business and the file is not walked');
 
-  window.__api.onWorklet({
-    type: 'opened', describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
-    canSeek: true, preferredRate: 44100, rate: 44100,
-  });
   $('allsubsongs').click();
   check($('allsubsongs').getAttribute('aria-checked') === 'true', 'the switch turns on');
   window.__toWorklet.length = 0;
@@ -946,9 +978,10 @@ if (window.__api) {
 
   // --- the sliders fill in behind the handle (C21) ------------------------------------------------
   console.log('\nsliders:');
-  // A known duration, because the subsong answer above changed it to that tune's own length.
-  window.__api.onWorklet({
-    type: 'opened', describe: 'title\tOnly', duration: 60, subsongs: 1, current: 0,
+  // A new actual open retires the preceding test's pending subsong command.
+  window.__api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/slider.mod']);
+  await acknowledgeOpen(() => window.__api.playAt(0), {
+    describe: 'title\tOnly', duration: 60, subsongs: 1, current: 0,
     canSeek: true, preferredRate: 44100, rate: 44100,
   });
   window.__api.onWorklet({ type: 'position', seconds: 15 });
@@ -1551,7 +1584,9 @@ if (window.__api) {
   await settle(700);   // let the playlist's own save land first
   const before = JSON.stringify((await playlists.get('p-random'))?.tracks);
 
-  await window.__api.openRandom();
+  await acknowledgeOpen(() => window.__api.openRandom(), {
+    duration: 60, subsongs: 1, current: 0, describe: '', rate: 44100, canSeek: true,
+  });
   await settle();
   check(window.__api.randomState() != null && !$('randomhead').hidden, 'Browse → Random opens the record, with its heading');
   check(window.__api.queueNow().length === 1 && window.__api.indexNow() === 0,

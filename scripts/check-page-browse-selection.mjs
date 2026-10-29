@@ -27,6 +27,14 @@ export default async function checkBrowseSelection({ window, check }) {
   const tracks = [0, 1, 2].map((i) => ({ url: `https://modland.com/pub/modules/Protracker/Selection/${i}.mod`, name: `${i}.mod`, file: `${i}.mod` }));
   await api.discardEdits(); api.showPanel(null);
   api.receive({ queue: [{ url: 'https://example.test/selection-source.mod', title: 'Independent source' }], index: 0 }); await settle(650);
+  const beforeSourceOpen = window.__toWorklet.filter((m) => m.type === 'open').length;
+  $('queue').querySelector('li.track').click();
+  await until(() => window.__toWorklet.filter((m) => m.type === 'open').length > beforeSourceOpen);
+  const requestId = window.__toWorklet.findLast((m) => m.type === 'open').requestId;
+  api.onWorklet({ type: 'opened', requestId, describe: 'title\tIndependent source', duration: 120,
+    rate: 44100, canSeek: true, subsongs: 1, current: 0 });
+  document.body.click(); await until(() => api.contextNow()?.state === 'running');
+  if ($('playpause').title === 'Pause') { $('playpause').click(); await until(() => $('playpause').title === 'Play'); }
   await store.save({ id: 'bulk-editor', name: 'Bulk current', tracks: [] });
   await store.save({ id: 'bulk-target', name: 'Bulk other', tracks: [] });
   await api.choosePlaylist('bulk-editor'); api.enqueueTrack(tracks[2]);
@@ -57,14 +65,16 @@ export default async function checkBrowseSelection({ window, check }) {
   check(state().count === 0 && $('browsetitle').textContent.includes('Selection') && !$('browse').hidden,
     'first actual Back clears selection without leaving the folder');
   select(1);
-  const playAction = $('playpause').onclick; let shortcutCalls = 0;
-  $('playpause').onclick = () => shortcutCalls++;
-  try {
-    $('browse-select-all').focus(); key($('browse-select-all'), ' '); $('browse-select-all').click();
-    check(shortcutCalls === 0, 'Space on a focused selection button does not invoke the global audio shortcut');
-    key(document.body, ' ');
-    check(shortcutCalls === 1, 'Space outside an interactive control still reaches the global audio shortcut');
-  } finally { $('playpause').onclick = playAction; }
+  const beforeShortcut = window.__toWorklet.length;
+  const shortcutTitle = $('playpause').title;
+  const expectedShortcut = shortcutTitle === 'Pause' ? 'pause' : 'play';
+  $('browse-select-all').focus(); key($('browse-select-all'), ' '); $('browse-select-all').click();
+  await settle();
+  check(window.__toWorklet.length === beforeShortcut, 'Space on a focused selection button does not invoke the global audio shortcut');
+  key(document.body, ' ');
+  check(await until(() => window.__toWorklet.slice(beforeShortcut).some((m) => m.type === expectedShortcut)),
+    'Space outside an interactive control reaches the actual shared transport command');
+  key(document.body, ' '); await until(() => $('playpause').title === shortcutTitle);
   check(state().count === 3 && $('browse-select-all').textContent.includes('Select none'), 'actual Select all uses exactly the displayed playable folder');
   $('browse-select-all').click();
   check(state().count === 0 && $('browse-select-all').hidden, 'actual Select none exits selection instead of retaining a hidden mode');

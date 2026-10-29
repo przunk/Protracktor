@@ -182,6 +182,8 @@ export const PL = {
   "Copy a link": "Skopiuj link",
   "could not fetch it: {reason}": "nie udało się pobrać: {reason}",
   "could not read it: {reason}": "nie udało się odczytać: {reason}",
+  "could not start audio: {reason}": "nie udało się uruchomić dźwięku: {reason}",
+  "could not select this tune": "nie udało się wybrać tego podutworu",
   "could not save it: {reason}": "nie udało się zapisać: {reason}",
   "could not save the playlist: {reason}": "nie udało się zapisać playlisty: {reason}",
   "Dark": "Ciemny",

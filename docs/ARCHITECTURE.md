@@ -1874,3 +1874,22 @@ and fetched-music Clear preserve these derived statistics; site-data removal cle
 Implementation and focused host evidence are recorded in the WEB ledger. Full W15 gate/lint and
 physical-browser acceptance remain separate; the latter includes output quality, worker scheduling,
 mobile background lifetime and audio encoding.
+
+## WEB system transport and presentation — W25, 2026-10-29
+
+The page owns explicit playback intent separately from temporarily paused/loading presentation.
+An intent generation retires asynchronous resume and first-touch completions after Pause, Stop or
+source replacement. Page buttons, keyboard and Media Session use the same concrete transport
+functions; system actions never synthesize DOM clicks or inherit pointer-hold suppression.
+Subsong commands carry a selection identity, suspend seeking until the latest acknowledgement and
+retire older queued seeks. Processor refusal preserves actual playback and returns explicit facts.
+Paused late EOF records a rewind requirement without consuming another queue occurrence.
+
+`SystemMedia` projects current source/capabilities into optional browser APIs. Independent handlers
+recheck live capability, failures stay isolated, and metadata uses the dock's existing subtitle
+logic. Position revision and declared state rebase timestamp extrapolation after pause/restart or
+API recovery. AudioContext state changes publish facts without automatic resume. `TrackArtwork`
+ports Native deterministic colour/format rules into one cached local PNG with packaged fallback.
+There is no additional store, network artwork request, transport model or dependency. Browser-owned
+session routing/background limits and Native exceptions are recorded in the
+[W25 contract](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).

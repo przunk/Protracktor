@@ -44,6 +44,23 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
+gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native
+unit tasks executed, **1368 actual-ESM page assertions**, **57 engine checks** and every companion.
+Lint: **0 errors / 79 warnings**, 146.2 seconds, all three analysis tasks executed. All **811**
+frozen inputs match; logs/JUnit/lint/source hashes are archived and the process exits zero.
+**25/25 scopes have implementation and host verification.** Final audit corrections, final
+integrated verification and the WEB package remain. Physical browser routing and acceptance are
+unchecked; C104 retains its documented platform limitation. No merge, APK or publication.
+
+**Earlier W25 implementation checkpoint, 2026-10-29:** shared explicit system/page/keyboard transport,
+seek/position/metadata and local format artwork are implemented. Focused host checks pass 27 policy,
+381 artwork, 46 ESM transport and 14 real-WASM PCM cases; ten simulated source defects are caught.
+Shared artwork rows pass six Native tests; missing-row failure/restoration reruns are verified.
+Complete W25 gate/lint and final audit/package remain. Count stays **24/25** until that gate passes.
+Physical browser media-key routing, appearance, sound and background acceptance are unchecked;
+C104 is not declared resolved. [Contract and limitations](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
 **W15 complete at host level, 2026-10-29:** fixed -18 LUFS browser normalization passes the
 forced complete gate on **90467b4**: **1262 tests / 172 suites**, zero failures/errors/skips,
 **1032 seconds**, all 31 native unit tasks executed and every companion. The same run passes

@@ -275,6 +275,7 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/rules/loudness-profile-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/loudness-encoding-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/loudness-identity-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/rules/artwork-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/history-filter-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/search-library-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("docs/rules/playlist-reorder-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)

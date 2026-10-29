@@ -124,6 +124,11 @@ identified by file content, filename, subsong, stereo choice and decoder revisio
 are independent of History and retained music copies; clearing either does not remove the profiles.
 Clearing the site's data removes them. Normalization does not change exported audio.
 
+When supported, the page provides the current title, shared track summary, playback position and
+locally generated format artwork to the browser's Media Session controls. This enables the
+browser or operating system to display and control playback. No external cover service is used,
+and Protracktor sends no listening report to the developer through this feature.
+
 A public copy of the web page is served by GitHub Pages at `https://przunk.github.io/Protracktor/`.
 GitHub receives the requests for that page under its own privacy statement. That copy has no
 pairing service, so nothing an app sends ever reaches it.
@@ -266,6 +271,11 @@ następnych utworów. Nie wysyła nigdzie dźwięku ani pomiarów. Zachowuje do 
 rozróżnianych po danych i nazwie pliku, subsongu, miksie stereo oraz wersji dekodera. Te statystyki
 są niezależne od historii i zachowanych kopii muzyki; usunięcie jednych lub drugich nie usuwa profili.
 Usuwa je wyczyszczenie danych witryny. Normalizacja nie zmienia eksportowanego audio.
+
+Jeśli przeglądarka to obsługuje, strona przekazuje tytuł, wspólny opis utworu, pozycję odtwarzania i
+lokalnie utworzoną okładkę formatu do kontrolek Media Session przeglądarki. Pozwala to przeglądarce
+lub systemowi wyświetlać i sterować odtwarzaniem. Nie korzysta z zewnętrznej usługi okładek, a
+Protracktor nie przesyła przez tę funkcję raportu słuchania do autora.
 
 Publiczna kopia strony jest udostępniana przez GitHub Pages pod adresem
 `https://przunk.github.io/Protracktor/`. Zapytania o nią otrzymuje GitHub, zgodnie z własną polityką

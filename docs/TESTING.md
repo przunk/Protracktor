@@ -1681,3 +1681,44 @@ Toggle while playing and paused, change stereo/subsongs, seek/restart and advanc
 and duplicate manual requests. Reload without autoplay, test refused/offline storage and Clear,
 use keyboard/touch in PL/EN and both themes, and confirm exports retain the original audio.
 Listening, device worker scheduling, routing, encoding and background lifetime require observation.
+
+### WEB system controls — W25, 2026-10-29
+
+Focused host commands:
+
+```sh
+node scripts/check-system-media.mjs
+node scripts/check-track-artwork.mjs
+PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_MEDIA=1 node --experimental-vm-modules scripts/check-page.mjs
+PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_PCM=1 node --experimental-vm-modules scripts/check-page.mjs
+```
+
+The project gate includes these checks. The ESM harness adapts browser transport and canvas only;
+the PCM bridge loads the actual page, processor and Native WASM. Shared artwork fixtures run
+against Android `TrackArtworkParityTest` with a declared Gradle input; missing-row failure and
+non-cached restoration are confirmed. Focused results do not replace the full project gate or
+physical browser acceptance. The comparison and deliberate-defect inventory are in the
+[implementation ledger](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
+Real-browser checklist, all unchecked; record OS/browser/version and the delivered bundle SHA:
+
+- [ ] Repeated Play/Pause from system controls stays idempotent, including loading and resuming.
+- [ ] Pause/Stop during loading or analysis prevents late startup. Play explicitly retries.
+- [ ] Next/Previous follow subsong settings and the manual FIFO, including duplicate requests;
+  hold a page control first, then press a hardware control and verify it still acts.
+- [ ] Change the visible playlist without changing the playing source; system metadata stays on
+  the actual tune. Stop dismisses it while preserving position/source; Play restores it.
+- [ ] Seek to an exact position and issue several seeks rapidly. The last target wins. Change
+  subsong during seeking; old work must not seek the new tune or restore old metadata.
+- [ ] Select a tune chip while paused; controls, actual sound, duration and title agree. Press
+  Next/Previous rapidly and Pause before the acknowledgement; the later Pause wins.
+- [ ] Check generated format cover, title and shared author/platform/year subtitle. Unknown
+  duration must not invent a system duration. Switch PL/EN without restarting audio.
+- [ ] Background/lock-screen and headset/Bluetooth controls are tested separately on each browser.
+  Record unavailable actions or absent WebAudio session routing as unsupported, not as a pass.
+- [ ] Browser interruption/suspension updates system presentation; explicit Play resumes only if
+  the platform permits it. Paused wall-clock time must not appear as playback progress.
+- [ ] A browser without Media Session or with a rejected action still supports all page controls.
+
+No browser/device run is claimed by the host event and PCM evidence. C104 remains under physical
+verification; no custom notification heart/layout or native audio-focus port is included.

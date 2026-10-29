@@ -81,7 +81,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W22 | Grouped downloads and Stop | Implemented; full host gate passed, browser acceptance pending |
 | W23 | Legacy Modland request recovery | Implemented; forced full gate passed; browser acceptance unchecked |
 | W24 | Language changes without interrupting playback | Implemented; forced full gate passed |
-| W25 | Browser Media Session and external controls | Pending; C104 reopened by scope selection |
+| W25 | Browser Media Session and external controls | Implemented; forced complete gate passed; physical OS routing unchecked with the documented platform limitation |
 
 ## W01 analysis
 
@@ -2075,3 +2075,105 @@ W15 closes **24/25 scopes** (W01-W24) at host level. W25, the final every-commit
 exclusions audit, final integrated checks and WEB package remain. Real browser rendering, sound,
 touch, routing, worker scheduling, encoder and background acceptance remain unchecked. No APK,
 version/schema change, merge, push or publication.
+
+## W25 — Browser system controls, 2026-10-29
+
+Reference: accepted Android **c8209b1ab79976ec28d27e1da447055756c7ca29**. Compared
+`PlaybackService` callbacks, `PlaybackMediaSession`, `PlaybackPresentation`, `TrackArtwork`,
+`TrackArtworkBitmaps`, `PlaybackController` explicit play/pause/seek/subsong/EOF paths and their
+existing session/presentation/artwork tests. Stop pauses and requests clearing system metadata,
+position and declared playback state while retaining the loaded position and source, matching the
+service's pause-and-dismiss intent. Whether the OS removes its surface belongs to the browser.
+Browser-owned notification layout and an extra heart remain excluded.
+
+`system-media.js` owns eight independent optional action registrations and platform presentation.
+The page, keyboard and platform now call the same explicit Play/Pause/Stop and short Next/Previous
+and seek entry points. Repeated Play preserves active/pending/resuming playback; Pause cancels
+startup and invalidates delayed resume/first-touch work. Previous pointer-hold suppression cannot
+consume a later system command. Source, manual FIFO and duplicate identity remain independent of
+the visible playlist. Seek uses the existing coalescing path and an exact pending target outside
+the range slider. Commands recheck current capability; an unsupported action or refused metadata,
+state or position API cannot prevent other supported actions or ordinary playback.
+
+System title and subtitle come from the actual decoded tune and existing dock summary, with the
+source path as album. Loading, refusal and Stop clear stale metadata/position. Subsong and language
+changes republish the common summary. Only finite positive known duration is published; unknown
+length clears the position instead of fabricating duration from the fallback. Paused position uses
+valid rate 1 with declared paused state. Play/Pause/restart/state recovery rebase the browser's
+position timestamp even when the last decoder position is unchanged. An AudioContext state-change
+observer updates presentation on suspension/interruption without issuing transport commands.
+
+`track-artwork.js` generates one cached local 512-square PNG. Its UTF-8 filename/title/ID seed,
+FNV/avalanche hue, Native Float colour calculation, luminance/contrast and suffix-before-prefix
+format labels match Android. No cover service or new dependency is used; absent/refused canvas
+falls back to the packaged icon. A shared 367-row TSV covers all 360 hues and seven seeds in both
+Kotlin and JS. Browser font/rasterization remains a manual acceptance item.
+
+Event-to-command review reproduced further ownership defects: a paused tune chip bypassed playback
+intent, an old coalesced seek could move the new subsong, and queued EOF could advance after Pause.
+All subsong selections now share one entry, clear old seek ownership, temporarily suspend seeking
+and carry a unique selection ID through the processor. Rapid Next/Previous uses the requested
+index; old ACKs cannot publish even after returning to the same index. Refusal preserves prior
+intent, restores controls and explains failure. Late EOF while paused remembers that Play must
+rewind without advancing or consuming FIFO requests. Successful selection refreshes position,
+duration, title and seek availability; a later Pause still wins.
+
+Two Native inconsistencies are explicit exceptions, not unreported parity claims. Its current
+`togglePlayPauseTo(true)` can cancel an in-progress load through the toggle path; WEB explicit
+Play keeps that load alive, with Pause/Stop as cancellation. Native `requestSubsong` restarts actual
+audio when paused, while the Kotlin state update omits `playing=true`; WEB displays the restarted
+state consistently. Android production is unchanged by this goal. Native's paused EOF polling
+rule is retained: delayed messages cannot automatically advance a paused source.
+
+Focused evidence: **27 system-policy cases**, **381 artwork cases**, **46 actual-ESM transport
+checks** and **14 real app/worklet/native-WASM PCM checks** pass. The latter includes actual tune
+chips selecting silent/audible NSF subsongs from Pause. Six Native artwork tests pass; removing
+one shared row fails both runtimes (367 versus 366), and exact restoration reruns and passes the
+same Gradle command without `--rerun-tasks`. Ten deliberate process-local defects break their
+intended page guards: repeated Play toggle, late resume, DOM-click Next, forked subtitle, stale
+first-touch, seek flooding, chip bypass, old seek, paused EOF and old same-index ACK. A further
+real-WASM processor guard rejects invalid subsong selection without resuming Pause and checks
+successful selection identity/restart; a process-local unconditional-restart fault breaks it.
+The complete page preflight also passes after replacing three premature synthetic-open fixtures
+with acknowledgements following real open commands. The original assertions are retained; no
+application source change was used to accommodate these obsolete test setups. Controlled
+faults never replace the production files. Full W25/project verification is still pending at this
+checkpoint; **24/25 scopes** remain closed until that complete run passes.
+
+### W25 complete host verification
+
+Candidate **9af16b9ae5d2a951eea87e6a8350a7a4b90c3b34** passes the forced complete project
+gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all **31 native
+unit tasks executed**, **1368 actual-ESM page assertions** and every companion. The gate includes
+the system-event and real app/worklet/WASM PCM paths and **57 engine checks**. Lint completes in
+**146.2 seconds**, with **0 errors / 79 warnings**; seven of thirty tasks execute, including all
+three analysis tasks, while valid prerequisite outputs are reused. All **811** frozen inputs
+match. Current-run logs, JUnit, lint and source hashes are archived locally; the outer process
+also exits zero. The existing JDK17 and process-local C1 workaround are retained.
+
+This closes **25/25 implementation scopes at host level**. Final requirement/commit/exclusion
+review, its corrections, final integrated verification and a reproducible WEB package remain.
+This is neither physical-browser acceptance nor a resolution of the routing boundary below.
+
+### W25 platform boundary and C104
+
+The [Media Session specification](https://www.w3.org/TR/mediasession/) assigns active-session and
+hardware routing to the browser; declared playback state alone does not select a session.
+[Current upstream Chromium](https://github.com/chromium/chromium/blob/main/content/browser/media/session/media_session_impl.cc)
+inspection on 2026-10-29 shows Android ambient players do not request audio focus and its desktop
+declared-state shortcut is not enabled on Android. Blink AudioContext publishes ambient audio.
+This is development-source evidence, not a reproduction or a released-browser support matrix;
+C104's reporting browser/device/build remains unspecified. Existing optional AudioSession playback
+classification is preserved. No silent media, relay, lossy re-encoding, native focus imitation or
+unapproved output-graph change is introduced to fabricate a controllable session.
+
+A further read-only retry inspected
+[Chromium's MediaStream player](https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/modules/mediastream/web_media_player_ms.cc):
+it reports one-shot content, which the same session controller excludes from controllability.
+Routing the live graph through a MediaStream element therefore is not an evidenced fix for this
+limitation. No output relay is added on that assumption.
+
+The supported callback implementation is testable on the host. Actual lock-screen/notification,
+headset/Bluetooth delivery, background lifetime and resuming after interruption remain unchecked
+and may be unavailable in a browser that does not route WebAudio as a controllable session. Keep
+C104 open for physical verification and retry this platform boundary during the final audit.

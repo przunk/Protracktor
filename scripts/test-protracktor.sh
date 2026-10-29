@@ -179,6 +179,8 @@ run_check "Recent searches" recent-searches node scripts/check-recent-searches.m
 run_check "History filtering" history-filter node scripts/check-history-filter.mjs
 run_check "Library search" library-search node scripts/check-library-search.mjs
 run_check "Stereo mix preferences" stereo-mix node scripts/check-stereo-mix.mjs
+run_check "System media policy" system-media node scripts/check-system-media.mjs
+run_check "Track artwork" track-artwork node scripts/check-track-artwork.mjs
 run_check "Volume normalization profiles" loudness-profiles node scripts/check-loudness-profiles.mjs
 run_check "Volume normalization preferences" normalization-preferences node scripts/check-normalization-preferences.mjs
 run_check "Volume normalization preparation" loudness-preparation node scripts/check-loudness-preparation.mjs
@@ -216,6 +218,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
     run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
     run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs
+    run_check "System media interactions" system-media-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_MEDIA=1 node --experimental-vm-modules scripts/check-page.mjs
     run_check "Web page" page env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs
     page_output="$(<"$PROTRACKTOR_LOG_PREFIX-page.log")"
     page_checks=$(echo "$page_output" | grep -c '✓' || true)
@@ -235,6 +238,7 @@ if [ -f web/vendor/engine.mjs ]; then
     run_check "Volume normalization worklet" loudness-worklet node scripts/check-worklet-loudness.mjs
     if [ -d web/node_modules/jsdom ]; then
         run_check "Volume normalization playback bridge" loudness-bridge env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_LOUDNESS_BRIDGE=1 node --experimental-vm-modules scripts/check-page.mjs
+        run_check "System media PCM" system-media-pcm env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_PCM=1 node --experimental-vm-modules scripts/check-page.mjs
     fi
     run_check "Stereo mix worklet" stereo-worklet node scripts/check-worklet-stereo.mjs
     run_check "Web engine checks" engine node scripts/check-engine.mjs

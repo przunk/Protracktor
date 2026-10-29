@@ -542,3 +542,14 @@ Both were verified by breaking the files deliberately and confirming the script 
 `lintVital` checks a narrower set. That one is silenced on its filter with the reason beside it --
 the rule wants a host, and `content://` has none. Verified by removing the silencing: the script
 failed and named the line. It adds about 45 s to a run.
+
+### WEB system-media verification — W25, 2026-10-29
+
+`scripts/test-protracktor.sh --really` now includes system-policy, shared artwork, actual ESM media
+actions and real-WASM PCM checks when the existing WEB prerequisites are installed. This goal
+requires every WEB companion to execute; a missing prerequisite is not a complete parity pass.
+`TrackArtworkParityTest` consumes the declared shared artwork TSV input. No engine rebuild is
+needed for the W25 JavaScript command/acknowledgement additions because the WASM inputs/API stay
+unchanged. Refresh legal/PWA staging after committing, then run the full gate on frozen inputs.
+The final package still uses `scripts/package-web.sh`; physical browser routing and background
+checks remain separate from host build/test results.
