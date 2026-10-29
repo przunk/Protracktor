@@ -10,11 +10,12 @@
 // `process()` asks. Same rule, fewer parts -- there is no thread here to be late.
 //
 // No `Player` class either, for the same reason: `Player` exists to mediate between a control
-// thread and an audio thread, and a worklet has neither. A handle is a backend.
+// thread and an audio thread, and a worklet has neither. Each handle owns its backend and DSP.
 //
 // `docs/PLAN_WEB.md` §13 S1.
 
 #include "engine.h"
+#include "stereo_mix.h"
 
 #include <emscripten/emscripten.h>
 
@@ -35,6 +36,8 @@ namespace {
 struct Handle {
     std::unique_ptr<protracktor::Backend> backend;
     std::string describe;
+    protracktor::StereoMixer stereoMixer;
+    int stereoWidth = 100;
 };
 
 std::string lastError;
@@ -115,12 +118,20 @@ EMSCRIPTEN_KEEPALIVE void pt_close(Handle *handle) { guardedVoid([&] { delete ha
  */
 EMSCRIPTEN_KEEPALIVE
 int pt_render(Handle *handle, int sampleRate, int frames, float *out) {
-    if (!handle) return 0;
+    if (!handle || sampleRate <= 0 || frames <= 0 || !out) return 0;
     // Silence rather than an exception: fewer frames than asked means "the tune ended", which the
     // worklet already knows how to answer, and a decoder that throws mid-tune ends it here.
     return guarded<int>([&] {
-        return static_cast<int>(handle->backend->render(sampleRate, static_cast<std::size_t>(frames), out));
+        const auto rendered = handle->backend->render(sampleRate, static_cast<std::size_t>(frames), out);
+        handle->stereoMixer.process(out, rendered, handle->stereoWidth, sampleRate);
+        return static_cast<int>(rendered);
     }, 0);
+}
+
+/** Per-handle playback width; a fresh export/description handle retains Original. */
+EMSCRIPTEN_KEEPALIVE
+void pt_set_stereo_width(Handle *handle, int percent) {
+    if (handle) handle->stereoWidth = percent == 0 || percent == 50 ? percent : 100;
 }
 
 /**

@@ -47,6 +47,7 @@ import { BrowseScroll } from './browse-scroll.js';
 import { BrowseScrollView } from './browse-scroll-view.js';
 import { SubsongStripView } from './subsong-strip-view.js';
 import { PlaybackPreferences } from './playback-preferences.js';
+import { StereoMixPreferences, stereoMode, stereoWidth } from './stereo-mix.js';
 import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
@@ -112,6 +113,9 @@ let index = -1;
  */
 const playbackPreferences = new PlaybackPreferences(() => localStorage);
 const restoredPlaybackPreferences = playbackPreferences.read();
+const stereoMixPreferences = new StereoMixPreferences(() => localStorage);
+const restoredStereoMix = stereoMixPreferences.read();
+let stereoMix = restoredStereoMix.value;
 const cacheAheadPreferences = new CacheAheadPreferences(() => localStorage);
 const restoredCacheAhead = cacheAheadPreferences.read();
 let shuffle = restoredPlaybackPreferences.value.shuffle;
@@ -820,7 +824,7 @@ async function begin() {
   node = new AudioWorkletNode(context, 'protracktor', {
     numberOfInputs: 0,
     outputChannelCount: [2],
-    processorOptions: { wasmBinary: wasm },
+    processorOptions: { wasmBinary: wasm, stereoWidth: stereoWidth(stereoMix) },
   });
   // Through the gain, not straight to the speakers. Created here rather than at load, because
   // there is no AudioContext to create it in until the first click.
@@ -4936,6 +4940,31 @@ $('fallback').oninput = () => {
 };
 showFallback();
 
+function stereoMixLabel(mode) {
+  switch (mode) {
+    case 'narrow': return uiMessageText('Narrow');
+    case 'mono': return uiMessageText('Mono');
+    default: return uiMessageText('Original');
+  }
+}
+
+function renderStereoMix() {
+  for (const radio of document.querySelectorAll('input[name="stereomix"]')) radio.checked = radio.value === stereoMix;
+  setUiText($('stereo-current'), uiMessageText('Current: {mode}', { mode: stereoMixLabel(stereoMix) }));
+}
+
+function setStereoMix(value) {
+  const mode = stereoMode(value);
+  if (mode === stereoMix) return;
+  stereoMix = mode;
+  const failure = stereoMixPreferences.write(mode);
+  node?.port.postMessage({ type: 'stereo', percent: stereoWidth(mode) });
+  renderStereoMix();
+  if (failure) showNote(uiMessageText('Could not save playback settings: {reason}', { reason: failure.message }));
+}
+for (const radio of document.querySelectorAll('input[name="stereomix"]')) radio.onchange = () => setStereoMix(radio.value);
+renderStereoMix();
+
 function repeatCaption(mode) {
   return mode === 'one' ? uiMessageText('Repeat one') : mode === 'all' ? uiMessageText('Repeat all') : uiMessageText('Repeat off');
 }
@@ -5772,6 +5801,7 @@ document.fonts?.ready.then(holdBarLabels);
 if (!location.hash.slice(1)) showPanel('pair');
 
 status(uiMessageText('ready — press Play or load some URLs'));
+if (restoredStereoMix.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredStereoMix.failure.message }));
 if (restoredPlaybackPreferences.failure) showNote(uiMessageText('Could not restore playback settings: {reason}', { reason: restoredPlaybackPreferences.failure.message }));
 if (restoredCacheAhead.failure) showNote(uiMessageText('Could not restore folder download settings: {reason}', { reason: restoredCacheAhead.failure.message }));
 pair();

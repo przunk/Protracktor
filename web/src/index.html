@@ -851,6 +851,15 @@
     .setting.choice > label { display: inline-flex; align-items: center; gap: 6px; margin: 6px 16px 0 0; min-height: 32px; }
     .setting.choice input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; }
     .setting > input[type=range] { width: 100%; }
+  .stereo-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .stereo-option { position: relative; display: flex; flex: 1 1 80px; flex-direction: column;
+    align-items: center; gap: 4px; min-height: 48px; padding: 8px; box-sizing: border-box;
+    border: 1px solid var(--surface-variant); border-radius: 12px; cursor: pointer;
+    background: var(--surface-container); color: var(--on-surface); }
+  .stereo-option input { position: absolute; top: 8px; left: 8px; }
+  .stereo-option svg { width: 24px; height: 24px; fill: currentColor; }
+  .stereo-option:has(input:checked) { background: var(--secondary-container); border-color: var(--on-surface); }
+  .stereo-option:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
   /* The Queue replaces list content while the shared dock remains available. */
   .playbackview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .playbackview[hidden] { display: none; }
@@ -1250,6 +1259,17 @@
         <label class="setting-toggle" for="settings-allsubsongs"><input id="settings-allsubsongs" type="checkbox"> Play every tune in a file</label>
         <p class="storage">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</p>
       </div>
+
+      <fieldset class="setting choice" aria-describedby="stereo-help">
+        <legend>Stereo mix</legend>
+        <p class="storage" id="stereo-help">Original keeps the source stereo. Narrow brings the channels closer (50% width). Mono plays the same channel mix in both ears. Applies immediately to playback, not shared audio.</p>
+        <div class="stereo-options">
+          <label class="stereo-option"><input type="radio" name="stereomix" value="original"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5H8V19H3Z M16 5H21V19H16Z"/></svg><span>Original</span></label>
+          <label class="stereo-option"><input type="radio" name="stereomix" value="narrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5H11V19H6Z M13 5H18V19H13Z"/></svg><span>Narrow</span></label>
+          <label class="stereo-option"><input type="radio" name="stereomix" value="mono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5H16V19H8Z"/></svg><span>Mono</span></label>
+        </div>
+        <p class="storage" id="stereo-current" aria-live="polite"></p>
+      </fieldset>
 
       <fieldset class="setting choice">
         <legend>Cache folders ahead</legend>

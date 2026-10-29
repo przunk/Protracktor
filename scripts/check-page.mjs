@@ -54,7 +54,8 @@ window.AudioContext = class {
 // which is the only observable a page has for a decision it made.
 window.__toWorklet = [];
 window.AudioWorkletNode = class {
-  constructor() {
+  constructor(_context, _name, options) {
+    window.__workletOptions = options;
     this.port = {
       onmessage: null,
       // **`structuredClone` with the transfer list, not a push.** A real `MessagePort` detaches
@@ -219,6 +220,8 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     () => `const { PlaybackReadAhead, readAheadCandidates, READ_AHEAD_COUNT } = (() => { ${fs.readFileSync('web/src/playback-read-ahead.js', 'utf8').replace(/^export /gm, '')}; return { PlaybackReadAhead, readAheadCandidates, READ_AHEAD_COUNT }; })();`)
   .replace("import { FolderPrefetch, CacheAheadPreferences } from './folder-prefetch.js';",
     () => `const { FolderPrefetch, CacheAheadPreferences } = (() => { ${fs.readFileSync('web/src/folder-prefetch.js', 'utf8').replace(/^export /gm, '')}; return { FolderPrefetch, CacheAheadPreferences }; })();`)
+  .replace("import { StereoMixPreferences, stereoMode, stereoWidth } from './stereo-mix.js';",
+    () => `const { StereoMixPreferences, stereoMode, stereoWidth } = (() => { ${fs.readFileSync('web/src/stereo-mix.js', 'utf8').replace(/^export /gm, '')}; return { StereoMixPreferences, stereoMode, stereoWidth }; })();`)
   .replace("import { PlaybackPreferences } from './playback-preferences.js';",
     () => `const { PlaybackPreferences } = (() => { ${fs.readFileSync('web/src/playback-preferences.js', 'utf8').replace(/^export /gm, '')}; return { PlaybackPreferences }; })();`)
   .replace("import { SubsongStripView } from './subsong-strip-view.js';",
@@ -3330,7 +3333,8 @@ if (window.__api) {
 
       window.__toWorklet.length = 0;
       const informing = api.informAbout(entry);
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      // Storage latency varies; the request itself is the synchronization point.
+      await reachPageState(() => window.__toWorklet.some((message) => message.type === 'describe'));
       const described = window.__toWorklet.find((message) => message.type === 'describe');
       check(described?.name === expected, `Information uses the decoder filename ${expected}`);
       if (described) api.onWorklet({ type: 'described', id: described.id, ok: false, reason: 'filename boundary check' });
@@ -3772,6 +3776,7 @@ await (await import('./check-page-modland-recovery.mjs')).default({ window, chec
 await (await import('./check-page-read-ahead.mjs')).default({ window, check });
 await (await import('./check-page-folder-prefetch.mjs')).default({ window, check });
 await (await import('./check-page-downloads.mjs')).default({ window, check });
+await (await import('./check-page-stereo.mjs')).default({ window, check });
 
 check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

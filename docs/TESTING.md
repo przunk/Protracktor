@@ -1602,3 +1602,38 @@ an actual HTTP404 with an access/server refusal and a disconnected network; only
 404 may try one alternate path. Confirm that clearing retained music during a slow recovery
 leaves current sound alone and that the late transfer does not restore a cleared disk copy.
 Run the forced complete project gate/lint before closing this stage.
+
+
+### WEB stereo mix — W14, 2026-10-29
+
+The full gate registers `check-stereo-mix.mjs`, `check-engine-stereo.mjs` and
+`check-worklet-stereo.mjs`. They exercise the production mode/preferences module, actual packaged
+WASM and actual processor message/callback path. Generated looping MOD fixtures supply left-only,
+right-only, correlated and opposite-phase PCM without external downloads. Check the first-frame
+matrix, bit-preserving Original, 32/44.1/96 kHz smoothing and mid-ramp retarget, invalid/empty
+requests, per-handle isolation, pause, seek, rewind and subsong continuation. Compare original
+and raw export PCM to the retained pre-change engine where that local baseline is available;
+mandatory public tests do not depend on private artifacts or browser encoding.
+
+The ten shared stored-mode rows also run in StereoMixTest alongside the unchanged native mode,
+preference and actual Compose Settings cases. Removing a row must fail both readers and invalidate
+the Gradle task. Restore it and repeat the same native command without a rerun flag; require eleven
+passing tests and an actually executed task. Deliberate UI, initial/live worklet, pause, fallback,
+storage refusal and compiled DSP/rate faults must fail their relevant checks before restoration.
+
+The actual page suite drives all three Settings choices, English/Polish, focus/labels, refused
+storage and recovery while preserving another visible playlist, duplicate FIFO, current source,
+clock and audio object. The startup runner includes stored Narrow/Mono, unknown values, refused
+reads and a mode change during delayed engine loading; no startup choice may create audio or
+write defaults. The legacy adapter is also exercised, without a second locale or mixer algorithm.
+
+Real-browser acceptance remains unchecked. In Settings → Stereo mix, compare Original, Narrow
+and Mono on strongly separated and ordinary stereo music; change modes while playing and paused,
+then advance files/subsongs, seek and restart. Confirm position, queue and draft preservation.
+Reload to verify the retained selection and explicit-Play startup rule. Check keyboard/touch,
+English/Polish/System, themes and zoom, and export audio while the live decoder is in Mono.
+Browser output quality, AAC encoding, mobile routing and background lifetime are separate checks.
+
+The C121 Information filename guard waits for the actual describe request before asserting its
+original filename. Storage reads can exceed 20 ms; a fixed sleep did not synchronize the action.
+Controlled read delay must pass with the correct name, and a broken production name must fail.

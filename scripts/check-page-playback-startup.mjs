@@ -7,6 +7,11 @@ import { zipDirectory } from '../web/src/zip-archive.js';
 
 const globalTracks = ['a', 'b'].map((name) => ({ url: `https://example.test/playback-startup/${name}.mod`, name }));
 const cases = {
+  'stereo-narrow': { raw: { stereoMix: 'narrow' }, shuffle: false, repeat: 'off', all: false, stereo: 'narrow' },
+  'stereo-mono': { raw: { stereoMix: 'mono' }, shuffle: false, repeat: 'off', all: false, stereo: 'mono' },
+  'stereo-malformed': { raw: { stereoMix: 'future-mode' }, shuffle: false, repeat: 'off', all: false },
+  'stereo-denied': { raw: {}, shuffle: false, repeat: 'off', all: false },
+  'stereo-loading': { raw: { stereoMix: 'narrow' }, shuffle: false, repeat: 'off', all: false, stereo: 'narrow' },
   defaults: { raw: {}, shuffle: false, repeat: 'off', all: false },
   cache: { raw: {}, shuffle: false, repeat: 'off', all: false },
   asma: { raw: {}, shuffle: false, repeat: 'off', all: false },
@@ -45,7 +50,11 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   const state = window.__startup = { writes: [], preferenceWrites: [], notices: [], choice, tracks,
     initialRepeatGlyph: window.document.querySelector('#repeat path').getAttribute('d') };
   const fetch = window.fetch; state.trackRequests = 0;
-  window.fetch = (...args) => { if (tracks.some((track) => track.url === String(args[0]))) state.trackRequests++; return fetch(...args); };
+  window.fetch = (...args) => { if (tracks.some((track) => track.url === String(args[0]))) state.trackRequests++;
+    if (name === 'stereo-loading' && String(args[0]).endsWith('engine.wasm')) return fetch(...args).then(async (reply) => {
+      await new Promise((resolve) => { state.releaseEngine = resolve; }); return reply;
+    });
+    return fetch(...args); };
   // Cold module evaluation can outlast a snackbar. Observe its visible lifetime, not hidden text.
   const bar = window.document.getElementById('snackbar'), caption = window.document.getElementById('snacktext');
   const notices = new window.MutationObserver(() => {
@@ -60,11 +69,15 @@ export async function prepare({ window, rulesSource, storeSource, name }) {
   };
   const set = window.Storage.prototype.setItem, get = window.Storage.prototype.getItem;
   window.Storage.prototype.setItem = function (key, value) {
-    if (/^protracktor\.(shuffle|repeat|allsubsongs|cacheAhead)$/.test(key)) state.preferenceWrites.push([key, value]);
+    if (/^protracktor\.(shuffle|repeat|allsubsongs|cacheAhead|stereoMix)$/.test(key)) state.preferenceWrites.push([key, value]);
     return set.call(this, key, value);
   };
   if (name === 'denied') window.Storage.prototype.getItem = function (key) {
     if (/^protracktor\.(shuffle|repeat|allsubsongs)$/.test(key)) throw new Error('playback preference read refused');
+    return get.call(this, key);
+  };
+  if (name === 'stereo-denied') window.Storage.prototype.getItem = function (key) {
+    if (key === 'protracktor.stereoMix') throw new Error('stereo mix preference read refused');
     return get.call(this, key);
   };
   if (name === 'prefetch-denied') window.Storage.prototype.getItem = function (key) {
@@ -114,6 +127,9 @@ export async function verify({ window, check, name }) {
       check(state.writes.every((name) => name === 'remoteMusic'), 'restoring a saved playlist performs no initialization database writes');
     }
     const order = api.planNow().context.order, { choice } = state;
+    const selectedMix = choice.stereo ?? 'original';
+    check(document.querySelector(`input[name="stereomix"][value="${selectedMix}"]`)?.checked,
+      `${name}: startup restores the native global stereo choice`);
     check(api.folderAheadNow().mode === (choice.folderMode ?? 'wifi')
       && document.querySelector(`input[name="cacheahead"][value="${choice.folderMode ?? 'wifi'}"]`).checked,
       `${name}: startup restores the folder policy without changing playback or writing defaults`);
@@ -127,6 +143,22 @@ export async function verify({ window, check, name }) {
     check(state.trackRequests === 0, `${name}: restoring a playlist or folder policy never fetches speculative music`);
     check(!api.dirtyNow(), `${name}: restored modes are not playlist content edits`);
     check(state.preferenceWrites.length === 0, `${name}: initialization does not write defaults over saved preferences`);
+    if (name.startsWith('stereo-')) {
+      if (name !== 'stereo-denied') check(window.localStorage.getItem('protracktor.stereoMix') === (choice.raw.stereoMix ?? null),
+        'startup preserves the exact retained stereo preference without rewriting a fallback');
+      if (name === 'stereo-denied') check(state.notices.some((text) => text.includes('stereo mix preference read refused')),
+        'a refused stereo read explains the Original fallback without starting audio');
+      $('playpause').click();
+      if (name === 'stereo-loading') {
+        check(await until(() => !!state.releaseEngine), 'the actual engine load can be delayed while Settings stays usable');
+        api.showPanel('settings'); document.querySelector('input[name="stereomix"][value="mono"]').click();
+        state.releaseEngine();
+      }
+      check(await until(() => !!window.__workletOptions), 'an explicit first Play constructs the actual worklet');
+      const width = name === 'stereo-loading' ? 0 : selectedMix === 'narrow' ? 50 : selectedMix === 'mono' ? 0 : 100;
+      check(window.__workletOptions?.processorOptions.stereoWidth === width,
+        'the latest selected stereo width reaches the first worklet construction after asynchronous loading');
+    }
     if (name === 'cache' || name === 'asma') {
       $('playpause').click();
       check(await until(() => window.__toWorklet.some((message) => message.type === 'open')),

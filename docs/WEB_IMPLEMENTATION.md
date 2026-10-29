@@ -70,7 +70,7 @@ evidence and final integrated checks. A model-only substage does not complete a 
 | W11 | Search scopes and saved-playlist coverage | Implemented; full host gate passes; browser acceptance unchecked |
 | W12 | Playlist reorder and import/export | Implemented in W12a/W12b; full host gate passes; browser acceptance unchecked |
 | W13 | Bulk Browse/Search/History actions | Implemented; full host gate passes; browser acceptance unchecked |
-| W14 | Original/Narrow/Mono | Pending |
+| W14 | Original/Narrow/Mono | Implemented; forced complete gate passed; browser acceptance unchecked |
 | W15 | Playback volume normalization | Pending |
 | W16 | Compact dock and subsong indication | Implemented; full host gate passes; browser acceptance unchecked |
 | W17 | Browse position and subsong following | Implemented in W17a/W17b; full host gate passes; browser acceptance unchecked |
@@ -1896,3 +1896,70 @@ W22 completes host verification for **22 of 25 scopes**: W01-W13 and W16-W24. Co
 W15 and W25, then the final requirements/commit/exclusion audit and WEB package. No skipped
 scope, merge, publication, APK or version change. Physical browser rendering, touch, quota,
 CORS execution, audible continuity and background behaviour remain unchecked.
+
+
+## W14 — Shared playback stereo mix, 2026-10-29
+
+Reference **c8209b1**: StereoMix, Appearance, controller selection/asynchronous open, NativeEngine
+and the common Player callback; the original three mode, four preference and three Compose Settings
+tests. Existing native callback tests define matrices, first-frame application, pause, EOF,
+unknown widths, granted-rate smoothing and retargeting. The new shared ten-row fixture adds one
+native case and is declared as a Gradle input.
+
+Parity checklist:
+
+- Stable original/narrow/mono identifiers map to 100/50/0 percent. Original is the absent/unknown
+  default; reading never rewrites a future value or writes startup defaults. Preserve unrelated
+  settings, playlists and schema. Refused reads/writes give visible feedback and safe live state.
+- Three labelled/icon Settings choices expose selected state and English/Polish descriptions.
+  Selection is global and live; it preserves pause, clock/subsong, source/FIFO/editor and audio
+  instance. A later successful action can persist after refusal; selecting the same mode is inert.
+- Reuse the exact native StereoMixer after decoding. Each WASM handle owns its target and ramp;
+  apply the selected mode before its first PCM, retain it across seek/rewind/subsong, and initialize
+  each new file directly at target. Use actual render rate and actual decoded frames. Empty or
+  invalid calls do not mutate output/decoder state. Original is a bit-preserving bypass.
+- The worklet retains the latest mode even without an open file or during compilation. Constructor
+  options read the current choice after asynchronous loading; ordered later messages update the
+  existing decoder. A paused change does not start audio. No backend-specific or JS DSP fork.
+- Export/description handles remain Original independently of live settings. No new stereo mode,
+  crossfeed, normalization or target slider is introduced in this scope.
+
+The production build now exports `pt_set_stereo_width` and uses the shared native header. The
+worklet owns the live target; the pure preference module owns retained identity/defaults. Page
+controls only publish that target. The standard build produces WASM SHA-256
+`e3353252860f7573592ab09052d88d33ce4988f8ba7f7eaa6848c70a1276a778`, byte-identical to the isolated
+candidate used before integration. Twelve Original PCM streams and two raw export PCM streams
+match the previous engine exactly; exports leave the live decoder's position intact.
+
+Integrated preflight passes **21 mode/persistence cases**, **46 actual-WASM PCM cases**,
+**6 real-worklet/WASM cases**, **23 actual page gestures**, **1350 complete page assertions**,
+**23 legacy adapter assertions** and **20 fresh starts / 485 assertions**. Native reference passes
+**11 tests / three suites**. Removing the last shared row fails WEB and native (eight tests /
+one failure before fail-fast); restoration with the same command, without rerun flags, executes
+and passes eleven tests. Seven production UI/worklet/model faults and two compiled native
+no-mixer/wrong-rate variants are detected; source and positive artifact hashes are restored or
+unchanged. The browser autoplay precondition in the isolated gesture helper was corrected by
+an actual body click and running-context assertion; production transport was not changed.
+
+A full-gate attempt passed all **1259 native tests / 172 suites** and the earlier companions,
+then exposed a fixed-20 ms assumption in the existing C121 Information filename guard. A controlled
+read delay reproduced its premature assertion; the eventual production request retained the
+correct filename. The guard now waits for the actual request and retains every filename assertion.
+Five real guard cases pass with delayed reads; deliberately sending display titles still fails
+all five. Application source is exactly restored after that control. The failed gate is archived
+separately and is not a complete pass; lint had not run. The complete retry below includes the
+corrected guard.
+
+The forced complete retry on **e0a1f797e779c1cda65f4e3ce8fa3cd99a1675c5** passes **1259 tests /
+172 suites**, zero failures/errors/skips, **1156 s**, all **31 native unit tasks executed** and
+all companions. The actual-ESM page contributes **1350 assertions**; twenty fresh starts contribute
+**485 assertions**. Lint passes with **0 errors / 79 warnings** in **150.9 s**. All **743
+source/test/build inputs plus one temporary test-worker configuration** match frozen hashes;
+logs, JUnit, lint and the receipt are archived. The same existing JDK17 uses process-scoped
+`JDK_JAVA_OPTIONS=-XX:TieredStopAtLevel=1` and the earlier test-worker init after archived C2 JVM
+crashes, without changing the full test selection, production or shared settings.
+
+W14 closes host verification for **23/25 scopes** (W01-W14 and W16-W24). Continue W15, W25 and
+the final requirements/commit/exclusion audit and WEB package. Browser appearance, touch, sound
+quality, encoder, routing and background acceptance remain unchecked. No version/schema change,
+APK, merge or publication.

@@ -1815,3 +1815,25 @@ RemoteMusic retains complete bytes under the original URL, so playlist reference
 sharing and offline replay remain stable. Cancellation and Clear use the existing transfer and
 publication owners. Browser CORS and credential rules remain authoritative; no proxy or custom
 Cookie/User-Agent machinery is introduced.
+
+
+## WEB playback stereo mix — W14, 2026-10-29
+
+The browser uses the same [StereoMixer](../native/engine/stereo_mix.h) as the native output.
+Each WASM decoder handle owns its mixer and target width; `pt_render` processes only the frames
+actually decoded, at the requested output rate. A fresh handle defaults to Original, so audio
+exports and file descriptions remain independent of the live decoder. Original bypasses PCM
+writes; Narrow and Mono use the existing convex channel matrix and up-to-10 ms width smoothing.
+Zero/invalid render requests do not advance the decoder or initialize a ramp.
+
+`stereo-mix.js` owns stable stored identifiers, width mapping and refusal-aware preferences.
+Settings controls change the global in-memory selection and send a target to the existing
+worklet without opening, seeking or resuming audio. The worklet retains that target across files
+and applies it before the first rendered frame. Its constructor receives the latest selection
+after asynchronous engine loading; later messages retain their order while compilation is pending.
+Seek, rewind and subsong changes retain the target. Only a new decoder resets mixer initialization.
+
+The shared [mode cases](rules/stereo-mix-cases.tsv) bind Kotlin and JS defaults/widths; the fixture
+is an explicit native test input. Production PCM/worklet tests cover asymmetric, correlated and
+opposite-phase input, multiple sample rates, retargeting, paused changes and independent handles.
+The browser audio device and encoder require separate real-browser acceptance.

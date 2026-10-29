@@ -488,4 +488,10 @@ export const PL = {
   "ASMA is being deleted. Try again.": "Trwa usuwanie ASMA. Spróbuj ponownie.",
   "Could not read downloaded data: {reason}": "Nie można odczytać pobranych danych: {reason}",
   "Stop": "Zatrzymaj",
+  "Stereo mix": "Miks stereo",
+  "Original": "Oryginał",
+  "Narrow": "Zwężone",
+  "Mono": "Mono",
+  "Current: {mode}": "Wybrane: {mode}",
+  "Original keeps the source stereo. Narrow brings the channels closer (50% width). Mono plays the same channel mix in both ears. Applies immediately to playback, not shared audio.": "Oryginał zachowuje stereo utworu. Zwężone zbliża kanały (50% szerokości). Mono odtwarza ten sam miks kanałów w obu uszach. Działa od razu podczas odtwarzania, nie zmienia udostępnianego audio.",
 };

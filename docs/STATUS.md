@@ -44,6 +44,25 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation — in progress, 2026-10-26
 
+**W14 complete at host level, 2026-10-29:** Original / Narrow / Mono use the shared native
+StereoMixer through a rebuilt per-handle WASM API. Global selection persists, applies before first
+PCM and changes live without changing pause, source/FIFO/editor, position or subsong. Raw export
+PCM and Original match the previous engine exactly. Focused checks pass **21 mode/persistence,
+46 real-WASM PCM, 6 real-worklet, 23 actual Settings gestures**, **1350 complete page assertions**,
+23 legacy assertions and **20 fresh starts / 485 assertions**. Native reference: **11 tests /
+three suites**, including the shared fixture; missing-row failure and non-cached restoration are
+verified. Nine source/compiled-engine faults are detected and restored. The forced complete gate
+on **e0a1f79** passes **1259 tests / 172 suites**, zero failures/errors/skips, **1156 s**, all
+31 native unit tasks executed and all companions, including **1350 actual-ESM page assertions**
+and **20 fresh starts / 485 assertions**. Lint: **0 errors / 79 warnings**, 150.9 s. All **744
+source/test/build and temporary verification inputs** match their frozen hashes; logs/JUnit/lint
+are archived. The existing JDK17 used process-scoped C1-only JIT after archived host JVM crashes;
+no tests, application or shared-tool configuration were changed. An earlier gate exposed a test
+timing assumption in the C121 Information guard; request-based synchronization and delayed-read /
+wrong-name controls verify its correction without changing application behaviour. The closed
+scope count is **23/25**. Browser rendering, touch, sound quality, encoding and background
+acceptance are unchecked.
+
 **W22 complete at host level, 2026-10-29:** a common selected-download runner and stable
 picker implement missing defaults, estimates, step progress, Stop, partial retention and Retry.
 Individual actions share locks/publication; cancelling a selected run preserves independent work
@@ -117,7 +136,7 @@ context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes th
 **0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
 and restored; actual-module startup and visible refusal notices now have stronger guards.
 Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
-**22 of 25 scopes have completed host verification** (W01-W13, W16-W24); W14/W15 and W25 remain. No WEB merge,
+**23 of 25 scopes have completed host verification** (W01-W14, W16-W24); W15 and W25 remain. No WEB merge,
 package, push or deployment.
 
 

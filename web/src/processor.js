@@ -76,6 +76,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     this.playing = false;
     this.reported = -1;
     this.requestId = null;
+    this.stereoWidth = options.processorOptions.stereoWidth ?? 100;
 
     // **The wasm binary arrives as bytes rather than being fetched here.** `fetch` does not exist
     // in an AudioWorkletGlobalScope, so a build that downloads its own `.wasm` cannot start; the
@@ -146,6 +147,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           this.reply({ type: 'failed', reason: e.UTF8ToString(e._pt_last_error()) });
           return;
         }
+        e._pt_set_stereo_width(this.handle, this.stereoWidth);
         this.ended = false;
         this.playing = true;
         this.reply({
@@ -163,6 +165,10 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         });
         break;
       }
+      case 'stereo':
+        this.stereoWidth = message.percent;
+        if (this.handle) e._pt_set_stereo_width(this.handle, this.stereoWidth);
+        break;
       case 'play': this.playing = true; break;
       case 'pause': this.playing = false; break;
       case 'seek':
