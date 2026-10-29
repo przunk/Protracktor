@@ -24,7 +24,7 @@ export const PL = {
   "Interface text changes without interrupting playback.": "Teksty interfejsu zmieniają się bez przerywania odtwarzania.",
   "Could not save language choice: {reason}": "Nie udało się zapisać wyboru języka: {reason}",
   "Play every tune in a file": "Graj wszystkie utwory w pliku",
-  "Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.": "Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.",
+  "Some files hold dozens of tunes. Off, only the selected tune plays before the playlist moves on.": "Niektóre pliki mieszczą kilkadziesiąt utworów. Po wyłączeniu gra tylko wybrany utwór, a potem playlista przechodzi dalej.",
   "Could not save playback settings: {reason}": "Nie udało się zapisać ustawień odtwarzania: {reason}",
   "Could not restore playback settings: {reason}": "Nie udało się przywrócić ustawień odtwarzania: {reason}",
   "Adding…": "Dodawanie…",

@@ -2178,7 +2178,7 @@ headset/Bluetooth delivery, background lifetime and resuming after interruption 
 and may be unavailable in a browser that does not route WebAudio as a controllable session. Keep
 C104 open for physical verification and retry this platform boundary during the final audit.
 
-## Final audit corrections — in progress, 2026-10-29
+## Final audit corrections — in progress, 2026-10-29–30
 
 W08/W25 text presentation reused JavaScript `trim`, which differs from Kotlin for separator
 controls and the BOM. Learned display/source lines, History presentation reads and artwork seed
@@ -2256,3 +2256,9 @@ token. Their container/content now use the existing secondary-container pair, ma
 `LabelledAction` in `SavedPlacesScreen`. A direct shipped-stylesheet reference check fails before
 and passes after correction. This is a CSS declaration check, not rendered colour/device evidence;
 the existing PL/EN, theme and Saved places browser checklist remains open.
+
+The Settings play-all explanation now says the selected tune plays when Off, rather than promising
+the first tune. Existing actual-WASM cases select a nonzero initial audible tune, and explicit
+tune chips also work with play-all Off. Both WEB languages now describe that behaviour accurately;
+the older Native wording is not treated as an audio rule. Playback logic and Android text are
+unchanged. The final integrated language/page checks will cover the revised translation key.
