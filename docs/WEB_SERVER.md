@@ -70,12 +70,22 @@ The manifest and worker paths work both at `/` and below GitHub Pages' `/Protrac
 
 After the first successful service-worker installation, the interface, decoder engine and bundled
 notices can start offline. Saved playlists and downloaded catalogue indexes remain in IndexedDB.
-Remote music and catalogue downloads still need a connection; pairing needs its running server.
+Fetched music retained in the browser's bounded cache can play offline; complete ASMA is an
+optional permanent download. Uncached music and new catalogue downloads need a connection.
+Retention depends on available browser storage. Pairing still needs its running server.
 
 Every shipped application file contributes to the worker's content hash. Updates install all
 files before becoming eligible to activate, and wait until all player tabs/windows are closed
 so an update cannot replace a playing tab's engine. Reopen the player to use the new version.
 Only this installation's old application caches are removed; music and other apps are unaffected.
+
+Each asset request carries its generated SHA-256 integrity value. A successful HTTP response with
+older or different bytes rejects installation and preserves the previous worker/cache. The same
+check protects network fallback if a cached file is missing. A browser without request-integrity
+support cannot install a new offline shell; it keeps its previous shell, if any, rather than
+accepting unchecked files. Ordinary network hosting remains available. The host checks use the
+actual generated worker and Node Fetch with a local HTTP server; browser installation/update
+acceptance remains a manual check.
 
 `package-web.sh` and `publish-web-pages.sh` generate `web/sw.js`; the local server generates it
 from the current files when requested. For manual static hosting, run

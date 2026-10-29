@@ -27,10 +27,16 @@ export function buildServiceWorker(root) {
     ...filesBelow(root, 'vendor/legal'), ...filesBelow(root, 'vendor/notices'),
   ].sort();
   const hash = crypto.createHash('sha256').update(template);
-  for (const file of files) hash.update(file).update('\0').update(fs.readFileSync(path.join(root, file)));
+  const integrity = {};
+  for (const file of files) {
+    const bytes = fs.readFileSync(path.join(root, file));
+    hash.update(file).update('\0').update(bytes);
+    integrity[file] = 'sha256-' + crypto.createHash('sha256').update(bytes).digest('base64');
+  }
   const revision = hash.digest('hex');
   const source = template.replace('__PWA_REVISION__', JSON.stringify(revision))
-    .replace('__PWA_FILES__', JSON.stringify(files));
+    .replace('__PWA_FILES__', JSON.stringify(files))
+    .replace('__PWA_INTEGRITY__', JSON.stringify(integrity));
   return { source, revision, files };
 }
 

@@ -49,6 +49,10 @@ titles, retained History presentation and artwork seeds. New guards fail before 
 6 learned-title, 16 History storage and 382 artwork checks pass afterward. The same cases pass
 10 Native tests in three suites. Further audit corrections, final full checks and WEB packaging
 are in progress; focused results do not establish readiness of the final integrated candidate.
+PWA install and cache-miss requests now verify generated asset digests, preventing an HTTP-200
+older engine/script from entering the new revision. Generated-worker/real-Fetch checks reproduce
+both gaps before correction and pass afterward, including old-cache preservation and unsupported
+integrity fallback. Actual browser PWA update acceptance remains unchecked.
 
 **W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
 gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native

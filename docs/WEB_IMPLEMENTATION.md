@@ -2191,3 +2191,14 @@ SQLite string codec; an earlier leading-BOM fixture exposed that distinction and
 
 These are focused correction checks, not a replacement for the final integrated gate. The final
 audit, its remaining fixes and package remain in progress; no new candidate is ready for acceptance.
+
+The PWA revision previously labelled a file list without checking delivered bytes. A real Node
+Fetch reproduction against the generated worker installed an HTTP-200 older engine under the new
+revision. Requests now carry generated SHA-256 integrity metadata, both during atomic installation
+and on a cache-miss network fallback. Mismatches delete only the failed candidate cache, preserving
+the previous version. Missing request-integrity support refuses the new offline installation.
+The production-path test fails before each correction and passes afterward for older engine/JS
+responses, matching responses, cache misses, failed updates and unsupported integrity. Existing
+subpath, other-app cache, Range, pairing and remote-request isolation checks still pass. Cache
+Storage is modelled in this host check; Fetch/network/integrity verification is real, not a claim
+about physical-browser rendering or installation. Final integrated verification remains pending.

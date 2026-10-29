@@ -551,5 +551,14 @@ requires every WEB companion to execute; a missing prerequisite is not a complet
 `TrackArtworkParityTest` consumes the declared shared artwork TSV input. No engine rebuild is
 needed for the W25 JavaScript command/acknowledgement additions because the WASM inputs/API stay
 unchanged. Refresh legal/PWA staging after committing, then run the full gate on frozen inputs.
+
+### WEB asset integrity — final audit, 2026-10-29
+
+`stage-web-pwa.mjs` embeds one SHA-256 integrity value per asset in the generated worker. Its
+revision still covers the template, file names and content. Both `Cache.addAll` installation and
+cache-miss Fetch requests use those values; HTTP success alone is insufficient to accept bytes.
+Run `node scripts/check-pwa.mjs` with loopback access: it serves correct and older HTTP-200 assets
+to actual Node Fetch and exercises the generated worker with a Cache Storage adapter. The full
+project gate includes this check. Manual browser installation/update testing remains separate.
 The final package still uses `scripts/package-web.sh`; physical browser routing and background
 checks remain separate from host build/test results.
