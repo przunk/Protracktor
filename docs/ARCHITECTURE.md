@@ -1904,3 +1904,13 @@ object, which neither a URL map nor reference matching alone can identify. Histo
 IDs use the same mapping. Transport-only updates preserve occurrence keys, and existing live
 reorder retains its explicit positional permutation. Playlist edits do not rebuild the manual
 FIFO or issue decoder commands unless the currently playing row itself is removed.
+
+## WEB asset version boundary — 2026-10-30
+
+The generated worker binds its revision to the template and every shipped asset's bytes. It
+also carries per-asset SHA-256 Fetch integrity metadata: installation and cache-miss network
+recovery both require the expected bytes. A mismatch or unsupported integrity rejects only the
+candidate offline cache, retaining the previous worker. No skipWaiting is used during playback.
+Pairing, music, remote requests, Range and other installations' caches remain outside this shell.
+The packager normalizes archive metadata separately from its timestamped/source-labelled filename;
+source SHA/dirty state is shared with staged legal metadata and checked before an artifact is made.

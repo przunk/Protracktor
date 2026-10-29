@@ -2262,3 +2262,91 @@ the first tune. Existing actual-WASM cases select a nonzero initial audible tune
 tune chips also work with play-all Off. Both WEB languages now describe that behaviour accurately;
 the older Native wording is not treated as an audio rule. Playback logic and Android text are
 unchanged. The final integrated language/page checks will cover the revised translation key.
+
+The mandatory plain `node scripts/check-page.mjs` also exposed a verification-adapter regression:
+flattening the learned-title import discarded its new trim alias. The real ESM application path
+was already passing. The compatibility adapter now imports the actual learned-title module,
+preserving its production dependency binding rather than copying that rule. The plain command
+fails with the old adapter and passes all **1367 assertions** after correction; the ESM gate
+adds its independent module-graph assertion. No application source change was needed for this fix.
+
+## Final source/requirements audit — 2026-10-30
+
+The final pass maps each feature/substage commit and its audit corrections back to the current
+production paths, accepted Android contracts/tests and WEB rule/event/storage/PCM checks. It also
+inspects the complete HTML/CSS, live Settings controls, source/download/persistence boundaries
+and package/update path. The per-stage comparisons and pre-fix/controlled-fault evidence above
+remain the detailed records; the table is their integrated requirement index. Historical green
+gates are not substituted for a new gate on the corrected final code.
+
+| Scope | Native comparison | Current WEB evidence and audited invariant |
+| --- | --- | --- |
+| W01 | ActiveQueue, PlaylistSession/TrackEditing | `check-playback-context`, page ownership and real source-switch PCM: independent editor, save barriers and explicit transfer |
+| W02 | PlaybackSchedule/PlaybackPlan, QueueSwipeIntent, ManualQueueReorder | Schedule/effect/gesture/reorder/page Queue cases: FIFO duplicate occurrences, consume-once, anchor Previous, omissions/Undo/Clear and pending-only movement |
+| W03 | QueueSourceNavigationRules/UI | Source-navigation, routes and save event checks: restore the producing view, preserve live data and protect dirty/missing destinations |
+| W04 | RandomHistory, RandomDice | Remembered Random/page dice cases: first entry, inactive return and deliberate accessible reroll preserve playback ownership |
+| W05 | RandomScope/History, RandomScopeSheet | Shared platform data, catalogue/startup/filter events: one scope, curated Favourites, live counts and heard-history boundary |
+| W06 | ListeningSession, HistoryWrites/StoreListened | Listening/worklet/storage/page marks: 5 seconds or natural end, seek/pause exclusions and ordered Clear |
+| W07 | SavedPlaces/Store/UI, LabelledAction | Exact-key catalogue/storage/view/page cases: unavailable-source explanations, Open/Bookmark, one-shot Undo and declared palette |
+| W08 | LearnedTitles, HistoryPresentationReads | Title/store/page cases: presentation-only overlay, original filename/order, duplicate rows, restart/Clear and Kotlin whitespace |
+| W09 | RecentSearches/preferences/UI | Shared TSV, storage and actual query events: 20 retained, 3 prefix matches, exact trim/case and submission ownership |
+| W10 | HistoryFilter/Browser/StoreSearch | Shared cases, full-cursor storage and live page events: literal query, debounce/count/paging, stale reads and no replay reordering |
+| W11 | LibrarySearch/SearchResults/SearchScope | Scope/store/page/source-return cases: held catalogues and saved playlists, caps/order/dedup, refusal and producing query |
+| W12 | TrackEditing, PlaylistTransfer/PlaylistFile | Reorder/transfer/store/page/edit events: live positional moves, Save/Discard, duplicate IDs, M3U8 and explicit unresolved counts |
+| W13 | Browse selection/AddToPlaylist | Selection model/view/page cases: stable geometry, result snapshot/source order, batch Add/Share and Back ownership |
+| W14 | StereoMix/preferences, common native header | Preferences, native-header oracle, actual WASM/worklet/page cases: 100/50/0 width, live changes and raw export |
+| W15 | LoudnessProfiles/Preparation, common DSP/analysis | Shared native DSP, profiles/cache/worker/preparation/PCM bridge: -18 LUFS, caps/peak guard, identities, cancellation and raw export |
+| W16 | DockIdentityLayout/PlayerDock | Actual dock events/CSS structure: reserved Add, separate Tune footer/Queue and no fixed height over large text |
+| W17 | BrowseScroll, SubsongStrip following | Rule/view/page cases: departed-row restoration, fresh History top, watched-region following and stale visit retirement |
+| W18 | PlaylistSession restore/save, PlayQueue | Preference/cold-page/control cases: paused restoration, no startup writes, defaults/refusals and one play-all setter |
+| W19 | PlaybackReadAhead, FolderPrefetch/CacheAhead | Shared byte-owner/folder/page cases: bounded ordered preparation, cancellation and explicit unknown-metering fallback |
+| W20 | RemoteFileCache/CacheBudget, BrowseCache/OnPhone | Cache/store/migration/page cases: 512 MiB ceiling, LRU/protection, actual held marks and session-only handoff bytes |
+| W21 | AsmaArchiveParity/Catalogue | Shared archive cases, production ZIP/storage and page controls: explicit full download, offline bytes, atomic replacement and cross-tab revisions |
+| W22 | DownloadPlan/LibraryDownloads/DownloadPicker | Shared plan, dataset/store/view/page cases: selected steps, real sizes/progress, Stop/retry and retained valid data |
+| W23 | RemoteFilesModland/Catalogue | Request/page cases: relevant 404 only, nested unknown-author fallback, encoding/ID preservation and distinct transport errors |
+| W24 | AppLanguage/AppLocale | Actual ESM/static/dynamic view events: in-place PL/EN, focus/selection/source/position continuity and accessible labels |
+| W25 | PlaybackMediaSession/Presentation, TrackArtwork, service/controller | Policy, shared artwork TSV, actual ESM commands and real PCM: explicit intents, seeks, subsongs, state/metadata ownership and C36 guards |
+
+Check names refer to `scripts/check-*.mjs`; Native references use the production/test locations
+recorded per stage. `test-protracktor.sh --really` executes these companions with the unchanged
+Native production code, its relevant Kotlin/SQLite tests, native audio checks and lint. The
+documented direct page/engine/database/PWA commands are checked separately as needed.
+
+### Deliberate differences and excluded scope
+
+The source audit confirms no Android production, schema-23, release version, AMP/slider, native
+service/B54 or shared DSP-header change. Native build configuration adds test inputs only; WASM
+integration reuses the existing headers. Browser schema 4 upgrades through coordinated 5/6 without
+destructive recreation. Runtime dependency/lock files are unchanged.
+
+The ten exclusions in GOAL remain exclusions: no recursive local library/picker feature, UADE
+process or external replay/UADE-duration port, other-app overlays/native permission/focus machinery,
+custom notification heart/layout, accounts/sync/telemetry, UnExoticA/Mod Archive/AMP catalogue,
+public pairing relay or retained multiple phone handoffs. Existing individual supported links,
+source acknowledgements, original export and self-hosted pairing stay available. No Android C118
+repair, Auto, tutorial, per-subsong playlist, crossfeed, Cast/AirPlay or dependency was added.
+
+The browser uses IndexedDB rather than SQLite, 64 px ordinary dock geometry rather than 60 dp,
+browser-appropriate actions and no wallpaper/haptic emulation. Unknown metering authority pauses
+Wi-Fi-only folder downloads with an explicit Always choice. C92's established pinch/viewport
+locking is retained; large text/desktop zoom remains a manual check. The Native loading-Play,
+paused-subsong state and duplicate-ID inconsistencies are handled as recorded above, rather than
+copied into WEB; its older first-tune help does not override actual selected-tune semantics.
+
+### Final C104 retry
+
+Rechecked on **2026-10-30**: the specification and current Chromium AudioContext/session/MediaStream
+production paths still show the [recorded routing boundary](#w25-platform-boundary-and-c104).
+Declared state/callback support cannot force an OS to route a WebAudio session. A MediaStream
+relay is still not an evidenced fix. No real-browser driver/device is available in this workspace,
+and the original report does not identify a browser build. Supported action implementation and
+host PCM/event proof are complete; physical headset/Bluetooth, notification/lock-screen delivery,
+interruption and background lifetime remain **unverified and potentially unsupported**, with
+ordinary in-page controls as the supported fallback. No skipped implementation scope is hidden
+by this limitation, and C104 is not declared fixed.
+
+The remaining delivery requirements are the **new final frozen complete gate/lint** and the
+**real-engine reproducible archive with contents/API/legal/PWA/source/size/hash evidence**.
+Both are still pending at this audit checkpoint. The
+[consolidated browser trial](WEB_PARITY_CHECKLIST.md) records every physical acceptance item as
+unchecked. Merge, push, gh-pages publication, APK and release remain outside this handoff.

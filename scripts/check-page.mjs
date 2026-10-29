@@ -213,6 +213,7 @@ const playbackSource = fs.readFileSync('web/src/playback-context.js', 'utf8').re
 const scheduleSource = fs.readFileSync('web/src/playback-schedule.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const stepsSource = fs.readFileSync('web/src/playback-steps.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 window.__systemMediaModules = { ...await import('../web/src/system-media.js'), ...await import('../web/src/track-artwork.js') };
+window.__learnedTitleModules = await import('../web/src/learned-titles.js');
 
 const gesturesSource = fs.readFileSync('web/src/row-gestures.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const reorderSource = fs.readFileSync('web/src/row-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
@@ -278,7 +279,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { SearchSuggestions } from './search-suggestions.js';",
     () => `const { SearchSuggestions } = (() => { ${fs.readFileSync('web/src/search-suggestions.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchSuggestions }; })();`)
   .replace("import { learnedDisplay, learnedSourceLine } from './learned-titles.js';",
-    `const { learnedDisplay, learnedSourceLine } = (() => { ${fs.readFileSync('web/src/learned-titles.js', 'utf8').replace(/^export /gm, '')}; return { learnedDisplay, learnedSourceLine }; })();`)
+    'const { learnedDisplay, learnedSourceLine } = window.__learnedTitleModules;')
   .replace("import { SavedPlaces, saveablePlace, savedPlaceId } from './saved-places.js';",
     `const { SavedPlaces, saveablePlace } = (() => { ${savedPlacesSource}; return { SavedPlaces, saveablePlace }; })();`)
   .replace("import { SavedPlacesView } from './saved-places-view.js';",
