@@ -40,10 +40,23 @@ playback context/schedule/current-track/command ownership, checks focus restorat
 EN/PL in place. Existing Random/source-return guards now use Back for their navigation scenario;
 Playlist has separate direct-editor assertions.
 
-The complete project gate/lint is pending at this implementation checkpoint. Host CSS/event
-checks do not establish physical layout, touch feel, keyboard default activation or screen-reader
-behaviour. Browser acceptance and integration remain pending; no Android application source,
-schema, release version, engine or public deployment is changed.
+The complete gate on **`95ec29ae8612756a90e153e9a265044ea90d5d9a`** exits **0**: **1266 Native tests / 173 suites**,
+zero failures/errors/skips, **1242 seconds**, **1368 ESM page assertions**, **43 navigation
+assertions**, **57 engine checks** and every companion. Native unit tests execute; Gradle reports
+9 tasks executed and 22 up to date. All three lint analyses execute: **0 errors / 79 warnings**,
+**151.4 seconds**. All **830** frozen source/package inputs match after verification and packaging.
+
+WEB trial archive: [protracktor-web-95ec29a-20261030-095926-413517787.tar.gz](../dist/protracktor-web-95ec29a-20261030-095926-413517787.tar.gz),
+**1,610,278 bytes**, SHA-256
+`eb6e2d5e237c62df412f469cc995e9434a67ecff2d5b9bfc3d9e65510ae37f1a`.
+The extracted engine/API/PCM, original notices, launcher/HTTP and all **111** PWA asset fetches
+pass host checks. The WASM is unchanged from the previous checked engine; no engine rebuild was
+needed. A later documentation-only commit records these results without relabelling the archive.
+
+Host CSS/event checks do not establish physical layout, touch feel, keyboard default activation
+or screen-reader behaviour. Browser acceptance and integration remain pending; no Android
+application source, schema, release version, engine or public deployment is changed. Navigation
+is the first delivery stage; Windows 11/Firefox Bluetooth evaluation follows publication.
 
 ## Browser trial
 

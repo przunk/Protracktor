@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-30 — WEB parity published on GitHub Pages from d38dcaf and HTTP-verified, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-30 — C125 WEB navigation ready on its task branch; WEB parity published on GitHub Pages from d38dcaf and HTTP-verified, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -44,14 +44,20 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation
 
-**C125 navigation correction in progress, 2026-10-30:** `fix/web-navigation-parity` separates
+**C125 navigation correction ready for browser trial, 2026-10-30:** `fix/web-navigation-parity` separates
 Random Back from Playlist, gives all Browse views an explicit Playlist exit, aligns Queue action
 labels and replaces the duplicate Random dice with one Native-style target. The duplicate was an
 unreflected `.hidden` property on SVG; the guard now checks the actual hidden attribute/display.
 Five new guards fail before correction; **43** focused page assertions, **9** dice cases and the
-**1368** full ESM page assertions pass after correction. Full gate/lint and physical browser
-acceptance remain pending; this branch is unmerged. [Contract and trial](WEB_NAVIGATION_PARITY.md).
-Bluetooth/system controls are the subsequent separate task, targeting Windows 11 + Firefox.
+**1368** full ESM page assertions pass after correction. Complete gate on **95ec29a** exits 0:
+**1266 tests / 173 suites**, zero failures/errors/skips, **1242 seconds**, all companions including
+43 navigation and 57 engine assertions. Native unit tests execute (9 Gradle tasks executed,
+22 up to date). Fresh lint: **0 errors / 79 warnings**, 151.4 seconds; all three analyses execute.
+All **830** frozen inputs match, and the real-engine WEB archive passes API/PCM/legal/HTTP/PWA
+checks. [Archive identity, contract and trial](WEB_NAVIGATION_PARITY.md).
+Physical browser acceptance and integration remain pending. This branch is unmerged; the public
+site still serves d38dcaf. Deliver navigation first, then evaluate Bluetooth/system controls on
+Windows 11 + Firefox after publication.
 
 **Published and checked, 2026-10-30:** [GitHub Pages](https://przunk.github.io/Protracktor/)
 serves source **d38dcaf44dcfd0b3b8ba6a486a8863e6fbc026e9**, deployed by gh-pages commit
