@@ -12,8 +12,17 @@ integrity entries and staged asset bytes match; the rebuilt engine is unchanged.
 build identity and worker revision change. PWA revision:
 `d0642b445d622899263dbffdd9866c97a9160ce658c93d21b4e416c04212d6de`.
 
-**Push, new public deployment and browser acceptance remain pending.** This document records
-local preparation, not live HTTP verification, and does not require another site build.
+**Public files verified — 2026-10-30 17:49 UTC.** The public GitHub API confirms develop
+`ae9adda` and gh-pages `a8111b8`. After initially serving the earlier `d38dcaf` publication,
+[GitHub Pages](https://przunk.github.io/Protracktor/) now serves source `1779419` with clean metadata.
+All **114** served files match the prepared gh-pages commit byte-for-byte. All **111** PWA integrity
+entries, HTTPS status/MIME types, root/`src/` routes and manifest prefix paths pass. The unchanged
+WASM matches the full-gate engine. The public navigation markup contains separate Back/Playlist
+controls and a single Random dice, and the delivered script uses the actual SVG hidden attribute.
+The [automated Pages run](https://github.com/przunk/Protracktor/actions/runs/41100496563) still reports
+`waiting` at the latest API check; these results verify public content, not workflow completion.
+Browser UI/audio, touch/keyboard interaction, real PWA installation/update and physical
+background/headset routing remain unchecked. This documentation-only record needs no site rebuild.
 
 ## Common controls
 
