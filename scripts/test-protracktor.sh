@@ -219,6 +219,7 @@ if [ -d web/node_modules/jsdom ]; then
     run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
     run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
     run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs
+    run_check "WEB navigation parity" navigation-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_NAVIGATION=1 node --experimental-vm-modules scripts/check-page.mjs
     run_check "System media interactions" system-media-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_MEDIA=1 node --experimental-vm-modules scripts/check-page.mjs
     run_check "Playlist occurrence editing" playlist-edit-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_PLAYLIST_EDIT=1 node --experimental-vm-modules scripts/check-page.mjs
     run_check "Web page" page env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs

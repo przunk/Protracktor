@@ -48,8 +48,8 @@ export default async function checkRememberedRandom({ window, check }) {
     && initial.history.playedPicks === record && window.__toWorklet.length === before,
     'Browse → remembered Random reveals the same session without drawing, selecting or sending audio commands');
   check(!$('randomhint').hidden && $('randomhint').textContent === 'Double-tap the dice to reroll the list'
-    && !$('random-dice').hidden && $('sessionicon').hidden, 'the Random view exposes one labelled dice action and the agreed double-tap hint');
-  $('random-leave').click(); await settle();
+    && !$('random-dice').hidden && $('sessionicon').hasAttribute('hidden'), 'the Random view exposes one accessible dice action and the agreed double-tap hint');
+  $('random-back').click(); await settle();
   check(!$('browse').hidden && $('browsetitle').textContent === 'Browse' && window.__toWorklet.length === before,
     'Back from ordinary Random returns one level to Browse without ending the active context');
   api.showPanel(null);
@@ -63,7 +63,7 @@ export default async function checkRememberedRandom({ window, check }) {
     'Random → author playback → playlist → Random leaves the author as the sole playback owner');
   check(api.visibleIndexNow() === -1 && rows().every((row) => !row.matches('.playing,.selected,.loading'))
     && $('sessiontitle').textContent === 'Random', 'an inactive Random record borrows no author highlight or Playing heading');
-  $('random-leave').click(); await settle();
+  $('random-back').click(); await settle();
   check(!$('browse').hidden && $('browsetitle').textContent === 'Browse' && !$('browseclose').hidden
     && $('browsedigression').hidden && window.__toWorklet.length === authorCommands,
     'Back from inactive Random reveals a normal Browse root without an active author detour leaking into navigation');

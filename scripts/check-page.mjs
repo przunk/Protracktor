@@ -419,6 +419,10 @@ if (startupCase) {
   await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
   window.close(); process.exit(failures.length ? 1 : 0);
 }
+if (process.env.PROTRACKTOR_NAVIGATION === '1') {
+  await (await import('./check-page-navigation.mjs')).verify({ window, check });
+  window.close(); process.exit(failures.length ? 1 : 0);
+}
 if (process.env.PROTRACKTOR_PLAYLIST_EDIT === '1') {
   await (await import('./check-page-playlist-edit.mjs')).verify({ window, check });
   window.close(); process.exit(failures.length ? 1 : 0);

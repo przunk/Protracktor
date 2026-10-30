@@ -44,6 +44,15 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation
 
+**C125 navigation correction in progress, 2026-10-30:** `fix/web-navigation-parity` separates
+Random Back from Playlist, gives all Browse views an explicit Playlist exit, aligns Queue action
+labels and replaces the duplicate Random dice with one Native-style target. The duplicate was an
+unreflected `.hidden` property on SVG; the guard now checks the actual hidden attribute/display.
+Five new guards fail before correction; **43** focused page assertions, **9** dice cases and the
+**1368** full ESM page assertions pass after correction. Full gate/lint and physical browser
+acceptance remain pending; this branch is unmerged. [Contract and trial](WEB_NAVIGATION_PARITY.md).
+Bluetooth/system controls are the subsequent separate task, targeting Windows 11 + Firefox.
+
 **Published and checked, 2026-10-30:** [GitHub Pages](https://przunk.github.io/Protracktor/)
 serves source **d38dcaf44dcfd0b3b8ba6a486a8863e6fbc026e9**, deployed by gh-pages commit
 **2fe4e5f9ace68bd384a2689a7f19358af79f0aa6**. Public HTTPS checks confirm all **114** served

@@ -93,7 +93,7 @@ export default async function checkSourceRoutes({ window, check }) {
     && window.__toWorklet.length === beforeRandomCommands && api.scheduleNow().current.manual,
     'Random source return reveals its existing list while retaining a manual occurrence and the session');
   check(window.document.activeElement === $('sessiontitle'), 'Random source navigation leaves keyboard focus on the visible session');
-  $('random-leave').click(); await settle();
+  $('random-back').click(); await settle();
   check(!$('browse').hidden && $('browsetitle').textContent === 'Browse'
     && window.__toWorklet.length === beforeRandomCommands,
     'Back from a returned Random source goes to Browse root without stopping playback');
