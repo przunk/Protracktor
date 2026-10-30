@@ -178,6 +178,7 @@ export const PL = {
   "Channels": "Kanały",
   "Clear the history": "Wyczyść historię",
   "Close": "Zamknij",
+  "Clear queue": "Wyczyść kolejkę",
   "Composer": "Kompozytor",
   "Copy a link": "Skopiuj link",
   "could not fetch it: {reason}": "nie udało się pobrać: {reason}",
