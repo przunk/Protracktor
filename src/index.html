@@ -212,12 +212,18 @@
   .randomhead .text { flex: 1; min-width: 0; }
   .randomhead .title { font-size: var(--title-medium); font-weight: 500; }
   .randomhead .meta { font-size: var(--body-small); color: var(--on-surface-variant); }
-  .randomfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 16px 10px;
-                  font-size: var(--body-small); color: var(--on-surface-variant); }
-  .randomfilter .chip { border: 1px solid var(--outline); border-radius: 8px; padding: 4px 12px;
-                        font-size: var(--body-medium); color: var(--on-surface); }
-  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
-                           border-color: transparent; }
+  .randomfilter { padding: 0 16px 10px; font-size: var(--body-small); color: var(--on-surface-variant); }
+  .randomchips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .randomfilter .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+    padding: 4px 12px; border: 1px solid var(--outline); border-radius: 8px; background: transparent;
+    font: inherit; color: var(--on-surface); cursor: pointer; }
+  .randomfilter .chip svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
+  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .randomfilter .chip:disabled { opacity: .45; cursor: default; }
+  .random-filter-explanation { display: flex; align-items: center; gap: 12px; }
+  .random-filter-explanation p { flex: 1; margin: 8px 0 0; }
+  #random-dice { touch-action: manipulation; flex: none; }
+  #randomhint { padding: 0 16px; margin: 0 0 10px; }
   #randomnote { padding: 0 16px; }
   .emptystate { padding: 40px 24px; text-align: center; }
   .emptystate .sheetbuttons { justify-content: center; }
@@ -271,6 +277,16 @@
     text-align: right;
   }
   li.track .text { min-width: 0; flex: 1; }
+  .track-leading, li.track .n.track-leading {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 0 0 28px; min-width: 28px; height: 40px; gap: 2px;
+  }
+  .leading-primary { min-height: 24px; line-height: 24px; }
+  .leading-primary svg { width: 18px; height: 18px; fill: currentColor; vertical-align: middle; }
+  .played-before { height: 12px; line-height: 12px; font-size: 12px; color: var(--on-surface-variant); }
+  .track-leading::after { content: ''; height: 12px; }
+  .track-leading:has(.played-before:not([hidden]))::after { display: none; }
+  #np-played { color: var(--on-surface-variant); font-size: var(--body-small); }
   li.track .title {
     font-size: var(--title-medium);
     font-weight: 500;
@@ -402,25 +418,24 @@
     margin: 4px 12px 0;
     background: var(--surface-container);
     border-radius: var(--shape-l);
-    /* A height of its own rather than its tallest child's, so the keep button appearing does not
-       make the dock grow (`docs/STATUS.md` C54, met on the phone first). */
-    height: 64px;
-    padding: 0 18px;
-    display: flex; align-items: center; gap: 12px;
+    min-height: 64px;
+    padding: 0 12px 8px;
     cursor: pointer;
   }
-  .nowcard .text { min-width: 0; flex: 1; }
-  /* **A height of its own, not its tallest child's.** The keep button is taller than the chevron
-     beside it, so without this the dock grew wherever keeping was offered — which on the phone was
-     a visibly taller dock in Random than over the playlist (`docs/STATUS.md` C54). */
-  .nowkeep { flex: none; display: flex; align-items: center; justify-content: center;
-             width: 40px; height: 40px; margin-right: 4px; padding: 0;
+  /* Counter width and Add visibility cannot change the title row or the Add target (C112). */
+  .nowhead { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: end; min-height: 32px; }
+  .nowkeep-slot { width: 48px; height: 32px; }
+  .nowfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; min-height: 24px; }
+  .nowkeep { display: flex; align-items: flex-end; justify-content: center;
+             width: 48px; height: 32px; padding: 0;
              background: none; border: 0; border-radius: 50%; color: var(--on-surface-variant);
              cursor: pointer; }
   .nowkeep:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   .nowkeep svg { width: 22px; height: 22px; fill: currentColor; }
-  .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .title { min-width: 0; font-size: var(--title-medium); line-height: 1.5; font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .meta { flex: 1 1 64px; min-width: 64px; font-size: var(--body-medium); line-height: 1.5; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dock-tune { flex: none; font-size: var(--label-small); line-height: 1.5; color: var(--on-surface-variant); white-space: nowrap; }
+  .nowcard:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   /* A line that does not fit and is moving (A54, `fitLine`): no `…` while the whole of it passes. */
   .nowcard .scrolling { text-overflow: clip; }
   .nowcard .run { display: inline-block; }
@@ -614,12 +629,32 @@
   .np-message pre { margin: 0; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
                     white-space: pre; overflow-x: auto; }
   /* Browsing: one list, four levels, and a head that says where you are. */
-  #browsesearch {
-    width: 100%; box-sizing: border-box; margin: 6px 0 8px;
+  #browsesearch, #historysearch {
+    width: 100%; box-sizing: border-box; margin: 0; min-height: 48px;
     background: var(--surface-container); color: var(--on-surface);
     border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
-    padding: 10px 16px; font: inherit;
+    padding: 10px 56px 10px 16px; font: inherit;
   }
+  .search-scope-tiles { display: flex; gap: 8px; margin-bottom: 8px; }
+  .search-scope-tiles .chip { flex: 1; min-width: 0; justify-content: center; white-space: normal; }
+  .search-scope-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 8px; }
+  #search-scopes .chip.on { outline: 2px solid var(--primary); font-weight: 700; }
+  #search-scopes .note { margin: 4px 0 8px; }
+  .history-query { margin: 6px 0 8px; }
+  #historysearch { padding-right: 16px; }
+  .search-query { position: relative; margin: 6px 0 8px; }
+  .search-submit { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 48px;
+    border: 0; background: none; color: var(--on-surface); border-radius: var(--shape-xl);
+    display: grid; place-items: center; cursor: pointer; }
+  .search-submit svg { width: 24px; height: 24px; fill: currentColor; }
+  .search-suggestions { position: absolute; z-index: 5; top: 100%; left: 0; right: 0;
+    margin: 2px 0 0; padding: 4px 0; list-style: none; border-radius: 12px; overflow-y: auto; box-sizing: border-box;
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); box-shadow: 0 4px 12px #0003; }
+  .search-suggestions li { padding: 12px 16px; min-height: 24px; cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-suggestions li:hover, .search-suggestions li[aria-selected="true"] {
+    background: var(--secondary-container); color: var(--on-secondary-container); }
   .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -645,6 +680,23 @@
   /* A tune: its name over where it lives, then what can be done with it without playing it. */
   #browselist li.btrack { padding: 6px 4px 6px 12px; min-height: 48px; }
   #browselist .btext { flex: 1; min-width: 0; }
+  .saved-folder-header, .saved-place-tools { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .saved-heading { flex: 1; min-width: 0; }
+  .saved-heading > div { overflow: hidden; text-overflow: ellipsis; }
+  .saved-heading small { display: block; }
+  .saved-place-tools { justify-content: flex-end; }
+  .saved-action { display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; min-width: 64px; min-height: 52px; padding: 4px 8px; border: 0; border-radius: 12px;
+    background: var(--secondary-container); color: var(--on-secondary-container); font: inherit;
+    font-size: var(--label-small); cursor: pointer; }
+  .saved-action svg { width: 24px; height: 24px; fill: currentColor; }
+  .saved-action:disabled { opacity: .5; cursor: default; }
+  #browselist li.saved-place { display: block; padding: 12px; cursor: default; }
+  #browselist li.saved-place:hover { background: none; }
+  .saved-place-line { display: flex; align-items: center; gap: 8px; }
+  #browselist .saved-place .bname, #browselist .saved-place .bmeta { white-space: normal; overflow-wrap: anywhere; }
+  .saved-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: max-content; flex: none; gap: 4px; }
+  .saved-reason { color: var(--on-surface-variant); margin: 8px 0; }
   #browselist .bmeta { color: var(--on-surface-variant); font-size: var(--body-small);
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #browselist .badd { display: inline-flex; align-items: center; gap: 4px; flex: none;
@@ -714,6 +766,24 @@
   /* Two ways to a new playlist, equal -- the phone's pair of outlined buttons. Side by side where they
      fit, one above the other where they do not: on a phone "Save this queue as…" ran out of its own
      outline and off the sheet (owner, 2026-09-11). */
+  #download-data-offer { margin: 10px 16px; }
+  #downloads .sheet { display: flex; flex-direction: column; overflow: hidden; }
+  #download-picker-body { display: flex; flex-direction: column; min-height: 0; }
+  .download-choices { border: 0; padding: 0; margin: 0; min-height: 0; overflow-y: auto; }
+  .download-choices legend { margin: 10px 0; }
+  .download-choice { display: grid; grid-template-columns: auto minmax(0, 1fr) 24px;
+                     gap: 12px; align-items: center; padding: 12px 0; min-height: 56px; }
+  .download-choice input { accent-color: var(--primary); width: 20px; height: 20px; }
+  .download-choice-text { min-width: 0; }
+  .download-choice-text > * { display: block; overflow-wrap: anywhere; }
+  .download-choice-text .storage { margin-top: 4px; }
+  .download-choice-text > .storage:last-child { min-height: 1.4em; }
+  .download-choice-progress { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .download-actions { display: flex; flex-direction: column; align-items: center; gap: 8px;
+                      padding: 12px 0 16px; flex-shrink: 0; }
+  .download-actions .outlined { flex: none; width: 55%; min-width: min(12rem, 100%); max-width: 100%;
+                                box-sizing: border-box; white-space: normal; }
+  .download-actions .outlined > span { min-width: 0; overflow-wrap: anywhere; }
   .sheetbuttons { display: flex; flex-wrap: wrap; gap: 8px; }
   .outlined { flex: 1 1 14em; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
               background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
@@ -761,33 +831,92 @@
   .toggle[aria-checked="true"] {
     background: var(--secondary-container); color: var(--on-surface); border-color: var(--secondary-container);
   }
-  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .subsongs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin-top: 10px; scroll-behavior: auto; }
   .subsong {
     background: var(--surface-container); color: var(--on-surface);
-    border: 1px solid var(--surface-variant); border-radius: var(--shape-s);
-    min-width: 40px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--surface-variant); border-radius: 50%;
+    flex: none; width: 36px; height: 36px; padding: 0; font: inherit; font-size: 13px; cursor: pointer;
     font-variant-numeric: tabular-nums;
   }
   .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
-  /* **`hidden` wins, everywhere, and it is last on purpose.** The page used to restore it element
-     by element -- `.panel[hidden]`, `.overlay[hidden]` and so on, each beside a `display` of its
-     own. Round 8's Random heading (`display: flex`) got no such line and showed over every panel
-     whether or not Random was running (`docs/STATUS.md` C38). `!important` is what wins in a
-     browser; standing last is what wins in jsdom, whose cascade takes the last matching rule and
-     does not read `!important` -- so here both agree, and the page check can see what a browser
-     would show. */
-  [hidden] { display: none !important; }
-
     /* The settings sheet's one interactive row. Full width so the slider is easy to hit on a
        phone, which is where this page is most often read. */
     .setting { margin: 18px 0 4px; }
     .setting > label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .setting > .setting-toggle { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
+    .setting-toggle input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; flex: none; }
     .setting > output { display: block; margin: 10px 0 2px; font-variant-numeric: tabular-nums; }
     .setting.choice { border: 0; padding: 0; min-width: 0; }
     .setting.choice > legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
     .setting.choice > label { display: inline-flex; align-items: center; gap: 6px; margin: 6px 16px 0 0; min-height: 32px; }
     .setting.choice input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; }
     .setting > input[type=range] { width: 100%; }
+  .stereo-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .stereo-option { position: relative; display: flex; flex: 1 1 80px; flex-direction: column;
+    align-items: center; gap: 4px; min-height: 48px; padding: 8px; box-sizing: border-box;
+    border: 1px solid var(--surface-variant); border-radius: 12px; cursor: pointer;
+    background: var(--surface-container); color: var(--on-surface); }
+  .stereo-option input { position: absolute; top: 8px; left: 8px; }
+  .stereo-option svg { width: 24px; height: 24px; fill: currentColor; }
+  .stereo-option:has(input:checked) { background: var(--secondary-container); border-color: var(--on-surface); }
+  .stereo-option:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+  /* The Queue replaces list content while the shared dock remains available. */
+  .playbackview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .playbackview[hidden] { display: none; }
+  .queue-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .queue-head .text { flex: 1; min-width: 0; }
+  .queue-head h2 { margin: 0; font-size: var(--title-medium); }
+  .queue-head .meta { color: var(--on-surface-variant); font-size: var(--body-small); overflow-wrap: anywhere; }
+  .queue-head .action { min-width: 48px; padding: 6px; }
+  #playback-list { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-x: hidden; }
+  #queue-instructions, #queue-repeat-note, #queue-empty { padding: 0 18px; }
+  .dock-summary { display: flex; gap: 6px; margin: 4px 12px 0; min-height: 64px; }
+  .dock-summary .nowcard { flex: 1; min-width: 0; margin: 0; }
+  .dock-summary > .action { flex: none; align-self: center; min-width: 48px; }
+  /* pan-y must be set before pointerdown; changing it after intent locks is too late. */
+  li.swipe-row, #browselist li.swipe-row { position: relative; display: block; padding: 0; overflow: hidden; touch-action: pan-y; }
+  .swipe-surface { position: relative; display: flex; align-items: center; gap: 14px; padding: 13px 18px;
+    background: var(--bg); transition: transform 160ms ease-out; }
+  #browselist .swipe-surface { gap: 10px; padding: 6px 4px 6px 12px; min-height: 48px; }
+  .swiping > .swipe-surface { transition: none; }
+  .swipe-row:hover > .swipe-surface { background: color-mix(in srgb, var(--on-surface) 7%, var(--bg)); }
+  .swipe-row.playing > .swipe-surface { background: color-mix(in srgb, var(--primary) 16%, var(--bg)); }
+  .swipe-row.selected > .swipe-surface { background: color-mix(in srgb, var(--primary) 9%, var(--bg)); }
+  .swipe-row.ticked > .swipe-surface { background: color-mix(in srgb, var(--primary) 10%, var(--bg)); }
+  .swipe-row.loading > .swipe-surface { background: color-mix(in srgb, var(--primary) 8%, var(--bg)); }
+  .swipe-reveal { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 18px; color: white; font-size: var(--label-small); font-weight: 600; }
+  .swipe-reveal.add { background: #23643D; }
+  .swipe-reveal.remove { background: #A52332; justify-content: flex-end; }
+  .swipe-reveal[hidden] { display: none; }
+  .swipe-reveal svg, .queue-origin svg, .queue-grip svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+  .queue-origin { display: flex; gap: 2px; color: var(--on-surface-variant); width: 24px; flex: none; }
+  .queue-origin svg { width: 16px; height: 16px; }
+  .queue-origin svg + svg { width: 12px; margin-left: -6px; align-self: end; }
+  .queue-track.inserted > .swipe-surface { padding-left: 34px; }
+  .queue-track.playing .title { font-weight: 700; }
+  .track.dragging { position: relative; z-index: 3; box-shadow: 0 4px 12px #0006; }
+  .track.reorder-preview { transition: transform 160ms ease-out; }
+  .queue-grip { display: flex; flex-direction: column; align-items: center; border: 0; background: none;
+    color: var(--on-surface-variant); padding: 6px; min-width: 48px; font: inherit;
+    font-size: var(--label-small); cursor: grab; touch-action: none; flex: none; }
+  .queue-grip:active { cursor: grabbing; }
+  li.track .text:focus-visible, #playlistlist .pname:focus-visible, .queue-grip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .swipe-surface, .track.reorder-preview { transition: none; } }
+  .browse-selection-head { display: flex; align-items: center; justify-content: space-between; flex: none;
+    height: 48px; padding: 0 16px; gap: 8px; }
+  .browse-selection-head > span { font-size: var(--label-large); }
+  .browse-selection-head .action { padding: 3px 8px; }
+  #browselist .btrack .track-leading { width: 40px; height: 40px; min-height: 40px; justify-content: center; }
+  #browselist .btrack .track-leading:has(input)::after { display: none; }
+  #browselist .btrack.ticked > .swipe-surface { background: color-mix(in srgb, var(--primary) 10%, var(--bg)); }
+  #browselist .btext:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  #selectbar { flex-wrap: wrap; }
+  .queue-source { display: flex; align-items: center; gap: 4px; max-width: 100%; color: inherit; background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer; }
+  .queue-source span { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .queue-source svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
+  /* Last as well as important: the host DOM cascade and browsers both hide every hidden panel. */
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -833,12 +962,16 @@
       playlist -- so every row keeps the actions and the marking every other row has.
     -->
     <div id="randomhead" class="randomhead" hidden>
+      <button id="random-dice" class="action" aria-label="Start a new Random list" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2v14h14V5H5zm3 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>
+        New list
+      </button>
       <svg viewBox="0 0 24 24" id="sessionicon"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
       <div class="text">
-        <div class="title" id="sessiontitle">Playing at random</div>
+        <div class="title" id="sessiontitle" tabindex="-1">Playing at random</div>
         <div class="meta" id="randomscope">Everything</div>
       </div>
-      <button class="action" id="random-filter">
+      <button class="action" id="random-filter" aria-expanded="false" aria-controls="randomfilter">
         <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zM6 11h12v2H6zM10 16h4v2h-4z"/></svg>
         Filter
       </button>
@@ -847,11 +980,8 @@
         Playlist
       </button>
     </div>
-    <div id="randomfilter" class="randomfilter" hidden>
-      <span class="chip on">Everything</span>
-      <span class="meta">The phone can narrow this to one machine or to Modland's favourites. The browser
-        picks from everything it can play, for now.</span>
-    </div>
+    <p id="randomhint" class="note" hidden>Double-tap the dice to reroll the list</p>
+    <div id="randomfilter" class="randomfilter" hidden></div>
     <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
     <!--
@@ -877,13 +1007,31 @@
   <section id="browse" class="browseview" hidden>
     <div class="browsehead">
       <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
-      <h2 id="browsetitle">Browse</h2>
+      <h2 id="browsetitle" tabindex="-1">Browse</h2>
       <button class="plain" id="browseclose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
     </div>
     <!-- Whose folder this is, while the dice waits under it: the session heading, in this screen. -->
     <div id="browsedigression" class="randomhead digression" hidden></div>
-    <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
-    <p class="note" id="browsenote"></p>
+    <div id="browsequery" class="search-query" hidden>
+      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+      <button type="button" id="browsesubmit" class="search-submit" aria-label="Search"></button>
+      <ul id="search-suggestions" class="search-suggestions" hidden></ul>
+    </div>
+    <div id="search-scopes" hidden></div>
+    <div id="historyquery" class="history-query" hidden>
+      <input type="search" id="historysearch" placeholder="Search History" aria-label="Search History" aria-controls="browselist" autocomplete="off">
+    </div>
+    <p class="note" id="browsenote" aria-live="polite"></p>
+    <p class="note" id="folder-prefetch-note" role="status" hidden></p>
+    <div class="sheetbuttons" id="download-data-offer" hidden>
+      <button class="outlined" id="choose-downloads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Downloads</button>
+    </div>
+    <div id="browse-selection-head" class="browse-selection-head" hidden>
+      <span id="browse-selection-count" aria-live="polite"></span>
+      <button class="action" id="browse-select-all" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 7 3 3 7-7 1.4 1.4L10 17l-4.4-4.4L7 12z"/></svg><span>Select all</span></button>
+    </div>
+    <div id="saved-place-header" class="saved-folder-header" hidden></div>
+    <div id="saved-place-tools" class="saved-place-tools" hidden></div>
     <!-- History a hundred at a time, and the way on outside the list's scroll (the phone's pager). -->
     <div id="historypager" class="historypager" hidden>
       <button class="plain" id="history-newer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>Newer</button>
@@ -891,6 +1039,19 @@
       <button class="plain" id="history-older">Older<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
     </div>
     <ol id="browselist"></ol>
+  </section>
+
+  <section id="playback-panel" class="playbackview" aria-labelledby="queue-title" hidden>
+    <div class="queue-head">
+      <div class="text"><h2 id="queue-title" tabindex="-1">Queue</h2><div class="meta"><button id="queue-source" class="queue-source"><span id="playback-source"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-1.4 1.4L13.2 12l-5.6 5.6L9 19l7-7-7-7z"/></svg></button><span id="queue-source-plain" hidden></span></div></div>
+      <button class="action" id="queue-clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6zm2 4h14v2H5v-2zm2 4h10v2H7v-2zm2 4h6v2H9v-2z"/></svg>Clear</button>
+      <button class="action" id="queue-help" aria-expanded="false" aria-controls="queue-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm1.2-6.2-1.1 1c-.8.7-1.1 1.2-1.1 2.2h-2c0-1.5.5-2.3 1.5-3.2l1.4-1.2c.5-.4.7-.8.7-1.3a1.6 1.6 0 0 0-3.2 0h-2a3.6 3.6 0 0 1 7.2 0c0 1-.5 1.8-1.4 2.5z"/></svg>Help</button>
+      <button class="action" id="queue-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+    </div>
+    <p id="queue-instructions" class="note" hidden>Tap to play. Hold for Information. Swipe right to add, left to remove. Drag a Reorder handle, or focus it and use the arrow keys. Right-click a row for all actions.</p>
+    <p id="queue-repeat-note" class="note" hidden>Repeat one is on. Next still plays the next queued track.</p>
+    <p id="queue-empty" class="note" hidden>No tracks in the queue. Add tracks from any list.</p>
+    <ol id="playback-list" aria-label="Queue"></ol>
   </section>
 
   <footer>
@@ -923,6 +1084,7 @@
           <span>Share</span>
         </button>
       </div>
+      <p id="np-played" hidden></p>
       <dl id="fields"></dl>
       <!-- The module's message: where the scene put its greetings, and half the reason these files are kept. -->
       <div id="np-message" class="np-message" hidden>
@@ -956,6 +1118,7 @@
     <!-- What you can do with what you ticked -- the phone's selection bar, icon and name each. -->
     <div id="selectbar" class="selectbar" hidden>
       <span id="selectcount"></span>
+      <button class="action" id="sel-add-current" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>Add</span></button>
       <button class="action" id="sel-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>Add to playlist</button>
       <button class="action" id="sel-share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z"/></svg>Share with Protracktor</button>
       <button class="action" id="sel-delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Delete</button>
@@ -982,20 +1145,22 @@
       <span id="remaining">0:00</span>
     </div>
 
-    <div class="nowcard" id="nowcard">
-      <div class="text">
+    <div class="dock-summary">
+    <div class="nowcard" id="nowcard" role="button" tabindex="0" aria-label="Now Playing" aria-controls="nowplaying" aria-expanded="false">
+      <div class="nowhead">
         <div class="title" id="title">Nothing playing</div>
-        <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
+        <div class="nowkeep-slot">
+          <button class="nowkeep" id="nowkeep" title="Add this tune to the playlist" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+        </div>
       </div>
-      <!--
-        Keeping what is playing, for anything that is not the playlist: a random pick, a Browse
-        result, a tune sent by link. The phone has it in the same place and for the same reason —
-        the decision comes after hearing it (`keepTransient`).
-      -->
-      <button class="nowkeep" id="nowkeep" title="Add this tune to the playlist" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      </button>
-      <svg viewBox="0 0 24 24" id="expand"><path d="m7.4 15.4-1.4-1.4 6-6 6 6-1.4 1.4-4.6-4.6z"/></svg>
+      <div class="nowfoot">
+        <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
+        <div id="dock-tune" hidden></div>
+      </div>
+    </div>
+    <button class="action" id="showqueue" aria-pressed="false" aria-controls="playback-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h14v2H3V5zm0 4h14v2H3V9zm0 4h8v2H3v-2zm12-1v8l6-4-6-4z"/></svg>Queue</button>
     </div>
 
     <div class="transport">
@@ -1069,8 +1234,10 @@
       <ol id="playlistlist"></ol>
       <div class="sheetbuttons">
         <button class="outlined" id="newlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+        <button class="outlined" id="playlist-import"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Import</button>
         <button class="outlined" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
       </div>
+      <input type="file" id="playlist-file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" aria-label="Import playlist" hidden>
       <p class="storage" id="storageline"></p>
     </div>
   </div>
@@ -1088,13 +1255,40 @@
       </div>
       <dl id="settingsfields"></dl>
 
-      <!--
-        The app's two choices (docs/PLAN_WEB_PARITY.md W6, W7), in the app's words. A new language
-        reloads the page; a new theme does not.
-      -->
+      <div class="setting">
+        <label class="setting-toggle" for="settings-allsubsongs"><input id="settings-allsubsongs" type="checkbox"> Play every tune in a file</label>
+        <p class="storage">Some files hold dozens of tunes. Off, only the selected tune plays before the playlist moves on.</p>
+      </div>
+
+      <fieldset class="setting choice" aria-describedby="stereo-help">
+        <legend>Stereo mix</legend>
+        <p class="storage" id="stereo-help">Original keeps the source stereo. Narrow brings the channels closer (50% width). Mono plays the same channel mix in both ears. Applies immediately to playback, not shared audio.</p>
+        <div class="stereo-options">
+          <label class="stereo-option"><input type="radio" name="stereomix" value="original"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5H8V19H3Z M16 5H21V19H16Z"/></svg><span>Original</span></label>
+          <label class="stereo-option"><input type="radio" name="stereomix" value="narrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5H11V19H6Z M13 5H18V19H13Z"/></svg><span>Narrow</span></label>
+          <label class="stereo-option"><input type="radio" name="stereomix" value="mono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5H16V19H8Z"/></svg><span>Mono</span></label>
+        </div>
+        <p class="storage" id="stereo-current" aria-live="polite"></p>
+      </fieldset>
+
+      <div class="setting">
+        <label class="setting-toggle" for="settings-normalization"><input id="settings-normalization" type="checkbox" aria-describedby="normalization-help"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9H8V15H4Z M10 5H14V19H10Z M16 8H20V16H16Z"/></svg><span>Volume normalization</span></label>
+        <p class="storage" id="normalization-help">Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.</p>
+      </div>
+
+      <fieldset class="setting choice">
+        <legend>Cache folders ahead</legend>
+        <p class="storage">When you open a Modland author's folder, its tracks are downloaded in the background, three at a time and up to 100 MB per folder, so they play without waiting.</p>
+        <label><input type="radio" name="cacheahead" value="wifi"> Wi-Fi only</label>
+        <label><input type="radio" name="cacheahead" value="always"> Always</label>
+        <label><input type="radio" name="cacheahead" value="off"> Off</label>
+        <p class="storage">This browser cannot check network data limits. Wi-Fi only pauses folder downloads; choose Always to enable them. The next tracks in your playback list are still prepared automatically.</p>
+      </fieldset>
+
+      <!-- Language and theme retain the live player. -->
       <fieldset class="setting choice">
         <legend>Language</legend>
-        <p class="storage">Changing it reloads the page; what is playing stops.</p>
+        <p class="storage">Interface text changes without interrupting playback.</p>
         <label><input type="radio" name="language" value="system"> System</label>
         <label><input type="radio" name="language" value="en"> English</label>
         <label><input type="radio" name="language" value="pl"> Polski</label>
@@ -1222,6 +1416,16 @@
         somebody you trust, runs.</p>
       <div class="sheetbuttons"><button class="outlined" id="pair-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Privacy policy</button></div>
       <button class="text-button" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="downloads" hidden role="dialog" aria-modal="true" aria-labelledby="downloads-title">
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2 id="downloads-title">Downloads</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <div id="download-picker-body"></div>
     </div>
   </div>
 

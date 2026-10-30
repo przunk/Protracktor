@@ -13,6 +13,8 @@
 // machine, and a translation would be a guess at what it meant.
 
 import { PL } from './i18n-pl.js';
+import { uiMessage, isUiMessage, joinUiText } from './ui-message.js';
+import { setUiText, setUiAttribute, refreshUiText } from './ui-text.js';
 
 const TABLES = { pl: PL };
 
@@ -53,6 +55,17 @@ export function t(text, vars) {
   return fill(typeof found === 'string' ? found : text, vars);
 }
 
+/** Preserve an action's arguments while resolving its presentation language only when drawn. */
+export function message(text, vars) {
+  const snapshot = vars ? snapshotArguments(vars) : undefined;
+  return uiMessage(() => t(text, snapshot));
+}
+
+function snapshotArguments(vars) {
+  return Object.freeze(Object.fromEntries(Object.entries(vars)
+    .map(([key, value]) => [key, isUiMessage(value) ? value : String(value)])));
+}
+
 /**
  * A count with its noun: [one] or [other] in English, and the Polish table's three forms --
  * `1 utwór`, `2 utwory`, `5 utworów` -- under [other]'s key. `{n}` is the count.
@@ -68,32 +81,38 @@ export function tn(n, one, other, vars = {}) {
   return fill(n === 1 ? one : other, all);
 }
 
+export function pluralMessage(n, one, other, vars = {}) {
+  const snapshot = snapshotArguments(vars);
+  return uiMessage(() => tn(n, one, other, snapshot));
+}
+
 /**
- * Translates the page's own markup once, before anything is drawn over it: every text that is a key
- * of the table, and the three attributes a person reads -- `aria-label`, `placeholder`, `title`.
- * Text is matched with its white space folded, as `index.html` wraps long sentences over lines.
+ * Capture original markup once, then refresh only explicit UI bindings in that root.
+ * Keys fold whitespace because index.html wraps long sentences over lines.
  */
+const staticRoots = new WeakSet();
 export function translateStatic(root) {
-  const table = TABLES[current];
-  if (!table) return;
-  const walker = root.ownerDocument.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const tag = node.parentElement?.tagName;
-    if (tag === 'SCRIPT' || tag === 'STYLE') continue;
-    const key = node.textContent.replace(/\s+/g, ' ').trim();
-    const found = key && table[key];
-    if (typeof found === 'string') {
-      const lead = node.textContent.match(/^\s*/)[0];
-      const tail = node.textContent.match(/\s*$/)[0];
-      node.textContent = lead + found + tail;
+  if (!staticRoots.has(root)) {
+    // Capture the original markup even in English; later user data has no translation ownership.
+    const walker = root.ownerDocument.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const tag = node.parentElement?.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE') continue;
+      const key = node.textContent.replace(/\s+/g, ' ').trim();
+      if (typeof PL[key] === 'string') {
+        const lead = node.textContent.match(/^\s*/)[0], tail = node.textContent.match(/\s*$/)[0];
+        setUiText(node, joinUiText(lead, message(key), tail));
+      }
     }
-  }
-  for (const el of root.querySelectorAll('[aria-label], [placeholder], [title]')) {
-    for (const name of ['aria-label', 'placeholder', 'title']) {
-      const found = el.hasAttribute(name) && table[el.getAttribute(name)];
-      if (typeof found === 'string') el.setAttribute(name, found);
+    for (const el of root.querySelectorAll('[aria-label], [placeholder], [title]')) {
+      for (const name of ['aria-label', 'placeholder', 'title']) {
+        const key = el.getAttribute(name);
+        if (key !== null && typeof PL[key] === 'string') setUiAttribute(el, name, message(key));
+      }
     }
+    staticRoots.add(root);
   }
+  refreshUiText(root);
 }
 
 /** Every text `translateStatic` would look for in [root]: for the check that none is missing. */
