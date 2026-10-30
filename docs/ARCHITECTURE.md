@@ -1,5 +1,255 @@
 # Architecture
 
+## WEB library download lifetimes — branch candidate, 2026-10-29
+
+LibraryDownloads is the common owner for the approved five-step plan, step locks, immutable
+progress and the selected operation's AbortController. Individual actions use the same providers.
+An already-running independent step is observed without borrowing its cancellation authority;
+completion is reconciled only into the run that requested it. Retry retains successful rows and
+restarts failed/pending ones. Stopping does not undo a completed atomic publication.
+
+DownloadPickerView retains its controls across progress and live language changes. Closing the
+overlay or pressing Escape returns to the original view/opener and ends presentation only.
+Tab/Shift-Tab are scoped to the actual dialog, including Close. Source/FIFO/editor and the audio host have
+independent lifetimes. dataset-download captures a previous installation before network/parse
+work and publishes rows plus metadata through catalogue.replacePrefix's guarded transaction.
+Quota/cancellation cannot leave an empty or partially replaced dataset. Explicit index downloads
+wait for earlier local compatibility work before capturing their guard; that work remains shared
+when one waiting download is cancelled.
+
+The approved WEB plan contains Modland/favourites, complete ASMA, HVSC durations and songdb
+credits only. Its 47 MiB estimate omits excluded songdb/UADE durations. WEB uses the temporarily
+permitted canonical HVSC website file because native's byte-identical DeepSID copy lacks CORS.
+No proxy, schema or dependency is added. [Sources, parity and verification](WEB_IMPLEMENTATION.md#w22--selected-library-downloads-2026-10-29).
+
+## WEB speculative music ownership — branch candidate, 2026-10-29
+
+PlaybackReadAhead owns completed, consume-on-open RAM buffers (4 MiB/file, 8 MiB total).
+PlaybackController's native candidate rule is represented once by readAheadCandidates: distinct
+pending manual FIFO, then source successors, at most three files. The app selects successors;
+the model owns eviction, cancellation and publication generations. RemoteMusic owns shared
+network work and retained bytes; retiring a speculative waiter cannot cancel an independent
+foreground load. Random has no second byte cache. A weak memo of the next shuffled PlayOrder
+lap lets prediction and actual Next share a permutation without mutating historical state.
+
+FolderPrefetch owns a loaded Modland author-folder snapshot and its ordered three-worker,
+100 MiB plan. Cached files do not spend that plan. Policy is rechecked before each start;
+replacement rejects late progress and cancels waiters. Existing row slots show progress without
+recreating the list. Queue overlays retain the underlying Browse lifetime; leaving Browse ends it.
+
+CacheAheadPreferences persists only explicit Wi-Fi only / Always / Off changes. That choice gates
+bulk folder work, not the next files of playback already selected. Android uses unmetered status;
+the [browser specification](https://wicg.github.io/netinfo/) supplies no equivalent authority.
+The adapter therefore reports unknown: Wi-Fi only visibly pauses folder work, Always opts in.
+Physical bearer names or throughput classes never silently authorize data spending. Startup does
+not fetch speculative music or write defaults. [Reference and checks](WEB_IMPLEMENTATION.md#w19--shared-playback-read-ahead-and-folder-policy-2026-10-29).
+
+## WEB playback preferences — branch candidate, 2026-10-28
+
+`PlaybackPreferences` reads shuffle, repeat and the existing play-all key synchronously before
+constructing either workspace order. Unknown values fall back without writes; partial storage
+refusal preserves other readable keys and returns its failure. Each explicit action persists only
+its own key. A refused write leaves the in-memory choice intact and is shown in the snackbar.
+The actual context owns transport modes independently of the visible playlist; these are not edits.
+
+The Settings checkbox and Now Playing switch share `setPlayAllSubsongs`; `renderPlaybackModes`
+updates both and the transport mode marks, accessible repeat name and One glyph. Restoring state
+never invokes a click or decoder. The startup restore captures its own editor generation and uses
+`setQueue` without persistence, avoiding initialization writes. A later editor selection wins over
+late saved reads; existing explicit URL handoff follows restore and keeps its established policy.
+No schema change, autoplay, phone-byte retention change or Android production modification.
+
+
+## WEB subsong following — branch candidate, 2026-10-28
+
+`SubsongStripView` keeps keyed numeric chips across current-only updates. Opening a file/count or
+freshly opening Now Playing reveals its actual current. Later advances move only when the previous
+chip was at least partly visible and the new one is outside the viewport. Manually browsed distant
+regions stay put. Frames belong to a strip visit; closing, replacement, invalid/single counts and
+new loads retire old work and controls. Direct alignment avoids an obsolete smooth scroll
+continuing after a newer selection; it also respects reduced motion without another animation.
+
+The pure follow/selection rules mirror native `SubsongStrip`/`PlaybackController.selectSubsong`.
+Actual-current, hidden and retired chip actions are refused; marks come from decoder replies.
+Information remains read-only rather than sending inspected-file indices to the audible decoder.
+An independent description generation rejects late results/errors after leaving or reopening the
+live view. Dock expansion uses the actual metadata/subsong snapshot, updated on live replies,
+so inspecting another file cannot resurrect its controls or an earlier tune's metadata. Browser
+system-metadata refresh remains W25; no new transport, storage, mode or Android behaviour is added.
+
+## WEB Browse positions — branch candidate, 2026-10-28
+
+`BrowseScroll` holds per-session level offsets and pending departed-row identities. Its native-
+derived restore decisions are Nothing, Wait for loading/empty rows, Scroll to the exact current
+identity, or Forget a genuinely missing row. There is no old-index fallback. The level key is
+shared with Browse selection, including producing Search query/scope and History query/page.
+
+`BrowseScrollView` snapshots before DOM replacement and applies only the latest completed visible
+visit. Loading/clamped intermediate lists cannot overwrite a saved offset. Queue-hidden updates
+wait for the same owner to become visible; same-level refresh restores its captured offset.
+Folder/catalogue/domain/bookmark actions record stable identities through both pointer and
+keyboard paths. Fresh Browse clears the session; fresh History/query clears only History state,
+while paging keeps independent offsets. Browser restoration aligns the target directly; physical
+scroll/animation feel remains a browser check.
+
+A destination chooser opened from Browse preserves its underlying models and position. Saved
+places starts its refresh before attempting restoration, so old membership cannot consume a
+return marker before a newly inserted bookmark changes the row's index. This changes no playback,
+playlist, manual-request, storage or source-navigation ownership.
+
+## WEB dock identity — branch candidate, 2026-10-28
+
+The identity card has independent title/Add and metadata/Tune rows. A permanent 48 by 32 px Add
+slot prevents changes of source or subsong count from shifting the save target or narrowing the
+title. Its ordinary browser minimum remains 64 px, with no extra top spacer; the footer can wrap
+and the card can grow with text. Queue remains outside the card, using the shared transport.
+
+The counter derives only from actual opened decoder state in the common playback presenter;
+inspecting another row cannot overwrite it. A new load, failure or empty source hides it. Both
+subsong modes display the full localized Tune N of M label. Existing metadata/marquee logic is
+reused. Card/Keep/Queue have independent pointer and keyboard ownership, with the expanded state
+published for assistive technology. This is presentation work, not a new transport state owner.
+
+## WEB Browse bulk selection — branch candidate, 2026-10-28
+
+`TrackSelection` owns selected URL identities independently of the playlist editor and playback.
+Its owner identifies the producing folder, submitted Search query/scope or History query/page.
+Membership refresh intersects IDs; a new owner clears them. Captures are immutable, in source
+order, and borrow held buffers without transferring them. Native bulk operations use source
+references rather than the learned-title presentation overlay.
+
+`BrowseSelectionView` decorates stable playable rows with checkboxes inside their reserved leading
+slot. Long press, row tap, checkbox, keyboard and Select all reach the same model. Context actions,
+swipe and playback scroll-follow are suspended while selecting; first Back/Escape clears it.
+Queue overlays preserve the underlying visit, while actual navigation retires it. Unavailable
+phone-only placeholders and folder/action rows are not selectable in WEB. Selection never owns
+transport. Button/field key handling precedes global transport shortcuts.
+
+Bulk Add uses the existing editor draft, serialized other-playlist writes or fresh atomic creation;
+Share uses portable references. The destination chooser captures its batch before clearing
+selection. Reads, feedback and completion are scoped to its originating visit/request; failed
+writes retain a retryable snapshot. From the phone stays protected. The same per-playlist writer
+serializes Add with Save/Rename/Delete, including a fresh destination read before append.
+
+Actually held local buffers from successful owned-playlist Save/Add/Save As and import are retained
+for the tab lifetime, so switching editors does not strand newly saved references. Working drafts
+keep their buffers; reference serialization removes them at the storage/share boundary. Phone
+handoff autosaves do not retain every replaced phone payload. Nothing persists audio or adds a
+scanner, bulk manual queue operation, export renderer, schema or dependency.
+
+## WEB playlist-file transfer — branch candidate, 2026-10-28
+
+`PlaylistTransfer` has no editor/transport ownership. It captures selected draft references for
+active exports and reads persisted contents for another playlist, retaining the initial label.
+Import resolves exact known ids, supported remote/archive identities and then a matching held
+filename/optional positive size. It creates one new playlist atomically; found counts describe
+resolved offerings before first-occurrence deduplication. Failed creation never replaces another
+identity. The picker/download are adapters; cancellation and refresh failure are distinct from
+unreadable, empty, partial and failed imports.
+
+`playlist-file.js` owns native-compatible M3U8 metadata, signed 64-bit decimal sizes and reference
+serialization. It preserves the wire format, except sanitizing metadata newlines so they cannot
+inject extra entries. The reader corrects the native empty-artist delimiter bug: native writes
+` - Title` but currently reads the delimiter back into the title. The common case records both
+native and corrected WEB results; other shared format cases match. Android code is unchanged.
+Browser imports of native `asma://` ids use the existing archive path encoder and canonical
+HTTPS URLs; remote presentation uses the browser's author-folder metadata convention.
+
+Held owned-playlist buffers live only for the tab lifetime. Search, list selection/discard and
+startup share hydration from existing runtime owners plus those retained buffers. An enumerable private
+symbol carries the original stored availability through immutable copies; reference serialization
+keeps it and strips buffers/symbols. A derived missing-file flag must never silently rewrite a
+protected phone list during a pending index save. With no held bytes, nonnetwork references are
+visibly unavailable. Empty/detached buffers are discarded; persisted/local metadata alone never
+proves playable bytes. No schema change, file scanner, filesystem grant or audio persistence.
+
+## WEB live row reorder — branch candidate, 2026-10-28
+
+`RowReorder` is shared by editable playlists and the pending manual block. Whole-row crossings
+commit immediately, as native does; gesture cancellation stops further movement and retains
+those edits. Incremental pointer/scroll deltas retain residual displacement across moves and
+partial reversals. Pending requests clamp to their block; the playlist uses its actual `main`
+scroll container. Frames bound edge scrolling to 480 pixels/s with a 50 ms frame cap.
+
+Views freeze physical row order during a gesture while updating the logical order and applying
+transforms, then synchronize on release/cancellation with pinned numeric scroll. They retain the
+captured row/handle and consume its generated click. Changed membership, context or visibility
+ends a stale gesture. Keyboard arrows and labelled menu actions reach the same domain move.
+The playlist renderer reserves existing object occurrences before matching replacement metadata
+by URL, using linear bags; legacy duplicate URLs keep independent handles.
+
+`moveEditorTrack` applies an index permutation to the draft, actual history and source occurrence
+IDs. It avoids URL-to-last-index collapse for existing pasted duplicates. A move marks the draft
+and re-deals shuffle from the retained current occurrence. The active source changes only when
+it belongs to that editor. No decoder command, pending-manual edit or playback restart occurs;
+Save/Discard remain the selected draft's responsibility. Physical touch, capture and painting
+still require a real browser check.
+
+## WEB scoped library search — branch candidate, 2026-10-28
+
+`SearchBrowser` owns explicit-submit query/scope state and request cancellation. An immutable
+producing result stays separate from pending field/chip edits. Scope-kind changes clear stale
+rows; same-kind chips retain them until Search. Back widens a narrowed scope before leaving;
+reentry retains the answer. Unchanged results keep their DOM row nodes while the field and scope
+presentation update. `SearchScopesView` owns controls, labels and verified availability, not
+search execution. Selection/focus never triggers a lookup or changes transport.
+
+`LibrarySearch` ports per-source 2000-row limits, saved-copy precedence, native matching fields
+and source ordering. Browser-saved references supply the supported subset of Android's Local
+library; the UI calls it Saved playlists and offers no folder scanner. Independent playlist
+copies are canonicalized by latest saved copy before the cap and ordered by binary title, because
+Android has one globally unique track row. Filtering never mutates playlists or drafts.
+`SearchSelection` retains only the first 2000 globally sorted catalogue hits while counting all.
+`visitTitleShards` reads current metadata and playable title shards in one readonly transaction;
+word matches span title/author, platforms use the existing shared map. This avoids full-archive
+materialization and mixed metadata/result snapshots. `readResult` shares completion/cancellation
+handling with History, including cancellation after a transaction has already finished.
+
+Source-route DTOs capture producing scope and summary alongside query/membership. Restoration
+uses a local immutable DTO while model publication can invalidate the visible route; current
+index/cache/download facts remain independent. Queue overlays preserve both Search and History
+visits. Scope availability follows committed playlist/index changes and window focus, keeping
+verified choices during refresh and explaining pending/error/empty states distinctly.
+
+Saved local references recover bytes only from the existing in-session editor/context/manual
+owners. Playback preserves that buffer; persistence and links retain references, never bytes.
+Missing copies remain visible with a reason and no replay action. Approved browser catalogues
+remain Modland/ASMA; no live archive, AMP, proxy, filesystem or new dependency is introduced.
+[Contract and verification](WEB_IMPLEMENTATION.md#w11--search-scopelibrary-analysis-2026-10-28).
+
+## WEB live History filter — branch candidate, 2026-10-28
+
+`HistoryBrowser` owns raw query, matching page/count/rows and loading/failure state; it does not
+own playback or recent general searches. Requests carry a generation and AbortController,
+edits debounce 200 ms, fresh entries reset query/page/scroll, and source return restores the
+producing snapshot. A Queue overlay preserves the underlying History visit. Current failures
+permit retry; stale failures and rows cannot publish after replacement or navigation.
+
+`played.read` waits for the ordered History writer. Blank queries obtain count/page in one
+readonly transaction; filtered cursors match title/author/filename literally and retain only a
+requested hundred plus the last partial page. Cancellation aborts active transactions and
+refuses publication even if completion wins the abort race. No schema change or bulk History
+allocation is introduced. `query-text.js` shares the precise Kotlin whitespace/simple-case rules
+with recent searches, while `history-filter.js` owns phrase matching and bounded paging.
+`HistoryFilterParityTest` and JS consume one declared TSV input. Android production is unchanged.
+[Reference, checklist and evidence](WEB_IMPLEMENTATION.md#w10--live-history-search-analysis-2026-10-28).
+
+## WEB recent searches — branch candidate, 2026-10-28
+
+`RecentSearchHistory` owns bounded query history and serialized settings writes, separately from
+playback History and Browse snapshots. `query-text.js` and `recent-searches.js` port Kotlin trimming, case and
+prefix rules; a common TSV runs against both implementations. The existing settings store gains
+one key, with no schema migration. Read failures are retried before writes; write failures retain
+the last persisted presentation and leave the ordinary search usable.
+
+`SearchSuggestions` binds existing input/submit/listbox nodes. It owns dropdown eligibility,
+keyboard/pointer selection and available-height placement, but not searches, playback or storage.
+Submitting closes focus before invoking the page; asynchronous updates only refresh eligible
+views. `app.js` distinguishes typed text from an acknowledged submitted query so a redraw cannot
+silently launch a newly typed lookup. Search-source snapshots keep the query that produced their
+rows. The integrated Search icon follows the native field's accessible-label convention; the
+options are plain text. Browser rendering/keyboard acceptance remains unchecked.
+
 ## Louder normalization target — accepted and merged, 2026-10-27
 
 `VolumeNormalizer` uses a named -18 LUFS target on develop, merged as **641b875**; the released
@@ -9,6 +259,63 @@ boost caps, peak headroom, fixed-trim transitions and independent focus ducking.
 an accepted Android playback policy, with general listening approval and per-case checks still
 unreported. It adds no global decoder boost or WEB parity implementation.
 [Measurements and acceptance limits](VOLUME_NORMALIZATION.md#louder-target-trial--2026-10-27-unmerged).
+
+## WEB playback ownership — branch implementation, 2026-10-27
+
+W01-W02 and W04-W05 are implemented on `feature/web-feature-parity`; integration and real-browser acceptance
+remain separate. [Scope and host evidence](WEB_IMPLEMENTATION.md).
+
+`PlaybackWorkspace` owns the selected editor and an independent immutable `PlaybackContext`.
+`PlayOrder` owns finite traversal, modes and actual shuffle history. `PlaybackSchedule` adds
+one-shot, origin-aware manual occurrences without editing that source or its playlist document.
+`PlaybackPlan` combines them; `playback-steps.js` interprets a domain step into state plus an
+explicit decoder effect. Only the current occurrence supplies audio, metadata, History and retry
+identity. Read-only transport availability cannot consume RNG state. Playlist persistence reads
+the selected editor, with serialized document writes and content/revision guards.
+
+`app.js` owns runtime jobs and executes effects; its legacy queue/index arrays are presentation
+mirrors. Actual open-job ownership is distinct from schedule/speculative-Random ownership, so
+Clear can preserve a loading file while retiring old speculation. Undo restores content/context,
+retains live editor changes and never rewinds audio.
+
+`QueueView` owns keyed DOM presentation only. `PendingReorder` now aliases the shared `RowReorder`,
+which commits occurrence-ID moves at each full-row crossing within the pending block; it never moves source/current rows or owns transport.
+Shared row gestures arbitrate horizontal intent before consumption, preserve vertical scrolling,
+cancel additional pointers and suppress abandoned click/context-menu events. Menus and keyboard
+actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move
+without a whole-list appearance animation. Exact visual/gesture behaviour still needs a browser.
+
+This adds no Android production/schema/native changes or dependencies. W03 still needs W10/W11 route wiring; W06-W25
+remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
+
+W03 adds `source-navigation.js` and an immutable route on `PlaybackContext`. The route holds
+view/query/result fields, separately from actual decoder jobs and live catalogue/storage owners.
+Header navigation follows the parked source, never its manual interruption. Guarded editor reads
+preserve the active order; Discard authorizes abandoning a draft after destination validation,
+rather than erasing it before an asynchronous read. Source, panel and editor generations retire
+old completions. Browse result closures bind their original query, and older reads cannot append
+to a restored route. This checkpoint passes the combined navigation
+host gate; W10/W11 query/scope wiring remains pending. [Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
+
+W04 separates the remembered Random record/view from the active source. DOM-free `RandomHistory`
+ports the native heard boundary, cursor, serial sampling and generation/cancellation rules;
+unheard preparation cannot enter the visible record. The active context remains transport owner
+when another view is opened. Explicit row selection and a deliberate dice reset activate Random.
+The shared source cursor is synchronized when Queue selects a heard occurrence. A reset retains
+manual FIFO requests; Clear retains heard history and an already adopted byte promise while
+retiring speculation. `random-dice.js` owns pointer/accessibility activation and reduced-motion
+rotation only. Browse detours depend on the visited route rather than the audio source.
+The combined navigation host gate passes; actual browser acceptance remains unchecked.
+
+W05 adds the screen-owned `RandomFilterState` and a separate `RandomFiltersView`. Native platform
+data is generated and checked against `Platforms.kt`; classification is shared by summaries and
+scoped sampling. `random-catalogue.js` joins curated Modland paths with retained playable buckets,
+keeps listed/matching counts separate, and keys availability to actual dataset identities.
+`catalogue.replacePrefix` commits records and summaries together, optionally against a metadata
+snapshot; playability stamps share that guarded write. Committed mutation notifications invalidate
+availability/read-ahead without replacing the current playback job. Old indexes use bounded scans;
+new indexes carry summaries. Scope preference/read/save ownership is independent of playback/view
+ownership. This checkpoint passes the combined host gate; browser acceptance remains unchecked.
 
 ## B54 Floating controls — gated experiment, 2026-10-26
 
@@ -246,7 +553,7 @@ plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary ass
 | Native replay installation | `ReplayDownloads` runs in the existing controller scope; controller owns progress, native configuration and the background dispatcher | **Extracted:** guarded sc68 then UADE downloads, activation and combined notice. Native calls remain controller-bound, including startup/post-delete UADE configuration; construction performs no download or native initialization |
 | Downloaded-data removal | `LibraryMaintenance` runs cache, catalogue index/archive, metadata and replay deletion in the controller's existing scope; stores/cache and native configuration retain their owners | **Extracted:** `LibraryMaintenanceState` publishes into the existing flows; `AndroidMaintenanceFiles` and `AndroidMaintenanceText` bind file operations and notices. No new deletion target, scope or state copy; playback and local user data remain outside this workflow |
 | Random history (C97) | `RandomHistory` owns the heard boundary, cursor, speculative tail and generation; the controller owns catalogue IO and playback | Scope changes discard only unheard entries. Next walks history; explicit re-roll appends a fresh pick. Serialized fills reject obsolete results after each suspension, including the small-pool fallback. Background replenishment never publishes speculative rows |
-| Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. The existing no-missing-bytes early return remains before cancellation |
+| Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. Preparation retires old work before checking whether all wanted bytes are held; late results also need the current generation |
 | Browse cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns Browse cache marks and both observers, including cancellation and stale-result protection | **Extracted:** `BrowseCache` combines `OnPhone` source checks with `FolderPrefetch` planning/execution. Narrow file/progress operations reuse the same remote cache and Browse writer; no new scope, cache or policy copy |
 | Android service | `PlaybackService` owns its coroutine scope, platform media session, notification and optional floating-controls window; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
 | Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |
@@ -1021,17 +1328,13 @@ library, the database or the 20 MB archive. Copies are swept an hour after they 
 than on the next share: the receiving app reads the file after the chooser closes, and deleting the
 previous copy the moment a new share starts would sometimes pull it from under a slow reader.
 
-**A link is a different feature, not a cheaper one.** It exists only for catalogue tracks, and what
-it contains is the catalogue's answer rather than ours. Modland serves every file over HTTP, so its
-track URL *is* the link. ASMA publishes one archive and has no per-file address at all, so
-`webUrlFor` returns null and the share names the collection and the path inside it. That is
-deliberate: an `asma://` reference means nothing on anyone else's phone, and an action that appears
-to work is worse than one that says what it can do.
-
-The open part was settled on 2026-09-02: **a link points at the file**, the same bytes that
-are playing, and what the recipient does with it is theirs to decide. That is what Modland's link
-already was, and it is what ASMA cannot offer — which is why ASMA's share is a collection and a
-path rather than a worse link.
+**A shared catalogue link points at the file's public HTTP address.** Both Modland and ASMA
+provide individual file URLs. ASMA's paths were measured on 2026-09-11, correcting the initial
+2026-09-02 assumption that it only exposed a ZIP. Native playback still reads its retained
+archive using internal `asma://` IDs; `fileUrlFor`/`webUrlFor` convert those paths for recipients.
+WEB imports perform that conversion without duplicating the archive root. Internal archive IDs
+are not links another application can fetch. The recipient decides how to handle the public file;
+sharing a URL does not transfer the phone's private archive or permission grants.
 
 ## 17. How a list behaves
 
@@ -1409,3 +1712,205 @@ The title moved from `titleSmall` to `titleMedium` and the author from `bodySmal
 and **the dock grew to fit** rather than the text being squeezed to preserve its old height. The
 owner offered that trade before being asked for it, which is the right way round: the dock is on
 every screen, and the thing it is for is being read at a glance.
+
+### WEB live language ownership — W24, 2026-10-28
+
+Language policy (`system`, `en`, `pl`) is independent of its resolved locale. Settings changes and
+browser `languagechange` events refresh presentation in place; an explicit choice ignores later
+system changes. A refused preference write leaves the session choice usable and explains that
+it was not saved. The audio graph, decoder job, playback plan, draft and navigation are untouched.
+
+`ui-message.js` represents explicit UI meanings with action-time argument snapshots.
+`i18n.js` resolves those meanings and Polish plural forms at presentation time. `ui-text.js`
+weakly binds individual text nodes and owned accessible attributes. Replacing a fallback with a
+raw title retires its old meaning even if the letters are identical. Original markup is captured
+once, including an initially English page; later user rows are never inferred to be translations.
+State-derived labels use explicit pure formatters, while past action messages keep their original
+arguments. No renderer retains a later mutable playlist merely to translate an earlier notice.
+
+This separation preserves rows, icons, event handlers, input selection, focused controls and
+pending Undo actions. File/title/author/playlist data and backend errors stay literal. Music-source
+acknowledgements use their held bilingual table; read-only privacy prose is redrawn from the held
+policy without another request or a scroll reset. Licence texts remain as distributed.
+
+The page integration gate evaluates the actual ESM graph inside the existing host DOM/audio
+fixture. Flattening imports had hidden a missing production `catalogue` import; real-module startup
+rejects that defect. Node's VM flag belongs only to tests and adds no WEB runtime dependency.
+Host DOM and audio-message evidence do not establish real-browser sound or device behaviour.
+
+### WEB retained music — W20, 2026-10-28
+
+Browser schema **6** adds `remoteMusic` and reserves `asmaArchives`. An upgrade preserves the
+existing documents, indexes, bookmarks and History qualification; it neither downloads nor seeds
+music. Permanent archive payloads have a separate lifetime and do not consume the fetched-file
+budget. A future schema is refused without reset, and a blocked upgrade can be retried.
+
+`cache-budget.js` ports native CacheBudget's 512 MiB ceiling, completed-only accounting and
+LRU(time,name). The browser keeps original URL identities, with native SHA-256 URL names for the
+same-timestamp tie-break. `store.js` publishes an immutable Blob and evicts in one transaction.
+Actual positive payload size establishes presence; a metadata flag does not. Current/read-ahead
+protection is sampled under the write transaction; protected bytes still count. Accounting reads
+Blob handles/sizes, rather than allocating every cached ArrayBuffer. This is not a browser memory
+or permanence guarantee. Failed publication or eviction rolls back the attempted change.
+
+`RemoteMusic` owns shared transfers, persistence, membership and clear/publication generations;
+UI cancellation retires a waiter, not another caller's transfer. `music-download.js` bounds the
+browser's combined connect/header wait to 45 seconds (native connect15/read30 allowance) and
+renews the native 30-second inactivity deadline for each body read. Fetch exposes no separate TCP
+connection timer. Failed/partial transfers never publish a copy. Every decoder caller owns its
+buffer, and retention/Blob/quota failure cannot withhold successfully fetched bytes.
+
+The common app resolver serves playback, Random and file/Information/audio actions. Runtime
+handoff bytes take precedence and are copied without persistent publication, even for HTTP URLs.
+Only absolute HTTP(S) fetches enter retained storage; relative/local/data identities do not become
+silent durable imports. Clear retires old publication tickets, removes only fetched copies and
+keeps current audio, pending requests, drafts and user documents. The ticket guard is deliberately
+stronger than native's directory clear followed by possible late background publication.
+
+Browse/Search/History decorate the existing leading slot with native's phone/tick; selection owns
+that slot and played-before stays below it. Playlist/Random/Queue numbers gain no extra cache UI.
+`MusicCacheView` retains its controls while sizes/failures change and offers clear/retry. It reports
+actual bytes and tiny frees honestly; the origin-wide quota estimate remains separate. In-process
+subscriptions plus focus/visibility reads refresh membership; cross-tab durable playback leases
+are not supplied. Browser quota/persistence and real offline playback still require acceptance.
+
+### WEB complete ASMA archive — W21, 2026-10-28
+
+The explicit ASMA action retains the compressed ZIP and derives its catalogue in schema 6's
+reserved `asmaArchives` store. One transaction replaces or removes both archive and index;
+quota, cancellation and corrupt input preserve the prior installation. A persisted revision
+ticket also prevents an older download in another tab from restoring deleted or newer data.
+Startup and migration never fetch the archive. Existing HTTPS playlist/History identities remain.
+
+`zip-archive.js` validates directory/member agreement, bounds, paths, overlap, sizes and CRC before
+publication. Browser bounds are 64 MiB per expanded member and 512 MiB expanded per archive;
+unsupported encryption, ZIP64 or raw-DEFLATE capability produces an explicit refusal. The
+compressed immutable Blob is retained rather than thousands of duplicate expanded cache entries.
+
+`OfflineAsma` checks current storage and returns a fresh verified member buffer through the common
+byte resolver, after live handoff/prepared bytes and before individual HTTP/fetched-cache access.
+Damaged members remain unavailable for that archive revision even after metadata refresh; a new
+installation can repair them. Permanent ASMA does not enter the fetched-music LRU, and clearing
+that cache does not remove the archive or affect an already playing buffer.
+
+`AsmaView` projects actual archive/index facts into existing catalogue and storage controls.
+Generation/snapshot guards reject old reads; focus/visibility refreshes reflect other-tab changes
+without replacing focused buttons. Index presence alone never establishes offline availability.
+Confirmed deletion removes index and ZIP together while keeping documents, History and playback.
+Host parsing/storage/DOM evidence and real-browser acceptance are recorded separately in the
+[implementation ledger](WEB_IMPLEMENTATION.md#w21--complete-offline-asma-2026-10-28).
+
+
+### WEB retained Modland addresses — W23, 2026-10-28
+
+catalogue-urls.js owns the native-compatible segment encoder and the narrowly scoped legacy
+unknown-author recovery rule. Catalogue URL construction and the bounded music reader use it
+without importing one another. The shared native/WEB cases cover nested formats, filenames,
+literal plus, Unicode and invalid or ambiguous routes.
+
+Only an original HTTP404 from the exact Modland module root permits one request with the moved
+author directory. Refused bodies are discarded, each attempt has a fresh header allowance, and
+transport/access/server failures remain explicit. The alternate address never becomes an ID:
+RemoteMusic retains complete bytes under the original URL, so playlist references, History,
+sharing and offline replay remain stable. Cancellation and Clear use the existing transfer and
+publication owners. Browser CORS and credential rules remain authoritative; no proxy or custom
+Cookie/User-Agent machinery is introduced.
+
+
+## WEB playback stereo mix — W14, 2026-10-29
+
+The browser uses the same [StereoMixer](../native/engine/stereo_mix.h) as the native output.
+Each WASM decoder handle owns its mixer and target width; `pt_render` processes only the frames
+actually decoded, at the requested output rate. A fresh handle defaults to Original, so audio
+exports and file descriptions remain independent of the live decoder. Original bypasses PCM
+writes; Narrow and Mono use the existing convex channel matrix and up-to-10 ms width smoothing.
+Zero/invalid render requests do not advance the decoder or initialize a ramp.
+
+`stereo-mix.js` owns stable stored identifiers, width mapping and refusal-aware preferences.
+Settings controls change the global in-memory selection and send a target to the existing
+worklet without opening, seeking or resuming audio. The worklet retains that target across files
+and applies it before the first rendered frame. Its constructor receives the latest selection
+after asynchronous engine loading; later messages retain their order while compilation is pending.
+Seek, rewind and subsong changes retain the target. Only a new decoder resets mixer initialization.
+
+The shared [mode cases](rules/stereo-mix-cases.tsv) bind Kotlin and JS defaults/widths; the fixture
+is an explicit native test input. Production PCM/worklet tests cover asymmetric, correlated and
+opposite-phase input, multiple sample rates, retargeting, paused changes and independent handles.
+The browser audio device and encoder require separate real-browser acceptance.
+
+## WEB volume normalization — W15 implementation, 2026-10-29
+
+Each WASM handle owns the same VolumeNormalizer used by Android. Mixing precedes normalization;
+its existing -18 LUFS target, gating, partial/complete boost limits, linked sample-peak guard and
+gain transitions are unchanged. Fresh handles default Off, including description and export
+decoders. Seeking/restarting retains gain and metering but invalidates whole-song continuity;
+successful subsong changes reset the old trim, and live stereo changes reset measurement rather
+than restarting playback. Numeric profile snapshots avoid serializing native strings per callback.
+
+The audio worklet opens a file privately and publishes its actual selected subsong through
+`decoded`. PlaybackNormalization owns a source snapshot, prepares that exact index off the audio
+thread, and answers with `prepared`; only then does the worklet publish `opened` and allow first
+PCM. This is also the Off path. A pause while waiting remains a pause, and both sides reject stale
+request/subsong/width facts. Source/History publication remains at `opened`. The open watchdog
+retires the request and closes private work, so late completion cannot revive a timed-out start.
+An engine-wide initialization refusal cancels all pending source snapshots as well.
+Old profile/close messages retain the old request ID and are routed before visible-source filtering.
+
+LoudnessPreparation serializes separate-decoder analyses and preserves Native's actual/-1 warming
+identities. LoudnessAnalyser owns one lazily created module worker and transferred private bytes;
+the worker calls the shared native analysis helper with its existing cooperative 200 ms / 20-second
+prefix limits. A five-second browser worker safety deadline also bounds initialization and an
+uncooperative backend call. Creation/load/analysis/cache errors fall back to live metering rather
+than rejecting playable music. Cancellation terminates the private worker; Off releases its idle
+engine. Only selected playback read-ahead warms profiles, never catalogue/folder scans.
+
+LoudnessProfiles retains at most 512 CRC-checked Native-format records in the existing settings
+store, using an atomic read/modify/write across tabs. Complete beats partial; otherwise longer wins,
+and an inferior observation does not promote an entry. Keys bind length-prefixed filename/main-file
+bytes to the actual WASM digest, subsong and stereo width. WEB does not invent companion decoding.
+Hash failure disables reusable identities; invalid/unwritable profiles are optional misses. History
+and fetched-music Clear preserve these derived statistics; site-data removal clears them.
+
+Implementation and focused host evidence are recorded in the WEB ledger. Full W15 gate/lint and
+physical-browser acceptance remain separate; the latter includes output quality, worker scheduling,
+mobile background lifetime and audio encoding.
+
+## WEB system transport and presentation — W25, 2026-10-29
+
+The page owns explicit playback intent separately from temporarily paused/loading presentation.
+An intent generation retires asynchronous resume and first-touch completions after Pause, Stop or
+source replacement. Page buttons, keyboard and Media Session use the same concrete transport
+functions; system actions never synthesize DOM clicks or inherit pointer-hold suppression.
+Subsong commands carry a selection identity, suspend seeking until the latest acknowledgement and
+retire older queued seeks. Processor refusal preserves actual playback and returns explicit facts.
+Paused late EOF records a rewind requirement without consuming another queue occurrence.
+
+`SystemMedia` projects current source/capabilities into optional browser APIs. Independent handlers
+recheck live capability, failures stay isolated, and metadata uses the dock's existing subtitle
+logic. Position revision and declared state rebase timestamp extrapolation after pause/restart or
+API recovery. AudioContext state changes publish facts without automatic resume. `TrackArtwork`
+ports Native deterministic colour/format rules into one cached local PNG with packaged fallback.
+There is no additional store, network artwork request, transport model or dependency. Browser-owned
+session routing/background limits and Native exceptions are recorded in the
+[W25 contract](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
+## WEB playlist occurrence mapping — final audit, 2026-10-29
+
+`PlayOrder.withTracks` and `PlaybackContext.withOrder` share one occurrence matcher: retained
+object references first, then stable FIFO identity matching for replaced metadata. A deletion
+or Undo supplies the exact old position of each surviving row; new/restored rows use null and
+receive fresh source IDs. This explicit mapping distinguishes repeated references to the same
+object, which neither a URL map nor reference matching alone can identify. History and source
+IDs use the same mapping. Transport-only updates preserve occurrence keys, and existing live
+reorder retains its explicit positional permutation. Playlist edits do not rebuild the manual
+FIFO or issue decoder commands unless the currently playing row itself is removed.
+
+## WEB asset version boundary — 2026-10-30
+
+The generated worker binds its revision to the template and every shipped asset's bytes. It
+also carries per-asset SHA-256 Fetch integrity metadata: installation and cache-miss network
+recovery both require the expected bytes. A mismatch or unsupported integrity rejects only the
+candidate offline cache, retaining the previous worker. No skipWaiting is used during playback.
+Pairing, music, remote requests, Range and other installations' caches remain outside this shell.
+The packager normalizes archive metadata separately from its timestamped/source-labelled filename;
+source SHA/dirty state is shared with staged legal metadata and checked before an artifact is made.

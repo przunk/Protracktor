@@ -14,6 +14,50 @@ class LoudnessProfilesTest {
     private fun base(bytes: ByteArray=byteArrayOf(1), name: String="a.mod", companions: List<Pair<String,ByteArray>> = emptyList(),
         revision: String="decoder1") = LoudnessProfiles.contentKey(bytes,name,companions,revision)
 
+    private fun cases(name: String, header: String): List<List<String>> {
+        val root=generateSequence(File(".").absoluteFile) { it.parentFile }
+            .first { File(it,"settings.gradle.kts").isFile }
+        val text=File(root,"docs/rules/$name.tsv").readText()
+        val rows=text.lineSequence().filter { it.isNotEmpty() && !it.startsWith("#") }.toList()
+        assertEquals(header,rows.first())
+        val cases=rows.drop(1)
+        assertEquals(Regex("(?m)^# cases: (\\d+)$").find(text)!!.groupValues[1].toInt(),cases.size)
+        assertTrue(cases.isNotEmpty())
+        return cases.map { it.split('\t') }
+    }
+    private fun bytes(hex: String): ByteArray = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    @Test fun `shared WEB profile validation uses native usability boundaries`() {
+        for (row in cases("loudness-profile-cases","case\tseconds\tlufs\tpeak\tcomplete\tusable")) {
+            val values=row.subList(1,5).map(String::toDouble).toDoubleArray()
+            assertEquals(row[0],row[5]=="1",LoudnessProfile.fromNative(values)!=null)
+        }
+    }
+    @Test fun `shared WEB binary records match native payload checksum and corruption refusal`() {
+        val dir=temporary.newFolder(); val cache=LoudnessProfiles(dir)
+        for (row in cases("loudness-encoding-cases","case\tseconds\tlufs\tpeak\tcomplete\tpayload")) {
+            val profile=LoudnessProfile(row[1].toDouble(),row[2].toDouble(),row[3].toDouble(),row[4]=="1")
+            val key=LoudnessProfiles.key(base(name=row[0]),0,100)
+            cache.write(key,profile)
+            val file=File(dir,"$key.profile")
+            val expected=bytes(row[5])
+            assertArrayEquals(row[0],expected,file.readBytes())
+            assertEquals(profile,cache.read(key))
+            expected[19]=(expected[19].toInt() xor 1).toByte(); file.writeBytes(expected)
+            assertNull(row[0],cache.read(key))
+        }
+    }
+    @Test fun `shared WEB identities preserve native byte framing UTF8 ordering and variants`() {
+        for (row in cases("loudness-identity-cases","case\tname\tbytes\trevision\tcompanions\tsubsong\twidth\tbase\tkey")) {
+            val companions=if (row[4]=="-") emptyList() else row[4].split(';').map {
+                val (name,hex)=it.split('='); name to bytes(hex)
+            }
+            val base=LoudnessProfiles.contentKey(bytes(row[2]),row[1],companions,row[3])
+            assertEquals(row[0],row[7],base)
+            assertEquals(row[0],row[8],LoudnessProfiles.key(base,row[5].toInt(),row[6].toInt()))
+        }
+    }
+
     @Test fun `content identity includes decoder filename companions subsong and stereo mode`() {
         val b=base()
         assertNotEquals(b,base(bytes=byteArrayOf(2)))

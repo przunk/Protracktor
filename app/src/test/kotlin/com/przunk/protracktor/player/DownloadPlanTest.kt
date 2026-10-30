@@ -73,4 +73,23 @@ class DownloadPlanTest {
             DownloadPlan.megabytesFor(DownloadPlan.choices().toSet()),
         )
     }
+    @Test
+    fun `shared WEB selections preserve native substep order within the approved sources`() {
+        val root = generateSequence(java.io.File(".").absoluteFile) { it.parentFile }
+            .first { java.io.File(it, "settings.gradle.kts").isFile }
+        val lines = java.io.File(root, "docs/rules/download-plan-cases.tsv").readLines()
+        val count = lines.first { it.startsWith("# cases: ") }.substringAfter(": ").toInt()
+        val rows = lines.filter { it.isNotBlank() && !it.startsWith("#") }
+        require(count > 0)
+        assertEquals("case\tselected\texpected", rows.first())
+        assertEquals("A shared selection is missing", count, rows.size - 1)
+        fun ids(value: String): List<String> = if (value == "-") emptyList() else value.split(',')
+        rows.drop(1).forEach { line ->
+            val fields = line.split('\t')
+            assertEquals(3, fields.size)
+            assertEquals(fields[0], ids(fields[2]), DownloadPlan.stepsFor(ids(fields[1]).toSet()))
+        }
+        // The shared step is credits-only in WEB; its intentionally narrower byte cost is tested there.
+    }
+
 }

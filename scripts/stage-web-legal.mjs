@@ -58,9 +58,12 @@ fs.copyFileSync(path.join(root, 'store', 'privacy-policy.md'), path.join(out, 'l
 // **Which source this page is.** The GPL's offer of source is for the version conveyed, so the
 // page's Source code link points at the commit it was built from, when there is one to name.
 let commit = '';
+let dirty = true;
 try {
-  commit = (await import('child_process')).execSync('git rev-parse HEAD', { cwd: root }).toString().trim();
+  const { execFileSync } = await import('node:child_process');
+  commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], { cwd: root, encoding: 'utf8' }).trim().length > 0;
 } catch { /* not a checkout: the link falls back to the repository */ }
-fs.writeFileSync(path.join(out, 'legal', 'build.json'), JSON.stringify({ commit }) + '\n');
+fs.writeFileSync(path.join(out, 'legal', 'build.json'), JSON.stringify({ commit, dirty }) + '\n');
 
 console.log(`📜 ${parseNotices(table, 'web').length} components, ${copied} licence files and the privacy policy beside the engine`);

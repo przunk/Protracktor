@@ -1,0 +1,36 @@
+# Shared ActiveQueue/PlaybackContext cases, 2026-10-26.
+# Explicit next and natural completion are deliberately separate actions.
+# Source arrays are a,b,c; - is no position/result.
+case	source	at	repeat	action	step	current
+playlist_next	playlist	0	off	next	play	1
+playlist_last_next	playlist	2	off	next	unchanged	-
+playlist_last_end	playlist	2	off	ended	stop	-
+collection_next	collection	0	off	next	play	1
+collection_last_next	collection	2	off	next	unchanged	-
+collection_last_end	collection	2	off	ended	stop	-
+playlist_repeat_one_next	playlist	0	one	next	play	1
+collection_repeat_one_next	collection	0	one	next	play	1
+playlist_repeat_one_end	playlist	0	one	ended	replay	-
+collection_repeat_one_end	collection	0	one	ended	replay	-
+playlist_last_repeat_one_next	playlist	2	one	next	unchanged	-
+playlist_all_next	playlist	2	all	next	play	0
+collection_all_end	collection	2	all	ended	play	0
+playlist_previous	playlist	1	off	previous	play	0
+playlist_first_previous	playlist	0	off	previous	unchanged	-
+collection_previous	collection	1	off	previous	play	0
+playlist_all_previous	playlist	0	all	previous	play	2
+playlist_one_previous	playlist	1	one	previous	play	0
+random_next	random	0	off	next	random-next	-
+random_end	random	0	off	ended	random-next	-
+random_one_next	random	0	one	next	random-next	-
+random_one_end	random	0	one	ended	replay	-
+random_first_previous	random	0	off	previous	unchanged	-
+random_previous	random	1	off	previous	random-previous	-
+external_next	external	0	off	next	unchanged	-
+external_end	external	0	off	ended	stop	-
+external_one_next	external	0	one	next	unchanged	-
+external_one_end	external	0	one	ended	replay	-
+none_next	none	-	off	next	unchanged	-
+none_end	none	-	off	ended	stop	-
+idle_playlist_next	playlist	-	off	next	play	0
+idle_playlist_previous	playlist	-	off	previous	unchanged	-

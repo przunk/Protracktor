@@ -1,0 +1,7 @@
+# Shared Android/WEB playlist-file cases; data cells are URI encoded UTF-8.
+case	name	filename
+punctuation	Mix%2FOne%3F	Mix_One_.m3u8
+unicode	%C5%BB%C3%B3%C5%82%C4%87%20%F0%9F%8E%B5	____%20_.m3u8
+spaces	A%20-%20B	A%20-%20B.m3u8
+empty		.m3u8
+punctuation-two	a%2Cb.c	a_b_c.m3u8

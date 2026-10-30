@@ -5,7 +5,7 @@
 The page and the pairing service are one small node program. It needs **node and nothing else** —
 no build tools, no Emscripten, no Android SDK. The engine is compiled to WebAssembly on a
 development machine and copied; that is what WebAssembly is for, and it is why a Pi can serve a
-player built from seven C and C++ decoders.
+player using the shared C and C++ decoder engine.
 
 ## What to copy
 
@@ -16,7 +16,10 @@ scripts/package-web.sh          # makes dist/protracktor-web-*.tar.gz
 
 The archive holds `web/` (the page, the vendored QR encoder, the built `engine.wasm`, and beside it
 the licence texts and the privacy policy the page's Settings show), `scripts/serve-web.mjs`, this
-file, and the licence. About 3 MB.
+file, an executable `run.sh` launcher, and the licence. The build reports the exact size and
+SHA-256. The filename identifies its source SHA and build timestamp; `dirty` means it includes
+uncommitted source changes. Repeated packages with identical input bytes and Git identity have
+identical archive contents and hashes.
 
 On the other machine:
 
@@ -70,17 +73,40 @@ The manifest and worker paths work both at `/` and below GitHub Pages' `/Protrac
 
 After the first successful service-worker installation, the interface, decoder engine and bundled
 notices can start offline. Saved playlists and downloaded catalogue indexes remain in IndexedDB.
-Remote music and catalogue downloads still need a connection; pairing needs its running server.
+Fetched music retained in the browser's bounded cache can play offline; complete ASMA is an
+optional permanent download. Uncached music and new catalogue downloads need a connection.
+Retention depends on available browser storage. Pairing still needs its running server.
 
 Every shipped application file contributes to the worker's content hash. Updates install all
 files before becoming eligible to activate, and wait until all player tabs/windows are closed
 so an update cannot replace a playing tab's engine. Reopen the player to use the new version.
 Only this installation's old application caches are removed; music and other apps are unaffected.
 
+Each asset request carries its generated SHA-256 integrity value. A successful HTTP response with
+older or different bytes rejects installation and preserves the previous worker/cache. The same
+check protects network fallback if a cached file is missing. A browser without request-integrity
+support cannot install a new offline shell; it keeps its previous shell, if any, rather than
+accepting unchecked files. Ordinary network hosting remains available. The host checks use the
+actual generated worker and Node Fetch with a local HTTP server; browser installation/update
+acceptance remains a manual check.
+
 `package-web.sh` and `publish-web-pages.sh` generate `web/sw.js`; the local server generates it
 from the current files when requested. For manual static hosting, run
 `node scripts/stage-web-pwa.mjs` after staging the engine and legal files, and copy `sw.js` alongside
 `src/`, `lib/` and `vendor/`. `node scripts/check-pwa.mjs` checks the manifest paths and worker policy.
+
+## Development platform data
+
+The WEB Random/search platform table is projected from Android's `Platforms.kt`. After changing
+its declarations, regenerate on the development checkout:
+
+```
+node scripts/generate-web-platforms.mjs
+node scripts/generate-web-platforms.mjs --check
+```
+
+The normal project test gate checks this projection and the corresponding classification rules.
+Serving the packaged player needs no generator or Android source files.
 
 ## server.json
 

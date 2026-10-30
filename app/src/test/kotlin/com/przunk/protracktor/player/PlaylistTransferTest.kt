@@ -5,6 +5,8 @@ package com.przunk.protracktor.player
 
 import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.SavedPlaylist
+import java.io.File
+import java.net.URLDecoder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -241,4 +243,21 @@ class PlaylistTransferTest {
             assertTrue(scope.coroutineContext.job.isActive)
         } finally { scope.cancel() }
     }
+    @Test fun `native export filenames agree with shared WEB cases`() = runBlocking {
+        val root = generateSequence(File(".").absoluteFile) { it.parentFile }
+            .first { File(it, "settings.gradle.kts").isFile }
+        val cases = File(root, "docs/rules/playlist-filename-cases.tsv").readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") }.drop(1)
+        assertTrue(cases.isNotEmpty())
+        for (row in cases) {
+            val c = row.split('\t').map { URLDecoder.decode(it, "UTF-8") }
+            val f = Fixture(this).apply {
+                selection = selection.copy(tracks = listOf(track()), playlists = listOf(SavedPlaylist(1, c[1])))
+            }
+            f.transfer.exportPlaylist(1)
+            drain()
+            assertEquals(c[0], c[2], f.copied!!.first)
+        }
+    }
+
 }

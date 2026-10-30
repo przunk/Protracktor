@@ -1,6 +1,7 @@
 # Protracktor privacy policy
 
 Effective date: 2026-10-25
+Updated: 2026-10-29
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -97,13 +98,36 @@ running the page the user opened.
 
 Protracktor also has a web page: a second player that runs in a browser, served by whoever hosts
 it — usually the user, on a machine of their own. The page keeps its playlists, play history,
-downloaded catalogue indexes and settings in that browser's own storage, on that device. It sends
+bookmarked catalogue folders, the twenty most recent unique submitted searches, downloaded
+catalogue indexes, retained music copies, an explicitly downloaded full ASMA archive and settings
+in that browser's own storage, on that device. Recent-search
+suggestions are matched locally; typing alone does not save a query. The page sends
 nothing to the developer and has no analytics, advertising or account. For what the user browses,
-downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org` and, for song
-metadata the user downloads, `raw.githubusercontent.com`, as the app does,
+downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org`,
+`www.hvsc.de` for downloaded SID durations and, for song metadata the user downloads,
+`raw.githubusercontent.com`, as the app does,
 and those archives see the same requests described above. The server hosting the page sees the
 requests for the page itself and whatever the app sends to it (above). Clearing the site's data in
 the browser removes everything the page kept.
+
+After playback is selected, the page may fetch upcoming tracks in advance and retain their bytes
+locally. Opening a Modland author's folder can also prepare its files when the folder-download
+policy permits. Wi-Fi only is the default; because the browser cannot establish whether a network
+is unmetered, this choice pauses folder downloads with an explanation. Always explicitly enables
+them; Off disables folder preparation. These folder choices do not disable preparation of upcoming
+playback. Prepared files are not recorded as played. Retained music and the full ASMA download can
+be removed separately in the page; browsers may also evict stored copies under their own rules.
+
+Optional volume normalization measures music on this device, including prepared upcoming tracks,
+without sending audio or measurements anywhere. It retains at most 512 derived loudness profiles,
+identified by file content, filename, subsong, stereo choice and decoder revision. These statistics
+are independent of History and retained music copies; clearing either does not remove the profiles.
+Clearing the site's data removes them. Normalization does not change exported audio.
+
+When supported, the page provides the current title, shared track summary, playback position and
+locally generated format artwork to the browser's Media Session controls. This enables the
+browser or operating system to display and control playback. No external cover service is used,
+and Protracktor sends no listening report to the developer through this feature.
 
 A public copy of the web page is served by GitHub Pages at `https://przunk.github.io/Protracktor/`.
 GitHub receives the requests for that page under its own privacy statement. That copy has no
@@ -220,14 +244,38 @@ obsługujący stronę otwartą przez użytkownika.
 
 Protracktor ma też stronę internetową: drugi odtwarzacz działający w przeglądarce, udostępniany
 przez tego, kto go hostuje — zwykle przez samego użytkownika, na jego własnym komputerze. Strona
-przechowuje swoje playlisty, historię odtwarzania, pobrane indeksy katalogów i ustawienia w pamięci
-tej przeglądarki, na tym urządzeniu. Niczego nie wysyła do twórcy i nie ma analityki, reklam ani
+przechowuje swoje playlisty, historię odtwarzania, zakładki folderów katalogów, dwadzieścia ostatnich
+unikalnych wyszukiwań, pobrane indeksy katalogów, zachowane kopie muzyki, pobrane na wyraźne żądanie
+pełne archiwum ASMA oraz ustawienia w pamięci tej przeglądarki, na tym urządzeniu. Podpowiedzi
+wyszukiwania są dopasowywane lokalnie; samo pisanie nie zapisuje zapytania. Niczego nie wysyła do
+twórcy i nie ma analityki, reklam ani
 konta. Dla tego, co użytkownik przegląda, pobiera lub odtwarza, łączy się z `modland.com`,
-`asma.atari.org`, `hvsc.c64.org` oraz — dla pobieranych metadanych utworów —
+`asma.atari.org`, `hvsc.c64.org`, `www.hvsc.de` dla pobieranych długości utworów SID
+oraz — dla pobieranych metadanych utworów —
 `raw.githubusercontent.com`, tak jak aplikacja, a te archiwa widzą te same zapytania, co
 opisane wyżej. Serwer udostępniający stronę widzi zapytania o samą stronę oraz to, co aplikacja do
 niego wysyła (wyżej). Wyczyszczenie danych witryny w przeglądarce usuwa wszystko, co strona
 przechowywała.
+
+Po wybraniu odtwarzania strona może pobierać kolejne utwory z wyprzedzeniem i zachowywać ich dane
+lokalnie. Otwarcie folderu autora w Modlandzie może też przygotowywać jego pliki, jeśli pozwala na
+to wybrana zasada pobierania folderów. Domyślne Wi-Fi only wstrzymuje takie pobieranie i wyjaśnia
+powód, ponieważ przeglądarka nie potrafi potwierdzić, że sieć nie ma limitu danych. Always włącza
+je na wyraźne życzenie; Off je wyłącza. Te opcje folderów nie wyłączają przygotowywania następnych
+utworów wybranego odtwarzania. Przygotowane pliki nie są zapisywane jako odsłuchane. Zachowane kopie
+muzyki i pełne archiwum ASMA można usunąć osobno na stronie; przeglądarka może też samodzielnie
+usuwać przechowywane kopie według własnych zasad.
+
+Opcjonalna normalizacja głośności mierzy muzykę na tym urządzeniu, także podczas przygotowywania
+następnych utworów. Nie wysyła nigdzie dźwięku ani pomiarów. Zachowuje do 512 profili głośności,
+rozróżnianych po danych i nazwie pliku, subsongu, miksie stereo oraz wersji dekodera. Te statystyki
+są niezależne od historii i zachowanych kopii muzyki; usunięcie jednych lub drugich nie usuwa profili.
+Usuwa je wyczyszczenie danych witryny. Normalizacja nie zmienia eksportowanego audio.
+
+Jeśli przeglądarka to obsługuje, strona przekazuje tytuł, wspólny opis utworu, pozycję odtwarzania i
+lokalnie utworzoną okładkę formatu do kontrolek Media Session przeglądarki. Pozwala to przeglądarce
+lub systemowi wyświetlać i sterować odtwarzaniem. Nie korzysta z zewnętrznej usługi okładek, a
+Protracktor nie przesyła przez tę funkcję raportu słuchania do autora.
 
 Publiczna kopia strony jest udostępniana przez GitHub Pages pod adresem
 `https://przunk.github.io/Protracktor/`. Zapytania o nią otrzymuje GitHub, zgodnie z własną polityką

@@ -1,0 +1,20 @@
+# UTF-8 URI-encoded fields; list separator |; - means empty list. Empty string fields remain empty.
+case	op	queries	input	expected
+empty-field	suggest	four|three|two|one		four|three|two
+empty-history	suggest	-		-
+filter-before-cap	suggest	alpha|beta|gamma|delta%20one|DELTA%20two|delta%20three|delta%20four	DeLtA	delta%20one|DELTA%20two|delta%20three
+prefix-only	suggest	alpha%20delta|delta|red%20delta	delta	delta
+no-match	suggest	alpha|beta	missing	-
+accents-leading-space	suggest	%C5%BB%C3%B3%C5%82w|%C5%BCaba	%20%20%C5%BC%C3%B3	%C5%BB%C3%B3%C5%82w
+trailing-space-is-part-of-prefix	suggest	alpha|alpha%20two|Alpha%20three	alpha%20	alpha%20two|Alpha%20three
+latest-spelling	record	beta|alpha|gamma	%20ALPHA%20	ALPHA|beta|gamma
+clean-deduplicates	clean	|%20alpha%20|ALPHA|%20		alpha
+retained-cap	record	query%2020|query%2019|query%2018|query%2017|query%2016|query%2015|query%2014|query%2013|query%2012|query%2011|query%2010|query%209|query%208|query%207|query%206|query%205|query%204|query%203|query%202|query%201	new	new|query%2020|query%2019|query%2018|query%2017|query%2016|query%2015|query%2014|query%2013|query%2012|query%2011|query%2010|query%209|query%208|query%207|query%206|query%205|query%204|query%203|query%202
+blank-submission	record	one|two	%20%0A%09%20	one|two
+kotlin-control-space	clean	%1Calpha%1F|%C2%A0beta%E2%80%87		alpha|beta
+bom-is-not-space	clean	%EF%BB%BFalpha|alpha		%EF%BB%BFalpha|alpha
+turkish-case-duplicates	clean	i|%C4%B0|%C4%B1|I		i
+turkish-prefix	suggest	%C4%B0stanbul|%C4%B1slak|Izmir|item	i	%C4%B0stanbul|%C4%B1slak|Izmir
+no-sharp-s-expansion	suggest	Stra%C3%9Fe|STRASSE	strass	STRASSE
+capital-sharp-s	clean	stra%C3%9Fe|STRA%E1%BA%9EE|STRASSE		stra%C3%9Fe|STRASSE
+supplementary-case	suggest	%F0%90%90%80x|other	%F0%90%90%A8	%F0%90%90%80x

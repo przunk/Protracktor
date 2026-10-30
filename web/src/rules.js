@@ -12,6 +12,8 @@
 // that makes it testable, and it is the reason `app.js` passes its state in rather than these
 // reaching for it.
 
+import { trimQuery } from './query-text.js';
+
 /** Where `next` goes, or null when the queue is finished. Shuffle is the caller's business. */
 export function nextIndex({ tracks, at, repeat }) {
   if (tracks <= 0 || at < 0) return null;
@@ -98,7 +100,7 @@ export function freshPick({ drawn, seen }) {
  * megabytes. This costs nothing.
  */
 export function searchTerms(query) {
-  return foldText(String(query ?? '').trim()).split(/\s+/).filter(Boolean);
+  return foldText(trimQuery(String(query ?? ''))).split(/[ \t\n]+/).filter(Boolean);
 }
 
 // Letters with no combining mark to drop, and what they fold to. The same table as the phone's

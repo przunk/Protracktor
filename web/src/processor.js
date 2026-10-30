@@ -75,6 +75,12 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     this.ended = false;
     this.playing = false;
     this.reported = -1;
+    this.requestId = null;
+    this.stereoWidth = options.processorOptions.stereoWidth ?? 100;
+    this.normalizationEnabled = options.processorOptions.normalizationEnabled === true;
+    this.awaitingPreparation = false;
+    this.playRequested = false;
+    this.profileBuffer = 0;
 
     // **The wasm binary arrives as bytes rather than being fetched here.** `fetch` does not exist
     // in an AudioWorkletGlobalScope, so a build that downloads its own `.wasm` cannot start; the
@@ -114,11 +120,17 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
       try {
         this.onMessage(event.data);
       } catch (error) {
+        try { if (this.handle) this.engine?._pt_close(this.handle); } catch { /* Preserve the original refusal. */ }
         this.handle = 0;
         this.playing = false;
-        this.port.postMessage({ type: 'failed', reason: `the engine failed on this file: ${error}` });
+        this.awaitingPreparation = false;
+        this.reply({ type: 'failed', reason: `the engine failed on this file: ${error}` });
       }
     };
+  }
+
+  reply(message) {
+    this.port.postMessage({ ...message, requestId: this.requestId });
   }
 
   onMessage(message) {
@@ -127,6 +139,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     switch (message.type) {
       case 'open': {
         this.close();
+        this.requestId = message.requestId;
         const bytes = new Uint8Array(message.bytes);
         const buf = e._malloc(bytes.length);
         e.HEAPU8.set(bytes, buf);
@@ -137,13 +150,26 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         e._free(buf);
         e._free(namePtr);
         if (!this.handle) {
-          this.port.postMessage({ type: 'failed', reason: e.UTF8ToString(e._pt_last_error()) });
+          this.reply({ type: 'failed', reason: e.UTF8ToString(e._pt_last_error()) });
           return;
         }
+        e._pt_set_stereo_width(this.handle, this.stereoWidth);
         this.ended = false;
-        this.playing = true;
-        this.port.postMessage({
+        this.playing = false;
+        this.playRequested = true;
+        this.awaitingPreparation = true;
+        this.reply({ type: 'decoded', current: e._pt_current_subsong(this.handle) });
+        break;
+      }
+      case 'prepared': {
+        if (!this.handle || !this.awaitingPreparation || message.requestId !== this.requestId
+          || message.current !== e._pt_current_subsong(this.handle)) return;
+        this.configureNormalization(message.width === this.stereoWidth ? message.profile : null);
+        this.awaitingPreparation = false;
+        this.playing = this.playRequested;
+        this.reply({
           type: 'opened',
+          playing: this.playing,
           describe: e.UTF8ToString(e._pt_describe(this.handle)),
           duration: e._pt_duration(this.handle),
           subsongs: e._pt_subsong_count(this.handle),
@@ -157,31 +183,63 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         });
         break;
       }
-      case 'play': this.playing = true; break;
-      case 'pause': this.playing = false; break;
+      case 'stereo':
+        this.measurement('stereo');
+        this.stereoWidth = message.percent === 0 || message.percent === 50 ? message.percent : 100;
+        if (this.handle) {
+          e._pt_set_stereo_width(this.handle, this.stereoWidth);
+          this.configureNormalization();
+          this.normalizationContext();
+        }
+        break;
+      case 'normalization':
+        this.measurement('toggle');
+        this.normalizationEnabled = message.enabled === true;
+        this.configureNormalization();
+        this.normalizationContext();
+        break;
+      case 'normalization-profile':
+        if (this.handle && !this.awaitingPreparation && this.normalizationEnabled
+          && message.requestId === this.requestId && message.width === this.stereoWidth
+          && message.subsong === e._pt_current_subsong(this.handle)) this.configureNormalization(message.profile);
+        break;
+      case 'play': this.playRequested = true; this.playing = !this.awaitingPreparation; break;
+      case 'pause': this.playRequested = false; this.playing = false; break;
       case 'seek':
         if (this.handle) {
           // Answered when it has landed: a SID or an SNDH seeks by running its machine there, for
           // seconds on a long SID, and the page shows a spinner until this says it is done (Q11).
           e._pt_seek(this.handle, message.seconds);
-          this.port.postMessage({ type: 'seeked', seconds: e._pt_position(this.handle) });
+          this.reply({ type: 'seeked', seconds: e._pt_position(this.handle) });
         }
         break;
       case 'subsong':
         if (this.handle) {
-          e._pt_select_subsong(this.handle, message.index);
-          this.ended = false;
-          this.playing = true;
+          const previousSeconds = e._pt_position(this.handle);
+          this.measurement('subsong');
+          const selected = e._pt_select_subsong(this.handle, message.index);
+          if (selected) {
+            this.configureNormalization();
+            this.ended = false;
+            this.playRequested = true;
+            this.playing = !this.awaitingPreparation;
+          }
           // **Answered, because a subsong is a different tune.** Its length is its own -- a GBS
           // gives each track one -- and so is its title. Without this the page kept showing the
           // first tune's duration against the third one's audio, which is the same defect
           // `selectSubsong` fixed on the phone.
-          this.port.postMessage({
+          this.reply({
             type: 'subsong',
+            selectionId: message.selectionId,
+            requestedIndex: message.index,
+            selected: !!selected,
+            playing: this.playing,
+            previousSeconds,
             index: e._pt_current_subsong(this.handle),
             duration: e._pt_duration(this.handle),
             describe: e.UTF8ToString(e._pt_describe(this.handle)),
           });
+          if (selected) this.normalizationContext();
         }
         break;
       // Play, on a track that has already ended. `pt_rewind` is what the phone's transport does
@@ -190,9 +248,10 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         if (this.handle) {
           e._pt_rewind(this.handle);
           this.ended = false;
-          this.playing = true;
+          this.playRequested = true;
+          this.playing = !this.awaitingPreparation;
           this.reported = -1;
-          this.port.postMessage({ type: 'position', seconds: 0 });
+          this.reply({ type: 'position', seconds: 0 });
         }
         break;
       case 'close': this.close(); break;
@@ -229,10 +288,36 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     }
   }
 
+  configureNormalization(profile = null) {
+    if (!this.handle || !this.engine) return;
+    this.engine._pt_set_normalization(this.handle, this.normalizationEnabled ? 1 : 0,
+      profile?.seconds ?? 0, profile?.lufs ?? -100, profile?.peak ?? 0, profile?.complete === true ? 1 : 0, this.stereoWidth);
+  }
+
+  normalizationContext() {
+    if (!this.handle || this.awaitingPreparation) return;
+    this.reply({ type: 'normalization-context', subsong: this.engine._pt_current_subsong(this.handle), width: this.stereoWidth });
+  }
+
+  measurement(reason) {
+    if (!this.handle || !this.engine || this.awaitingPreparation) return;
+    this.profileBuffer ||= this.engine._malloc(32);
+    const available = this.engine._pt_loudness_profile(this.handle, this.profileBuffer);
+    const values = available ? [...new Float64Array(this.engine.HEAPU8.buffer, this.profileBuffer, 4)] : null;
+    this.reply({ type: 'loudness', reason, values,
+      subsong: this.engine._pt_current_subsong(this.handle), width: this.stereoWidth });
+  }
+
   close() {
-    if (this.handle && this.engine) this.engine._pt_close(this.handle);
+    if (this.handle && this.engine) {
+      this.measurement('close');
+      this.engine._pt_close(this.handle);
+      this.reply({ type: 'closed' });
+    }
     this.handle = 0;
     this.playing = false;
+    this.playRequested = false;
+    this.awaitingPreparation = false;
   }
 
   process(_inputs, outputs) {
@@ -262,7 +347,8 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
 
     if (rendered < frames) {
       this.ended = true;
-      this.port.postMessage({ type: 'ended' });
+      this.measurement('end');
+      this.reply({ type: 'ended', seconds: e._pt_position(this.handle) });
       return true;
     }
 
@@ -271,7 +357,8 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     const position = e._pt_position(this.handle);
     if (Math.abs(position - this.reported) > 0.2) {
       this.reported = position;
-      this.port.postMessage({ type: 'position', seconds: position });
+      if (this.normalizationEnabled) this.measurement('progress');
+      this.reply({ type: 'position', seconds: position });
     }
     return true;
   }

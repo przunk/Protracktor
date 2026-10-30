@@ -150,12 +150,78 @@ fi
 "$SCRIPT_DIR/check-store-metadata.sh"
 run_check "Test-runner fixtures" runner python3 "$SCRIPT_DIR/check-test-runner.py"
 run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.sh"
+run_check "WEB package fixtures" web-package node scripts/check-web-package.mjs
+
+# These domain cases need only Node, not a browser/DOM dependency or a compiled WASM engine.
+run_check "Track selection" track-selection node scripts/check-track-selection.mjs
+run_check "Browse restoration" browse-scroll node scripts/check-browse-scroll.mjs
+run_check "Subsong strip rules" subsong-strip node scripts/check-subsong-strip.mjs
+run_check "Playback preferences" playback-preferences node scripts/check-playback-preferences.mjs
+run_check "Music cache budget" cache-budget node scripts/check-cache-budget.mjs
+run_check "Music transfer deadlines" music-download node scripts/check-music-download.mjs
+run_check "Remote music ownership" remote-music node scripts/check-remote-music.mjs
+run_check "Playback read-ahead" playback-read-ahead node scripts/check-playback-read-ahead.mjs
+run_check "Folder prefetch" folder-prefetch node scripts/check-folder-prefetch.mjs
+run_check "Grouped download rules" library-downloads node scripts/check-library-downloads.mjs
+run_check "Atomic dataset downloads" dataset-downloads node scripts/check-dataset-downloads.mjs
+run_check "Playlist file transfer" playlist-transfer node scripts/check-playlist-transfer.mjs
+run_check "Playlist reorder" list-reorder node scripts/check-list-reorder.mjs
+run_check "Playback context" playback-context node scripts/check-playback-context.mjs
+run_check "Playback schedule" playback-schedule node scripts/check-playback-schedule.mjs
+run_check "Playback effects" playback-effects node scripts/check-playback-steps.mjs
+run_check "Source navigation" source-navigation node scripts/check-source-navigation.mjs
+run_check "Random history" random-history node scripts/check-random-history.mjs
+run_check "Random scopes" random-scope node scripts/check-random-scope.mjs
+run_check "Listening qualification" listening-session node scripts/check-listening-session.mjs
+run_check "History write/read ownership" history-state node scripts/check-history-state.mjs
+run_check "Saved places" saved-places node scripts/check-saved-places.mjs
+run_check "Learned titles" learned-titles node scripts/check-learned-titles.mjs
+run_check "Recent searches" recent-searches node scripts/check-recent-searches.mjs
+run_check "History filtering" history-filter node scripts/check-history-filter.mjs
+run_check "Library search" library-search node scripts/check-library-search.mjs
+run_check "Stereo mix preferences" stereo-mix node scripts/check-stereo-mix.mjs
+run_check "System media policy" system-media node scripts/check-system-media.mjs
+run_check "Track artwork" track-artwork node scripts/check-track-artwork.mjs
+run_check "Volume normalization profiles" loudness-profiles node scripts/check-loudness-profiles.mjs
+run_check "Volume normalization preferences" normalization-preferences node scripts/check-normalization-preferences.mjs
+run_check "Volume normalization preparation" loudness-preparation node scripts/check-loudness-preparation.mjs
+run_check "Playback normalization ownership" playback-normalization node scripts/check-playback-normalization.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
-    run_check "Web page" page node scripts/check-page.mjs
+    run_check "Playback settings startup" playback-startup env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-playback-startup.mjs
+    run_check "UI message ownership" ui-messages node scripts/check-ui-messages.mjs
+    run_check "Browse restoration presentation" browse-scroll-view node scripts/check-browse-scroll-view.mjs
+    run_check "Subsong strip presentation" subsong-strip-view node scripts/check-subsong-strip-view.mjs
+    run_check "Browse selection presentation" browse-selection-view node scripts/check-browse-selection-view.mjs
+    run_check "Playlist import storage" playlist-transfer-store node scripts/check-playlist-transfer-store.mjs
+    run_check "Search suggestions" search-suggestions node scripts/check-search-suggestions.mjs
+    run_check "Download picker presentation" download-picker node scripts/check-download-picker.mjs
+    run_check "Search scopes presentation" search-scopes-view node scripts/check-search-scopes-view.mjs
+    run_check "Library search storage" library-search-store node scripts/check-library-search-store.mjs
+    run_check "Recent search storage" recent-searches-store node scripts/check-recent-searches-store.mjs
+    run_check "Saved places storage" saved-places-store node scripts/check-saved-places-store.mjs
+    run_check "Saved places catalogues" saved-places-catalogue node scripts/check-saved-places-catalogue.mjs
+    run_check "Saved places presentation" saved-places-view node scripts/check-saved-places-view.mjs
+    run_check "Music cache presentation" music-cache-view node scripts/check-music-cache-view.mjs
+    run_check "Music cache storage" music-cache-store node scripts/check-music-cache-store.mjs
+    run_check "Volume normalization storage" loudness-cache node scripts/check-loudness-cache.mjs
+    run_check "Offline ASMA archive" asma-archive node scripts/check-asma-archive.mjs
+    run_check "Legacy Modland recovery" modland-recovery node scripts/check-modland-recovery.mjs
+    run_check "Music cache migrations" music-cache-migrations node scripts/check-music-cache-migrations.mjs
+    run_check "History storage/migrations" history-store node scripts/check-history-store.mjs
+    run_check "History filtering storage" history-filter-store node scripts/check-history-filter-store.mjs
+    run_check "Random catalogue/storage" random-catalogue node scripts/check-random-catalogue.mjs
+    run_check "Random startup" random-startup node scripts/check-random-startup.mjs
+    run_check "Random dice" random-dice node scripts/check-random-dice.mjs
+    run_check "Row gestures" row-gestures node scripts/check-row-gestures.mjs
+    run_check "Pending reorder" queue-reorder node scripts/check-queue-reorder.mjs
+    run_check "Queue presentation" queue-view node scripts/check-queue-view.mjs
+    run_check "System media interactions" system-media-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_MEDIA=1 node --experimental-vm-modules scripts/check-page.mjs
+    run_check "Playlist occurrence editing" playlist-edit-events env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_PLAYLIST_EDIT=1 node --experimental-vm-modules scripts/check-page.mjs
+    run_check "Web page" page env PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs
     page_output="$(<"$PROTRACKTOR_LOG_PREFIX-page.log")"
     page_checks=$(echo "$page_output" | grep -c '✓' || true)
     echo "🖥  $page_checks page checks passed"
@@ -167,6 +233,16 @@ fi
 # a refusal quoting the wrong decoder (C55) and a throw crossing the boundary (C42) -- are both in
 # `native/engine/engine.cpp`, which is the file Android compiles too.
 if [ -f web/vendor/engine.mjs ]; then
+    run_check "Worklet final playback position" worklet-listening node scripts/check-worklet-listening.mjs
+    run_check "Stereo mix PCM" stereo-pcm node scripts/check-engine-stereo.mjs
+    run_check "Volume normalization PCM" loudness-pcm node scripts/check-engine-loudness.mjs
+    run_check "Volume normalization worker" loudness-worker node scripts/check-loudness-worker.mjs
+    run_check "Volume normalization worklet" loudness-worklet node scripts/check-worklet-loudness.mjs
+    if [ -d web/node_modules/jsdom ]; then
+        run_check "Volume normalization playback bridge" loudness-bridge env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_LOUDNESS_BRIDGE=1 node --experimental-vm-modules scripts/check-page.mjs
+        run_check "System media PCM" system-media-pcm env PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_PCM=1 node --experimental-vm-modules scripts/check-page.mjs
+    fi
+    run_check "Stereo mix worklet" stereo-worklet node scripts/check-worklet-stereo.mjs
     run_check "Web engine checks" engine node scripts/check-engine.mjs
     engine_output="$(<"$PROTRACKTOR_LOG_PREFIX-engine.log")"
     engine_checks=$(echo "$engine_output" | grep -c '✓' || true)

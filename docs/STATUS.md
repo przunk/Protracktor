@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-28 — B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-30 — WEB parity integrated into develop, browser trial and GitHub Pages publication pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -42,6 +42,445 @@ VersionName 1.4.0 and schema 23 are retained. The merge tree equals branch 691f8
 application inputs match checked source fbf2958; this is a source comparison, not another run.
 Master/tags, frozen WEB work and AMP are unchanged; no push, build or publication for integration.
 
+## WEB feature implementation
+
+**Integrated into develop, 2026-10-30:** integration of `feature/web-feature-parity` at
+**bbaa1aab82cb8a5405cae64721c98eb1d67f9f1c** is approved before the physical browser trial.
+All 829 application/package inputs match the checked source `abd505a`; the comparison is source
+evidence, not a new test run or browser acceptance. The original archive retains its source/hash.
+GitHub Pages preparation and push remain pending; master, release tags and versionName are unchanged.
+
+**Technical handoff ready, 2026-10-30:** all **25/25** scopes and the final 41-commit audit are
+implemented on `feature/web-feature-parity`; tested source **abd505a11f389509e92dfab6ad3f496d0364fa1a**.
+Fresh complete gate: **1266 tests / 173 suites**, zero failures/errors/skips, **1266 seconds**;
+all 31 Native unit tasks executed, **1368 ESM page assertions**, **57 engine checks** and every
+companion pass. Fresh lint executes all three analyses: **0 errors / 79 warnings**, 143.4 seconds.
+All **829** frozen inputs match; the final plain page command also passes **1367 assertions**.
+
+WEB archive: [protracktor-web-abd505a-20261030-004338-244872936.tar.gz](../dist/protracktor-web-abd505a-20261030-004338-244872936.tar.gz), **1,610,081 bytes**,
+SHA-256 `88cd7b0ab3068fc69cd2f830c08f1805a089d7dde76723a1bb948b3e19f36644`.
+Two actual builds are byte-identical; extracted engine/API/PCM, legal contents, launcher/HTTP and
+all 111 PWA asset fetches pass host checks. [Complete evidence and limits](WEB_IMPLEMENTATION.md#final-technical-handoff--2026-10-30).
+
+**Physical browser acceptance is unchecked.** Use the [browser trial](WEB_PARITY_CHECKLIST.md).
+C104 headset/OS routing remains unverified and potentially unsupported after the final retry.
+One earlier plain-run ASMA assertion failed once; instrumented, final ESM and uninstrumented
+reruns pass without a source correction. Its cause remains unknown and the observation is retained.
+The candidate is now integrated into develop; push, deployment and physical browser acceptance
+remain pending. No APK or application release was prepared for this integration.
+
+The dated checkpoints below describe earlier stages and are superseded by this handoff.
+
+**Final source audit, 2026-10-30:** W01-W25 have been traced through their feature/substage
+commits, current production paths, Native comparisons and WEB rule/event/storage/PCM checks.
+The final HTML/CSS, exclusions, source/asset identity and delivery paths are reviewed; the
+[requirement index and C104 retry](WEB_IMPLEMENTATION.md#final-sourcerequirements-audit--2026-10-30)
+record the limits. The [consolidated browser checklist](WEB_PARITY_CHECKLIST.md) remains entirely
+unchecked for physical environments. The plain page command also passes after repairing its
+legacy import adapter. A **new final forced complete gate/lint and real-engine archive are still
+pending**; previous stage receipts do not establish readiness of this corrected candidate.
+
+**Keyboard audit follow-up, 2026-10-30:** main-list titles and playlist choices now have real
+Enter/Space actions, focus targets and focus retention through redraws. Seven event guards fail
+before correction; the focused run and all **1368** ESM page assertions pass afterward. Native
+editor/context rules are retained. Physical keyboard, screen reader and focus appearance remain
+unchecked. The first final-gate attempt on `d7be376` was intentionally interrupted (exit 143) for
+this correction; it is not a passing final verification. A fresh complete gate/lint and archive
+are still required.
+
+**Final audit corrections, 2026-10-29:** Kotlin-compatible whitespace handling now covers learned
+titles, retained History presentation and artwork seeds. New guards fail before correction;
+6 learned-title, 16 History storage and 382 artwork checks pass afterward. The same cases pass
+10 Native tests in three suites. Further audit corrections, final full checks and WEB packaging
+are in progress; focused results do not establish readiness of the final integrated candidate.
+PWA install and cache-miss requests now verify generated asset digests, preventing an HTTP-200
+older engine/script from entering the new revision. Generated-worker/real-Fetch checks reproduce
+both gaps before correction and pass afterward, including old-cache preservation and unsupported
+integrity fallback. Actual browser PWA update acceptance remains unchecked.
+Playlist removal/Undo now preserves duplicate occurrence positions and IDs instead of mapping
+equal URLs to the last row. Ten production-ESM event assertions fail before correction; all 28
+event checks and 75 model cases pass afterward, with existing transport/reorder companions.
+These results use an adapted decoder port; physical browser playback remains unchecked.
+Explicit playback selection closes old PCM before fetching the new source; viewing another
+playlist still keeps it playing. Real app/worklet/WASM checks fail twice before correction
+(normalization Off/On) and pass all 33 checks afterward. Normalization/system-event companions
+pass. A stale-row swipe/click failure from that broad run has a subsequent W02 correction:
+suppression survives row replacement, stale nodes cannot play and fresh keyboard input resets
+suppression. Both new guards fail before correction; all 33 focused edit/gesture checks and the
+1368-assertion full page run pass afterward. Final complete checks/package remain pending.
+WEB packaging now reproduces archive bytes for the same inputs/Git identity and marks dirty
+sources in both filename and metadata. Actual-script fixtures verify contents, identity and
+refusals. These checks use a tiny engine fixture; final real-engine packaging is still pending.
+
+**W25 complete host verification, 2026-10-29:** candidate **9af16b9** passes the forced complete
+gate: **1263 tests / 173 suites**, zero failures/errors/skips, **1217 seconds**, all 31 native
+unit tasks executed, **1368 actual-ESM page assertions**, **57 engine checks** and every companion.
+Lint: **0 errors / 79 warnings**, 146.2 seconds, all three analysis tasks executed. All **811**
+frozen inputs match; logs/JUnit/lint/source hashes are archived and the process exits zero.
+**25/25 scopes have implementation and host verification.** Final audit corrections, final
+integrated verification and the WEB package remain. Physical browser routing and acceptance are
+unchecked; C104 retains its documented platform limitation. No merge, APK or publication.
+
+**Earlier W25 implementation checkpoint, 2026-10-29:** shared explicit system/page/keyboard transport,
+seek/position/metadata and local format artwork are implemented. Focused host checks pass 27 policy,
+381 artwork, 46 ESM transport and 14 real-WASM PCM cases; ten simulated source defects are caught.
+Shared artwork rows pass six Native tests; missing-row failure/restoration reruns are verified.
+Complete W25 gate/lint and final audit/package remain. Count stays **24/25** until that gate passes.
+Physical browser media-key routing, appearance, sound and background acceptance are unchecked;
+C104 is not declared resolved. [Contract and limitations](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
+**W15 complete at host level, 2026-10-29:** fixed -18 LUFS browser normalization passes the
+forced complete gate on **90467b4**: **1262 tests / 172 suites**, zero failures/errors/skips,
+**1032 seconds**, all 31 native unit tasks executed and every companion. The same run passes
+**1368 actual-ESM page assertions**, **25 cold starts / 641 assertions**, **26 real normalization
+bridge assertions** and **55 engine checks**. All **793** frozen inputs match; current-run
+logs/JUnit/lint are archived. Lint: **0 errors / 79 warnings**, valid cached analyses in the full
+gate (6.9 seconds), preceded by a forced 207-second run on identical Android/lint inputs. Existing
+JDK17 with process-scoped C1 is retained. Complete script success was observed after the tool
+handle disappeared; no wrapper exit is fabricated. **24/25 scopes are closed (W01-W24).** W25,
+final review/checks and WEB packaging remain; real-browser/device acceptance is unchecked.
+
+**Earlier W15 implementation checkpoint, 2026-10-29:** browser normalization now uses the unchanged native
+-18 LUFS DSP and separate bounded/cancellable worker analysis. Settings defaults Off; retained
+profiles use CRC-checked content/subsong/stereo/decoder identities, best-measurement replacement,
+atomic writes and a 512-record limit independent of History/music Clear. The common startup path
+defers first PCM until the actual selected subsong is prepared or falls back. Live changes preserve
+pause/source/editor/FIFO; Off releases the analysis worker. A reproduced unanswered-open timeout
+now retires its request and closes the private decoder, preventing late startup.
+
+Focused checks pass **35 shared profile/identity**, **11 preferences**, **11 storage**, **25
+preparation**, **15 playback-ownership**, **6 real-worker**, **8 real-worklet** and **36 actual-WASM
+PCM/policy cases**, including sixteen comparisons with a standalone native-header oracle. The
+actual ESM app/worker/worklet bridge passes **26 assertions**, including nonzero GME selection,
+first PCM, Stop and the real ten-second deadline. Native reference: **18 tests / three suites**;
+shared-row failure and non-cached restoration are verified. Twenty-five fresh starts pass **641
+assertions**; focused Settings passes **28 ESM / 27 legacy assertions**. Global engine failure
+also retires private startup data; its actual message-port guard failed before that correction
+and now passes. An added pause assertion
+initially raced the asynchronous transport; it now waits for the actual paused state. These focused
+checks were followed by the complete run recorded above. At this earlier checkpoint W15 was not
+yet counted complete, with 23/25 scopes closed. Physical browser appearance, listening, touch, mobile
+worker scheduling, routing and background acceptance remain unchecked.
+
+The first W15 full-gate attempt passed **1262 native tests / 172 suites**, zero failures/errors/
+skips, before its relocated Random startup bootstrap failed to resolve the new dynamic imports.
+That test path now anchors both static and dynamic imports to the project; all four unchanged
+Random startup/ownership checks pass. All **793** frozen inputs matched at failure; evidence is
+archived. This changes only test setup; the subsequent complete gate is recorded above.
+
+A subsequent identical-source run passed **1262 native tests / 172 suites**, **1368 page
+assertions**, **25 fresh starts** and the **26-assertion real normalization bridge**, then stopped
+at an old engine test expecting immediate open replies. That test now checks both decoded IDs,
+preparation silence, stale-preparation rejection and only the current opened ID. Its complete
+engine run passes and a controlled eager-preparation fault fails. An intervening Robolectric
+framework class-loading failure is archived separately; its cause remains unproven. The corrected
+candidate subsequently passed the complete gate above; no partial runs were combined into a pass.
+
+**W14 complete at host level, 2026-10-29:** Original / Narrow / Mono use the shared native
+StereoMixer through a rebuilt per-handle WASM API. Global selection persists, applies before first
+PCM and changes live without changing pause, source/FIFO/editor, position or subsong. Raw export
+PCM and Original match the previous engine exactly. Focused checks pass **21 mode/persistence,
+46 real-WASM PCM, 6 real-worklet, 23 actual Settings gestures**, **1350 complete page assertions**,
+23 legacy assertions and **20 fresh starts / 485 assertions**. Native reference: **11 tests /
+three suites**, including the shared fixture; missing-row failure and non-cached restoration are
+verified. Nine source/compiled-engine faults are detected and restored. The forced complete gate
+on **e0a1f79** passes **1259 tests / 172 suites**, zero failures/errors/skips, **1156 s**, all
+31 native unit tasks executed and all companions, including **1350 actual-ESM page assertions**
+and **20 fresh starts / 485 assertions**. Lint: **0 errors / 79 warnings**, 150.9 s. All **744
+source/test/build and temporary verification inputs** match their frozen hashes; logs/JUnit/lint
+are archived. The existing JDK17 used process-scoped C1-only JIT after archived host JVM crashes;
+no tests, application or shared-tool configuration were changed. An earlier gate exposed a test
+timing assumption in the C121 Information guard; request-based synchronization and delayed-read /
+wrong-name controls verify its correction without changing application behaviour. The closed
+scope count is **23/25**. Browser rendering, touch, sound quality, encoding and background
+acceptance are unchecked.
+
+**W22 complete at host level, 2026-10-29:** a common selected-download runner and stable
+picker implement missing defaults, estimates, step progress, Stop, partial retention and Retry.
+Individual actions share locks/publication; cancelling a selected run preserves independent work
+and current playback. Atomic writes fix reproduced quota loss and ignored parse cancellation;
+compatibility sequencing and actual Close icon taps have regression guards. Focused checks pass
+14 model, 26 dataset, 17 component and 40 actual-gesture cases; shared plans pass native 29 tests /
+four suites, with missing-row invalidation proved. WEB retains the separately permitted HVSC
+website source at its working canonical alias; actual GET/CORS and byte identity with native's
+DeepSID copy are verified. Modal dismissal restores its originating view/focus; keyboard navigation
+stays within the dialog. The complete page preflight passes **1327 actual-ESM assertions** and
+40 focused legacy gesture assertions; fifteen controlled source faults are detected and restored.
+The forced complete gate on **9546ba5** passes **1258 tests / 172 suites**, zero failures/errors/skips,
+**995 s**, all 31 native unit tasks executed and all companions, including **1327 actual-ESM page
+assertions** and fifteen fresh starts / 339 assertions. Lint: **0 errors / 79 warnings**, 108.7 s.
+All **736 source/test/build inputs plus one temporary verification configuration** match their
+frozen hashes; logs/JUnit/lint are archived. Test workers used C1-only JIT on the existing JDK17
+after the archived normal-JIT run suffered host JVM SIGSEGV; no tests, application configuration
+or shared tools were changed. The closed scope count is **22/25**; browser appearance, touch,
+quota, sound and background acceptance remain unchecked.
+
+**W19 complete at host level, 2026-10-29:** bounded common playback read-ahead and policy-gated
+Modland folder preparation pass the forced full gate on **bc97964**: **1257 tests / 172 suites**,
+zero failures/errors/skips, **994 s**, all 31 native unit tasks executed and all companions,
+**1287 actual-ESM page assertions**, fifteen fresh starts / 339 assertions. Lint: **0 errors /
+79 warnings**, 84.6 s; all **728** input hashes match. Logs/JUnit/lint are archived. Default folder
+policy explains the browser's unavailable unmetered-network status; selected-playback preparation
+stays independent. Android playback code/WASM/schema/version are unchanged; shared privacy copy
+is updated. Browser rendering, touch, CORS, quota, sound and background acceptance remain unchecked.
+
+**W19 pre-gate implementation checkpoint, 2026-10-29:** shared bounded playback read-ahead replaces
+Random's byte promises; Modland author-folder prefetch has ordered three-worker execution,
+100 MiB planning, cancellation and retained Wi-Fi only / Always / Off controls. Browser default
+pauses folder bulk downloads with an explanation because unmetered-network status is unavailable.
+Chosen-playback preparation is independent. Focused checks cover 12 read-ahead, 15 folder and
+70 context cases; native 24 tests/two suites, actual page 1287 assertions, fifteen fresh starts
+339 assertions. Controlled faults and shared-input invalidation are verified. Full gate/lint
+were still pending at this checkpoint; see the completed gate above. Physical browser acceptance
+remains unchecked.
+
+**W23 complete at host level, 2026-10-29:** the shared reader recovers one moved Modland
+unknown-author path only after HTTP404, preserving nested formats, canonical encoding and original
+playlist/History/cache IDs. Tested **7b1743e** passes the forced complete gate: **1256 tests /
+172 suites**, zero failures/errors/skips, **960 s**, all companions, **1256 actual-ESM page
+assertions** and twelve fresh starts (248 assertions). Lint: **0 errors / 79 warnings**,85.7 s;
+all **720** input hashes match. The shared23-case fixture, four source faults, missing-row guard
+and restoration are verified. Real browser CORS/persistence/rendering/sound remain unchecked.
+
+**W21 complete at host level, 2026-10-28:** explicit ASMA download retains the complete ZIP and
+atomically publishes/deletes its derived index. Schema remains 6; startup never fetches it.
+Current HTTPS IDs, documents, playback and fetched-cache separation survive; native-root import,
+corruption state and stale cross-tab publication/presentation are covered. Tested **57a189f**
+passes the forced full gate: **1255 tests / 172 suites**, zero failures/errors/skips, **984 s**,
+all companions, **1240 actual-ESM page assertions** and twelve cold starts (248 assertions).
+Lint: **0 errors / 79 warnings**, 86.5 s; all **716** input hashes match. The Random test copier's
+missing dependency is corrected and all four ownership assertions pass. Evidence is archived;
+physical browser CORS/quota/rendering/sound/background acceptance remains unchecked.
+
+**W20 complete at host level, 2026-10-28:** browser schema 6 separates fetched copies from user
+documents and the reserved ASMA archive. Native-style 512 MiB LRU, protected atomic publication,
+common byte resolution, Browse copy marks and Storage Clear/Retry pass the forced full gate on
+**2d9faae**: **1254 tests / 171 suites**, zero failures/errors/skips, **955 s**, all companions,
+**1212 page assertions** and eleven cold starts (226 assertions). Lint: **0 errors / 79 warnings**;
+all **708** input hashes match. Shared native/WEB cases, migrations, transfer deadlines and
+controlled faults are verified. Browser offline/quota/rendering/audio behaviour remains unchecked.
+No WEB merge, package, version change or deployment.
+
+**W24 complete at host level, 2026-10-28:** live en/pl/System changes preserve playback, bytes,
+context/FIFO, draft, selection/focus and raw names. Tested **7d321ac** passes the forced gate:
+**1252 tests / 170 suites**, zero failures/errors/skips, **922 s**, all companions including
+**1182 page assertions**, 16 ownership cases and ten fresh starts (204 assertions). Lint
+**0 errors / 79 warnings**; all **694** input hashes match. Eleven controlled faults are detected
+and restored; actual-module startup and visible refusal notices now have stronger guards.
+Native reference c8209b1 is unchanged. Physical browser acceptance remains unchecked.
+**24 of 25 scopes have completed host verification** (W01-W24); W25 remains. No WEB merge,
+package, push or deployment.
+
+
+**W18 complete at host level, 2026-10-28:** retained shuffle/repeat and the shared Settings/player
+subsong choice restore without autoplay. Saved selection restores without writes; old results
+and failures cannot replace a newer view. Forced gate on **709fb71** passes **1252 tests / 170
+suites**, zero failures/errors/skips, **917 s**, all companions, **1135 page assertions** and ten
+fresh-page scenarios (194 bootstrap assertions). Lint **0 errors / 79 warnings**; all **688** input
+hashes match. Six controlled faults are detected and restored. Native production is unchanged.
+W01-W13 and W16-W18 are implemented; W24 is next. Physical browser acceptance remains unchecked.
+No WEB merge, package, push or deployment.
+
+
+**W18 implementation checkpoint, 2026-10-28:** shuffle/repeat restore before workspace creation;
+Settings and Now Playing share all-subsongs state. Saved playlist selection restores paused without
+writes; the startup ReferenceError and stale failure feedback are corrected. Ten preference cases,
+ten fresh-page scenarios (194 assertions) and 16 actual control assertions pass. Six controlled
+faults fail and restored sources pass. Native production is unchanged. Full gate/lint are pending;
+physical browser acceptance is unchecked. No merge or deployment.
+
+
+**W18 in progress, 2026-10-28:** fresh-page reproduction confirms saved-playlist restoration
+fails because its generation variable is undeclared; the catch presents it as a browser storage
+failure. Two actual startup assertions fail before the fix. This is being repaired with playback
+preference restoration; initialization must select paused without rewriting the playlist.
+No full W18 verification or browser acceptance is claimed yet.
+
+
+**W17 complete at host level, 2026-10-28:** W17b's keyed horizontal subsong strip keeps distant
+browsing stable, follows the watched current region and resets on fresh opening/file/count.
+Read-only Information, retired controls and late replies are covered. Forced full gate on
+**7d75d87** passes **1252 tests / 170 suites**, zero failures/errors/skips, **825 s**, all
+companions and **1119 page assertions**; lint **0 errors / 79 warnings**. All **683** input hashes
+match. Five actual native component comparisons and six WEB/two native negative controls support
+the port; native production is unchanged. Physical browser behaviour remains unchecked.
+W01-W13, W16 and W17 are implemented; W18 is next. No WEB merge, package, push or deployment.
+
+
+**W17b implementation checkpoint, 2026-10-28:** keyed horizontal subsong chips follow only the
+watched region and reset on file/count/fresh opening. Information is read-only; stale replies,
+retired controls and duplicate-current selections are guarded. Current metadata survives dock
+reentry. Focused 15 rule / 6 presentation / 21 page assertions and five actual native component
+cases pass, with six WEB and two native controlled faults detected and restored. Native
+production is unchanged. Full forced checks/lint are pending; real-browser behaviour is unchecked.
+
+
+**W17a implemented, 2026-10-28:** per-level offsets and exact departed-row restoration
+survive index changes, empty/loading views and obsolete reads. Fresh Browse/History/query resets
+and independent History page positions are covered; temporary Add/Queue preserves the visit.
+Saved places waits for refreshed membership before consuming its marker. The forced complete
+gate passes **1247 tests / 169 suites**, zero failures/errors/skips, **813 s**, all companions,
+**1098 page assertions**; lint **0 errors / 79 warnings**. Android/native sources match the unit
+phase launched on **834836d**; before the WEB phase, test setup alone was corrected in **7f1b1d3**
+to explicitly choose its Search scope. All **677** final input hashes match. Four controlled
+faults and the pre-fix bookmark race are detected and restored. Physical browser scrolling/touch
+remain unchecked. W17b subsong following is next; W17 is not yet complete. No WEB bundle,
+merge, push, deployment, schema or versionName change.
+
+**W16 implemented, 2026-10-28:** independent title/Add and metadata/Tune rows preserve
+Add's reserved target, title sizing and separate Queue action. Ordinary browser minimum stays
+64 px; enlarged text may wrap/grow. Actual opened state owns the counter, including both subsong
+modes and load/error resets; inspecting another file cannot replace it. Keyboard expansion is
+independent of transport. Forced full gate on **37715ec** passes **1247 tests / 169 suites**,
+zero failures/errors/skips, **805 s**; all companions execute, **1076 page assertions**, lint
+**0 errors / 79 warnings**. All **672** input hashes match. Three deliberate faults fail;
+restored sources pass. Physical browser geometry/touch/zoom/assistive technology remain unchecked.
+W17a position restoration is next. No WEB bundle, merge, push or deployment.
+
+**W13 implemented, 2026-10-28:** bulk selection for playable Browse/Search/History rows,
+source-order capture, first-Back clearing, visit/membership ownership and stable checkbox slots.
+Batch Add/Share preserve playback and manual FIFO. Local buffers stay in drafts/tab memory;
+storage and links carry references. Failed destination writes remain retryable; obsolete reads
+and feedback cannot replace a newer visit. Focused controls own Space before global shortcuts.
+Forced gate on **6796084** passes **1247 tests / 169 suites**, zero failures/errors/skips,
+**794 s**; all companions execute, **1052 page assertions**, lint **0 errors / 79 warnings**.
+All **671** recorded inputs match. Six controlled regressions fail at the expected guards;
+two concrete pre-fix keyboard/stale-error failures are corrected. Physical browser interaction
+remains unchecked. W01-W13 have host implementation evidence; W16 is next. No WEB bundle,
+merge, push, deployment or versionName change.
+
+**W12 implemented, 2026-10-28:** native-compatible M3U8 import/export, independent draft/
+playback ownership, atomic fresh playlist creation, explicit partial results and transient local
+byte resolution. Search/list/startup hydration distinguishes runtime availability from saved
+metadata. Forced full gate on **2bf2834** passes **1244 tests / 168 suites**, zero failures/
+errors/skips, **774 s**; all companions execute, **1010 page assertions**, lint **0 errors /
+79 warnings**. All **665** recorded inputs match. File-picker/download/cross-device UI unchecked.
+W12a, W12b and W13 are implemented at host level.
+
+**Native M3U comparison finding:** at reference c8209b1, exporting a blank artist writes a leading
+artist separator and `PlaylistFile.read` retains that separator in the title. The shared host case
+records this behaviour; the WEB reader accepts the empty artist without altering its title.
+Android production code remains unchanged and its correction needs a separate Android task.
+
+**W12a implemented, 2026-10-28:** shared immediate row-crossing moves for playlist and manual
+Queue, draft/source isolation and duplicate occurrence retention. Focused native **12 tests /
+3 suites**, WEB **18 domain / 13 grip / 26 actual-page cases** pass. Forced full gate on
+**53e437a** passes **1241 tests / 167 suites**, zero failures/errors/skips, **765 s**; all
+companions execute, **973 page assertions**, lint **0 errors / 79 warnings**. All 656 recorded
+inputs match. Physical-browser touch, capture and painting remain unchecked. W12b M3U8 transfer
+is implemented in W12b.
+
+**W11 implemented, 2026-10-28:** explicit Search scopes and all saved-playlist references, native
+2000-per-source limits, global catalogue ordering/counts, mixed title/author word matching and
+producing-scope restoration from Queue. Empty/short queries work; scope choices never auto-search.
+Stable rows survive pending edits; missing local copies explain their refusal and existing held
+phone bytes remain transient. Native focused reference checks pass **45 tests / 5 suites**;
+JS passes **42 domain**, **8 production-store** and **10 scope-presentation** cases. Controlled
+fixture, actual-click, precedence, ownership, scope restoration, DOM identity and byte-transfer
+guards fail as intended; sources are restored. Final forced gate on **1182e66** passes
+**1240 tests / 166 suites**, zero failures/errors/skips, **769 s** overall; **947 page checks**
+and all companions execute; lint has zero errors. All 650 recorded inputs match. W03 scope/query
+restoration is complete; physical browser acceptance remains unchecked.
+
+**W02 drag parity gap closed by W12a:** the initial WEB release-only move differed from native
+live crossing/cancellation. The shared gesture and native-derived guards now align this timing.
+W02 host implementation is complete again; physical browser acceptance remains unchecked.
+No WEB merge/deployment or bundle handoff yet.
+
+
+**W10 implemented, 2026-10-28:** separate live History field, 200 ms debounce, whole-History literal
+Unicode matching, coherent bounded paging, read/Clear ownership and source-query restoration.
+Focused Android checks pass **26 tests / 5 suites**, including actual History UI and native SQLite;
+JS passes **30 rule/ownership cases**, **6 production storage cases** and **912 page assertions**.
+Controlled broken input, generation and common-fixture cases fail as intended and are restored.
+Final forced gate on **e38f728** passes **1239 tests / 165 suites**, zero failures/errors/skips,
+**755 s** overall; all WEB companions execute and lint has zero errors. All 640 recorded inputs
+still match. Browser appearance/keyboard/touch remain unchecked; W11 Search scopes are next.
+
+
+**W09 implemented, 2026-10-28:** query history/suggestions are connected through the real field,
+integrated Search action, keyboard and pointer handlers. Eighteen cases run against the actual
+Kotlin/JS rules; JS passes 24 domain cases, 11 DOM event cases, four IndexedDB cases and 883 page
+assertions. Native lookup starts on explicit submission; typing alone never records or silently
+submits on redraw. Forced full gate on **5f239c9** passed **1238 tests / 164 suites** in
+**760 s**, zero failures/errors/skips; lint has zero errors. All 598 recorded application/test/build
+inputs still match. Browser acceptance is unchecked; no WEB bundle, merge or deployment.
+
+**Resumed 2026-10-28:** rebase onto accepted develop **c8209b1**, retaining all WEB application
+changes byte-for-byte. New Android comparisons use that reference, including the accepted -18
+LUFS policy for W15. Original branch preserved at `backup/web-parity-before-resume-20261028`;
+resumed head **dc8c850**, **865 page checks passed** before W09; W03 remains partially
+integrated until History/Search scope work. No WEB merge or deployment is approved.
+
+Autonomous implementation started on `feature/web-feature-parity`, based on develop `3183eee`.
+All twenty-five scopes remain in the [implementation ledger](WEB_IMPLEMENTATION.md), with mandatory
+Android code/test comparison and a final retry of skipped items. No merge/deployment is authorized.
+
+**W01-W02 implemented on the branch, 2026-10-27:** selected-editor ownership is independent of
+actual playback; manual FIFO, Clear/Undo and a unified keyed Queue panel are connected. Real
+menu/swipe/grip/keyboard callbacks preserve occurrence identity, source continuation and playlist
+writes. The panel keeps the shared dock, departure animations and current-row following. Outside-row
+additional pointers cancel gestures, and handled long presses suppress an extra browser menu.
+
+**W04 remembered Random implemented on the branch, 2026-10-27:** first entry starts; later
+entry reveals the retained heard record without replacing author/playlist/History playback.
+Double-tap rerolls a session, preserves manual requests and keeps global History. Hidden prepared
+picks, source ownership, positional duplicates, Clear/Undo and the accessible dice action follow
+the native rules. Batches are sampled without replacement; returning to Browse no longer borrows
+an unrelated active author's detour presentation.
+
+The combined forced context/navigation gate passes **1218 tests / 160 suites**, zero failures,
+errors or skips, **777 s**; all 31 unit tasks executed. All companions pass, including **760 page
+assertions**, **52 engine checks**, 67 context, 29 schedule, 14 effects, 9 source-navigation,
+17 Random-history, 9 dice, 16 swipe, 9 grip and 7 keyed-presentation cases. Fresh lint:
+**0 errors / 79 warnings**, 94.7 s. Exact source-input hashes and reports are retained in ignored
+`user/web-parity-verification/w04-context-navigation-full-gate/`.
+**Real-browser appearance, touch, audio and background behaviour remain unchecked.** No intermediate
+bundle is handed off. W03's source destinations pass the combined gate, but its future W10/W11
+History-query/Search-scope wiring remains pending. Later entries and the scope ledger supersede
+this checkpoint; W05-W07 are recorded below.
+Android production, schema, native code and dependencies are unchanged; no APK, merge or deployment.
+
+**W05 implemented on the branch, 2026-10-27:** platform/Favourites filters preserve Random history,
+use actual-index availability, retain curated paths and persist one scope. Dataset replacement is
+atomic and guarded against obsolete playability rebuilds. The full forced gate passes **1218 tests /
+160 suites**, zero failures/errors/skips, **695 s**, all 31 unit tasks executed. Companions pass,
+including **787 page assertions**, **24 scope/platform cases**, **12 catalogue/storage cases** and
+**4 startup checks**. Fresh lint: **0 errors / 79 warnings**, 84.8 s. Final input hashes/reports are
+retained in ignored `user/web-parity-verification/w05-random-filters-full-gate/`.
+**Real-browser acceptance remains unchecked.** No bundle, APK, Android production/schema/native
+change, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w05-random-filters-checkpoint--2026-10-27).
+
+**W06 implemented on the branch, 2026-10-27:** earned playback time/natural end, ordered History
+Clear, existing-History migration and discreet played-before marks match Android. IndexedDB v5
+preserves user data and adds an empty bookmark store for W07; Android schema remains 23.
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **744 s**, all
+31 unit tasks executed; **818 page assertions**, 16 listening, 10 write/read ownership, 14 storage/
+migration and 3 worklet boundary cases pass with all existing companions. Fresh lint: **0 errors /
+79 warnings**, 94.3 s. Source hashes/reports: ignored
+`user/web-parity-verification/w06-played-before-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, merge or deployment. [Scope/evidence](WEB_IMPLEMENTATION.md#w06-played-before-checkpoint--2026-10-27).
+
+**W07 implemented on the branch, 2026-10-27:** exact author/game-folder bookmarks, Saved places,
+current-index availability, navigation and one-shot removal Undo are connected without playback
+or playlist mutation. The existing v5 bookmarks store is reused. The forced full gate passes
+**1218 tests / 160 suites**, zero failures/errors/skips, **839 s**; all 31 unit tasks executed,
+**848 page assertions** and all companions pass. Fresh lint: **0 errors / 79 warnings**, 106.7 s.
+All 81 input hashes and reports are retained in ignored
+`user/web-parity-verification/w07-saved-places-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, Android/schema change, merge or deployment.
+[Scope/evidence](WEB_IMPLEMENTATION.md#w07-saved-places-checkpoint--2026-10-27).
+
+**W08 implemented on the branch, 2026-10-27:** learned History titles update Browse, Random and
+Queue presentation without changing source identity, order, selection or decoder filenames.
+Clear History removes the overlay; displayed copies preserve current-subsong export identity.
+The forced full gate passes **1218 tests / 160 suites**, zero failures/errors/skips, **838 s**;
+all 31 unit tasks executed, **865 page assertions** and all companions pass. Fresh lint:
+**0 errors / 79 warnings**, 88.7 s. All 76 input hashes and reports are retained in ignored
+`user/web-parity-verification/w08-learned-titles-full-gate/`. **Browser acceptance is unchecked.**
+No APK, bundle, Android/schema change, merge or deployment.
+[Scope/evidence](WEB_IMPLEMENTATION.md#w08-learned-titles-checkpoint--2026-10-27).
+
 ## WEB and Android parity inventory — 2026-10-26
 
 Recorded the [dated feature comparison](WEB_ANDROID_PARITY_2026-10-26.md) against develop
@@ -54,8 +493,9 @@ Application code, release versions and deployment are unchanged.
 implementation scope, with the [explicit exclusions and deferred integrations](WEB_ANDROID_PARITY_2026-10-26.md#scope-selected-after-the-inventory--2026-10-26).
 The local ignored GOAL.md now defines separate feature commits on `feature/web-feature-parity`,
 mandatory comparison with Android code/tests for each scope, regression gates and a final WEB
-bundle. Its previous contents are preserved under ignored `user/goals/`. Implementation has not
-started; no task branch, application build, merge or deployment was performed for this plan.
+bundle. Its previous contents are preserved under ignored `user/goals/`. At that plan-only
+checkpoint (`3183eee`), implementation had not started and no task branch, application build,
+merge or deployment had been performed; subsequent execution is recorded above.
 
 ## C122 Redmi Note 8 Pro crashes at startup after a previously working installation
 

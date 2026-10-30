@@ -1,0 +1,26 @@
+# cases: 23
+# Native ModlandLegacyPathsTest and real C109/C119 inputs.
+case	url	expect
+ym	https://modland.com/pub/modules/YM/-%20unknown/conflict%20europe.ym	https://modland.com/pub/modules/YM/_unknown/conflict%20europe.ym
+spc	https://modland.com/pub/modules/Nintendo%20SPC/-%20unknown/Same%20Game/same%20game%20%2822%29.spc	https://modland.com/pub/modules/Nintendo%20SPC/_unknown/Same%20Game/same%20game%20%2822%29.spc
+adlib	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/-%20unknown/%28opl2%29%20totally%20nuts.s3m	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/_unknown/%28opl2%29%20totally%20nuts.s3m
+sega	https://modland.com/pub/modules/Video%20Game%20Music/Sega%20Megadrive/-%20unknown/World%20Championship%20Soccer/06%20ending%20theme.vgz	https://modland.com/pub/modules/Video%20Game%20Music/Sega%20Megadrive/_unknown/World%20Championship%20Soccer/06%20ending%20theme.vgz
+native-nested	https://modland.com/pub/modules/Video%20Game%20Music/Console/Variant/-%20unknown/Game%20%281990%29/a%2Bb%20%23100%25.s3m	https://modland.com/pub/modules/Video%20Game%20Music/Console/Variant/_unknown/Game%20%281990%29/a%2Bb%20%23100%25.s3m
+unknown-filename	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/-%20unknown/-%20unknown.s3m	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/_unknown/-%20unknown.s3m
+unicode	https://modland.com/pub/modules/Protracker/-%20unknown/%C5%BB%C3%B3%C5%82%C4%87/a%2Bb%20%7E%21%20%281%29.mod	https://modland.com/pub/modules/Protracker/_unknown/%C5%BB%C3%B3%C5%82%C4%87/a%2Bb%20%7E%21%20%281%29.mod
+format-root	https://modland.com/pub/modules/-%20unknown/Composer/file.ym	-
+filename	https://modland.com/pub/modules/YM/Composer/-%20unknown	-
+deep-filename	https://modland.com/pub/modules/Video%20Game%20Music/Sega%20Megadrive/Composer/-%20unknown	-
+lookalike	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/-%20unknown%20composer/file.s3m	-
+already-current	https://modland.com/pub/modules/Video%20Game%20Music/Sega%20Megadrive/_unknown/file.vgz	-
+ambiguous	https://modland.com/pub/modules/YM/-%20unknown/-%20unknown/file.ym	-
+other-host	https://example.invalid/pub/modules/YM/-%20unknown/conflict%20europe.ym	-
+spoofed-host	https://modland.com.evil.invalid/pub/modules/YM/-%20unknown/conflict%20europe.ym	-
+other-path	https://modland.com/elsewhere/YM/-%20unknown/conflict%20europe.ym	-
+query	https://modland.com/pub/modules/YM/-%20unknown/conflict%20europe.ym?download=yes	-
+fragment	https://modland.com/pub/modules/YM/-%20unknown/conflict%20europe.ym#fragment	-
+invalid-escape	https://modland.com/pub/modules/YM/-%20unknown/%ZZ%20europe.ym	-
+encoded-filename-slash	https://modland.com/pub/modules/Ad%20Lib/Screamtracker%203%20AdLib/Composer/file%2F-%20unknown%2Fother.s3m	-
+encoded-format-slash	https://modland.com/pub/modules/YM/Family%2F-%20unknown/file.ym	-
+http	http://modland.com/pub/modules/YM/-%20unknown/conflict%20europe.ym	-
+literal-plus	https://modland.com/pub/modules/YM/-%20unknown/a+b.ym	https://modland.com/pub/modules/YM/_unknown/a%2Bb.ym

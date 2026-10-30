@@ -1,0 +1,13 @@
+# Shared Android StereoMix and WEB stored-mode cases.
+# cases: 10
+case	stored	mode	width
+absent	-	original	100
+original	original	original	100
+narrow	narrow	narrow	50
+mono	mono	mono	0
+empty	<empty>	original	100
+unknown	headphones	original	100
+future	future-mode	original	100
+case-sensitive	MONO	original	100
+not-a-property	constructor	original	100
+not-trimmed	 mono 	original	100

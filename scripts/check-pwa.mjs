@@ -7,8 +7,92 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
+import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { buildServiceWorker } from './stage-web-pwa.mjs';
+
+/** Actual Fetch verifies request integrity; only the Cache Storage transaction is modelled. */
+async function checkDeliveredVersion(built, next, oldBytes, nextBytes) {
+  let served = oldBytes, responses = 0;
+  const server = http.createServer((request, response) => {
+    const file = decodeURIComponent(new URL(request.url, 'http://localhost').pathname).slice('/Protracktor/'.length);
+    const bytes = served.get(file);
+    if (!bytes) { response.writeHead(404); response.end(); return; }
+    responses++;
+    response.writeHead(200, { 'Content-Length': bytes.length });
+    response.end(bytes);
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const base = `http://127.0.0.1:${server.address().port}/Protracktor/`, stores = new Map();
+  const caches = {
+    async open(name) {
+      if (!stores.has(name)) stores.set(name, new Map());
+      return {
+        async match(url) {
+          const bytes = stores.get(name).get(url);
+          return bytes ? new Response(bytes) : undefined;
+        },
+        async addAll(requests) {
+          // Await every transfer before closing the server, including a rejected update.
+          const results = await Promise.allSettled(requests.map(async request => {
+            const response = await fetch(request);
+            if (!response.ok) throw Error(`Asset HTTP ${response.status}`);
+            return [request.url, Buffer.from(await response.arrayBuffer())];
+          }));
+          const failure = results.find(result => result.status === 'rejected');
+          if (failure) throw failure.reason;
+          for (const result of results) stores.get(name).set(...result.value);
+        },
+      };
+    },
+    async delete(name) { return stores.delete(name); },
+  };
+  const install = async worker => {
+    const handlers = {};
+    vm.runInNewContext(worker.source, {
+      self: { registration: { scope: base }, addEventListener(type, handler) { handlers[type] = handler; } },
+      caches, Request, Response, URL, fetch,
+    });
+    let installed;
+    handlers.install({ waitUntil(promise) { installed = promise; } });
+    await installed;
+    return handlers;
+  };
+  const name = worker => `protracktor-shell:${base}:${worker.revision}`;
+  try {
+    await install(built);
+    assert.equal(stores.get(name(built)).size, oldBytes.size);
+    for (const file of ['vendor/engine.wasm', 'src/app.js']) {
+      served = new Map(nextBytes);
+      served.set(file, oldBytes.get(file));
+      const before = responses;
+      await assert.rejects(install(next), /fetch|integrity/i, `${file}: HTTP 200 with wrong bytes must reject the update`);
+      assert.equal(responses - before, next.files.length, 'all responses were successful HTTP 200');
+      assert(!stores.has(name(next)), 'no mixed version survives the failed installation');
+      assert(stores.has(name(built)), 'the installed previous version survives');
+    }
+    served = nextBytes;
+    const handlers = await install(next);
+    for (const [file, expected] of nextBytes) assert.deepEqual(stores.get(name(next)).get(base + file), expected);
+    const missing = 'vendor/engine.wasm';
+    stores.get(name(next)).delete(base + missing);
+    const loadMissing = async () => {
+      let result;
+      handlers.fetch({ request: new Request(base + missing), respondWith(promise) { result = promise; } });
+      return result;
+    };
+    served = oldBytes;
+    await assert.rejects(loadMissing(), /fetch|integrity/i, 'a cache miss must not mix an older network asset into the active version');
+    served = nextBytes;
+    assert.deepEqual(Buffer.from(await (await loadMissing()).arrayBuffer()), nextBytes.get(missing));
+    console.log('  ✓ real Fetch checks install and cache-miss bytes, retains the old cache and installs matching assets');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const web = path.join(root, 'web');
@@ -49,6 +133,8 @@ try {
   }
   fs.writeFileSync(path.join(fixture, 'vendor/private-diagnostics.html'), 'must not be cached');
   const built = buildServiceWorker(fixture);
+  const bytesFor = worker => new Map(worker.files.map(file => [file, fs.readFileSync(path.join(fixture, file))]));
+  const oldBytes = bytesFor(built);
   assert.ok(built.files.includes('vendor/engine.wasm'));
   assert.ok(!built.files.some((file) => file.includes('diagnostics')));
   assert.equal(buildServiceWorker(fixture).revision, built.revision);
@@ -60,7 +146,9 @@ try {
   }
   console.log('  ✓ scripts, engine, legal records and icons invalidate the cache; diagnostics stay out');
   fs.appendFileSync(path.join(fixture, 'src/app.js'), '\n// next version\n');
+  fs.appendFileSync(path.join(fixture, 'vendor/engine.wasm'), '\nnext engine version\n');
   const next = buildServiceWorker(fixture);
+  await checkDeliveredVersion(built, next, oldBytes, bytesFor(next));
 
   for (const base of ['https://example.test/', 'https://example.test/Protracktor/']) {
     const handlers = {}, stores = new Map();
@@ -71,6 +159,10 @@ try {
         const entries = stores.get(name);
         return {
           async addAll(requests) {
+            for (const request of requests) {
+              assert.equal(request.cache, 'reload');
+              assert.match(request.integrity, /^sha256-[A-Za-z0-9+/]{43}=$/);
+            }
             entries.set(requests[0].url, new Response('partial'));
             if (failInstall) throw new Error('download failed');
             for (const request of requests) entries.set(request.url, new Response(request.url));
@@ -131,8 +223,14 @@ try {
     await assert.rejects(lifecycle('install'), /download failed/);
     assert.ok(!stores.has(`protracktor-shell:${base}:${next.revision}`));
     assert.ok(stores.has(ownCache), 'a failed update preserves the active version');
+    failInstall = false;
+    class UnsupportedIntegrityRequest extends Request { get integrity() { return ''; } }
+    vm.runInNewContext(next.source, { ...workerContext, Request: UnsupportedIntegrityRequest });
+    await assert.rejects(lifecycle('install'), /integrity is unavailable/);
+    assert.ok(!stores.has(`protracktor-shell:${base}:${next.revision}`));
+    assert.ok(stores.has(ownCache), 'an unsupported integrity API preserves the old version');
   }
-  console.log('  ✓ offline startup, scoped cleanup, safe updates and pairing/network isolation');
+  console.log('  ✓ offline startup, scoped cleanup, integrity fallback, safe updates and pairing/network isolation');
 } finally {
   fs.rmSync(fixture, { recursive: true, force: true });
 }

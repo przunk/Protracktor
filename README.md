@@ -31,11 +31,13 @@ HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` th
 tune cannot; what neither knows is measured while the tune plays.
 
 Optional [volume normalization](docs/VOLUME_NORMALIZATION.md) reduces track-to-track loudness
-differences during Android playback; it does not process exported audio.
+differences during Android and browser playback; it does not process exported audio.
 
-There is also a **player for the browser** in `web/`, which plays the same archives and takes a
-playlist handed to it by the phone. It is a second player rather than a second screen; see
-`docs/WEB_SERVER.md` to run one.
+The **browser player** in `web/` supports Modland, ASMA and HVSC, browser playlists, an independent
+playback context and manual queue, History/search/bookmarks, retained music and optional offline
+ASMA. It can also receive a playlist from the phone. See [WEB_SERVER](docs/WEB_SERVER.md) to run
+it and the [browser trial checklist](docs/WEB_PARITY_CHECKLIST.md) for verification and platform
+limits. Browser system controls depend on the browser's Media Session routing.
 
 See [`docs/STATUS.md`](docs/STATUS.md) for completed work, known defects and the evidence behind
 verification claims. Host checks and reported phone results are recorded separately; neither a

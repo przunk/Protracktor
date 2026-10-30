@@ -4,20 +4,30 @@
 
 const REVISION = __PWA_REVISION__;
 const FILES = __PWA_FILES__;
+const INTEGRITY = __PWA_INTEGRITY__;
 const BASE = self.registration.scope;
 // Cache Storage is shared by the origin. Another app or a second Protracktor installation
 // under a different path must keep its own caches when this one updates.
 const PREFIX = `protracktor-shell:${BASE}:`;
 const CACHE = PREFIX + REVISION;
-const ASSETS = new Set(FILES.map((file) => new URL(file, BASE).href));
+const ASSETS = new Map(FILES.map((file) => [new URL(file, BASE).href, file]));
 const PAGE = new URL('src/index.html', BASE).href;
+
+function assetRequest(file, input = new URL(file, BASE)) {
+  const integrity = INTEGRITY[file];
+  const request = new Request(input, { cache: 'reload', integrity });
+  if (request.integrity !== integrity) throw new Error('Offline asset integrity is unavailable');
+  return request;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     try {
       const cache = await caches.open(CACHE);
-      // Install the whole version or keep the previous worker. Never cache a partial update.
-      await cache.addAll([...ASSETS].map((url) => new Request(url, { cache: 'reload' })));
+      // HTTP 200 alone cannot prove that an in-place deployment supplied this version's engine.
+      const requests = FILES.map((file) => assetRequest(file));
+      // Fetch checks every digest; a mismatch rejects addAll and leaves the previous worker active.
+      await cache.addAll(requests);
     } catch (error) {
       await caches.delete(CACHE);
       throw error;
@@ -49,9 +59,10 @@ self.addEventListener('fetch', (event) => {
     }
     if (url.href === new URL('src/', BASE).href) url.href = PAGE;
   }
-  if (!ASSETS.has(url.href)) return;
+  const file = ASSETS.get(url.href);
+  if (!file) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    return (await cache.match(url.href)) || fetch(request);
+    return (await cache.match(url.href)) || fetch(assetRequest(file, request));
   })());
 });

@@ -1,0 +1,9 @@
+# cases: 7
+bytes	kind	count
+0	nothing	0
+-1	nothing	0
+1	under-megabyte	0
+1048575	under-megabyte	0
+1048576	megabytes	1
+2097151	megabytes	1
+536870912	megabytes	512

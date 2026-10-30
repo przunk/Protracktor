@@ -12,10 +12,15 @@
 // own prefix -- a group (Modland's format, ASMA's section), an author, the tunes -- so browsing,
 // search and the dice treat them alike.
 
-import { catalogue } from './store.js';
+import { catalogue, asmaArchive } from './store.js';
+import { downloadMusic } from './music-download.js';
+import { checkDownload, downloadSnapshot, commitDownload } from './dataset-download.js';
+import { MODLAND_FILE_BASE, encodeCataloguePath } from './catalogue-urls.js';
+import { zipDirectory, validateZip } from './zip-archive.js';
 import { md5, parseSongLengths } from './songlengths.js';
 import { parseSongDbMetadata, songDbKey } from './songdb.js';
 import { searchTerms, searchable } from './rules.js';
+import { countPlatformBucket, PLATFORM_FINGERPRINT } from './random-scope.js';
 
 const MODLAND = 'modland';
 const ASMA = 'asma';
@@ -24,7 +29,7 @@ const ASMA_INDEX_URL = 'https://asma.atari.org/asmadb/asma.zip';
 
 /** What each archive is called on screen, and where its files are served. */
 const SOURCES = {
-  [MODLAND]: { name: 'Modland', files: 'https://modland.com/pub/modules/' },
+  [MODLAND]: { name: 'Modland', files: MODLAND_FILE_BASE },
   // ASMA serves every file at its zip entry's own path (measured), which is what lets a
   // browser play it without the 20 MB archive -- `docs/rules/queue-cases.tsv` [asmaUrl].
   [ASMA]: { name: 'ASMA', files: 'https://asma.atari.org/asma/' },
@@ -322,7 +327,9 @@ export function toRecords(text, source = MODLAND, isPlayable = () => true) {
       .sort((a, b) => collator.compare(a.name, b.name)),
   });
 
-  return { records, tracks, total, buckets: buckets.size, formats: formats.size };
+  const platformCounts = {};
+  for (const record of records) countPlatformBucket(platformCounts, source, record);
+  return { records, tracks, total, buckets: buckets.size, formats: formats.size, platformCounts };
 }
 
 /**
@@ -334,112 +341,53 @@ export function toRecords(text, source = MODLAND, isPlayable = () => true) {
  * can be 60,572 C64 tunes with nothing on screen to say why.
  */
 export async function downloadModland({
-  fingerprint = '', isPlayable = () => true, onProgress = null,
+  fingerprint = '', isPlayable = () => true, onProgress = null, signal,
 } = {}) {
+  const expected = await downloadSnapshot(`${MODLAND}:`, signal);
   onProgress?.({ stage: 'fetching' });
-  const response = await fetch(INDEX_URL);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const bytes = await response.arrayBuffer();
+  const bytes = await downloadMusic((...args) => fetch(...args), INDEX_URL, { signal, onProgress });
+  checkDownload(signal);
 
   onProgress?.({ stage: 'reading' });
   const text = await unzipOnly(bytes);
+  checkDownload(signal);
 
   onProgress?.({ stage: 'sorting' });
-  const { records, tracks, total, buckets, formats } = toRecords(text, MODLAND, isPlayable);
+  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(text, MODLAND, isPlayable);
   const key = keyFor(MODLAND);
 
-  await catalogue.clear(`${MODLAND}:`);
-  await catalogue.putAll(records, 2000, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{
+  await commitDownload(`${MODLAND}:`, [...records, {
     // **`complete`, the way the phone's `catalogues` row records it.** An index written before step
     // 0 holds only what an older build accepted, so a format added afterwards genuinely is missing
     // rows here and no local pass can supply them. One written since holds the archive.
     key: key.meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
-  }]);
+    platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
+  }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
 }
 
-/**
- * ASMA's list, **read out of its archive without downloading the archive**.
- *
- * ASMA publishes one 20 MB zip and no separate index; the phone downloads the lot, which is what
- * makes it work offline. A browser needs only the list, and a zip keeps its list at the end: the
- * end record says where the central directory is, and the directory names every file and its
- * size. Two ranged requests -- the tail, then the directory -- come to 0.85 MB (measured: 6,780
- * entries, 6,335 of them `.sap`), and each tune is then fetched from its own
- * address when it plays.
- *
- * A server that ignores `Range` answers 200 with the whole file; the same reading works on that,
- * because the offsets are the file's own.
- *
- * **Never the suffix form, `bytes=-N`**, which fails with "Failed to fetch". Only a range with a
- * start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
- * question without `Access-Control-Allow-Headers`, so the request is refused before it leaves. The
- * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
- * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
- */
-export async function downloadAsma({ fingerprint = '', isPlayable = () => true, onProgress = null } = {}) {
-  onProgress?.({ stage: 'fetching the list' });
-  // The end record is 22 bytes and may be followed by a comment of up to 64 KB.
-  let tail;
-  try {
-    const head = await fetch(ASMA_INDEX_URL, { method: 'HEAD' });
-    const length = Number(head.headers.get('content-length'));
-    if (!head.ok || !length) throw new Error('no size');
-    tail = await ranged(ASMA_INDEX_URL, `bytes=${Math.max(0, length - 65557)}-${length - 1}`);
-    tail.start = Math.max(0, length - 65557);
-  } catch {
-    onProgress?.({ stage: 'fetching the whole archive (20 MB), this browser will not ask for part of it' });
-    const response = await fetch(ASMA_INDEX_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    tail = { bytes: await response.arrayBuffer(), whole: true };
-  }
-  const view = new DataView(tail.bytes);
-  let end = -1;
-  for (let i = tail.bytes.byteLength - 22; i >= 0; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
-  }
-  if (end < 0) throw new Error('no end record in the archive');
-  const size = view.getUint32(end + 12, true);
-  const offset = view.getUint32(end + 16, true);
-  // Already in hand when the tail reached back far enough -- or was the whole file.
-  const from = tail.whole ? 0 : tail.start;
-  const directory = offset >= from
-    ? new DataView(tail.bytes, offset - from, size)
-    : new DataView((await ranged(ASMA_INDEX_URL, `bytes=${offset}-${offset + size - 1}`)).bytes);
-
-  onProgress?.({ stage: 'reading' });
-  const names = new TextDecoder();
-  const lines = [];
-  for (let at = 0; at + 46 <= directory.byteLength && directory.getUint32(at, true) === 0x02014b50;) {
-    const bytes = directory.getUint32(at + 24, true);
-    const nameLength = directory.getUint16(at + 28, true);
-    const extra = directory.getUint16(at + 30, true);
-    const comment = directory.getUint16(at + 32, true);
-    const name = names.decode(new Uint8Array(directory.buffer, directory.byteOffset + at + 46, nameLength));
-    at += 46 + nameLength + extra + comment;
-    // `asma/<section>/<author>/<title>.sap`; directories end in a slash and hold nothing.
-    if (!name.startsWith('asma/') || name.endsWith('/')) continue;
-    lines.push(`${bytes}\t${name.slice('asma/'.length)}`);
-  }
-
+/** The explicit ASMA action retains its whole ZIP and publishes the derived index atomically. */
+export async function downloadAsma({ fingerprint = '', isPlayable = () => true, onProgress = null, signal } = {}) {
+  const ticket = await asmaArchive.ticket();
+  onProgress?.({ stage: 'fetching' });
+  const bytes = await downloadMusic((...args) => fetch(...args), ASMA_INDEX_URL, { signal, onProgress });
+  const entries = zipDirectory(bytes).filter((entry) => entry.name.startsWith('asma/'));
+  if (!entries.length) throw new Error('The archive contains no ASMA files.');
+  const body = await new Response(bytes).blob();
+  await validateZip(body, entries, { signal, onProgress });
   onProgress?.({ stage: 'sorting' });
-  const { records, tracks, total, buckets, formats } = toRecords(lines.join('\n'), ASMA, isPlayable);
-  await catalogue.clear(`${ASMA}:`);
-  await catalogue.putAll(records, 2000, (done, all) => onProgress?.({ stage: 'storing', done, total: all }));
-  await catalogue.putAll([{
-    key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
-  }]);
+  const lines = entries.map((entry) => `${entry.size}\t${entry.name.slice('asma/'.length)}`).join('\n');
+  const { records, tracks, total, buckets, formats, platformCounts } = toRecords(lines, ASMA, isPlayable);
+  const at = Date.now();
+  onProgress?.({ stage: 'storing', done: 0, total: records.length });
+  const stored = await asmaArchive.replace({ id: ASMA, schema: 1, body, entries, tracks, total, at }, [...records, {
+    key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at,
+    platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
+  }], { signal, ticket });
+  if (!stored) throw new DOMException('A newer ASMA download or deletion replaced this request.', 'AbortError');
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
-}
-
-/** One ranged request, and whether the server ignored the range and sent everything. */
-async function ranged(url, range) {
-  const response = await fetch(url, { headers: { Range: range } });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return { bytes: await response.arrayBuffer(), whole: response.status === 200, start: 0 };
 }
 
 /**
@@ -510,7 +458,10 @@ export async function meta(source = MODLAND) { return catalogue.get(keyFor(sourc
  * Deletes a catalogue's whole index -- its meta, formats, authors, tracks and title shards, which all
  * live under the source's own prefix -- and nothing of any other (W10, the phone's delete).
  */
-export async function forgetIndex(source) { await catalogue.clear(`${source}:`); }
+export async function forgetIndex(source) {
+  if (source === ASMA) await asmaArchive.remove();
+  else await catalogue.clear(`${source}:`);
+}
 export async function formats(source = MODLAND) { return (await catalogue.get(keyFor(source).formats))?.formats ?? []; }
 export async function authors(format, source = MODLAND) {
   return (await catalogue.get(keyFor(source).authors(format)))?.authors ?? [];
@@ -528,13 +479,19 @@ export async function authors(format, source = MODLAND) {
  * format and none per bucket. Held by the caller for the session; a roll is then a random number
  * and a binary search.
  */
-export async function buildRandomTable() {
+export async function buildRandomTable({ signal } = {}) {
+  const check = () => { if (signal?.aborted) throw new DOMException('Aborted', 'AbortError'); };
+  check();
   const entries = [];
   let total = 0;
   // Every archive held, one pool: a tune from ASMA is as likely as any tune from Modland.
   for (const source of sources()) {
-    for (const { name: format } of await formats(source)) {
-      for (const { name: author, count } of await authors(format, source)) {
+    const available = await formats(source);
+    check();
+    for (const { name: format } of available) {
+      const buckets = await authors(format, source);
+      check();
+      for (const { name: author, count } of buckets) {
         if (!count) continue;
         total += count;
         entries.push({ source, format, author, end: total });
@@ -542,6 +499,20 @@ export async function buildRandomTable() {
     }
   }
   return { entries, total };
+}
+
+/** Android randomSample returns a uniform batch without replacement, bounded by the pool size. */
+export async function sampleRandom(table, count, random = Math.random, signal) {
+  const total = table?.total ?? 0, swaps = new Map(), picks = [];
+  for (let left = total; left > 0 && picks.length < count && !signal?.aborted; left--) {
+    const slot = Math.min(left - 1, Math.floor(random() * left));
+    const index = swaps.get(slot) ?? slot;
+    swaps.set(slot, swaps.get(left - 1) ?? left - 1);
+    swaps.delete(left - 1);
+    const track = await drawTrack(table, () => (index + 0.5) / total);
+    if (track) picks.push(track);
+  }
+  return picks;
 }
 
 /**
@@ -553,6 +524,7 @@ export async function buildRandomTable() {
 export async function drawTrack(table, random = Math.random) {
   if (!table?.total) return null;
   const r = Math.min(table.total - 1, Math.floor(random() * table.total));
+  if (table.tracks) return table.tracks[r] ?? null;
   let lo = 0;
   let hi = table.entries.length - 1;
   while (lo < hi) {
@@ -562,7 +534,7 @@ export async function drawTrack(table, random = Math.random) {
   const bucket = table.entries[lo];
   const start = lo ? table.entries[lo - 1].end : 0;
   const tracks = await tracksIn(bucket.format, bucket.author, bucket.source);
-  return tracks[r - start] ?? tracks[0] ?? null;
+  return tracks[bucket.indices?.[r - start] ?? r - start] ?? null;
 }
 
 /** One bucket, as tracks the queue understands. */
@@ -598,7 +570,7 @@ export async function tracksIn(format, author, source = MODLAND) {
  *
  * @returns how many tunes are offered afterwards, or null when there was nothing to do.
  */
-export async function refreshPlayable(source = MODLAND, isPlayable = () => true) {
+export async function refreshPlayable(source = MODLAND, isPlayable = () => true, { fingerprint } = {}) {
   const key = keyFor(source);
   const held = await catalogue.get(key.meta);
   if (!held?.complete) return null;
@@ -653,18 +625,19 @@ export async function refreshPlayable(source = MODLAND, isPlayable = () => true)
   // **The old derived records go first.** A format removed leaves a title shard and an author list
   // that this pass never rebuilds, and writing over the survivors would leave the rest standing --
   // tunes findable in search that Browse no longer lists.
-  await catalogue.clear(`${source}:titles:`);
-  await catalogue.clear(`${source}:authors:`);
-  await catalogue.putAll(records, 2000);
-  await catalogue.putAll([{ ...held, tracks, total, formats: formats.size, at: Date.now() }]);
-  return tracks;
+  const platformCounts = {};
+  for (const record of records) countPlatformBucket(platformCounts, source, record);
+  const applied = await catalogue.replacePrefix(`${source}:`, [...records, { ...held, tracks, total, formats: formats.size,
+    at: Date.now(), platformCounts, platformFingerprint: PLATFORM_FINGERPRINT,
+    fingerprint: fingerprint ?? held.fingerprint }], { expected: { key: key.meta, value: held } });
+  return applied ? tracks : null;
 }
 
 /**
  * Records which format list judged this index, so the judging is not repeated every time.
  *
- * Separate from `refreshPlayable` because the two answer to different things: that one rebuilds
- * what is offered, this one remembers that it was rebuilt.
+ * Retained for maintenance tools. Production refresh writes its stamp in the guarded transaction,
+ * so a newer index cannot receive an older rebuild's capability fingerprint.
  */
 export async function stampIndex(source = MODLAND, fingerprint = '') {
   const held = await catalogue.get(keyFor(source).meta);
@@ -693,21 +666,22 @@ function metaFor(source, format, author) {
 export function urlFor(format, author, title, source = MODLAND) {
   // An empty author is a file filed straight under its group (ASMA's `Games/Title.sap`), not an
   // empty folder: splitting "" gives one empty segment, and the address a double slash.
-  return SOURCES[source].files
-    + [format, ...(author ? author.split('/') : []), title].map(encodeSegment).join('/');
+  return fileUrlFor([format, ...(author ? author.split('/') : []), title].join('/'), source);
 }
 
-function encodeSegment(segment) {
-  let out = '';
-  for (const character of segment) {
-    out += /[A-Za-z0-9.\-*_]/.test(character)
-      ? character
-      : [...new TextEncoder().encode(character)]
-          .map((byte) => `%${byte.toString(16).toUpperCase().padStart(2, '0')}`).join('');
-  }
-  return out;
+/** A path relative to the catalogue's HTTP file root; existing browser identities stay stable. */
+export function fileUrlFor(path, source = MODLAND) {
+  return SOURCES[source].files + encodeCataloguePath(path);
 }
 
+/** Native IDs include the archive root; older WEB imports also accepted the shorter form. */
+export function asmaFileUrl(id) {
+  if (typeof id !== 'string' || !id.startsWith('asma://')) return null;
+  let path = id.slice('asma://'.length);
+  if (path.startsWith('asma/')) path = path.slice('asma/'.length);
+  if (!path || path.split('/').some((part) => !part || part === '.' || part === '..')) return null;
+  return fileUrlFor(path, ASMA);
+}
 
 // --- HVSC's song lengths --------------------------------------------------------------------------
 //
@@ -719,7 +693,8 @@ function encodeSegment(segment) {
 // server answers HEAD without its CORS filter, so a HEAD says there is no
 // `Access-Control-Allow-Origin` when a GET sends one.
 
-const SONG_LENGTHS_URL = 'https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5';
+// WEB keeps the permitted website copy: the native DeepSID URL has no CORS. See PLAN_CATALOGUES.
+const SONG_LENGTHS_URL = 'https://www.hvsc.de/download/C64Music/DOCUMENTS/Songlengths.md5';
 
 /** Everything song lengths store lives under, so one `clear` takes all of it. */
 const LENGTHS = 'lengths:';
@@ -755,36 +730,20 @@ export async function clearSongLengths() {
  * databases the page downloads whole -- HVSC's lengths and songdb's metadata -- because a page that
  * says nothing for ten seconds reads as a page that has stopped.
  */
-async function fetchText(url, encoding, onProgress) {
-  onProgress?.({ stage: 'fetching', done: 0, total: 0 });
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const total = Number(response.headers.get('content-length')) || 0;
-  if (!response.body) return new TextDecoder(encoding).decode(new Uint8Array(await response.arrayBuffer()));
-  const reader = response.body.getReader();
-  const chunks = [];
-  let done = 0;
-  for (;;) {
-    const read = await reader.read();
-    if (read.done) break;
-    chunks.push(read.value);
-    done += read.value.length;
-    onProgress?.({ stage: 'fetching', done, total });
-  }
-  const joined = new Uint8Array(done);
-  let at = 0;
-  for (const chunk of chunks) { joined.set(chunk, at); at += chunk.length; }
-  return new TextDecoder(encoding).decode(joined);
+async function fetchText(url, encoding, onProgress, signal) {
+  const bytes = await downloadMusic((...args) => fetch(...args), url, { signal, onProgress });
+  checkDownload(signal); return new TextDecoder(encoding).decode(bytes);
 }
 
-export async function downloadSongLengths({ onProgress = null } = {}) {
+export async function downloadSongLengths({ onProgress = null, signal } = {}) {
+  const expected = await downloadSnapshot(LENGTHS, signal);
   // **Latin-1, not UTF-8.** The file is a list of hex keys and digits, but the comment lines above
   // them carry composer names with accents in whatever eight-bit encoding HVSC has always used.
   // Decoding as UTF-8 throws on those bytes in strict mode and replaces them otherwise; either
   // way the comments are not read, and the entries must not be risked for them.
-  const text = await fetchText(SONG_LENGTHS_URL, 'latin1', onProgress);
+  const text = await fetchText(SONG_LENGTHS_URL, 'latin1', onProgress, signal);
 
-  onProgress?.({ stage: 'reading' });
+  onProgress?.({ stage: 'reading' }); checkDownload(signal);
   const entries = parseSongLengths(text);
   if (entries.length === 0) throw new Error('the song length database was empty');
 
@@ -798,10 +757,8 @@ export async function downloadSongLengths({ onProgress = null } = {}) {
 
   // **Replaced wholesale, not merged**, the same rule the phone keeps: HVSC publishes corrections
   // as well as additions, so a merge would keep a length its own publisher has withdrawn.
-  await catalogue.clear(LENGTHS);
   const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
-  await catalogue.putAll(records, 64, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{ key: `${LENGTHS}meta`, tunes: entries.length, at: Date.now() }]);
+  await commitDownload(LENGTHS, [...records, { key: `${LENGTHS}meta`, tunes: entries.length, at: Date.now() }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tunes: entries.length });
   return { tunes: entries.length };
 }
@@ -846,9 +803,10 @@ export async function clearSongMetadata() { await catalogue.clear(SONGDB); }
  * Fetches songdb's metadata and stores it, **replaced wholesale**: the publisher corrects as well as
  * adds, and a merge would keep a row it has withdrawn.
  */
-export async function downloadSongMetadata({ onProgress = null } = {}) {
-  const text = await fetchText(SONGDB_METADATA_URL, 'utf-8', onProgress);
-  onProgress?.({ stage: 'reading' });
+export async function downloadSongMetadata({ onProgress = null, signal } = {}) {
+  const expected = await downloadSnapshot(SONGDB, signal);
+  const text = await fetchText(SONGDB_METADATA_URL, 'utf-8', onProgress, signal);
+  onProgress?.({ stage: 'reading' }); checkDownload(signal);
   const entries = parseSongDbMetadata(text);
   if (entries.length === 0) throw new Error('the song metadata was empty');
   const shards = new Map();
@@ -858,10 +816,8 @@ export async function downloadSongMetadata({ onProgress = null } = {}) {
     if (!held) { held = {}; shards.set(shard, held); }
     held[key] = [author, publisher, album, year];
   }
-  await catalogue.clear(SONGDB);
   const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
-  await catalogue.putAll(records, 16, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
-  await catalogue.putAll([{ key: `${SONGDB}meta`, tunes: entries.length, at: Date.now() }]);
+  await commitDownload(SONGDB, [...records, { key: `${SONGDB}meta`, tunes: entries.length, at: Date.now() }], expected, { signal, onProgress });
   onProgress?.({ stage: 'done', tunes: entries.length });
   return { tunes: entries.length };
 }

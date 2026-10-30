@@ -1,7 +1,338 @@
 # What only a phone can prove
 
+The consolidated [WEB parity browser trial](WEB_PARITY_CHECKLIST.md) covers W01-W25, supported
+environments, persistence/PWA updates and remaining physical-browser acceptance. Its unchecked
+boxes are not implied passes from host checks. Current source/artifact and automated results are
+in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
+runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
+
+## WEB W22 selected downloads — browser checks pending, 2026-10-29
+
+Host companions: `node scripts/check-library-downloads.mjs`,
+`node scripts/check-dataset-downloads.mjs`, `node scripts/check-download-picker.mjs`; the page
+suite drives actual empty-list/catalogue actions, Download, Stop, Retry, Close icon, Escape and
+live language controls. Shared download-plan rows also run against production Kotlin DownloadPlan.
+Removing a row must fail both readers and invalidate Gradle's declared input without a new command.
+Controlled faults cover the real event path as well as cancellation, order, locks and storage.
+
+Real browser trial remains unchecked:
+
+- Start without indexes. Open the empty-playlist offer, inspect three checked choices and the
+  approximate 47 MB total, then close without fetching. With everything held, no choice should be
+  checked and disabled Download should explain what to select. Refresh remains an explicit choice.
+- While music plays, choose Modland and metadata, change selections and start. Check stable controls
+  and current-step progress; scrolling/large text must leave Stop reachable. Closing via its icon,
+  the scrim or Escape must keep work running and return focus to the originating view's action.
+  Tab/Shift-Tab must wrap within the dialog, including Close. Reopen the same frozen selection.
+- Interrupt a later request. Earlier completed datasets must remain browsable. Stop should report
+  retained/unfinished work and start nothing later; Retry should fetch only failed/pending substeps.
+  Check another tab's existing user data and current audio/source/FIFO/editor remain intact.
+- Refuse storage or disconnect during refresh. Old data must survive with an explicit partial
+  outcome. Do not infer success from a spinner stopping. Test the canonical HVSC request in the
+  actual browser; host Origin-bearing GET/CORS headers and identical SHA are partial evidence.
+- Switch PL/EN, use keyboard/touch and check both themes at narrow/wide sizes. Native comparison
+  covers behaviour; host DOM identities and stylesheet checks do not establish physical layout,
+  audible continuity, mobile network conditions or browser background lifetime.
+
+## WEB W19 read-ahead — browser checks pending, 2026-10-29
+
+Run `node scripts/check-playback-read-ahead.mjs`, `node scripts/check-folder-prefetch.mjs` and
+`node scripts/check-playback-context.mjs`; the complete page suite drives the real playlist Next,
+manual FIFO, Clear, Browse and Settings handlers. Shared folder rows also run against production
+Kotlin FolderPrefetchTest as a declared Gradle input. Fault controls must detect stale publication,
+wrong FIFO priority, missing total budget, skipped over-budget rows, unknown-network permission,
+missing real opened hook and hidden-folder work. Finish with the forced complete gate and lint.
+
+Browser trial remains unchecked:
+
+- Play a finite list, then Next; verify its prepared successor, manual FIFO priority, duplicates,
+  shuffled Repeat All boundary and uninterrupted current playback when Clear retires speculation.
+- Open a Modland author's folder. The default Wi-Fi only choice must explain why automatic
+  folder downloads are paused in this browser. Always starts up to three files concurrently;
+  Off stops new starts. Leaving ends pending folder work; existing shared downloads may finish.
+- During progress, select rows, scroll, retain keyboard focus and open/close Queue over Browse.
+  Spinner and offline-copy marks must update in place, with no shifted controls or stale folder.
+- Reload with each policy, including refused storage. Restore the choice without initial music
+  requests or autoplay; report refusal while keeping the selected runtime choice usable. Changing
+  PL/EN updates the live explanation without changing playback, selection or scroll.
+- Check actual mobile network/CORS, cache quota, touch scrolling, audible transitions and background
+  behaviour. Host DOM/stream tests establish none of these physical-browser properties.
+
 Use the current APK in [Status](STATUS.md) for the active regression checklists. Older
 APK numbers identify the original handoff, not a recommendation to install an older build.
+
+## WEB W18 restored playback modes — browser checks pending, 2026-10-28
+
+Host fresh-page/IndexedDB and control events are partial evidence; physical reload, storage
+permissions and reader/touch behaviour remain unchecked until tried in a browser.
+
+- Choose Shuffle and each Repeat mode, select a later playlist track and reload. Restore that
+  playlist/selection, marks and Repeat One glyph, paused, without opening audio. Try empty/new
+  storage and a saved all-subsongs value from the previous WEB version; defaults are Off.
+- Toggle Play every tune from Settings and Now Playing. Both reflect the same choice and persist
+  on reload. Next walks subsongs only when enabled; direct numeric selection works either way.
+  Settings offers this global choice even with no file or a single-tune file.
+- Play one source, view another playlist and change modes: actual playback and manual duplicate
+  requests survive, with no dirty playlist. Refuse preference writes: keep the session's mode and
+  explain the refusal. Permit a later write and try again. Do not clear user storage to recover.
+- With slow saved-state reads, select another playlist before initialization finishes: the newer
+  choice wins. Open a full-list handoff link on startup: its list wins and remains paused, keeping
+  modes. Existing explicit play links retain their separate playback behaviour.
+
+## WEB W17b subsong strip — browser checks pending, 2026-10-28
+
+Host DOM rectangles and actual native Robolectric components are comparison evidence; real
+browser scroll clamping, touch, focus, painting and background behaviour remain unchecked.
+
+- Open a file at an arbitrary tune, e.g. 69 of 256, then Now Playing. One horizontal strip should
+  reveal the active chip. Advance while nearby: already-visible chips do not scroll; once the
+  new chip leaves the watched region it comes into view. A partly visible previous chip counts.
+- Manually scroll to 249–256 while tune 70 plays. Further advances must leave that distant region
+  in place. If music later reaches that region, ordinary following resumes. Change file/count,
+  close/reopen Now Playing and test both subsong modes: a fresh opening reveals actual current.
+- Select numeric chips by pointer/keyboard. Current selection must not restart, marks must follow
+  decoder answers, and Space must not also Play/Pause. Focus should survive current-only redraws.
+  Start another file with the strip visible: old controls disappear before the load answers.
+- Inspect a different file: read-only metadata, no controls for its subsongs affecting the audible
+  file. Return through the dock: actual current title/metadata/chips. Delay its description and
+  leave/reopen the live panel: old replies/errors must not replace the new view. Try EN/PL, themes,
+  narrow/wide windows, zoom, reduced motion and real touch scrolling; these remain manual checks.
+
+## WEB W17a Browse positions — browser checks pending, 2026-10-28
+
+Host fixtures mock row rectangles and execute actual navigation/Back events; they do not establish
+physical scrolling, scrollbars, browser clamping or touch feel. No bundle/deployment yet.
+
+- Scroll far down Modland formats/authors, open a folder and Back through several levels. Return
+  to the exact departed row. Refresh/change an index so the row moves; remove that row: return
+  to its identity when present, otherwise retain the parent's offset without an old-index jump.
+  Back during a delayed read must keep the newer level and its position. Try empty/loading rows.
+- Close Browse and open it anew: top/root. Queue over Browse preserves its underlying position.
+  Same-level index/status refresh must not reset scroll or move input focus. Use mouse, keyboard
+  Enter/Space and touch; neither navigation nor restoration may restart music or edit the queue.
+- History fresh entry/query starts at the top. Scroll page one, change page and return: each page
+  keeps its own offset within that phrase. Open/cancel Add to another playlist over History: same
+  query/page/offset. Queue open/close preserves it. Returning to an earlier phrase starts fresh.
+- Search positions belong to the result's producing query/scope; pending field/chip edits must
+  keep that result's position. Open a Saved place, add another bookmark ahead of it while away,
+  then Back: wait for refreshed membership before locating the departed bookmark. Try deletion,
+  refused/delayed refresh and EN/PL. Verify no old result scrolls a newer view.
+
+## WEB W16 dock — browser checks pending, 2026-10-28
+
+Host DOM/CSS/event checks cannot prove physical geometry, focus/touch feel or visual overlap.
+No browser screenshot or bundle/deployment is claimed for this checkpoint.
+
+- Play Battle of honour.it by Treks, then files with 1, 5 and 256 subsongs in both modes. Title
+  stays upper left, Add upper right, shared metadata lower left and full Tune N of M lower right;
+  Queue stays outside. Add's target and title width must not shift as counts or ownership change.
+- Compare with/without Add over the active playlist: ordinary card height stays unchanged, with
+  balanced text insets and no top spacer. Try Polish, narrow/wide windows and enlarged text/zoom;
+  footer wrapping may grow the card, never overlay text or the Add target. Check both themes and
+  reduced-motion marquee behaviour. These rendering scenarios remain unchecked.
+- Tap Add, the footer and Queue separately. Add edits only the selected draft, footer opens Now
+  Playing, Queue opens its own panel; transport and manual requests stay unchanged. Tab to the
+  card and use Space/Enter without also triggering Play/Pause. Check visible focus and its reader
+  name/expanded state. Inspect another file, change subsong, load/fail a different file and return
+  to a single-tune track: the counter must describe only the actual opened file.
+
+## WEB W13 Browse selection — browser checks pending, 2026-10-28
+
+Candidate only; no bundle/deployment. Host pointer/keyboard/IndexedDB checks do not establish
+physical touch, checkbox geometry or browser focus behaviour.
+
+- Long-press a playable Browse/Search/History row, then tap rows/checkboxes and Select all/none.
+  Space/Enter and the keyboard context menu must work without also toggling audio. Check stable
+  row/header spacing, hidden contextual actions, disabled swipe and no playback scroll-follow.
+  First Back/Escape clears ticks; the next follows normal navigation. Nothing changes playback,
+  the current source, elapsed time or manual requests just by selecting.
+- Select rows out of order; Add to current must append in source order to its draft and wait for
+  Save. Other playlist/New playlist saves its own destination without changing the editor or
+  playback; cancel does not restore ticks. Refuse storage, retry, or leave during a delayed read:
+  no empty action, duplicate append or obsolete chooser/error over the newer visit. From the phone
+  offers only other destinations, with no protected write.
+- Share a batch and verify portable ordered references without buffers. Add held local tracks,
+  Save, switch editors and play them without resending. Reload without those bytes: unavailable
+  placeholders explain the missing data. Stored lists and links must contain no audio payload.
+- Open/close Queue with a Browse selection, live-refresh History, change its query/page, submit
+  Search and navigate folders. Only IDs belonging to the same producing visit survive; a new
+  list clears ticks. Pending general-Search field/chip edits keep its existing result selection.
+  Check keyboard, mouse/touch, PL/EN, both themes and narrow/wide layouts in a real browser.
+
+## WEB W12b M3U8 transfer — browser checks pending, 2026-10-28
+
+No bundle/deployment yet. Host events exercise FileReader and IndexedDB, but native file-picker,
+file-download and cross-application sharing UI remain unchecked.
+
+- In Playlists, Import a UTF-8 native M3U8, a plain list, Unicode names and HTTP(S)/ASMA references.
+  A new playlist appears without selecting it, changing the current draft, pausing audio or
+  touching manual requests. Try partial/missing locals, duplicates and all-missing input: counts
+  refer to resolved offerings; imported membership keeps first-occurrence order. A nonempty
+  all-missing input creates an empty new list and says 0/N. Empty/unreadable/comment-only input
+  and cancelled picker must not create a playlist. Try the same picked file twice.
+- Reorder/remove without Save and export that playlist: the file must carry the draft. Export
+  another playlist while changing the visible one: contents/name remain the initial requested
+  selection. No implicit Save or playback change. Unicode label survives inside a sanitized
+  filename. From the phone offers only read-only Export, never Rename/Delete. Empty export and
+  read/download failures explain themselves. Reimport browser exports, including unknown artist
+  titles containing a separator. Android's existing empty-artist reader discrepancy is recorded
+  in Status; it is not fixed by this WEB branch.
+- Import references to files currently held from the phone. Replace the phone list, choose the
+  imported list and play it; held buffers stay usable. Edit and Save, then export: neither the
+  stored record nor the file may contain audio payload. Reload the tab with that list selected:
+  missing local bytes must disable its rows, not try to fetch `content://`. Reconnect/resend bytes
+  and check rehydration, without clearing playlists or History.
+- Leave the view/change playlist during a delayed file read. Completion creates its own list
+  without stealing the new view or editor. Storage refusal/collision must preserve existing data;
+  failed refresh after a committed import reports both outcomes honestly. Check EN/PL, both
+  themes, narrow/wide windows, keyboard, actual picker/download and Android round trips.
+
+## WEB W12a live reorder — browser checks pending, 2026-10-28
+
+Candidate only; no WEB bundle or deployment yet. Host geometry/pointer hooks cannot establish
+physical touch, pointer capture, overlap painting or scroll feel.
+
+- In an editable playlist, hold its labelled Reorder handle. Move less than one row, then across
+  several rows, pause between moves and partially reverse. Logical moves apply while held;
+  the raised row stays under the pointer, above neighbours, with the viewport pinned except
+  for edge auto-scroll. Cancellation retains already committed moves.
+- Play a middle item, add duplicate manual requests and reorder that playlist. Track, elapsed
+  time, position and pending requests stay unchanged; Next uses the edited source order. Repeat
+  and shuffle preserve their Android semantics. Reorder visible B while A plays: A stays intact.
+- Save and reload the draft; discard another reorder. Verify the selected playlist is the one
+  saved/restored. Try a pasted list containing repeated URLs, including the playing occurrence.
+- In Queue, drag duplicate pending requests within their indentation. Current/source rows cannot
+  be reordered through their handles. Close Queue or change membership while dragging: no hidden
+  continued movement. Existing swipe/long press and departure animation must still behave normally.
+- Use keyboard arrows and the handle's labelled move menu; check focus, boundary actions, EN/PL,
+  both themes, narrow/wide windows and reduced motion. A completed drag must not trigger playback
+  or the menu through its synthesized click. Protected From the phone, Random/transient and
+  selection-mode lists must not gain editable-playlist handles.
+
+## WEB W11 Search scopes — browser checks pending, 2026-10-28
+
+Candidate on `feature/web-feature-parity`; no merge, bundle or deployment yet. Host events and
+IndexedDB checks cannot establish appearance, keyboard feel, touch or browser latency.
+
+- Search a title, author and words split across both. Try accent folding, blank and one-character
+  queries, punctuation and a result beyond the former 300-row cap. Check global title ordering,
+  the 2000-per-source limit and visible full catalogue counts.
+- Put the same URL in a saved playlist and a catalogue; the saved copy should win once. Search
+  across another saved playlist with a different selected editor and check that neither playlist
+  nor playback changes. A missing local phone copy explains its refusal; a still-held copy plays
+  without persisting bytes or detaching the source buffer.
+- Choose Saved playlists, Online, individual catalogue chips, By platform and several machines.
+  Empty chip selections cover all in that kind. Scope selection never auto-searches. Kind changes
+  clear old rows; chip/text edits keep the producing rows stable until explicit Search. Recent
+  suggestions submit immediately in the selected scope and close the keyboard/dropdown.
+- Back first widens narrowed Search, then returns to Browse retaining the phrase; reentry retains
+  the previous answer. Folder and History Back must not consume cached general-Search text.
+- Play an answer, change text/chips without submitting, then use Queue Go to source. The restored
+  query/scope/membership must be those that produced the playing list; music/manual FIFO stay
+  intact. Opening/closing Queue over Search leaves the field usable.
+- Try rapid submissions, leave/reentry, refused storage, scope Retry, index removal/replacement,
+  and saved-reference search without indexes. No obsolete rows/errors or false missing-index
+  explanation while reads are pending. Check EN/PL, both themes, narrow/wide screens, zoom,
+  keyboard-only operation and software keyboard. These device/browser scenarios remain unchecked.
+
+## WEB W09-W10 — browser checks pending, 2026-10-28
+
+No bundle handoff yet; these changes remain on `feature/web-feature-parity`. Host event/database
+checks are not proof of rendering, software-keyboard behaviour or touch.
+
+- Submit five queries; focus Search and check three plain-text recent prefix matches, case
+  handling, immediate option submission, arrow keys/Enter and Escape/Tab. Typing alone must not
+  search or persist, and result completion must not reopen the keyboard/dropdown.
+- Open History with more than 100 entries. Type part of an older title, author and filename;
+  edits filter after 200 ms without Enter. Check literal punctuation/accents, matching totals,
+  second/last-page boundaries and clearing the phrase. Input focus should survive results.
+- Play a filtered History result, then alter the filter and continue playback. Queue Go to source
+  must restore the producing query/page/results, without restarting music. Open/close Queue over
+  History and continue typing. A fresh Browse → History visit starts unfiltered at the top.
+- Check no matches versus empty History, labelled keyboard-accessible Retry after a read failure,
+  rapid edits/leave/reentry and Clear during a pending read. No obsolete rows/counts should return;
+  failed erase must explain the refusal and leave a usable filter. History Clear leaves recent
+  general queries intact. Check EN/PL and both themes, narrow/tall viewports and software keyboard.
+
+## WEB W01-W02 — browser checklist, not yet a bundle handoff
+
+2026-10-27: host checks pass on `feature/web-feature-parity`, including the production
+DOM/MessagePort/IndexedDB paths. They do not establish appearance, real touch, sound or background
+operation. Keep these checks open until the completed WEB parity candidate is packaged; W03-W25
+are still in progress and no intermediate APK/bundle is supplied here.
+
+- [ ] Play playlist A, view/edit B and open Browse. Playback, Next/Previous and metadata remain
+  owned by A; Save writes B. Explicitly playing B transfers the source.
+- [ ] Add repeated files from main/Browse/History menus and right swipes. Verify independent FIFO
+  occurrences, unchanged playlist documents and History replay-origin behaviour.
+- [ ] Open Queue from its separate dock button. The shared dock remains reachable, the current row
+  is revealed, and Close/Escape restores the prior view. Keyboard focus enters the current row and
+  returns to the toggle on close; Help starts collapsed.
+- [ ] Advance through manual requests. Played rows depart smoothly without a whole-list blink;
+  Previous returns to the parked source and consumed requests do not reappear. Test Repeat One,
+  explicit file Next, shuffle and subsong controls.
+- [ ] Swipe left on manual/source rows and Undo. Only that occurrence/session row changes. Check
+  named green/red reveals, vertical/diagonal scrolling priority, short/reversed drags, cancellation
+  and a second finger elsewhere on screen.
+- [ ] Drag pending grips in both directions and near viewport edges. They stay under the finger,
+  above neighbours and inside the manual block. Source/current rows have no grip. Try keyboard
+  arrows, the grip menu and a membership change during drag.
+- [ ] Hold a Queue row for Information. It must not play, open a second browser context menu or
+  swallow the next button press. Check right-click and keyboard row actions too.
+- [ ] Clear while playing, paused and downloading. Keep the actual file/position/job, remove extra
+  indentation and allow guarded Undo without a decoder restart or rollback of newer editor edits.
+- [ ] Check reduced motion, EN/PL, both themes, narrow/wide viewports, larger text and accessible
+  action names. Verify full-width manual highlights and stable dock height.
+
+## WEB W03 source return — focused host checkpoint, browser checks pending
+
+The source label navigates through production handlers and passes the combined context/navigation
+host gate. W10 now wires History query/page restoration; W11 Search scopes remain pending. Do not treat this as a packaged handoff.
+
+- [ ] While A plays and B is selected, open Queue and activate its source label. Reveal A without
+  restarting, resuming a paused file or changing pending manual requests. Repeat during a manual
+  interruption; the label still follows its parked source.
+- [ ] Repeat with dirty B: Cancel leaves Queue/draft intact; Save persists B before switching;
+  Discard abandons it when the destination is available. A missing source gives feedback.
+- [ ] Return to folder, Search, History and Random. Restore the captured route/list, not an
+  unrelated author jump; retain live download/cache facts. Back follows the source hierarchy.
+  History starts at its top; Search keeps its query; Random return never rerolls.
+- [ ] Check the inline name/arrow, full accessible description and destination focus in EN/PL,
+  narrow/large-text layouts and both themes. A manual-only/shared-link source is a plain label.
+
+## WEB W04 remembered Random — host integration, browser checks pending
+
+- [ ] Enter Random for the first time: one pick starts, with three hidden prepared picks. Leave
+  and return: the same heard list remains, even if a different playlist/author/History is playing.
+  Global transport controls follow that actual source; only tapping a Random row activates it.
+- [ ] Use ordinary Back and Queue's source return. Random goes back one level to Browse without
+  stale author headings, hidden Close controls or a second Back to the playlist.
+- [ ] Double-click/double-tap the dice: one new list, same filter, retained manual requests and
+  independent global History. A single pointer tap does nothing. Check keyboard activation,
+  visible hint, 360-degree rotation, reduced motion, drags, holds and a second finger.
+- [ ] Walk an earlier heard row with Next, then pass the heard boundary. One new row appears per
+  advance. During manual playback no Random row is highlighted; Previous returns to its anchor.
+  Clear/Undo preserves the audible file and remembered record, also while a draw/download waits.
+- [ ] Try empty/unavailable indexes and a very small pool. Revisiting an empty session does not
+  silently retry; deliberate reroll does. Repeated files have separate positions; pruning one
+  never removes another occurrence or changes another active source.
+
+## WEB W05 filters — integrated host checks, browser acceptance pending
+
+- [ ] Open Random/Filter with no indexes, a legacy index and current Modland/ASMA indexes.
+  Cold checks explain unknown counts; warm reopening keeps usable chips. Everything remains
+  available; platforms with no playable indexed files are disabled with an explanation.
+- [ ] Download Favourites while the panel stays open. Distinguish the absent list, a retained list
+  without a matching Modland index, and playable matches. All chips refresh together; Retry
+  preserves known counters after a failed read. Deleting an index blocks stale availability.
+- [ ] Build ten heard picks, select the fifth and change platform. The entire heard record remains;
+  Next walks its suffix, then appends one new pick from the selected pool. Check the same choice
+  while an author owns playback: neither its current file nor Next changes to Random.
+- [ ] Reload and verify the selected scope. Check a prompt explicit choice during slow startup,
+  a failed save, empty/unsupported pools and an index update during an older read.
+- [ ] Check all chips, the selected shape, explanations and Retry/Download in EN/PL, themes,
+  narrow/wide layouts, zoom and keyboard/screen-reader navigation. The inline panel should remain
+  scrollable with the shared player dock available.
 
 ## C121 WEB decoder filenames — private-window playback reported, remaining checks pending
 
@@ -1208,3 +1539,192 @@ Compare with the preserved 1084 APK only if it is already installed or can be up
 do not uninstall/clear data or force a downgrade for this comparison. Record APK/build, device,
 Android version, cold/warm sequence and observed opening/enablement times. No on-device timing
 or performance improvement has been measured by the agent.
+
+### Live WEB language regression — W24, 2026-10-28
+
+Run `node scripts/check-ui-messages.mjs` for UI/data ownership, immutable action arguments,
+composition, Polish plural forms and retained node/attribute bindings. The full project gate runs
+page startup and interaction checks with the actual production module graph:
+`PROTRACKTOR_PAGE_MODULES=1 node --experimental-vm-modules scripts/check-page.mjs`.
+The VM flag is a Node host-test requirement, not a browser installation step.
+
+The live-language fixtures drive real Settings radios and System events. They retain decoder/audio
+references, runtime bytes, elapsed listening, raw names, independent editor/context, duplicate FIFO,
+paused state and transport-message counts. They check write failures, focus/query ranges, Search
+answers/selection/suggestions, Saved places explanations and Undo, Queue rows/handles/menus, and
+held source acknowledgements/privacy prose. Requested page navigation is observed explicitly;
+jsdom reports reload requests without performing them, so unchanged references alone are not proof.
+Native comparison uses accepted `c8209b1` language/resource/controller paths and `AppLanguageTest`.
+
+Browser acceptance remains unchecked: change English/Polish/System while playing, paused, browsing,
+editing a query and inspecting another file; verify sound continuity, theme, focus, scroll, retained
+selection and meaningful accessibility labels. Repeat with an external shared link and background
+playback. Host stubs do not establish audible continuity, mobile focus or OS behaviour.
+
+### Retained WEB music — W20, 2026-10-28
+
+Run the registered `check-cache-budget`, `check-music-download`, `check-remote-music`,
+`check-music-cache-store`, `check-music-cache-migrations` and `check-music-cache-view` scripts.
+Shared TSV cases are also consumed by the actual native CacheBudgetParityTest and declared as
+Gradle inputs. Removing a case must fail both implementations and force native test execution.
+Store tests use the production opener with host IndexedDB and real platform Blobs, not a copied
+schema or alternate application store. Controller tests exercise the same production coordinator
+with controlled network/storage ports. Stream tests use real Response bodies and controlled timers.
+
+Actual-module page checks drive Browse, selection, transport, Settings Clear/Retry and HTTP handoff.
+They verify byte identity, retained replay, cache-only cleanup, unchanged playback/FIFO/editor,
+protected documents, readable errors, refused quota and transferred-buffer lifetime. Cold-page
+startup additionally plays a pre-existing retained copy without network or initialization autoplay.
+Cache-budget maintenance may write `remoteMusic` during startup; every other store stays protected
+by the original no-initialization-write guard. The page harness supplies object-URL cleanup and
+rejects uncaught UI exceptions rather than ignoring delayed timer errors.
+
+Manual browser acceptance remains open: play online, reload, disable the network and replay; clear
+copies during playback; preserve handoff bytes during this tab while refusing persistence after
+reload; check size/mark/focus behaviour and truthful storage refusal. After W21, full ASMA must
+survive fetched-cache Clear, while deleting ASMA removes its archive and index together. Host tests
+establish no audible output, real browser storage allocation, mobile touch or background behaviour.
+
+
+### WEB retained Modland paths — W23, 2026-10-28
+
+`node scripts/check-modland-recovery.mjs` consumes the 23 shared URL cases and runs thirteen
+production downloader/coordinator checks with real Response streams and host IndexedDB. Native
+ModlandLegacyPathsTest consumes the same file, declared as a Gradle test input; the ten existing
+RemoteFilesModlandTest cases remain unchanged. Controlled faults must fail before restoration.
+The existing seven music-transfer deadline/cancellation cases remain required. A removed shared row
+fails both readers and invalidates the native task without changing its command or adding a rerun
+flag; restoration executes and passes all fifteen reference tests.
+
+Actual page tests click saved playlist rows for conflict europe.ym, same game (22).spc,
+(opl2) totally nuts.s3m and 06 ending theme.vgz. They check exact original/recovered requests,
+bytes delivered to the worklet, original History and saved IDs, and replay without network.
+The common file-action resolver must reuse those bytes without issuing playback commands.
+These are host event/storage observations, not real-browser sound or CORS acceptance.
+
+Manual browser trial remains unchecked: play those retained legacy references online, replay
+from retained storage offline and inspect their unchanged playlist/History addresses. Compare
+an actual HTTP404 with an access/server refusal and a disconnected network; only the eligible
+404 may try one alternate path. Confirm that clearing retained music during a slow recovery
+leaves current sound alone and that the late transfer does not restore a cleared disk copy.
+Run the forced complete project gate/lint before closing this stage.
+
+
+### WEB stereo mix — W14, 2026-10-29
+
+The full gate registers `check-stereo-mix.mjs`, `check-engine-stereo.mjs` and
+`check-worklet-stereo.mjs`. They exercise the production mode/preferences module, actual packaged
+WASM and actual processor message/callback path. Generated looping MOD fixtures supply left-only,
+right-only, correlated and opposite-phase PCM without external downloads. Check the first-frame
+matrix, bit-preserving Original, 32/44.1/96 kHz smoothing and mid-ramp retarget, invalid/empty
+requests, per-handle isolation, pause, seek, rewind and subsong continuation. Compare original
+and raw export PCM to the retained pre-change engine where that local baseline is available;
+mandatory public tests do not depend on private artifacts or browser encoding.
+
+The ten shared stored-mode rows also run in StereoMixTest alongside the unchanged native mode,
+preference and actual Compose Settings cases. Removing a row must fail both readers and invalidate
+the Gradle task. Restore it and repeat the same native command without a rerun flag; require eleven
+passing tests and an actually executed task. Deliberate UI, initial/live worklet, pause, fallback,
+storage refusal and compiled DSP/rate faults must fail their relevant checks before restoration.
+
+The actual page suite drives all three Settings choices, English/Polish, focus/labels, refused
+storage and recovery while preserving another visible playlist, duplicate FIFO, current source,
+clock and audio object. The startup runner includes stored Narrow/Mono, unknown values, refused
+reads and a mode change during delayed engine loading; no startup choice may create audio or
+write defaults. The legacy adapter is also exercised, without a second locale or mixer algorithm.
+
+Real-browser acceptance remains unchecked. In Settings → Stereo mix, compare Original, Narrow
+and Mono on strongly separated and ordinary stereo music; change modes while playing and paused,
+then advance files/subsongs, seek and restart. Confirm position, queue and draft preservation.
+Reload to verify the retained selection and explicit-Play startup rule. Check keyboard/touch,
+English/Polish/System, themes and zoom, and export audio while the live decoder is in Mono.
+Browser output quality, AAC encoding, mobile routing and background lifetime are separate checks.
+
+The C121 Information filename guard waits for the actual describe request before asserting its
+original filename. Storage reads can exceed 20 ms; a fixed sleep did not synchronize the action.
+Controlled read delay must pass with the correct name, and a broken production name must fail.
+
+### WEB volume normalization — W15, 2026-10-29
+
+The public full gate includes profile/identity, preferences, atomic storage, preparation and
+playback-ownership checks. Shared validation, binary/CRC and content-key fixtures also run in
+LoudnessProfilesTest alongside the unchanged preparation and physical native Settings tests.
+Declare every fixture as a Gradle input. Remove an actual identity row to demonstrate both
+consumers fail; restore it and require the same native command to execute eighteen tests in
+three suites without rerun flags or cached results.
+
+`check-engine-loudness.mjs` uses actual packaged WASM/decoded PCM. It covers initial prepared
+gain, fallback, boost/attenuation caps, peak precedence, analysis budgets, short input,
+seek/restart, width/rate/subsong transitions and whole-song continuity. It compiles a standalone
+native-header oracle and compares decoded PCM and input statistics across four sample rates.
+`check-worklet-loudness.mjs` drives the real message/callback path for deferred startup, pause,
+stale profile packets, Off, subsong resets, old close identities and natural/seeked EOF.
+
+`check-loudness-worker.mjs` runs the actual worker handler/native analysis in real Node threads;
+its adapter supplies browser transport only. Check independent decoder position, serial reuse,
+owned transfers, cancellation, load/refusal recovery and source-buffer survival. Storage tests
+use the production IndexedDB adapter, two concurrent connections, CRC corruption, quota failure,
+complete/partial replacement, 512 entries and user-data preservation through Clear.
+
+The full gate also executes the production ESM page with
+`PROTRACKTOR_LOUDNESS_BRIDGE=1`. Browser message transports and speaker output are adapted;
+app/processor/worker/WASM, gestures and IndexedDB are real. Inspect the first PCM, cancelled
+private startup and History, a generated NSF whose actual first audible subsong is one, old
+profile identities and the real ten-second watchdog followed by late delivery. Settings checks
+cover PL/EN, keyboard focus/icon/label, live pause/source/FIFO/editor continuity and visible
+refused writes. Twenty-five fresh page processes cover retained/default/malformed/refused
+preferences and a switch during delayed engine loading. A pause assertion waits for the actual
+transport state; a fixed delay or direct setter is not equivalent evidence.
+
+Demonstrate that missing Settings actions, premature PCM, stale source/subsong/configuration,
+broken CRC/cache quality and a compiled native DSP bypass fail the relevant guards. Preserve
+exact source hashes after restoration. Rebuild the normal WASM whenever its inputs change and
+run the complete forced project gate/lint before closing W15; focused checks are partial evidence.
+
+Real-browser acceptance remains unchecked. In Settings → Volume normalization, compare quiet/loud
+tracks with On/Off, including first and repeated plays, silence/short files and separated stereo.
+Toggle while playing and paused, change stereo/subsongs, seek/restart and advance through source
+and duplicate manual requests. Reload without autoplay, test refused/offline storage and Clear,
+use keyboard/touch in PL/EN and both themes, and confirm exports retain the original audio.
+Listening, device worker scheduling, routing, encoding and background lifetime require observation.
+
+### WEB system controls — W25, 2026-10-29
+
+Focused host commands:
+
+```sh
+node scripts/check-system-media.mjs
+node scripts/check-track-artwork.mjs
+PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_MEDIA=1 node --experimental-vm-modules scripts/check-page.mjs
+PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_SYSTEM_PCM=1 node --experimental-vm-modules scripts/check-page.mjs
+```
+
+The project gate includes these checks. The ESM harness adapts browser transport and canvas only;
+the PCM bridge loads the actual page, processor and Native WASM. Shared artwork fixtures run
+against Android `TrackArtworkParityTest` with a declared Gradle input; missing-row failure and
+non-cached restoration are confirmed. Focused results do not replace the full project gate or
+physical browser acceptance. The comparison and deliberate-defect inventory are in the
+[implementation ledger](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+
+Real-browser checklist, all unchecked; record OS/browser/version and the delivered bundle SHA:
+
+- [ ] Repeated Play/Pause from system controls stays idempotent, including loading and resuming.
+- [ ] Pause/Stop during loading or analysis prevents late startup. Play explicitly retries.
+- [ ] Next/Previous follow subsong settings and the manual FIFO, including duplicate requests;
+  hold a page control first, then press a hardware control and verify it still acts.
+- [ ] Change the visible playlist without changing the playing source; system metadata stays on
+  the actual tune. Stop dismisses it while preserving position/source; Play restores it.
+- [ ] Seek to an exact position and issue several seeks rapidly. The last target wins. Change
+  subsong during seeking; old work must not seek the new tune or restore old metadata.
+- [ ] Select a tune chip while paused; controls, actual sound, duration and title agree. Press
+  Next/Previous rapidly and Pause before the acknowledgement; the later Pause wins.
+- [ ] Check generated format cover, title and shared author/platform/year subtitle. Unknown
+  duration must not invent a system duration. Switch PL/EN without restarting audio.
+- [ ] Background/lock-screen and headset/Bluetooth controls are tested separately on each browser.
+  Record unavailable actions or absent WebAudio session routing as unsupported, not as a pass.
+- [ ] Browser interruption/suspension updates system presentation; explicit Play resumes only if
+  the platform permits it. Paused wall-clock time must not appear as playback progress.
+- [ ] A browser without Media Session or with a rejected action still supports all page controls.
+
+No browser/device run is claimed by the host event and PCM evidence. C104 remains under physical
+verification; no custom notification heart/layout or native audio-focus port is included.

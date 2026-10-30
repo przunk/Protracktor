@@ -41,4 +41,16 @@ class LearnedTitlesTest {
         assertEquals("file.mod", LearnedTitles.sourceLine(
             LearnedTitles.display(track.copy(subtitle = ""), mapOf(track.id to "Title"))))
     }
+
+    @Test fun `separator controls are blank but BOM stays in learned presentation`() {
+        val track = TrackRef("a", "a.mod", "Source")
+        assertSame(track, LearnedTitles.display(track, mapOf("a" to "\u001c\u001f")))
+        for ((raw, expected) in listOf("\u001cTitle\u001f" to "Title",
+            "\ufeffTitle\ufeff" to "\ufeffTitle\ufeff", "\ufeff" to "\ufeff")) {
+            assertEquals(expected, LearnedTitles.display(track, mapOf("a" to raw)).title)
+        }
+        val titled = track.copy(title = "Title", fileName = "a.mod")
+        assertEquals("a.mod", LearnedTitles.sourceLine(titled.copy(subtitle = "\u001c\u001f")))
+        assertEquals("\ufeff/a.mod", LearnedTitles.sourceLine(titled.copy(subtitle = "\ufeff")))
+    }
 }

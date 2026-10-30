@@ -22,4 +22,23 @@ class StereoMixTest {
         }
         assertEquals(StereoMix.ORIGINAL, PlayerUiState().stereoMix)
     }
+
+    @Test fun `shared stored mode cases match WEB without changing native defaults`() {
+        val root = generateSequence(java.io.File(".").absoluteFile) { it.parentFile }
+            .first { java.io.File(it, "settings.gradle.kts").isFile }
+        val lines = java.io.File(root, "docs/rules/stereo-mix-cases.tsv").readLines()
+        val count = lines.first { it.startsWith("# cases: ") }.substringAfter(": ").toInt()
+        val rows = lines.filter { it.isNotBlank() && !it.startsWith("#") }
+        require(count > 0)
+        assertEquals("case\tstored\tmode\twidth", rows.first())
+        assertEquals("A shared stereo case is missing", count, rows.size - 1)
+        rows.drop(1).forEach { line ->
+            val fields = line.split('\t')
+            assertEquals(4, fields.size)
+            val raw = when (fields[1]) { "-" -> null; "<empty>" -> ""; else -> fields[1] }
+            val mode = StereoMix.fromStored(raw)
+            assertEquals(fields[0], fields[2], mode.stored)
+            assertEquals(fields[0], fields[3].toInt(), mode.widthPercent)
+        }
+    }
 }

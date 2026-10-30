@@ -1,0 +1,12 @@
+# Shared selected-download plan; WEB credits intentionally omit excluded songdb lengths.
+# cases: 9
+case	selected	expected
+empty	-	-
+modland	modland	modland,favourites
+asma	asma	asma
+metadata	songmetadata	songlengths,trackmetadata
+all	songmetadata,asma,modland	modland,favourites,asma,songlengths,trackmetadata
+unknown	unknown	-
+mixed	unknown,asma,songmetadata	asma,songlengths,trackmetadata
+no-live	modarchive,amp,replayroutines	-
+duplicated	modland,modland,songmetadata	modland,favourites,songlengths,trackmetadata

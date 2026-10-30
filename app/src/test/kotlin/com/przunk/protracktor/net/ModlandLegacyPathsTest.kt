@@ -50,4 +50,20 @@ class ModlandLegacyPathsTest {
             assertNull(url, Modland.legacyUnknownAuthorUrl(url))
         }
     }
+
+    @Test fun `retained Modland identities match shared browser recovery cases`() {
+        val root = generateSequence(java.io.File(".").absoluteFile) { it.parentFile }
+            .first { java.io.File(it, "settings.gradle.kts").isFile }
+        val lines = java.io.File(root, "docs/rules/modland-legacy-cases.tsv").readLines()
+        val count = lines.first { it.startsWith("# cases: ") }.substringAfter(": ").toInt()
+        val rows = lines.filter { it.isNotBlank() && !it.startsWith("#") }
+        assertEquals("case\turl\texpect", rows.first())
+        require(count > 0)
+        assertEquals("A shared legacy path case is missing", count, rows.size - 1)
+        rows.drop(1).forEach { line ->
+            val parts = line.split('\t')
+            assertEquals(3, parts.size)
+            assertEquals(parts[0], parts[2].takeUnless { it == "-" }, Modland.legacyUnknownAuthorUrl(parts[1]))
+        }
+    }
 }

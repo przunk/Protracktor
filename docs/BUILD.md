@@ -470,6 +470,42 @@ The normal check is part of `test-protracktor.sh`; ASan/UBSan is an additional l
 LeakSanitizer cannot finish under a ptrace-based sandbox, so run the sanitizer variant outside it
 when permitted. These checks do not reproduce Bluetooth on a phone or replace the release-APK test.
 
+## WEB audio parity checks
+
+Rebuild the shared native browser engine with `./scripts/build-web-engine.sh` after changing its
+inputs. Normalization needs its current `pt_set_normalization`, `pt_loudness_profile` and
+`pt_measure_loudness` exports; new scripts must travel with that rebuilt engine. Android DSP
+headers stay common to both builds.
+
+Run `./scripts/test-protracktor.sh --really` for the complete gate and lint. For WEB work, existing
+dependencies in `web/node_modules` and the packaged engine must be present so no optional WEB
+checks are skipped. The normalization checks use Node's built-in worker threads, the existing
+host C++ compiler for a native-header PCM oracle, and the project's existing jsdom/fake-indexeddb
+dependencies. No additional runtime package is introduced. A focused production GUI/audio path is:
+
+```bash
+PROTRACKTOR_PAGE_MODULES=1 PROTRACKTOR_LOUDNESS_BRIDGE=1 node --experimental-vm-modules scripts/check-page.mjs
+```
+
+That check adapts browser transport/speaker output; it is not listening or phone-browser evidence.
+After complete verification, `./scripts/package-web.sh` places the WEB archive in `dist/` and
+stages current legal notices, source identity and PWA assets. Packaging is separate from deployment.
+
+The WEB archive name includes the short source SHA, an optional `dirty` marker and a timestamp;
+the final output line gives its absolute path and exact byte size. `vendor/legal/build.json`
+retains the full source SHA and dirty state, checked against the checkout before packaging.
+GNU tar normalizes ordering, ownership, modes and timestamps to the source commit; gzip omits its
+variable header. Identical source identity and input bytes therefore reproduce the same archive
+bytes despite checkout/staging dates and non-executable source permissions. Filename timestamps
+remain distinct so repeated builds do not overwrite one another. The development packager uses
+Git, Node, GNU tar and gzip; the receiving host still needs only Node to run the player.
+
+`node scripts/check-web-package.mjs`, included in the full gate, executes the actual scripts in a
+disposable repository. It compares two archives after changing input dates/modes, verifies runtime
+files, notices and the launcher, checks dirty-source identity/PWA invalidation, and refuses a
+missing engine or mismatched source metadata. Its tiny engine is a packaging fixture, not a
+decoder test. Actual engine/API checks and the final real-WASM bundle verification are separate.
+
 ## Telling a green suite from a green suite that ran
 
 `./scripts/test-protracktor.sh` prints how the result was reached, because Gradle has two ways of
@@ -521,3 +557,23 @@ Both were verified by breaking the files deliberately and confirming the script 
 `lintVital` checks a narrower set. That one is silenced on its filter with the reason beside it --
 the rule wants a host, and `content://` has none. Verified by removing the silencing: the script
 failed and named the line. It adds about 45 s to a run.
+
+### WEB system-media verification — W25, 2026-10-29
+
+`scripts/test-protracktor.sh --really` now includes system-policy, shared artwork, actual ESM media
+actions and real-WASM PCM checks when the existing WEB prerequisites are installed. This goal
+requires every WEB companion to execute; a missing prerequisite is not a complete parity pass.
+`TrackArtworkParityTest` consumes the declared shared artwork TSV input. No engine rebuild is
+needed for the W25 JavaScript command/acknowledgement additions because the WASM inputs/API stay
+unchanged. Refresh legal/PWA staging after committing, then run the full gate on frozen inputs.
+
+### WEB asset integrity — final audit, 2026-10-29
+
+`stage-web-pwa.mjs` embeds one SHA-256 integrity value per asset in the generated worker. Its
+revision still covers the template, file names and content. Both `Cache.addAll` installation and
+cache-miss Fetch requests use those values; HTTP success alone is insufficient to accept bytes.
+Run `node scripts/check-pwa.mjs` with loopback access: it serves correct and older HTTP-200 assets
+to actual Node Fetch and exercises the generated worker with a Cache Storage adapter. The full
+project gate includes this check. Manual browser installation/update testing remains separate.
+The final package still uses `scripts/package-web.sh`; physical browser routing and background
+checks remain separate from host build/test results.

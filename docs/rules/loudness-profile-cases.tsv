@@ -1,0 +1,16 @@
+# cases: 14
+case	seconds	lufs	peak	complete	usable
+partial	20	-23	.4	0	1
+complete	10	-18	.2	1	1
+minimum-window	.4	-70	.01	0	1
+too-short	.3999	-20	.2	0	0
+below-gate	20	-70.01	.2	0	0
+upper-bound	20	30	2	1	1
+above-upper	20	30.1	.2	0	0
+silence	20	-100	0	1	0
+zero-peak	20	-20	0	0	0
+negative-peak	20	-20	-.1	0	0
+bad-seconds	NaN	-20	.2	0	0
+bad-lufs	20	NaN	.2	0	0
+bad-peak	20	-20	Infinity	0	0
+negative-time	-1	-20	.2	0	0
