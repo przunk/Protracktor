@@ -3,10 +3,17 @@
 Reported: **2026-10-30**, C125. Implementation branch: `fix/web-navigation-parity`, from develop
 `4da35220cd676ed721d45486e4357202e8e7de0a`. Android production UI at that reference is the contract.
 
-**Integration update, 2026-10-30:** branch head `35e4a3c` is approved for integration into develop
-before the physical browser trial. All 830 source/package inputs match the tested source
-`95ec29a`; only the integration documentation changes. The original archive retains its identity.
-GitHub Pages preparation and push are the next steps; this does not establish browser acceptance.
+**Integration and publication preparation, 2026-10-30:** branch head `35e4a3c` is merged into
+develop as `17794197b49c789f77bc4f5379087815ceab424a` after approval before the physical browser trial. All 830 inputs
+match tested source `95ec29a` before staging; only the integration documentation changes.
+The original archive retains its identity. Local gh-pages commit
+`a8111b83718337f83ce41205f45adf4da3aa1fbd` contains **115 files** from the clean merge source. All **111** PWA
+integrity entries and staged asset bytes match; the rebuilt engine is unchanged. Only generated
+build identity and worker revision change. PWA revision:
+`d0642b445d622899263dbffdd9866c97a9160ce658c93d21b4e416c04212d6de`.
+
+**Push, new public deployment and browser acceptance remain pending.** This document records
+local preparation, not live HTTP verification, and does not require another site build.
 
 ## Common controls
 

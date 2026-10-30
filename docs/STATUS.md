@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-30 — C125 WEB navigation integrated, GitHub Pages preparation pending; WEB parity published on GitHub Pages from d38dcaf and HTTP-verified, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-30 — C125 WEB navigation merged and gh-pages prepared locally, awaiting push; WEB parity published on GitHub Pages from d38dcaf and HTTP-verified, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -55,11 +55,16 @@ Five new guards fail before correction; **43** focused page assertions, **9** di
 22 up to date). Fresh lint: **0 errors / 79 warnings**, 151.4 seconds; all three analyses execute.
 All **830** frozen inputs match, and the real-engine WEB archive passes API/PCM/legal/HTTP/PWA
 checks. [Archive identity, contract and trial](WEB_NAVIGATION_PARITY.md).
-Integration of branch head **35e4a3cc66d01b43fb00b63f23315123c76134d8** is approved before the
-physical browser trial. All 830 checked source/package inputs match `95ec29a`; this is a source
-comparison, not another test run. GitHub Pages preparation and push are pending; the last verified
-public source is d38dcaf. Deliver navigation first, then evaluate Bluetooth/system controls on
-Windows 11 + Firefox after publication.
+Integrated branch head **35e4a3cc66d01b43fb00b63f23315123c76134d8** into develop as
+**17794197b49c789f77bc4f5379087815ceab424a**, with approval before the physical browser trial. All 830 checked inputs match
+`95ec29a` before publication preparation; this is a source comparison, not another test run.
+Local gh-pages commit **a8111b83718337f83ce41205f45adf4da3aa1fbd** is prepared from that clean merge source:
+**115 files**, all **111** PWA asset digests and staged bytes match. The engine is unchanged;
+only generated source metadata and the PWA revision differ from the checked candidate.
+Prepared PWA revision: `d0642b445d622899263dbffdd9866c97a9160ce658c93d21b4e416c04212d6de`.
+**Push and new public deployment are pending**; the last verified public source is d38dcaf.
+This documentation-only record does not require another site build. Deliver navigation first,
+then evaluate Bluetooth/system controls on Windows 11 + Firefox after publication.
 
 **Published and checked, 2026-10-30:** [GitHub Pages](https://przunk.github.io/Protracktor/)
 serves source **d38dcaf44dcfd0b3b8ba6a486a8863e6fbc026e9**, deployed by gh-pages commit
