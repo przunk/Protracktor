@@ -2333,6 +2333,8 @@ const SESSION = {
 function showSessionView(kind) {
   editorShown = !kind;
   randomView = kind === 'random' ? rememberedRandom : null;
+  $('sessionbar').hidden = !kind;
+  $('random-back').hidden = kind !== 'random';
   $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
   $('random-filter').setAttribute('aria-expanded', 'false');
@@ -2341,15 +2343,14 @@ function showSessionView(kind) {
   const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
+    setUiText($('session-view-title'), SESSION[kind].chip);
     setUiText($('sessiontitle'), digressing ? uiMessageText('Browsing author') : title);
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
-  $('sessionicon').hidden = kind === 'random';
+  $('sessionicon').toggleAttribute('hidden', kind === 'random');
   $('random-dice').hidden = kind !== 'random';
   $('randomhint').hidden = kind !== 'random';
-  $('random-leave').innerHTML = iconSvg(kind === 'random' ? ICON.cloud : ICON.playlist);
-  $('random-leave').append(makeUiText(document, uiMessageText(kind === 'random' ? 'Browse' : 'Playlist')));
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
   if (digressing) $('randomscope').textContent = away.author;
@@ -3337,6 +3338,12 @@ function endAway() {
 /** The heading's way back, whichever session it is heading. */
 function endSession() { if (randomView || random) endRandom(); else endAway(); }
 
+/** Playlist is a destination; Back follows the producing view without replacing playback. */
+function returnToPlaylist() {
+  showPanel(null); showEditor();
+  $('playlistchip').focus({ preventScroll: true });
+}
+
 /** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
 function dropSession() {
   const session = random ?? away;
@@ -3979,11 +3986,9 @@ async function renderBrowse(resolved = null) {
     setUiText($('browsedigression').querySelector('.title'), uiMessageText('Browsing author'));
     $('browsedigression').querySelector('.meta').textContent = away.author;
   }
-  $('browseback').hidden = browsePath.length === 0;
+  $('browseback').hidden = false;
   if (!inPlace) note.textContent = '';
-  // No search inside a digression: it is one author's folder and the way out is Back (the phone
-  // shows no field here either). Close goes with it — a second way out, to somewhere else, beside
-  // the one that leads back to the dice.
+  // An author detour keeps Back to its origin and a separate Playlist exit, as in Android.
   // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
   showSearchQuery(!digressing && browsePath[0] === 'search');
@@ -3993,7 +3998,7 @@ async function renderBrowse(resolved = null) {
     setUiAttribute($('browsesearch'), 'aria-label', searchInputLabel);
     setUiAttribute($('browsesearch'), 'placeholder', searchInputLabel); renderSearchScopes();
   }
-  $('browseclose').hidden = digressing;
+  $('browseclose').hidden = false;
   $('historypager').hidden = true;
   $('historyquery').hidden = browsePath[0] !== 'history';
   if (browsePath[0] === 'history') {
@@ -4640,6 +4645,7 @@ $('tab-browse').onclick = async () => {
 };
 $('browseback').onclick = async () => {
   if (browseSelection.active) { browseSelection.clear(); return; }
+  if (!browsePath.length) { returnToPlaylist(); return; }
   if (browsePath[0] === 'history') {
     sourceBrowseRoute = null; browsePath = [];
     await renderBrowse(); return;
@@ -4678,7 +4684,7 @@ $('browseback').onclick = async () => {
   jumpedTo = null;
   await renderBrowse();
 };
-$('browseclose').onclick = () => showPanel(null);
+$('browseclose').onclick = returnToPlaylist;
 
 $('playlistchip').onclick = () => {
   renderPlaylists();
@@ -4947,10 +4953,12 @@ addEventListener('beforeunload', (event) => {
   event.preventDefault();
   event.returnValue = '';
 });
-$('random-leave').onclick = async () => {
+$('random-leave').onclick = returnToPlaylist;
+$('random-back').onclick = async () => {
   if (randomView) {
     showEditor(); browsePath = []; browseFromSource = false; sourceBrowseRoute = null;
     showPanel('browse'); await renderBrowse();
+    if (!$('browse').hidden && !browsePath.length) $('browsetitle').focus({ preventScroll: true });
   } else endSession();
 };
 
