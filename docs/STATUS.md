@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-30 — WEB parity integrated into develop, browser trial and GitHub Pages publication pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-30 — WEB parity published on GitHub Pages from d38dcaf and HTTP-verified, browser trial pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -44,11 +44,25 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation
 
+**Published and checked, 2026-10-30:** [GitHub Pages](https://przunk.github.io/Protracktor/)
+serves source **d38dcaf44dcfd0b3b8ba6a486a8863e6fbc026e9**, deployed by gh-pages commit
+**2fe4e5f9ace68bd384a2689a7f19358af79f0aa6**. Public HTTPS checks confirm all **114** served
+files match that branch byte-for-byte, including the exact integrity digests for all **111** PWA
+assets. Root/`src/`, required MIME types and manifest paths under `/Protracktor/` are checked;
+the public GitHub API confirms both pushed refs and availability of the source commit.
+The rebuilt WASM is byte-identical to the fully tested engine. Only generated source metadata
+and the PWA revision differ from the original candidate. PWA revision:
+`9cdf2c2aaff3d78bdb9c9ce672384d7044e0d48ef50cfbec7d6d2f07bac11b58`.
+These are HTTP/content checks, not browser execution: physical UI, sound, PWA installation/update
+and background/headset behaviour remain unchecked. This documentation record does not change the
+deployed application or require another site build.
+
 **Integrated into develop, 2026-10-30:** integration of `feature/web-feature-parity` at
 **bbaa1aab82cb8a5405cae64721c98eb1d67f9f1c** is approved before the physical browser trial.
 All 829 application/package inputs match the checked source `abd505a`; the comparison is source
 evidence, not a new test run or browser acceptance. The original archive retains its source/hash.
-GitHub Pages preparation and push remain pending; master, release tags and versionName are unchanged.
+At integration, GitHub Pages preparation and push were still pending; master, release tags and
+versionName are unchanged.
 
 **Technical handoff ready, 2026-10-30:** all **25/25** scopes and the final 41-commit audit are
 implemented on `feature/web-feature-parity`; tested source **abd505a11f389509e92dfab6ad3f496d0364fa1a**.
@@ -66,8 +80,8 @@ all 111 PWA asset fetches pass host checks. [Complete evidence and limits](WEB_I
 C104 headset/OS routing remains unverified and potentially unsupported after the final retry.
 One earlier plain-run ASMA assertion failed once; instrumented, final ESM and uninstrumented
 reruns pass without a source correction. Its cause remains unknown and the observation is retained.
-The candidate is now integrated into develop; push, deployment and physical browser acceptance
-remain pending. No APK or application release was prepared for this integration.
+The candidate is now integrated into develop and published on GitHub Pages; physical browser
+acceptance remains pending. No APK or application release was prepared for this integration.
 
 The dated checkpoints below describe earlier stages and are superseded by this handoff.
 

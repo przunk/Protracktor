@@ -10,11 +10,23 @@ push, publication, APK, release version change or AMP integration is part of thi
 
 ## Final technical handoff — 2026-10-30
 
+**Publication check, 2026-10-30:** the public [GitHub Pages player](https://przunk.github.io/Protracktor/)
+serves source `d38dcaf44dcfd0b3b8ba6a486a8863e6fbc026e9` from gh-pages commit
+`2fe4e5f9ace68bd384a2689a7f19358af79f0aa6`. Direct HTTPS requests verify **114/114** published
+files against Git blobs, all **111** PWA integrity entries, script/WASM/manifest MIME types,
+root forwarding and manifest prefix paths. Public GitHub API reads confirm both refs and the
+source commit. The rebuilt engine matches the checked WASM hash below; only the generated build
+identity and worker revision differ from the original frozen inputs. Published PWA revision:
+`9cdf2c2aaff3d78bdb9c9ce672384d7044e0d48ef50cfbec7d6d2f07bac11b58`.
+This establishes the deployed bytes and source availability, not browser rendering, playback,
+installation/update activation or physical OS routing. Those checklist items remain open.
+
 **Integration update, 2026-10-30:** the completed branch at `bbaa1aa` is approved for merging
 into develop before the physical browser trial. The merge preserves all 829 checked
 application/package inputs. The source, hashes and results below identify the original technical
-handoff; they are not relabelled for the merge. GitHub Pages preparation, push and browser
-acceptance remain pending. No new application test or release is claimed for integration.
+handoff; they are not relabelled for the merge. GitHub Pages preparation and push were pending
+at integration; browser acceptance remains unchecked. No new application test or release is
+claimed for integration.
 
 All **W01-W25** implementation scopes, the 41-commit source/requirements review and its
 corrections are complete on `feature/web-feature-parity`. The checked application/package source
