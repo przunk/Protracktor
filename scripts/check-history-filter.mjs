@@ -31,6 +31,33 @@ await test('shrinking and enormous pages return the last partial page; empty/neg
 });
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+await test('default debounce and cancellation keep the native Window timer receiver', async () => {
+  const nativeSet = globalThis.setTimeout, nativeClear = globalThis.clearTimeout;
+  const timers = new Map(), reads = [], cancelled = [];
+  let next = 0;
+  try {
+    globalThis.setTimeout = function (run, ms) {
+      assert.equal(this, globalThis, 'native Window timers reject a HistoryBrowser receiver');
+      assert.equal(ms, 200);
+      const id = ++next; timers.set(id, run); return id;
+    };
+    globalThis.clearTimeout = function (id) {
+      assert.equal(this, globalThis, 'native Window cancellation rejects a HistoryBrowser receiver');
+      cancelled.push(id); timers.delete(id);
+    };
+    const browser = new HistoryBrowser({ read: async query => {
+      reads.push(query); return { total: 1, page: 0, rows: [query] };
+    } });
+    await browser.open();
+    const first = browser.setQuery('old'), latest = browser.setQuery('latest');
+    assert.deepEqual(cancelled, [1]);
+    timers.get(2)(); await Promise.all([first, latest]);
+    assert.deepEqual(reads, ['', 'latest']);
+    const leaving = browser.setQuery('leaving'); browser.leave(); await leaving;
+    assert.deepEqual(cancelled, [1, 3]);
+    assert.deepEqual(reads, ['', 'latest']);
+  } finally { globalThis.setTimeout = nativeSet; globalThis.clearTimeout = nativeClear; }
+});
 function fixture() {
   const timers = new Map(), calls = [], errors = [];
   let now = 0, nextTimer = 0;

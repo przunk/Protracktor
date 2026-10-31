@@ -143,8 +143,12 @@ async function captureProfile(browser, base, output, profile, report) {
   }, profile);
   const dir = path.join(output, profile.name);
   await fs.mkdir(dir);
-  const entry = { ...profile, screenshots: [], errors, blocked, fulfilled };
+  const entry = { ...profile, screenshots: [], checks: [], errors, blocked, fulfilled };
   report.profiles.push(entry);
+  const verify = async (name, run) => {
+    try { await run(); entry.checks.push({ name, passed: true }); }
+    catch (error) { entry.checks.push({ name, passed: false, reason: error.message }); }
+  };
   const take = async name => {
     await page.evaluate(() => document.fonts.ready);
     // Let Chromium's transient touch highlight expire without changing the page's CSS.
@@ -204,8 +208,17 @@ async function captureProfile(browser, base, output, profile, report) {
     await page.locator('#browselist .bname', { hasText: /^Visual Demo$/ }).click();
     await take('author-folder');
     await browse(/^History$|^Historia$/); await take('history');
-    await page.locator('#historysearch').fill('demo');
-    await page.waitForTimeout(350); await take('history-search');
+    await page.locator('#historysearch').fill('superseded query');
+    await page.locator('#historysearch').fill('evening');
+    await verify('C126: rapid typing filters History using native debounce/cancellation', () => page.waitForFunction(() => {
+      const rows = document.querySelectorAll('#browselist [data-url]');
+      return rows.length === 1 && rows[0].textContent.includes('Evening demo');
+    }, null, { timeout: 3000 }));
+    await take('history-search');
+    await page.locator('#historysearch').fill('');
+    await verify('C126: clearing History search restores all eight fixture entries', () => page.waitForFunction(() =>
+      document.querySelectorAll('#browselist [data-url]').length === 8, null, { timeout: 3000 }));
+    await page.locator('#historysearch').fill('cancel on departure');
     await browse(/^Search$|^Szukaj$/);
     await click('#browsesearch');
     await page.locator('#search-suggestions').waitFor({ state: 'visible' });
@@ -231,6 +244,7 @@ async function captureProfile(browser, base, output, profile, report) {
     await take('settings-bottom');
     assert.equal(errors.length, 0, `Browser page errors: ${errors.join('\n')}`);
     assert.equal(blocked.length, 0, `Unexpected external requests: ${blocked.join('\n')}`);
+    assert.deepEqual(entry.checks.filter(check => !check.passed), [], 'Browser regression checks failed');
   } catch (error) {
     entry.failure = error.stack ?? String(error);
     await take('failure').catch(() => {});

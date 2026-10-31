@@ -13,7 +13,8 @@ export class HistoryBrowser {
   #finishDelay = null;
   #state = Object.freeze(emptyHistory());
   active = false;
-  constructor({ read, changed = () => {}, failed = () => {}, setTimer = setTimeout, cancelTimer = clearTimeout }) {
+  constructor({ read, changed = () => {}, failed = () => {},
+    setTimer = (run, ms) => globalThis.setTimeout(run, ms), cancelTimer = id => globalThis.clearTimeout(id) }) {
     Object.assign(this, { read, changed, failed, setTimer, cancelTimer });
   }
   get state() { return this.#state; }
