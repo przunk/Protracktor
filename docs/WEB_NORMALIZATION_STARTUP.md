@@ -98,7 +98,8 @@ worklet/WASM boundary cases, **36** native-WASM PCM policy cases and the real ES
 bridge. The final complete-gate, clean-browser and package results are recorded below.
 Logs/reports are retained under ignored `user/c130-normalization-fix/`.
 
-The correction remains unmerged. Firefox/device listening and publication are separate steps.
+Integration was subsequently approved and completed as recorded below. Firefox/device listening
+and publication remain separate steps.
 Genuine unavailable analysis still uses the documented live fallback; this change fixes the
 unnecessary browser-timer failure rather than promising every source can be measured upfront.
 
@@ -131,7 +132,36 @@ Only generated `web/vendor/legal/build.json` and `web/sw.js` change after the fr
 hash remains `b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`.
 Browser tooling, private probes and downloaded music are absent from the distribution.
 
-**Ready for trial, unmerged and unpublished.** Use the
+**Integrated; local Pages preparation verified, push/public verification pending.** Use the
 [Firefox listening checklist](TESTING.md#c130-web-normalization-startup--firefox-trial-pending-2026-10-31).
 No new APK/AAB, engine rebuild, master/tag move or push was performed for C130. Later
 documentation does not relabel this checked source/package.
+
+## Integration and Pages preparation — 2026-10-31
+
+Merged `fix/web-normalization-startup` (`8e127a9`) into develop with approval as
+**`97bf93b2976b9479183649ca4358f287ac986c3e`**. The merge tree equals the accepted branch head.
+All **840 non-generated inputs** from the 842-file freeze match checked source `fc86ef8`.
+This is a source comparison, not another full test run. The earlier standalone package retains
+its original source/hash.
+
+`./scripts/publish-web-pages.sh` prepared local gh-pages
+**`553b8b4a1b790a05734c4383bcf1ef44a4f2370b`**, from clean source `97bf93b`:
+
+- All **115 files / 4,504,371 bytes** match the intended production site; browser tools and
+  private music/probes are absent.
+- All **111** PWA integrity entries match their assets. The revision recomputes as
+  `768e2f6d8cfcf98ab3d22947497820c570d2b189bef533b5d213f06981cc4e34`.
+- Source metadata names the merge commit with `dirty: false`. Only generated source metadata
+  and the worker revision differ from the checked candidate; the WASM is unchanged.
+
+Push both the source and Pages branches from the project root:
+
+```bash
+./scripts/push-protracktor.sh develop gh-pages
+```
+
+**Remote push and public HTTP verification are pending.** Preparing local gh-pages does not
+establish that GitHub Pages has updated. After the push, compare public source metadata/served
+bytes with this preparation and perform the Firefox listening trial. No master/tag, release
+version, APK/AAB or engine rebuild is part of this publication preparation.

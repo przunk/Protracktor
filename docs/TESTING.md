@@ -11,7 +11,8 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 Candidate **fc86ef8** passes the complete 1278-test gate/lint and six clean-source Chromium
 Worker/AudioWorklet/PCM checks. Actual reported OctaMED/SID/VGZ files also receive valid profiles
 through the default browser preparation path in Narrow. This establishes host/browser execution,
-not a Firefox/device listening outcome. The C130 branch remains unmerged and unpublished.
+not a Firefox/device listening outcome. C130 is merged with approval as `97bf93b`; local
+gh-pages `553b8b4` is prepared, with push and public verification pending.
 [Verified WEB package and measurements](WEB_NORMALIZATION_STARTUP.md#verified-candidate-and-web-package--2026-10-31).
 
 For cold preparation, use a fresh private Firefox window and enable **Volume normalization**

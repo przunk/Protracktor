@@ -1872,7 +1872,7 @@ uncooperative backend call. Creation/load/analysis/cache errors fall back to liv
 than rejecting playable music. Cancellation terminates the private worker; Off releases its idle
 engine. Only selected playback read-ahead warms profiles, never catalogue/folder scans.
 
-**C130, 2026-10-31:** analyser defaults explicitly invoke the global timer owner. Worker-handler
+**C130, merged as `97bf93b`, 2026-10-31:** analyser defaults explicitly invoke the global timer owner. Worker-handler
 or deadline setup failure settles optional analysis, and result/cancellation cleanup releases
 the job before clearing its timer or disposing the worker. Cleanup failures cannot retain the
 active slot. Real-browser checks exercise prepared cold starts and warm replay through the

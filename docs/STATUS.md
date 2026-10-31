@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-31 — C130 corrected on unmerged fix/web-normalization-startup, checked source fc86ef8, full gate/browser/WEB package verified; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-31 — C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -46,7 +46,7 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ### C130 — WEB normalization starts quietly before increasing gain
 
-~~Open~~ — **corrected on unmerged `fix/web-normalization-startup`, 2026-10-31**. Firefox report with normalization
+~~Open~~ — **accepted and merged as `97bf93b`, 2026-10-31**. Firefox report with normalization
 On and Narrow: after `slow beat.mmd1`, `Soft_Boobies.sid` starts quietly then becomes louder;
 `16 planet ohly.vgz` subsequently does the same. Restart can retain the higher gain.
 The default analyser rejects a wrongly owned native timer in actual Chromium, leaving its job
@@ -66,8 +66,12 @@ clean Chromium run passes six real Worker/worklet/PCM cases; a separate default-
 sequence prepares usable profiles for all three actual reported files. Firefox/device listening
 remains unchecked. The extracted **1,610,658-byte** WEB archive verifies source identity,
 corrected runtime files, API/PCM/legal/HTTP and all 111 PWA assets/integrities. Package identity
-and trial instructions are recorded below. No C130 merge, publication, APK/AAB or engine rebuild
-has been performed; C118 is already integrated separately as **204e7f7**.
+and trial instructions are recorded below. C130 is integrated as **97bf93b**; the merge tree
+equals the accepted branch and all 840 non-generated frozen inputs match tested source fc86ef8.
+Local gh-pages **553b8b4** is prepared from that clean merge: **115 files / 4,504,371 bytes**,
+all **111** PWA asset digests and source metadata checked. Push/public verification and Firefox
+listening remain pending. No new APK/AAB, engine rebuild or master/tag change was performed;
+C118 is integrated separately as **204e7f7**.
 [Report, measurements and recommended repair](WEB_NORMALIZATION_STARTUP.md).
 
 **C126–C129 repaired and checked, 2026-10-31:** clean source **30112cf** on
