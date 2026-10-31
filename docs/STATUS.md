@@ -44,6 +44,49 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation
 
+**Visual inspection tooling in progress, 2026-10-31:** `feature/web-visual-review`, from develop
+`5717b52`, adds isolated real Chromium renders across five desktop/phone-sized EN/PL Dark/Light
+profiles. No existing WEB feature/navigation branch remains to merge for this stage. Application
+sources, runtime dependencies, release versions, AMP and master/tags are unchanged. The first
+browser matrix captures the views but fails on C126 below; no green browser acceptance is claimed.
+[Tooling scope and actual results](WEB_VISUAL_REVIEW.md).
+
+### C126 — WEB History search throws when using the native browser timer
+
+Agent finding and actual browser reproduction, **2026-10-31**, application base `5717b52` with
+uncommitted visual tooling: open Browse → History and type in the search field. In headless
+Chromium **156.0.8078.4**, all five desktop/phone-sized EN/PL Dark/Light profiles produce an
+uncaught `TypeError: Illegal invocation` at `history-browser.js:57`. Results remain loading/empty
+instead of showing matches. No audio, DOM, CSS or timer implementation was substituted.
+
+Mechanism: `HistoryBrowser` retains `setTimeout` as `setTimer` and calls `this.setTimer(...)`,
+passing a class instance to the browser's Window timer method. The rejection occurs before the
+read/error-handler block. Node/jsdom permits this invocation and the earlier host checks missed
+the browser requirement. The retained `clearTimeout` path warrants the same receiver check when
+repairing it. This is a confirmed Chromium WEB defect, not an Android defect or a claim about
+every browser. The visual runner captures the page error and exits 1 rather than reporting a pass.
+No application fix is included in the tooling stage; C126 remains open.
+
+### C127 — WEB search scope buttons use browser defaults and oversized SVGs
+
+Agent visual finding, **2026-10-31**, actual Chromium 156 rendering of application base `5717b52`:
+Browse → Search → submit a query. Saved playlists, Online catalogues and By platform show grey
+native buttons and large black icons rather than the application palette and bounded action icons.
+The original 412×915 EN/Dark Search PNG was inspected, not inferred from DOM tests. The base
+`.chip` appearance and SVG sizing are restricted to `.randomfilter`; Search's own selectors only
+set layout/selected outline. Check both themes, labels and catalogue/platform sub-options in the
+repair. Open; no production CSS change is included in the tooling stage.
+
+### C128 — WEB Random Back is styled as a small native browser button
+
+Agent visual finding, **2026-10-31**, actual 412×915 EN/Dark Chromium rendering: Browse → Random.
+Back has a grey native button background and compact text instead of Browse's themed Back action.
+The plain-button styling is scoped to `.browseview`, but Random's `sessionbar` lives inside
+`main`. The navigation callback and route are separate from this visible appearance defect.
+Open; no production CSS change or phone observation is claimed for this record.
+
+### C125 — Navigation correction
+
 **C125 navigation correction integrated, 2026-10-30:** `fix/web-navigation-parity` separates
 Random Back from Playlist, gives all Browse views an explicit Playlist exit, aligns Queue action
 labels and replaces the duplicate Random dice with one Native-style target. The duplicate was an

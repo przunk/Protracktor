@@ -108,6 +108,20 @@ Python's buffer and a long run looks hung.
 
 ## Builds
 
+### WEB screenshots and visual inspection
+
+The optional headless browser tool is separate from normal application builds and host checks:
+
+```bash
+./scripts/setup-web-visual.sh   # explicit dependency/browser download; no system installation
+./scripts/capture-web.sh       # isolated production-page captures; gallery and JSON under dist/
+```
+
+Use `--list` for profiles or `--profile phone-en-dark` for one. The fixture-driven run uses the
+actual browser renderer, WASM and AudioWorklet, with synthetic stored data and local responses
+for music downloads. Browser errors fail the run while preserving images for review. It does not
+establish physical-device, headset or audible behaviour. [Scope, setup and evidence](WEB_VISUAL_REVIEW.md).
+
 ### Schema snapshots (B42, schema 23, stacked on B43's 22)
 
 `app/schemas/1.sql` through `23.sql` export each historical database shape. `SchemaSqlTest` builds
