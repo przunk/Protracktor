@@ -2322,14 +2322,22 @@ queries and shows at most three prefix matches, submitting a selected query in t
 No implementation, tests or new APK are established by this requirements checkpoint.
 C96 UADE teardown is deferred beyond today; B45 queue ownership needs a separate discussion.
 
-### C104 — WWW headset/media buttons do not control playback; owner report, deferred
+### C104 — WWW headset/media buttons do not control playback; physical verification pending
 
-The owner reports Android headset buttons appear to work, but buttons do not work for the WWW
-player. Exact browser/device/headset, installed/site build, affected buttons and reproduction steps
-were not supplied. This is a real owner observation, not an agent reproduction or a diagnosis.
-Web already registers play/pause/next/previous handlers in `web/src/app.js`; their presence does
-not prove browser/device delivery. Cause and fix remain unverified. Track the deferred work with
-B47, separately from Android routing C102 and Android Auto B44. No code change or device retest.
+Initial report, **2026-10-13**: Android headset buttons were reported working, while buttons did
+not control the WWW player. Browser/device/headset, build, affected buttons and reproduction steps
+were not supplied at that stage. This was a user observation, not an agent reproduction or diagnosis.
+
+Update, **2026-10-31**: the target environment is Windows 11 + Firefox, supplied during the WEB
+follow-up. Physical testing is currently unavailable; the exact Firefox version, headset and
+foreground/background button results remain unspecified. Keep C104 open without requiring a
+test now or claiming a confirmed fix. The W25 Media Session implementation and navigation
+follow-up are integrated; public source `1779419` passed HTTP content verification on 2026-10-30.
+Play/Pause/Stop, Next/Previous, seek, position, metadata and artwork have host event/PCM evidence;
+that does not establish browser-to-OS or headset delivery. Ordinary in-page controls remain the
+fallback. [Implementation and platform limits](WEB_IMPLEMENTATION.md#w25--browser-system-controls-2026-10-29).
+Track remaining device verification with B47, separately from Android routing C102 and Android
+Auto B44. No new application change or physical retest was performed for this update.
 
 ## Notification heart request — recorded 2026-10-13; implementation selected
 

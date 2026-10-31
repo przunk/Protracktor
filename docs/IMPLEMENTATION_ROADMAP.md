@@ -1,10 +1,11 @@
 # Implementation roadmap
 
-Updated: 2026-10-26. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-31. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
 The latest prepared tagged AAB is **1.4.0 (1304)**. Version 1.4.0 is confirmed in Google Play
-closed testing; the production-access reapplication is awaiting review as of 2026-10-26.
+closed testing; Google declined production access again on 2026-10-27 and requires an additional
+14 days of closed testing with real testers before another application.
 [Prepared artifact record](RELEASE_NOTES_1.4.0.md), [current distribution status](STATUS.md#google-play-production-access-reapplication--2026-10-26).
 Pre-correction historical IDs/SHAs below refer to
 the archived original graph, not newly built artifacts. [Commit map and validation](VERSION_HISTORY_REWRITE.md).
@@ -47,11 +48,13 @@ later device builds and remaining checks are recorded in the [contract](VOLUME_N
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B56 | Consider searching while typing | Request recorded 2026-10-31; result retrieval, distinct from recent-query suggestions and existing live History filtering. Views/sources, timing and cancellation need discussion; no implementation selected. [Wishlist](WISHLIST.md#b56-consider-searching-while-typing--discussion-recorded-2026-10-31). |
+| B55 | Search within the open playlist | Request recorded 2026-10-31; distinct from searching across saved playlists. Matching, draft handling and filtered-row actions need discussion; no implementation selected. [Wishlist](WISHLIST.md#b55-search-within-the-open-playlist--todo-recorded-2026-10-31). |
 | B54 | Floating playback controls | Experiment merged as afab610, 2026-10-26, with `FloatingControls.ENABLED = false`. Public availability/announcements require a later explicit decision. Source 0e9d361 passed 54 focused checks/lint and minified Off APK verification; full suite not repeated, as requested. Enabled trial APK 1.4.0 (1313), source 2497632, remains unchanged. Detailed device cases are not individually confirmed. [Contract and evidence](FLOATING_CONTROLS.md). |
 | B53 | Integrate a free music library | Proposal recorded 2026-10-25. Identify the intended service and URL before assessing access and integration; no provider or implementation selected. [Wishlist](WISHLIST.md#b53-integrate-a-free-music-library--idea-recorded-2026-10-25). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
-| B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
+| B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons were reported working. WEB Media Session implementation is integrated/published; C104 physical routing remains unverified. Target: Windows 11 + Firefox; testing is currently unavailable, recorded 2026-10-31. Do not reimplement Android transport. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
 | B38 | Phone pairing on public GitHub Pages | Deferred; the owner currently accepts no public-page pairing. |
@@ -99,7 +102,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | ~~C109~~ | ~~Legacy Modland unknown-author paths fail to download (YM and Same Game SPC)~~ | Provisionally resolved after satisfactory phone playback; merged **122368f**, 2026-10-21. Saved identities are retained; 36 focused checks and the combined 1106-test full gate/lint passed. Longer-term coverage remains open. [Analysis](MODLAND_LEGACY_DOWNLOADS.md). Separate from C26 and B45. |
 | ~~C112~~ | ~~Dock subsong-position label crowds the Now Playing text beside Queue~~ | Accepted after positive phone testing and merged **e90c817**, 2026-10-22. APK **1.3.0 (1281), 0b9169b** remains unchanged; 60 dp card/original text insets, 1113 tests/full gates/lint passed. Detailed accessibility/checklist outcomes not separately reported. [Decision and evidence](STATUS.md#c112-dock-subsong-count-crowds-now-playing-text). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
-| C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
+| C104 | Headset/media buttons do not control the WWW player | Initial report, 2026-10-13; Android buttons were reported working. WEB handlers/metadata/position pass host checks and are published; physical routing remains open. Windows 11 + Firefox is the target; exact browser/headset and button results are unavailable. Physical testing is postponed as of 2026-10-31. [Current record](STATUS.md#c104--www-headsetmedia-buttons-do-not-control-playback-physical-verification-pending). |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
@@ -165,9 +168,12 @@ See [Format plan](PLAN_FORMATS.md), [Catalogue plan](PLAN_CATALOGUES.md) and
 do not plan SAP, SID, AHX/HVL, ZXTune or UADE integration again merely from an old heading.
 
 The [WEB and Android parity inventory dated 2026-10-26](WEB_ANDROID_PARITY_2026-10-26.md)
-records source-level differences, especially features from 1.0.0 through 1.4.0. It separates
-missing functionality, partial/platform integration and existing WEB capabilities; its suggested
-priorities are not an approved implementation sequence.
+records the source-level differences before the parity implementation, especially features from
+1.0.0 through 1.4.0; its missing-feature tables are historical. All 25 selected scopes are now
+implemented and integrated, followed by the navigation correction. Public source `1779419` was
+HTTP-verified on 2026-10-30. Consult the [implementation ledger](WEB_IMPLEMENTATION.md),
+[navigation follow-up](WEB_NAVIGATION_PARITY.md) and [browser trial](WEB_PARITY_CHECKLIST.md)
+for current evidence, intentional exclusions and unchecked physical behaviour. C104 remains open.
 
 - **C81(b):** support NSF/FDS rips loading below `$8000`; the truthful unsupported-file error is
   implemented, not the FDS memory model.
@@ -190,6 +196,10 @@ priorities are not an approved implementation sequence.
 
 ## 5. Open decisions, verification and documentation
 
+- **Q17:** discuss whether changing the search filter should re-run the submitted query, retain
+  the previous result set until submission, or clear it. Resetting results was reported on
+  2026-10-31; no defect classification or new behaviour is selected. Separate from B56's
+  search-as-you-type proposal. [Discussion](OPEN_QUESTIONS.md#q17--search-results-after-changing-the-filter).
 - **Q6:** restoration policy for formats requiring re-rendering from the beginning.
 - **Q9:** whether to isolate decoders/engine in a separate Android process.
 - **Q13–Q16:** queue/navigation, stereo/headphone controls, recent-search retention and notification

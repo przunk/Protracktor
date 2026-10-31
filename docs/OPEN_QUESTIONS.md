@@ -5,6 +5,30 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ---
 
+## Q17 — Search results after changing the filter
+
+Reported for discussion on **2026-10-31**: changing the search filter clears the visible results.
+The desired replacement behaviour has not been selected. The report does not identify a build,
+platform or precise filter control; reproduce that path before diagnosing or changing it.
+This is an open interaction decision, not a confirmed defect or implementation approval.
+
+- Re-run the last submitted query with the new filter and replace results when that request
+  completes. Show loading/error state and prevent older responses from overwriting newer ones.
+- Keep the previous results until explicit submission, with an unambiguous indication of the
+  scope that produced them.
+- Retain the current reset-on-filter-change behaviour, explaining that a new search is needed.
+
+Recommendation for discussion: re-run the submitted query after a filter change, with explicit
+loading state and atomic replacement. This avoids a blank reset without confusing old results
+with the newly selected scope. Viewing/refining results should retain the independent playing
+context. This is a recommendation, not an accepted requirement.
+
+Decide separately whether new query text should also trigger retrieval
+([B56](WISHLIST.md#b56-consider-searching-while-typing--discussion-recorded-2026-10-31)).
+Existing recent-query suggestions and live History search do not settle either question.
+
+---
+
 ## Q16 — Notification heart: destination and existing membership
 
 **Selected trial accepted and merged on 2026-10-14; real user feedback, wishlist B48.** Add the playing track

@@ -10,6 +10,29 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B56. Consider searching while typing — discussion, recorded 2026-10-31
+
+Request recorded 2026-10-31: consider updating music search results as the query is entered,
+instead of requiring explicit submission. This concerns result retrieval, not the existing
+recent-query dropdown (B46/W09); live filtering in History (B49/W10) already exists.
+
+Before selecting implementation, discuss affected views and sources, minimum query length,
+debounce, cancellation of stale work and interaction with explicit submission and suggestions.
+Keep B55's search within an open playlist distinct from catalogue search. Filter changes that
+currently clear results are a related, separate discussion in
+[Q17](OPEN_QUESTIONS.md#q17--search-results-after-changing-the-filter).
+No timing policy, platform scope or implementation is selected by recording this request.
+
+## B55. Search within the open playlist — TODO, recorded 2026-10-31
+
+Request recorded 2026-10-31: add a way to find tracks within the playlist currently being viewed.
+This is distinct from History search (B49/W10) and Search's existing saved-playlist scope (W11),
+which searches across saved playlists rather than filtering the open editor.
+
+Discuss matching fields, live filtering versus explicit submission, the scope of unsaved edits
+and how filtered rows interact with selection, reordering and playback. No UI, matching rule or
+playback-context change has been selected; record this as future work without altering the list.
+
 ## B54. Floating playback controls — accepted experiment, default Off
 
 Decision, 2026-10-26: retain the satisfactory phone trial in develop with
