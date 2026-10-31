@@ -5,11 +5,12 @@ The previous WEB parity and navigation changes are already integrated. This stag
 to inspect actual browser rendering without requiring screenshots to be supplied manually.
 
 **Repair follow-up, 2026-10-31:** the subsequently approved C126–C129 corrections are complete
-on unmerged `fix/web-browser-polish`, checked source `30112cf`. All 35 Chromium guards, the full
+on `fix/web-browser-polish`, checked source `30112cf`, and merged with approval as `0e8d660`. All 35 Chromium guards, the full
 project gate and lint pass; 90 new originals are captured; all 15 overview sheets and critical originals have been inspected. See the
 [repair handoff and current gallery](WEB_BROWSER_FIXES.md#final-verification-and-handoff--2026-10-31).
 The failed baseline findings/images below retain their original source and identity; they are
-not the result of the corrected run. No public deployment or physical acceptance is claimed.
+not the result of the corrected run. Local gh-pages `fbd75a7` is prepared; push, public deployment
+and physical acceptance remain pending. [Integration record](WEB_BROWSER_FIXES.md#integration-and-pages-preparation--2026-10-31).
 
 ## Scope
 
@@ -150,9 +151,9 @@ including desktop Search, the 360 px Random view and the 320 px scrolled Setting
   observation rather than approval to redesign it.
 
 No Android/full application gate or lint was rerun for this tooling-only change. Earlier WEB host
-passes remain their own evidence and do not override this real-browser failure. This branch is
-ready as an inspection tool, with defects recorded; application repair, new branch integration
-and publication remain separate steps. Windows/Firefox, actual phones, Bluetooth, audible output
+passes remain their own evidence and do not override this real-browser failure. At this baseline
+checkpoint the tool was ready with defects recorded; subsequent repairs and integration are
+recorded at the top of this document. Windows/Firefox, actual phones, Bluetooth, audible output
 and PWA lifecycle acceptance remain unchecked.
 
 ### Artifacts

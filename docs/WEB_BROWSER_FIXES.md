@@ -68,8 +68,8 @@ profiles; the full five-profile matrix, project gate/lint and clean-source packa
 
 Checked source: **`30112cfe803b579b068d4912422b478f44feccb0`**, clean tree, on `fix/web-browser-polish`.
 The four fix commits are `f26d58d` (C126), `849d805` (C127), `11a0429` (C128) and `30112cf`
-(C129). The visual-tooling parent remains included. This is an unmerged/unpublished handoff;
-no physical-device acceptance is inferred.
+(C129). The visual-tooling parent remains included. This checkpoint preceded integration and
+publication preparation, recorded below; no physical-device acceptance is inferred.
 
 - **Full project gate:** **1266 tests / 173 suites**, zero failures/errors/skips, **1259 s**.
   The JVM unit task executes; 9 Gradle tasks execute and 22 remain up to date. All companion
@@ -93,8 +93,8 @@ no physical-device acceptance is inferred.
 Run the standard gate with `./scripts/test-protracktor.sh`; the dedicated real-browser phase is
 `./scripts/capture-web.sh` after its explicit setup. These results cover the inspected sources
 and profiles, not Windows/Firefox, physical touch/headsets, audible quality, background/lock-screen
-routing or actual installed-PWA activation/update. C104 stays open. No merge, push, release tag or
-APK is produced by this handoff.
+routing or actual installed-PWA activation/update. C104 stays open. This handoff itself produced
+no merge, push, release tag or APK; the later integration is recorded below.
 
 ### Artifacts
 
@@ -106,3 +106,33 @@ APK is produced by this handoff.
 
 The report archive contains the images, assessment and exact gate results. The WEB archive
 contains the player/server/assets; browser tooling and synthetic screenshot data are not shipped.
+
+## Integration and Pages preparation — 2026-10-31
+
+Integration and WEB publication were approved. `fix/web-browser-polish`, including its visual
+tooling parent, merged into develop as **`0e8d660e82d65e0ba921111cd4d519d77e7b56ea`**. The merge
+tree equals the approved branch head. All **836 non-generated inputs** from the 838-file freeze
+match checked source `30112cf`; this comparison does not claim a second full test run.
+
+`./scripts/publish-web-pages.sh` prepared local gh-pages
+**`fbd75a794a99a56a416c527f76c00451222da567`**, from clean source `0e8d660`:
+
+- All **115 files / 4,503,999 bytes** match the intended production site. Browser tooling and
+  screenshot fixtures are absent.
+- All **111** PWA integrity entries match their assets. The revision recomputes as
+  `e6591ce981a15c39cc3da584de86c8a7de9f360a323a9c9c7e355e27cb0799c8`.
+- Source metadata names the merge commit with `dirty: false`. Only that generated metadata
+  and the worker revision differ from the checked candidate; the WASM hash recorded above is
+  unchanged. No engine rebuild was required.
+
+**Push and public deployment are pending.** The last HTTP-verified public source remains
+`1779419`; preparing a local branch does not establish that the site has updated. Publish both
+the source and Pages branches from the project root:
+
+```bash
+./scripts/push-protracktor.sh develop gh-pages
+```
+
+After the push, verify the public source metadata and served bytes against this preparation.
+Physical browser/headset and installed-PWA update checks remain separate. Master, release tags,
+release versions, AMP and the parked normalization slider are unchanged; no APK/AAB was built.

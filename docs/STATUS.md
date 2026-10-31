@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-31 — C126–C129 corrected on unmerged fix/web-browser-polish, source 30112cf; full gate/lint and Chromium matrix passed; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-31 — C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -52,9 +52,18 @@ execute and all companion phases pass, including **1368 ESM page** and **57 engi
 Fresh lint: **0 errors / 79 warnings**, 149.2 s. All **838** frozen inputs match before staging.
 The actual Chromium matrix passes **35 guards**, captures **90 original / 15 overview** PNGs and
 records no page exceptions. The agent inspected all overviews and critical originals. Extracted
-WEB API/PCM/legal/HTTP/PWA checks pass. This branch includes the inspection tool, remains unmerged
-and has not changed the public site. [Contract, gallery and WEB artifact](WEB_BROWSER_FIXES.md#final-verification-and-handoff--2026-10-31).
+WEB API/PCM/legal/HTTP/PWA checks pass. Integration was approved and the branch, including the
+inspection tool, merged as **0e8d660**. Its tree equals the approved branch head; all 836
+non-generated frozen inputs match checked source 30112cf. This is a source comparison, not
+another full test run. [Contract, gallery and WEB artifact](WEB_BROWSER_FIXES.md#final-verification-and-handoff--2026-10-31).
 Physical phones, Windows/Firefox, Bluetooth and installed-PWA activation/update remain unchecked.
+
+**WEB publication prepared, 2026-10-31:** local gh-pages **fbd75a7** is built from clean source
+**0e8d660e82d65e0ba921111cd4d519d77e7b56ea**. All **115** staged files match the intended site,
+including all **111** PWA asset digests and the source metadata (`dirty: false`). Only generated
+source metadata and the PWA revision differ from the checked candidate; the WASM is unchanged.
+Push and public HTTP verification remain pending; the last verified public source is still
+1779419. [Preparation record and push command](WEB_BROWSER_FIXES.md#integration-and-pages-preparation--2026-10-31).
 
 **Baseline visual inspection stage, 2026-10-31:** `feature/web-visual-review`, from develop
 `5717b52`, adds isolated real Chromium renders across five desktop/phone-sized EN/PL Dark/Light
@@ -63,12 +72,12 @@ PNGs; all 130 input hashes remain unchanged. The agent inspected all overview sh
 originals. The application check correctly exits **1** on C126 in all five profiles; visual
 inspection confirms C127–C129. No green application/browser acceptance is claimed. Queue bounds
 and root horizontal overflow are checked across all captures. Application sources/runtime
-dependencies, release versions, AMP and master/tags are unchanged. The tool is ready on its branch;
-repairs and integration remain separate. [Evidence and gallery/archive](WEB_VISUAL_REVIEW.md#clean-source-capture-and-visual-assessment--2026-10-31).
+dependencies, release versions, AMP and master/tags were unchanged at that baseline checkpoint.
+Subsequent repairs and integration are recorded above. [Evidence and gallery/archive](WEB_VISUAL_REVIEW.md#clean-source-capture-and-visual-assessment--2026-10-31).
 
 ### C126 — WEB History search throws when using the native browser timer
 
-~~Open~~ — **corrected on unmerged `fix/web-browser-polish`, 2026-10-31**. `f26d58d` fixes the global timer owner; rapid typing, clear and departure pass the actual browser guards.
+~~Open~~ — **corrected and merged as `0e8d660`, 2026-10-31**. `f26d58d` fixes the global timer owner; rapid typing, clear and departure pass the actual browser guards.
 The five-profile matrix and full gate pass as recorded above. Public deployment and physical
 acceptance remain separate. The original finding follows.
 
@@ -88,7 +97,7 @@ The initial tooling stage recorded the defect without a fix; its later correctio
 
 ### C127 — WEB search scope buttons use browser defaults and oversized SVGs
 
-~~Open~~ — **corrected on unmerged `fix/web-browser-polish`, 2026-10-31**. `849d805` supplies shared chip styling, themed tiles and aligned 24/16 px icons; category/sub-option guards pass.
+~~Open~~ — **corrected and merged as `0e8d660`, 2026-10-31**. `849d805` supplies shared chip styling, themed tiles and aligned 24/16 px icons; category/sub-option guards pass.
 The five-profile matrix and full gate pass as recorded above. Public deployment and physical
 acceptance remain separate. The original finding follows.
 
@@ -102,7 +111,7 @@ repair. This was the original tooling finding, before the correction recorded ab
 
 ### C128 — WEB Random Back is styled as a small native browser button
 
-~~Open~~ — **corrected on unmerged `fix/web-browser-polish`, 2026-10-31**. `11a0429` shares destination Back styling and the Browse inset; real styles and centre-hit checks pass.
+~~Open~~ — **corrected and merged as `0e8d660`, 2026-10-31**. `11a0429` shares destination Back styling and the Browse inset; real styles and centre-hit checks pass.
 The five-profile matrix and full gate pass as recorded above. Public deployment and physical
 acceptance remain separate. The original finding follows.
 
@@ -114,7 +123,7 @@ The original tooling finding preceded the correction above; no phone observation
 
 ### C129 — WEB scrolled Settings content appears above the sticky header
 
-~~Open~~ — **corrected on unmerged `fix/web-browser-polish`, 2026-10-31**. `30112cf` covers the responsive sheet inset with its sticky header; coverage and Close reachability pass.
+~~Open~~ — **corrected and merged as `0e8d660`, 2026-10-31**. `30112cf` covers the responsive sheet inset with its sticky header; coverage and Close reachability pass.
 The five-profile matrix and full gate pass as recorded above. Public deployment and physical
 acceptance remain separate. The original finding follows.
 
