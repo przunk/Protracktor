@@ -214,12 +214,13 @@
   .randomhead .meta { font-size: var(--body-small); color: var(--on-surface-variant); }
   .randomfilter { padding: 0 16px 10px; font-size: var(--body-small); color: var(--on-surface-variant); }
   .randomchips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .randomfilter .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+  :is(.randomfilter, #search-scopes) .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
     padding: 4px 12px; border: 1px solid var(--outline); border-radius: 8px; background: transparent;
     font: inherit; color: var(--on-surface); cursor: pointer; }
-  .randomfilter .chip svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
-  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container); }
-  .randomfilter .chip:disabled { opacity: .45; cursor: default; }
+  :is(.randomfilter, #search-scopes) .chip svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
+  :is(.randomfilter, #search-scopes) .chip.on { background: var(--secondary-container); color: var(--on-secondary-container); }
+  :is(.randomfilter, #search-scopes) .chip:disabled { opacity: .45; cursor: default; }
+  :is(.randomfilter, #search-scopes) .chip:focus-visible { outline: 2px solid var(--on-surface); outline-offset: 2px; }
   .random-filter-explanation { display: flex; align-items: center; gap: 12px; }
   .random-filter-explanation p { flex: 1; margin: 8px 0 0; }
   #random-dice { touch-action: manipulation; flex: none; display: grid; place-items: center;
@@ -320,9 +321,10 @@
   }
   .overlay[hidden] { display: none; }
   .sheet {
+    --sheet-top-inset: 22px;
     background: var(--surface-container);
     border-radius: var(--shape-xl);
-    padding: 22px 24px 16px;
+    padding: var(--sheet-top-inset) 24px 16px;
     max-width: 420px; width: 100%;
     box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
     text-align: center;
@@ -332,10 +334,13 @@
      sheet that runs past the bottom -- Settings on a phone -- had nothing that could bring the rest
      into view. Its heading stays, so Close is always there. */
   .sheet { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-  .sheet > .browsehead { position: sticky; top: 0; z-index: 1; background: var(--surface-container); }
+  /* Cover the scrollport's top padding while retaining the original heading position. */
+  .sheet > .browsehead { position: sticky; top: calc(-1 * var(--sheet-top-inset)); z-index: 1;
+    margin-top: calc(-1 * var(--sheet-top-inset)); padding-top: var(--sheet-top-inset);
+    background: var(--surface-container); }
   @media (max-width: 560px) {
     .overlay { padding: 12px; }
-    .sheet { padding: 18px 16px 12px; }
+    .sheet { --sheet-top-inset: 18px; padding: var(--sheet-top-inset) 16px 12px; }
     /* The owner, 2026-09-24: settings as a panel of nearly the whole height. */
     #settings .sheet { height: 100%; }
   }
@@ -639,9 +644,14 @@
     border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
     padding: 10px 56px 10px 16px; font: inherit;
   }
-  .search-scope-tiles { display: flex; gap: 8px; margin-bottom: 8px; }
-  .search-scope-tiles .chip { flex: 1; min-width: 0; justify-content: center; white-space: normal; }
-  .search-scope-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 8px; }
+  .search-scope-tiles { display: flex; gap: 8px; padding: 2px; margin-bottom: 8px; }
+  #search-scopes .search-scope-tiles .chip { flex: 1; min-width: 0; min-height: 64px;
+    flex-direction: column; justify-content: flex-start; padding: 8px; white-space: normal;
+    border-radius: var(--shape-m); border-color: transparent;
+    background: var(--secondary-container); color: var(--on-secondary-container); }
+  #search-scopes .search-scope-tiles .chip svg { width: 24px; height: 24px; }
+  .search-scope-chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; }
+  .search-scope-chips .chip { flex: none; white-space: nowrap; }
   #search-scopes .chip.on { outline: 2px solid var(--primary); font-weight: 700; }
   #search-scopes .note { margin: 4px 0 8px; }
   .history-query { margin: 6px 0 8px; }
@@ -660,11 +670,12 @@
   .search-suggestions li:hover, .search-suggestions li[aria-selected="true"] {
     background: var(--secondary-container); color: var(--on-secondary-container); }
   .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  #sessionbar { padding: 0 16px; }
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .browseview { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 16px 6px; }
-  .browseview .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
-                                   padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
+  .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
+    padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
   #browselist { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
   .historypager { display: flex; align-items: center; gap: 6px; padding: 0 0 6px; }
   .historypager[hidden] { display: none; }
