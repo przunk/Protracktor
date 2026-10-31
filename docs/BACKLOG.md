@@ -269,7 +269,7 @@ storage in Settings, the first run), was added on 2026-09-22 with W-D4.
 
 **C118 refinement, 2026-10-31:** refresh the active view after completed writes from other
 playback sources. The no-self-recording policy below remains; the blanket suppression of live
-reads is superseded by this task. Implementation and its unmerged verification state are in
+reads is superseded by this task. Implementation and its verification state are in
 [C118](HISTORY_LIVE_UPDATES.md).
 
 Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes

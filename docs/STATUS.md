@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-31 — C130 WEB normalization startup investigated and confirmed, repair pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 corrected on unmerged fix/history-live-updates, source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working, merge pending; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-31 — C130 WEB normalization startup investigated and confirmed, repair pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -1292,7 +1292,7 @@ Reconcile live updates with that policy before implementation, rather than silen
 recording semantics. Filtering, paging, scroll stability and the captured playback context need
 regression coverage. This is a user-reported freshness issue, not another History-search request.
 
-~~Open~~ — **corrected on unmerged `fix/history-live-updates`, 2026-10-31**, from develop
+~~Open~~ — **accepted and merged as `204e7f7`, 2026-10-31**, from develop
 `0cd80c1`. Completed writer revisions refresh the active view's phrase/page without rebuilding
 playback. History-origin plays keep their recency/count policy; Queue source navigation retains
 its captured view until another committed write. At the top, new rows are visible; data updates
@@ -1311,8 +1311,9 @@ Minified, test-signed APK **1.4.0 (1403)** builds in **98 s**:
 Package/version, signature, non-debuggable release, R8, ZIP/native alignment and integrity are
 checked. Schema 23 and versionName 1.4.0 remain. **Phone feedback, 2026-10-31:** the
 implementation was reported working overall. Installed build/device and individual trial
-outcomes were not separately supplied. Integration approval remains pending; no merge, push,
-master/tag change, AAB or store publication is performed.
+outcomes were not separately supplied. Integration was approved and completed as **204e7f7**;
+all 840 frozen inputs match tested source 5a0b4a6. This is a source comparison, not another full
+test run. No push, master/tag change, APK/AAB build or store publication was performed for the merge.
 [Contract, mechanism and phone trial](HISTORY_LIVE_UPDATES.md).
 
 ## 1.3.0 — AAB prepared, upload/publication unconfirmed

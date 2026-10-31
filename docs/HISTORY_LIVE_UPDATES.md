@@ -91,7 +91,7 @@ certificate, ZIP integrity, 16 KB ZIP/native alignment, R8 mapping, one DEX and 
 The filename and verification receipt identify source `5a0b4a6`; subsequent documentation does
 not relabel this APK or its versionCode.
 
-**Overall phone behaviour reported working, unmerged.** Host/Robolectric evidence and the
+**Overall phone behaviour reported working; merged as `204e7f7`.** Host/Robolectric evidence and the
 overall phone report remain distinct; individual phone scenarios are not separately enumerated.
 No push, release tag, AAB or store publication is performed.
 
@@ -100,7 +100,7 @@ No push, release tag, AAB or store publication is performed.
 The implementation was reported working after the trial handoff. The latest supplied APK is
 1.4.0 (1403), source `5a0b4a6`; the installed build ID, device and individual checklist outcomes
 were not separately supplied. Record this as an overall successful report, not a pass for every
-scenario below. Integration approval has not yet been given; keep the branch unmerged.
+scenario below. Integration was subsequently approved and completed as recorded below.
 
 ## Phone trial
 
@@ -120,5 +120,11 @@ scenario below. Integration approval has not yet been given; keep the branch unm
    the current database. Queue's source action retains its captured view; another committed
    play refreshes that view without resetting its phrase/page or changing playback.
 
-Integration waits for explicit approval after the trial. No push, master/tag change, AAB or
-store publication is part of this fix.
+## Integration — 2026-10-31
+
+Merged `fix/history-live-updates` (`f1196fb`) into develop as
+**`204e7f71936589831b2055c2edfc0b5c9a739f6a`** after the successful phone report and explicit
+integration approval. The only conflict was the Status summary; both C118 and C130 records
+were retained. All **840** frozen application/check inputs equal tested source `5a0b4a6`.
+This is a source comparison, not another full test run or APK build. The supplied APK keeps its
+original identity. No push, master/tag change, AAB or store publication was performed.

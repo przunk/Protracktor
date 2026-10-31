@@ -1226,7 +1226,7 @@ positions. Errors have localized feedback and a labelled retry, not a false no-m
 Only an explicit track tap captures a result-page queue; filtering does not alter the existing
 playback queue, History recency/count policy or recent-query storage. [Contract](PLAN_HISTORY_SEARCH.md).
 
-**C118 live freshness, branch implementation, 2026-10-31:** `HistoryBrowser` observes the existing
+**C118 live freshness, accepted and merged as `204e7f7`, 2026-10-31:** `HistoryBrowser` observes the existing
 ordered writer's revision and the active History visit. `HistoryReads.busy` keeps automatic
 refresh behind an explicit read/debounce/clear; writes received while busy are picked up at idle.
 Refresh retains the phrase/page and existing rows while reading, with the same latest-request

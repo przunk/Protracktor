@@ -13,7 +13,8 @@ Candidate source **5a0b4a6**, minified test-signed APK **1.4.0 (1403)**. The com
 actual Compose checks establish the write/clear/filter ownership and top/scrolled behaviour;
 they do not establish phone timing, touch or playback. Subsequent phone feedback reports the
 implementation working overall. Individual outcomes and installed build/device were not
-separately supplied. The branch remains unmerged pending integration approval.
+separately supplied. Integration was approved and the branch merged as `204e7f7`; granular phone outcomes remain
+separate from that approval.
 
 Use the [APK identity and five-step phone trial](HISTORY_LIVE_UPDATES.md#verified-candidate-and-apk--2026-10-31).
 Start with Random → History → Next without leaving History. Then check a scrolled page, an
