@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -37,6 +39,8 @@ internal class HistoryReads<T>(
 
     private val newest = AtomicLong(0)
     private var running: Job? = null
+    private val working = MutableStateFlow(false)
+    val busy = working.asStateFlow()
 
     fun open(request: HistoryRequest = HistoryRequest()) = load(request, 0, false)
     fun filter(request: HistoryRequest) = load(request, 0, true)
@@ -70,6 +74,7 @@ internal class HistoryReads<T>(
     private fun launchRequest(request: HistoryRequest, checkAtStart: Boolean = true, work: suspend (Long) -> Unit): Job {
         val ticket = newest.incrementAndGet()
         running?.cancel()
+        working.value = true
         // Assign before Main.immediate can complete or reenter.
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
@@ -79,7 +84,10 @@ internal class HistoryReads<T>(
             } catch (error: Exception) {
                 if (owns(ticket, request)) failed(request, error)
             } finally {
-                if (newest.get() == ticket) running = null
+                if (newest.get() == ticket) {
+                    running = null
+                    working.value = false
+                }
             }
         }
         running = job

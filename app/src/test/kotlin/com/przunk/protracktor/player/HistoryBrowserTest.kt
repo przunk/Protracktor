@@ -9,14 +9,18 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.job
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HistoryBrowserTest {
     private class Fixture(scope: CoroutineScope) {
         val browse = MutableStateFlow(BrowseState(domain = BrowseDomain.HISTORY, historyVisit = 1))
@@ -25,34 +29,38 @@ class HistoryBrowserTest {
         var reader: suspend (String, Int) -> HistoryPage<TrackRef> = { query, _ ->
             HistoryPage(1, 0, listOf(TrackRef(query.ifEmpty { "all" }, query)))
         }
-        val browser = HistoryBrowser(scope, browse,
+        val browser = HistoryBrowser(scope, browse, MutableStateFlow(HistoryWrites.Revision()),
             read = { query, page -> calls += query to page; reader(query, page) },
             clear = {}, onFailure = { errors += it })
     }
 
-    private suspend fun CoroutineScope.drain() {
-        while (coroutineContext.job.children.any()) coroutineContext.job.children.toList().joinAll()
+    private fun TestScope.drain() {
+        advanceTimeBy(200)
+        runCurrent()
     }
 
-    @Test(timeout = 5000) fun `edits debounce to one latest full History request and reset the page`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `edits debounce to one latest full History request and reset the page`() = runTest {
+        val f = Fixture(backgroundScope)
         f.browser.open(); drain()
         f.browse.update { it.copy(historyPage = 3) }
-        val started = System.nanoTime()
+        val started = currentTime
         f.browser.setQuery("superseded")
         f.browser.setQuery(" latest ")
         assertTrue(f.browse.value.loading)
         assertTrue(f.browse.value.tracks.isEmpty())
-        drain()
-        assertTrue("200 ms debounce did not run", (System.nanoTime() - started) / 1_000_000 >= 180)
+        runCurrent()
+        advanceTimeBy(199); runCurrent()
+        assertEquals(listOf("" to 0), f.calls)
+        advanceTimeBy(1); runCurrent()
+        assertTrue("200 ms debounce did not run", currentTime - started >= 200)
         assertEquals(listOf("" to 0, "latest" to 0), f.calls)
         assertEquals(" latest ", f.browse.value.historyQuery)
         assertEquals(0, f.browse.value.historyPage)
         assertEquals("latest", f.browse.value.tracks.single().id)
     }
 
-    @Test(timeout = 5000) fun `retired identical input cannot replace a newer occurrence`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `retired identical input cannot replace a newer occurrence`() = runTest {
+        val f = Fixture(backgroundScope)
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         var occurrence = 0
@@ -73,8 +81,8 @@ class HistoryBrowserTest {
         assertTrue(f.errors.isEmpty())
     }
 
-    @Test(timeout = 5000) fun `leaving History suppresses late errors and does not clear another view loading`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `leaving History suppresses late errors and does not clear another view loading`() = runTest {
+        val f = Fixture(backgroundScope)
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         f.reader = { _, _ ->
@@ -91,8 +99,8 @@ class HistoryBrowserTest {
         assertTrue(f.errors.isEmpty())
     }
 
-    @Test(timeout = 5000) fun `new visit invalidates an abandoned filtered read`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `new visit invalidates an abandoned filtered read`() = runTest {
+        val f = Fixture(backgroundScope)
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         f.reader = { query, _ ->
@@ -108,8 +116,8 @@ class HistoryBrowserTest {
         assertEquals("new visit", f.browse.value.tracks.single().id)
     }
 
-    @Test(timeout = 5000) fun `current failures stop loading and the same phrase can retry`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `current failures stop loading and the same phrase can retry`() = runTest {
+        val f = Fixture(backgroundScope)
         var fail = true
         f.reader = { query, _ ->
             if (fail) error("current failure")
@@ -125,8 +133,8 @@ class HistoryBrowserTest {
         assertEquals("retry", f.browse.value.tracks.single().id)
     }
 
-    @Test(timeout = 5000) fun `clear cancels a pending debounce and leaves no old rows`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `clear cancels a pending debounce and leaves no old rows`() = runTest {
+        val f = Fixture(backgroundScope)
         f.browser.open(); drain()
         f.browser.setQuery("pending")
         var erased = false
@@ -139,8 +147,8 @@ class HistoryBrowserTest {
         assertFalse(f.browse.value.loading)
     }
 
-    @Test(timeout = 5000) fun `failed clear reloads a cancelled pending filter rather than leaving a spinner`() = runBlocking {
-        val f = Fixture(this)
+    @Test(timeout = 5000) fun `failed clear reloads a cancelled pending filter rather than leaving a spinner`() = runTest {
+        val f = Fixture(backgroundScope)
         f.browser.setQuery("pending")
         var failures = 0
         f.browser.clearAll({ error("clear failed") }, { failures++ })
@@ -151,8 +159,8 @@ class HistoryBrowserTest {
         assertEquals("pending", f.browse.value.tracks.single().id)
     }
 
-    @Test fun `unchanged input is a no op and edits outside History do not mutate another domain`() = runBlocking {
-        val f = Fixture(this)
+    @Test fun `unchanged input is a no op and edits outside History do not mutate another domain`() = runTest {
+        val f = Fixture(backgroundScope)
         f.browser.open(); drain()
         val initial = f.browse.value
         f.browser.setQuery("")

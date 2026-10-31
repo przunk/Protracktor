@@ -267,6 +267,11 @@ storage in Settings, the first run), was added on 2026-09-22 with W-D4.
 
 ## A56. History keeps its order while you use it — **noted 2026-09-21; DONE 2026-09-22, merged; confirmed on the phone**
 
+**C118 refinement, 2026-10-31:** refresh the active view after completed writes from other
+playback sources. The no-self-recording policy below remains; the blanket suppression of live
+reads is superseded by this task. Implementation and its unmerged verification state are in
+[C118](HISTORY_LIVE_UPDATES.md).
+
 Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes
 walked after it -- out of History; the open History is no longer re-read on every play. Where a
 results list came from is set once, where the list is made, so next and previous keep it.

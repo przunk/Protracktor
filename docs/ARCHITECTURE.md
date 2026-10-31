@@ -1226,6 +1226,14 @@ positions. Errors have localized feedback and a labelled retry, not a false no-m
 Only an explicit track tap captures a result-page queue; filtering does not alter the existing
 playback queue, History recency/count policy or recent-query storage. [Contract](PLAN_HISTORY_SEARCH.md).
 
+**C118 live freshness, branch implementation, 2026-10-31:** `HistoryBrowser` observes the existing
+ordered writer's revision and the active History visit. `HistoryReads.busy` keeps automatic
+refresh behind an explicit read/debounce/clear; writes received while busy are picked up at idle.
+Refresh retains the phrase/page and existing rows while reading, with the same latest-request
+ownership. It does not rebuild the playback context or change History-origin recording policy.
+History-only top anchoring exposes new first rows when already at the top; elsewhere keyed rows
+retain the visible anchor. [Contract and verification](HISTORY_LIVE_UPDATES.md).
+
 **One trap worth keeping written down.** The natural way to write "insert or bump the count" is
 `INSERT ... ON CONFLICT ... DO UPDATE`. That is SQLite 3.24, and **API 29 ships 3.22** while
 `minSdk` is 29 — so the natural way crashes on the oldest device supported. Nothing in this project

@@ -48,6 +48,7 @@ class HistoryBrowseUiTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private lateinit var workflow: BrowseWorkflow
     private lateinit var historyBrowser: HistoryBrowser
+    private lateinit var historyWrites: HistoryWrites
     private var stored = rows(0) + rows(1)
     private var readGate: CompletableDeferred<Unit>? = null
     private var readFails = false
@@ -75,7 +76,10 @@ class HistoryBrowseUiTest {
     }
 
     private fun show() {
-        historyBrowser = HistoryBrowser(activity.get().lifecycleScope, browse,
+        historyWrites = HistoryWrites(activity.get().lifecycleScope,
+            record = { track -> stored = listOf(track) + stored.filterNot { it.id == track.id } },
+            qualify = {}, erase = { stored = emptyList() }, failed = { failures += it })
+        historyBrowser = HistoryBrowser(activity.get().lifecycleScope, browse, historyWrites.revision,
             read = { query, page ->
                 readGate?.await()
                 if (readFails) error("controlled History read failure")
@@ -116,7 +120,10 @@ class HistoryBrowseUiTest {
                     onQueryChange = workflow::setQuery, onScope = workflow::setSearchScope,
                     onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = workflow::runSearch,
                     recentQueries = emptyList(), onSearchSuggestion = workflow::searchFor,
-                    onClearHistory = { historyBrowser.clearAll({ stored = emptyList() }, { failures += it }) },
+                    onClearHistory = {
+                        val cleared = historyWrites.clear()
+                        historyBrowser.clearAll({ cleared.await() }, { failures += it })
+                    },
                     onHistoryPage = historyBrowser::showPage, onHistoryQueryChange = historyBrowser::setQuery,
                     playingId = playingId, loadingId = null,
                     onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
@@ -278,5 +285,43 @@ class HistoryBrowseUiTest {
         compose.onNodeWithText("History track 0").assertIsDisplayed()
         compose.onNodeWithText("Older").performClick()
         compose.onNodeWithText("History track 100").assertIsDisplayed()
+    }
+
+    @Test fun `a committed new play appears while History stays open at the top`() {
+        show()
+        compose.runOnIdle { historyWrites.record(TrackRef("new", "New live tune"), historyWrites.generation) }
+        compose.waitForIdle()
+        compose.onNodeWithText("New live tune").assertIsDisplayed()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals(201, browse.value.historyTotal)
+            org.junit.Assert.assertFalse(browse.value.loading)
+        }
+    }
+
+    @Test fun `a new play preserves a scrolled History anchor`() {
+        show()
+        scrollTo(50)
+        compose.runOnIdle { historyWrites.record(TrackRef("new", "New live tune"), historyWrites.generation) }
+        compose.waitForIdle()
+        compose.onNodeWithText("History track 50").assertIsDisplayed()
+        compose.runOnIdle { org.junit.Assert.assertEquals(201, browse.value.historyTotal) }
+    }
+
+    @Test fun `live writes respect the phrase retain focus and do not replace captured playback`() {
+        show()
+        compose.onNodeWithText("History track 0").performClick()
+        val captured = playedRows
+        filter("fresh")
+        compose.runOnIdle {
+            historyWrites.record(TrackRef("fresh", "Fresh live match"), historyWrites.generation)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("Fresh live match").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).assertIsFocused()
+        compose.runOnIdle {
+            org.junit.Assert.assertSame(captured, playedRows)
+            org.junit.Assert.assertEquals(1, playCalls)
+            org.junit.Assert.assertEquals("fresh", browse.value.historyQuery)
+        }
     }
 }
