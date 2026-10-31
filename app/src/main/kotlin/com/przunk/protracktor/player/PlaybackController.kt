@@ -1661,6 +1661,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val historyBrowser = HistoryBrowser(
         scope = scope,
         browse = _browse,
+        revision = historyWrites.revision,
         read = ::historyRows,
         clear = { history.clear() },
         onFailure = {

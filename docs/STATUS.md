@@ -1271,13 +1271,20 @@ Reported sequence: keep History visible during playback; newly recorded tracks d
 Leaving History and opening it again reveals the updates. Expected: entries that qualify for
 History recording become visible without a navigation round trip. The report suggests reading
 only on entry, without observing subsequent changes; no new code inspection, host reproduction
-or phone test was performed by the agent for this record. **Open; not implemented.**
+or phone test was performed by the agent for that initial record.
 
 Related prior decision: [A56](BACKLOG.md) deliberately froze the open History view to avoid rows
 moving under a tap; playback originating from History does not record/reorder its own entries.
 Reconcile live updates with that policy before implementation, rather than silently changing
 recording semantics. Filtering, paging, scroll stability and the captured playback context need
 regression coverage. This is a user-reported freshness issue, not another History-search request.
+
+**Implementation in progress, 2026-10-31:** `fix/history-live-updates`, from develop `0cd80c1`,
+connects the active History view to completed writer revisions. The original eight-case host
+regression fails in five cases before correction. A real Compose check separately fails on a
+new row hidden above the viewport; the History-only top-anchor correction addresses that case.
+Final focused/full checks and APK are pending. No phone verification or integration is claimed.
+[Contract, mechanism and phone trial](HISTORY_LIVE_UPDATES.md).
 
 ## 1.3.0 — AAB prepared, upload/publication unconfirmed
 

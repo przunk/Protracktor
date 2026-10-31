@@ -1333,7 +1333,9 @@ private fun Selectable(
                 }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
+                val rowKeys = browse.tracks.map { it.id }
+                RestorePosition(scroll, key, listState, rowKeys, browse.loading)
+                if (browse.domain == BrowseDomain.HISTORY) KeepHistoryAtTop(listState, rowKeys)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 // **A local folder's own folders first** (the owner, 2026-09-29): the tree is
