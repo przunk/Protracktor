@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-30 — C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-10-31 — real Chromium visual review prepared on feature/web-visual-review; C126–C129 open; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 open; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
@@ -44,12 +44,15 @@ Master/tags, frozen WEB work and AMP are unchanged; no push, build or publicatio
 
 ## WEB feature implementation
 
-**Visual inspection tooling in progress, 2026-10-31:** `feature/web-visual-review`, from develop
+**Visual inspection stage prepared, 2026-10-31:** `feature/web-visual-review`, from develop
 `5717b52`, adds isolated real Chromium renders across five desktop/phone-sized EN/PL Dark/Light
-profiles. No existing WEB feature/navigation branch remains to merge for this stage. Application
-sources, runtime dependencies, release versions, AMP and master/tags are unchanged. The first
-browser matrix captures the views but fails on C126 below; no green browser acceptance is claimed.
-[Tooling scope and actual results](WEB_VISUAL_REVIEW.md).
+profiles. Clean tooling source **f1bf550** produces **90 primary**, **5 diagnostic** and **15 overview**
+PNGs; all 130 input hashes remain unchanged. The agent inspected all overview sheets and critical
+originals. The application check correctly exits **1** on C126 in all five profiles; visual
+inspection confirms C127–C129. No green application/browser acceptance is claimed. Queue bounds
+and root horizontal overflow are checked across all captures. Application sources/runtime
+dependencies, release versions, AMP and master/tags are unchanged. The tool is ready on its branch;
+repairs and integration remain separate. [Evidence and gallery/archive](WEB_VISUAL_REVIEW.md#clean-source-capture-and-visual-assessment--2026-10-31).
 
 ### C126 — WEB History search throws when using the native browser timer
 
@@ -84,6 +87,16 @@ Back has a grey native button background and compact text instead of Browse's th
 The plain-button styling is scoped to `.browseview`, but Random's `sessionbar` lives inside
 `main`. The navigation callback and route are separate from this visible appearance defect.
 Open; no production CSS change or phone observation is claimed for this record.
+
+### C129 — WEB scrolled Settings content appears above the sticky header
+
+Agent visual finding, **2026-10-31**, clean tooling source `f1bf550`, unchanged application:
+open Settings in the compact 320×640 Chromium profile and scroll to the final sections. The
+original `compact-en-light/18-settings-bottom.png` shows the content heading above Settings and
+Close, at the panel's top edge. The sheet scrolls with top padding, while its header sticks at
+`top: 0` inside the content area, leaving the padding strip exposed to the scrolled content.
+This is a visible layering/coverage defect, not an exception or a phone report. Check header
+coverage and rounded corners in both themes when repairing it. Open; no application fix included.
 
 ### C125 — Navigation correction
 

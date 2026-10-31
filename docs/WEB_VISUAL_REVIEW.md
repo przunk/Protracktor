@@ -87,8 +87,8 @@ This is an agent-run browser reproduction using the real input event, not a repo
 observation. It establishes C126; it does not repair it. Full screenshot capture/visual inspection
 continues, while the runner correctly returns failure for this application error.
 
-The final source identity, screenshot archive and image assessment will be recorded after the
-tooling commit and the clean-source matrix run.
+The clean-source matrix and image assessment are recorded below; the dated initial observations
+remain evidence of what exposed the defects.
 
 ## Initial visual findings — 2026-10-31
 
@@ -111,3 +111,50 @@ fixture rows lacked the replayable flag and were intentionally dimmed by product
 the fixture now supplies valid replayable entries. Do not report that fixture omission as an
 application bug. Native touch highlights are allowed to settle for 350 ms before capture;
 no highlight or application style is overridden.
+
+## Clean-source capture and visual assessment — 2026-10-31
+
+Checked tooling source: **`f1bf550082f7911b938a97e91cea7fe67fdba5ea`**, clean tree.
+Browser: **Chromium 156.0.8078.4**, Linux x64. All **130** application/tooling/served-vendor input
+hashes remain unchanged through capture. Application sources and runtime dependencies match
+develop `5717b52`; this stage changes tooling/documents only.
+
+The full run produces **90 primary PNGs** (eighteen views in each of five profiles), **5 failure
+diagnostic PNGs** and **15 overview PNGs**. All original image hashes and viewport dimensions
+are checked. The agent inspected all fifteen overview sheets and original critical renders,
+including desktop Search, the 360 px Random view and the 320 px scrolled Settings panel.
+
+- **Checked:** real browser setup/launch, fresh project-local library extraction, syntax checks,
+  invalid-profile rejection and the complete capture/gallery path. The native five-subsong NSF
+  opens through the production WASM/worklet; no decoder message was synthesized.
+- **Application run fails, exit 1:** C126 occurs once in every profile after the real History
+  input action. No unexpected external request or additional page exception is recorded. A full
+  image set is not a passing application test.
+- **Visual defects confirmed:** C127 and C128 remain visible across the final profiles. Search
+  SVGs measure about **75–221 px**, all black; Random Back measures **24 px** high with native
+  grey styling. The compact original also confirms **C129**: Settings content appears above its
+  sticky header after scrolling. The header sticks at `top: 0` inside a padded scrolling sheet,
+  leaving the top padding strip exposed. Inspect the header's coverage in both themes when fixing.
+- **Visual assessment:** the ordinary lists, manual-row indentation, compact player and Dark/Light
+  palettes are coherent. Queue remains visible within every captured viewport; no root horizontal
+  overflow is measured. Title/path truncation is expected with long fixtures; the 320 px Random
+  filter is scrollable through `main`, so its off-screen chips are not classified as missing.
+  Settings starts with dense technical/storage details, which is an information-hierarchy
+  observation rather than approval to redesign it.
+
+No Android/full application gate or lint was rerun for this tooling-only change. Earlier WEB host
+passes remain their own evidence and do not override this real-browser failure. This branch is
+ready as an inspection tool, with defects recorded; application repair, new branch integration
+and publication remain separate steps. Windows/Firefox, actual phones, Bluetooth, audible output
+and PWA lifecycle acceptance remain unchecked.
+
+### Artifacts
+
+- [Gallery](../dist/web-visual-f1bf550-2026-10-31T18-27-21-332Z/index.html)
+- [Capture/assessment metadata](../dist/web-visual-f1bf550-2026-10-31T18-27-21-332Z/report.json)
+- [Portable report archive](../dist/protracktor-web-visual-f1bf550-20261031.tar.gz): **9,411,735 bytes**,
+  SHA-256 `7449623ca06db98d23de92d26b95cde89470f5ad34a053938c5337f486114631`.
+
+The archive contains images, overview sheets, gallery, `REVIEW.md`, diagnostics and `SHA256SUMS`.
+It contains no browser binaries, npm installation or live user profile. These are review artifacts,
+not a new WEB distribution or an APK.
