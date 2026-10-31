@@ -6,6 +6,22 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## C130 WEB normalization startup — Firefox trial pending, 2026-10-31
+
+Candidate **fc86ef8** passes the complete 1278-test gate/lint and six clean-source Chromium
+Worker/AudioWorklet/PCM checks. Actual reported OctaMED/SID/VGZ files also receive valid profiles
+through the default browser preparation path in Narrow. This establishes host/browser execution,
+not a Firefox/device listening outcome. The C130 branch remains unmerged and unpublished.
+[Verified WEB package and measurements](WEB_NORMALIZATION_STARTUP.md#verified-candidate-and-web-package--2026-10-31).
+
+For cold preparation, use a fresh private Firefox window and enable **Volume normalization**
+with **Narrow** before playing. Play the reported OctaMED → SID → VGZ sequence, listen through
+the first five seconds and replay each from the beginning. There should be no normalization
+step upward around three seconds for successfully prepared playback. Repeat in Original; verify
+that normal song dynamics, manual volume and transport still behave normally. Keep the same
+window for the warm-replay comparison. Record the exact served build/browser and any exception;
+genuine unavailable analysis retains its conservative live fallback.
+
 ## C118 live History — overall phone report successful, 2026-10-31
 
 Candidate source **5a0b4a6**, minified test-signed APK **1.4.0 (1403)**. The complete gate passes
@@ -628,14 +644,14 @@ checklist outcomes below were not separately supplied. No new APK or gate was ru
 HTTP/decoder probes and rendered host geometry remain host evidence; the practical phone trial is
 accepted. Detailed accessibility, archive/cache permutations and long-term coverage stay unverified.
 
-## C118 History freshness — new report, not corrected
+## C118 History freshness — original report, 2026-10-21
 
-Keep History open while playback creates an entry eligible for recording. The reported behaviour
-is that it appears only after leaving History and opening it again. Exact playback origin, query,
-page and installed build were not supplied; no agent-run reproduction is claimed. Before a fix,
-reconcile live updates with A56's rule that plays originating from History do not record/reorder
-themselves. A future regression check must also preserve filtering, paging, scroll stability and
-the current playback context. [Report](STATUS.md#c118-history-does-not-show-newly-recorded-plays-while-the-view-remains-open).
+The original report described new eligible entries appearing only after leaving History and
+opening it again. Exact playback origin, query/page and installed build were not supplied at
+that checkpoint, which did not claim agent-run reproduction. The later correction preserves
+A56 recording rules, filtering, paging, keyed scrolling and the captured context. It was reported
+working and merged with approval as **204e7f7**, 2026-10-31. Retain the initial report as history;
+the [current verification and phone feedback](HISTORY_LIVE_UPDATES.md) supersede its open status.
 
 ## Prepared release 1.3.0 — Play-generated install not yet confirmed
 

@@ -1,7 +1,7 @@
 # C130: WEB normalization starts quietly before increasing gain
 
-Reported and investigated: **2026-10-31**. Application source: `0cd80c1`. No application code
-has been changed for this investigation.
+Reported and investigated: **2026-10-31**, source `0cd80c1`. The approved repair follows on
+`fix/web-normalization-startup`, from develop `707539e` after C118 integration.
 
 ## Report
 
@@ -60,7 +60,7 @@ a prerequisite for this mechanism. Exact Firefox/device playback and an audible 
 unchecked. Diagnostic scripts, downloaded bytes/checksums and result JSON stay under ignored
 `user/web-normalization-investigation/`.
 
-## Recommended repair
+## Repair scope
 
 Use explicit global timer adapters for the default analyser timers, and ensure that a setup or
 cleanup failure cannot leave an active worker/job permanently occupied. Add a real-browser
@@ -69,6 +69,69 @@ plus failure/retry/cleanup checks. Retain target LUFS, boost/peak limits, Narrow
 the conservative fallback for genuine unavailable analysis; that fallback can still adjust a
 level after sufficient live measurement. No louder target or stereo-policy change is needed.
 
-**Open; repair not implemented.** This investigation changes documentation only. No application
-gate, APK, engine rebuild, merge or publication is claimed by this stage. C118's separate APK
-and branch are unaffected.
+## Implementation checkpoint — 2026-10-31
+
+Default timer adapters explicitly call the current global timer owner. Setup failures now settle
+the optional measurement and dispose its worker. Cleanup releases the active slot before clearing
+the deadline; refused timer cleanup or worker termination cannot strand the result or block a new
+job. A synchronously expired injected deadline also clears its subsequently returned handle.
+The Native policy, profile format/cache, target, safety limits and five-second worker deadline
+are unchanged. No engine rebuild or Android code change is needed for C130.
+
+The native-owner host guard fails before correction. All **31** worker/preparation cases pass
+afterward. Four controlled negative probes remove setup handling, timer cleanup handling, safe
+termination and late-deadline cleanup respectively; each fails its intended guard. Production
+bytes are restored before the positive check.
+
+`./scripts/check-web-normalization.sh` uses the existing local Chromium setup and production
+`PlaybackNormalization`, Worker, AudioWorklet and WASM, with native browser timers and real
+IndexedDB profile storage. A minimal harness supplies generated quiet ProTracker files and
+measures actual WebAudio PCM; it is not a whole-player UI or audible-device test. Before the fix,
+request one starts with no prepared profile and fails. Afterward, two cold songs and warm replay
+pass for Original and Narrow: **six cases**, all twenty-second profiles, no browser-script errors,
+and below **0.002 dB** early-to-later RMS difference on the generated constant tones. Warm and
+cold starts agree within the checked 0.5 dB bound. The worklet options match the application's
+zero-input/stereo-output configuration; no audio or Worker implementation is substituted.
+
+Focused companions also pass: **15** playback-normalization ownership cases, **8** actual
+worklet/WASM boundary cases, **36** native-WASM PCM policy cases and the real ESM/worker/worklet
+bridge. The final complete-gate, clean-browser and package results are recorded below.
+Logs/reports are retained under ignored `user/c130-normalization-fix/`.
+
+The correction remains unmerged. Firefox/device listening and publication are separate steps.
+Genuine unavailable analysis still uses the documented live fallback; this change fixes the
+unnecessary browser-timer failure rather than promising every source can be measured upfront.
+
+## Verified candidate and WEB package — 2026-10-31
+
+Clean source **`fc86ef80712423e331121115fdbaf025afa02ccf`** passes the complete project gate:
+**1278 tests / 174 suites**, zero failures/errors/skips, **1141 s** overall. The JVM unit task
+executes in **385.8 s**. All **85** gate phases pass, including **1368** page assertions,
+**57** engine assertions, native audio, PWA and server checks. Fresh lint analyses execute:
+**0 errors / 79 warnings**, **141.7 s**. Existing JDK17 with the process-local C1 configuration
+is retained. All **842** frozen application/check inputs match before packaging.
+
+The clean-source Chromium run passes all **six** real Worker/worklet/PCM cases with
+`dirty: false`. Maximum absolute early-to-later RMS difference is **0.00085 dB** on the constant
+tones. A separate real-browser production preparation sequence uses the exact three reported
+files, Narrow and default timers/Worker/cache. Every file receives a usable profile: 20 s for
+OctaMED, 8.64 s for SID and 3.25 s for VGZ. This run's preparation times are 164–225 ms; they
+are host observations, not a device-performance guarantee or an audible Firefox test.
+
+Standalone distribution:
+[protracktor-web-fc86ef8-20261031-225858-993641835.tar.gz](../dist/protracktor-web-fc86ef8-20261031-225858-993641835.tar.gz),
+**1,610,658 bytes**, SHA-256
+`5b6d8e60500b265c62719aa15a0c92552c909811dc403db36737ddf890e67f2a`.
+Source metadata names `fc86ef8` with `dirty: false`. Extracted checks verify the corrected
+analyser/coordinator/worker/processor bytes, all 19 engine exports, real decoded PCM and Mono
+transition, 14 components/19 notices, executable launcher, real HTTP/MIME/redirects and all
+**111** PWA asset/integrity fetches. The PWA revision is
+`1d1ca3b58778d4555cb56c74e135b8e0c46ce1b48077e173cbcecdede53f6459`.
+Only generated `web/vendor/legal/build.json` and `web/sw.js` change after the freeze. The WASM
+hash remains `b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`.
+Browser tooling, private probes and downloaded music are absent from the distribution.
+
+**Ready for trial, unmerged and unpublished.** Use the
+[Firefox listening checklist](TESTING.md#c130-web-normalization-startup--firefox-trial-pending-2026-10-31).
+No new APK/AAB, engine rebuild, master/tag move or push was performed for C130. Later
+documentation does not relabel this checked source/package.

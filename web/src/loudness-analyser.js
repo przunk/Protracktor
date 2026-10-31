@@ -10,8 +10,14 @@ export class LoudnessAnalyser {
   #active = null;
   #nextId = 0;
   constructor({ wasmBinary, createWorker = () => new Worker(new URL('./loudness-worker.js', import.meta.url), { type: 'module' }),
-    timeout = LOUDNESS_WORKER_TIMEOUT_MS, setTimer = setTimeout, clearTimer = clearTimeout }) {
+    timeout = LOUDNESS_WORKER_TIMEOUT_MS,
+    setTimer = (run, ms) => globalThis.setTimeout(run, ms), clearTimer = id => globalThis.clearTimeout(id) }) {
     Object.assign(this, { wasmBinary, createWorker, timeout, setTimer, clearTimer });
+  }
+  #dispose(worker) {
+    if (this.#worker !== worker) return;
+    this.#worker = null;
+    try { worker.terminate(); } catch { /* Optional cleanup cannot occupy the analysis slot. */ }
   }
   get running() { return this.#active !== null; }
   analyseOwned({ bytes, name, subsong, width }, { signal } = {}) {
@@ -28,31 +34,36 @@ export class LoudnessAnalyser {
     const worker = this.#worker, owner = { id: ++this.#nextId }; this.#active = owner;
     return new Promise((resolve, reject) => {
       let finished = false, timer;
+      const clearDeadline = () => {
+        if (timer === undefined) return;
+        try { this.clearTimer(timer); } catch { this.#dispose(worker); }
+        timer = undefined;
+      };
       const finish = (value, error = null, dispose = false) => {
         if (finished) return; finished = true;
-        signal?.removeEventListener('abort', stop); this.clearTimer(timer);
         if (this.#active === owner) this.#active = null;
-        if (dispose && this.#worker === worker) { this.#worker = null; worker.terminate(); }
+        signal?.removeEventListener('abort', stop); clearDeadline();
+        if (dispose) this.#dispose(worker);
         if (error) reject(error); else resolve(value);
       };
       const stop = () => finish(null, aborted(), true);
       owner.cancel = stop;
-      worker.onmessage = ({ data }) => {
-        if (this.#worker === worker && this.#active === owner && data?.id === owner.id) finish(data.values ?? null);
-      };
       const failed = (event) => {
         event?.preventDefault?.();
         if (this.#worker !== worker) return;
         if (!finished) finish(null, null, true);
-        else { this.#worker = null; worker.terminate(); }
+        else this.#dispose(worker);
       };
-      worker.onerror = failed;
-      worker.onmessageerror = failed;
-      signal?.addEventListener('abort', stop, { once: true });
-      timer = this.setTimer(() => finish(null, null, true), this.timeout);
-      if (finished) return;
-      if (signal?.aborted) { stop(); return; }
       try {
+        worker.onmessage = ({ data }) => {
+          if (this.#worker === worker && this.#active === owner && data?.id === owner.id) finish(data.values ?? null);
+        };
+        worker.onerror = failed;
+        worker.onmessageerror = failed;
+        signal?.addEventListener('abort', stop, { once: true });
+        timer = this.setTimer(() => finish(null, null, true), this.timeout);
+        if (finished) { clearDeadline(); return; }
+        if (signal?.aborted) { stop(); return; }
         const request = { id: owner.id, bytes, name, subsong, width }, transfer = [bytes];
         if (fresh) { request.wasmBinary = this.wasmBinary.slice(0); transfer.push(request.wasmBinary); }
         worker.postMessage(request, transfer);
@@ -61,6 +72,6 @@ export class LoudnessAnalyser {
   }
   close() {
     if (this.#active) this.#active.cancel();
-    else if (this.#worker) { this.#worker.terminate(); this.#worker = null; }
+    else if (this.#worker) this.#dispose(this.#worker);
   }
 }

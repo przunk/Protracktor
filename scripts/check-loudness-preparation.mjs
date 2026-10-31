@@ -35,6 +35,60 @@ function workerHarness(options = {}) {
   const reply = (worker, result = values, id = worker.requests.at(-1).id) => worker.onmessage({ data: { id, values: result } });
   return { analyser, workers, timers, wasmBinary, reply };
 }
+await test('default timers preserve the native global receiver', async () => {
+  const set = globalThis.setTimeout, clear = globalThis.clearTimeout;
+  let h;
+  try {
+    globalThis.setTimeout = function (...args) { assert(this === globalThis, 'Wrong native timer owner'); return set(...args); };
+    globalThis.clearTimeout = function (...args) { assert(this === globalThis, 'Wrong native timer owner'); return clear(...args); };
+    h = workerHarness({ setTimer: undefined, clearTimer: undefined });
+    const pending = h.analyser.analyseOwned(source());
+    if (h.workers[0].requests.length) h.reply(h.workers[0]);
+    assert.deepEqual(await pending, values);
+    assert.equal(h.analyser.running, false);
+  } finally {
+    globalThis.setTimeout = set; globalThis.clearTimeout = clear;
+    try { h?.analyser.close(); } catch { /* Preserve the original regression failure. */ }
+  }
+});
+await test('timer setup failure settles optional analysis and permits a fresh job', async () => {
+  let fail = true;
+  const h = workerHarness({ setTimer: () => { if (fail) throw new Error('timer refused'); return 1; } });
+  assert.equal(await h.analyser.analyseOwned(source()), null);
+  assert.equal(h.analyser.running, false); assert.equal(h.workers[0].terminated, 1);
+  fail = false;
+  const retry = h.analyser.analyseOwned(source());
+  h.reply(h.workers[1]); assert.deepEqual(await retry, values); h.analyser.close();
+});
+await test('timer cleanup failure cannot strand a valid result or poison the next worker', async () => {
+  const h = workerHarness({ clearTimer: () => { throw new Error('timer cleanup refused'); } });
+  const first = h.analyser.analyseOwned(source());
+  h.reply(h.workers[0]); assert.deepEqual(await first, values);
+  assert.equal(h.analyser.running, false); assert.equal(h.workers[0].terminated, 1);
+  const second = h.analyser.analyseOwned(source());
+  h.reply(h.workers[1]); assert.deepEqual(await second, values); h.analyser.close();
+});
+await test('a terminating worker failure cannot strand cancellation or later analysis', async () => {
+  const h = workerHarness(), pending = h.analyser.analyseOwned(source());
+  h.workers[0].terminate = () => { throw new Error('termination refused'); };
+  const cancelled = assert.rejects(pending, { name: 'AbortError' });
+  h.analyser.close(); await cancelled;
+  assert.equal(h.analyser.running, false);
+  const retry = h.analyser.analyseOwned(source());
+  h.reply(h.workers[1]); assert.deepEqual(await retry, values); h.analyser.close();
+});
+await test('worker handler setup failure releases the active slot', async () => {
+  let stopped = 0;
+  const h = workerHarness({ createWorker: () => Object.freeze({ postMessage() {}, terminate() { stopped++; } }) });
+  assert.equal(await h.analyser.analyseOwned(source()), null);
+  assert.equal(h.analyser.running, false); assert.equal(stopped, 1);
+});
+await test('a synchronous deadline also clears the handle returned after its callback', async () => {
+  const cleared = [], h = workerHarness({ setTimer: (callback) => { callback(); return 17; },
+    clearTimer: (handle) => cleared.push(handle) });
+  assert.equal(await h.analyser.analyseOwned(source()), null);
+  assert.deepEqual(cleared, [17]); assert.equal(h.analyser.running, false);
+});
 await test('the worker owns transferred input and a private WASM copy; an idle worker is reused', async () => {
   const h = workerHarness(), input = source(), first = h.analyser.analyseOwned(input);
   assert.equal(input.bytes.byteLength, 0); assert.equal(h.wasmBinary.byteLength, 2);
