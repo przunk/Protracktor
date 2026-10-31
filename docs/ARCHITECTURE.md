@@ -1872,6 +1872,12 @@ uncooperative backend call. Creation/load/analysis/cache errors fall back to liv
 than rejecting playable music. Cancellation terminates the private worker; Off releases its idle
 engine. Only selected playback read-ahead warms profiles, never catalogue/folder scans.
 
+**C130, 2026-10-31:** analyser defaults explicitly invoke the global timer owner. Worker-handler
+or deadline setup failure settles optional analysis, and result/cancellation cleanup releases
+the job before clearing its timer or disposing the worker. Cleanup failures cannot retain the
+active slot. Real-browser checks exercise prepared cold starts and warm replay through the
+production Worker/worklet, with unchanged Native policy. [Mechanism and evidence](WEB_NORMALIZATION_STARTUP.md).
+
 LoudnessProfiles retains at most 512 CRC-checked Native-format records in the existing settings
 store, using an atomic read/modify/write across tabs. Complete beats partial; otherwise longer wins,
 and an inferior observation does not promote an entry. Keys bind length-prefixed filename/main-file

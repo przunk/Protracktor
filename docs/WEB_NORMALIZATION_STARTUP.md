@@ -95,9 +95,43 @@ zero-input/stereo-output configuration; no audio or Worker implementation is sub
 
 Focused companions also pass: **15** playback-normalization ownership cases, **8** actual
 worklet/WASM boundary cases, **36** native-WASM PCM policy cases and the real ESM/worker/worklet
-bridge. Complete gate/lint, clean-source browser check and packaged WEB handoff remain pending.
+bridge. The final complete-gate, clean-browser and package results are recorded below.
 Logs/reports are retained under ignored `user/c130-normalization-fix/`.
 
 The correction remains unmerged. Firefox/device listening and publication are separate steps.
 Genuine unavailable analysis still uses the documented live fallback; this change fixes the
 unnecessary browser-timer failure rather than promising every source can be measured upfront.
+
+## Verified candidate and WEB package — 2026-10-31
+
+Clean source **`fc86ef80712423e331121115fdbaf025afa02ccf`** passes the complete project gate:
+**1278 tests / 174 suites**, zero failures/errors/skips, **1141 s** overall. The JVM unit task
+executes in **385.8 s**. All **85** gate phases pass, including **1368** page assertions,
+**57** engine assertions, native audio, PWA and server checks. Fresh lint analyses execute:
+**0 errors / 79 warnings**, **141.7 s**. Existing JDK17 with the process-local C1 configuration
+is retained. All **842** frozen application/check inputs match before packaging.
+
+The clean-source Chromium run passes all **six** real Worker/worklet/PCM cases with
+`dirty: false`. Maximum absolute early-to-later RMS difference is **0.00085 dB** on the constant
+tones. A separate real-browser production preparation sequence uses the exact three reported
+files, Narrow and default timers/Worker/cache. Every file receives a usable profile: 20 s for
+OctaMED, 8.64 s for SID and 3.25 s for VGZ. This run's preparation times are 164–225 ms; they
+are host observations, not a device-performance guarantee or an audible Firefox test.
+
+Standalone distribution:
+[protracktor-web-fc86ef8-20261031-225858-993641835.tar.gz](../dist/protracktor-web-fc86ef8-20261031-225858-993641835.tar.gz),
+**1,610,658 bytes**, SHA-256
+`5b6d8e60500b265c62719aa15a0c92552c909811dc403db36737ddf890e67f2a`.
+Source metadata names `fc86ef8` with `dirty: false`. Extracted checks verify the corrected
+analyser/coordinator/worker/processor bytes, all 19 engine exports, real decoded PCM and Mono
+transition, 14 components/19 notices, executable launcher, real HTTP/MIME/redirects and all
+**111** PWA asset/integrity fetches. The PWA revision is
+`1d1ca3b58778d4555cb56c74e135b8e0c46ce1b48077e173cbcecdede53f6459`.
+Only generated `web/vendor/legal/build.json` and `web/sw.js` change after the freeze. The WASM
+hash remains `b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`.
+Browser tooling, private probes and downloaded music are absent from the distribution.
+
+**Ready for trial, unmerged and unpublished.** Use the
+[Firefox listening checklist](TESTING.md#c130-web-normalization-startup--firefox-trial-pending-2026-10-31).
+No new APK/AAB, engine rebuild, master/tag move or push was performed for C130. Later
+documentation does not relabel this checked source/package.
