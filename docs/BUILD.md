@@ -115,6 +115,7 @@ The optional headless browser tool is separate from normal application builds an
 ```bash
 ./scripts/setup-web-visual.sh   # explicit dependency/browser download; no system installation
 ./scripts/capture-web.sh       # isolated production-page captures; gallery and JSON under dist/
+./scripts/check-web-normalization.sh # real Worker/worklet PCM: cold starts and replay, Original/Narrow
 ```
 
 Use `--list` for profiles or `--profile phone-en-dark` for one. The fixture-driven run uses the

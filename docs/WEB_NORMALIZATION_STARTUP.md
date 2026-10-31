@@ -1,7 +1,7 @@
 # C130: WEB normalization starts quietly before increasing gain
 
-Reported and investigated: **2026-10-31**. Application source: `0cd80c1`. No application code
-has been changed for this investigation.
+Reported and investigated: **2026-10-31**, source `0cd80c1`. The approved repair follows on
+`fix/web-normalization-startup`, from develop `707539e` after C118 integration.
 
 ## Report
 
@@ -60,7 +60,7 @@ a prerequisite for this mechanism. Exact Firefox/device playback and an audible 
 unchecked. Diagnostic scripts, downloaded bytes/checksums and result JSON stay under ignored
 `user/web-normalization-investigation/`.
 
-## Recommended repair
+## Repair scope
 
 Use explicit global timer adapters for the default analyser timers, and ensure that a setup or
 cleanup failure cannot leave an active worker/job permanently occupied. Add a real-browser
@@ -69,6 +69,35 @@ plus failure/retry/cleanup checks. Retain target LUFS, boost/peak limits, Narrow
 the conservative fallback for genuine unavailable analysis; that fallback can still adjust a
 level after sufficient live measurement. No louder target or stereo-policy change is needed.
 
-**Open; repair not implemented.** This investigation changes documentation only. No application
-gate, APK, engine rebuild, merge or publication is claimed by this stage. C118's separate APK
-and branch are unaffected.
+## Implementation checkpoint — 2026-10-31
+
+Default timer adapters explicitly call the current global timer owner. Setup failures now settle
+the optional measurement and dispose its worker. Cleanup releases the active slot before clearing
+the deadline; refused timer cleanup or worker termination cannot strand the result or block a new
+job. A synchronously expired injected deadline also clears its subsequently returned handle.
+The Native policy, profile format/cache, target, safety limits and five-second worker deadline
+are unchanged. No engine rebuild or Android code change is needed for C130.
+
+The native-owner host guard fails before correction. All **31** worker/preparation cases pass
+afterward. Four controlled negative probes remove setup handling, timer cleanup handling, safe
+termination and late-deadline cleanup respectively; each fails its intended guard. Production
+bytes are restored before the positive check.
+
+`./scripts/check-web-normalization.sh` uses the existing local Chromium setup and production
+`PlaybackNormalization`, Worker, AudioWorklet and WASM, with native browser timers and real
+IndexedDB profile storage. A minimal harness supplies generated quiet ProTracker files and
+measures actual WebAudio PCM; it is not a whole-player UI or audible-device test. Before the fix,
+request one starts with no prepared profile and fails. Afterward, two cold songs and warm replay
+pass for Original and Narrow: **six cases**, all twenty-second profiles, no browser-script errors,
+and below **0.002 dB** early-to-later RMS difference on the generated constant tones. Warm and
+cold starts agree within the checked 0.5 dB bound. The worklet options match the application's
+zero-input/stereo-output configuration; no audio or Worker implementation is substituted.
+
+Focused companions also pass: **15** playback-normalization ownership cases, **8** actual
+worklet/WASM boundary cases, **36** native-WASM PCM policy cases and the real ESM/worker/worklet
+bridge. Complete gate/lint, clean-source browser check and packaged WEB handoff remain pending.
+Logs/reports are retained under ignored `user/c130-normalization-fix/`.
+
+The correction remains unmerged. Firefox/device listening and publication are separate steps.
+Genuine unavailable analysis still uses the documented live fallback; this change fixes the
+unnecessary browser-timer failure rather than promising every source can be measured upfront.
