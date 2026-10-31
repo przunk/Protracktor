@@ -70,8 +70,30 @@ History entry/query resets and per-page positions retain the existing C107/B49 o
   assertions are retained.
 - Corrected integration checks pass **55 tests / 7 suites**, zero failures/errors/skips,
   **129 s**, including the unchanged Queue source-navigation suite and the strengthened
-  virtual-time debounce guard. Complete project tests/lint and a clean-source minified APK are
-  pending. Evidence is kept under ignored `user/c118-history-live/`; no phone outcome is inferred.
+  virtual-time debounce guard. Evidence is kept under ignored `user/c118-history-live/`; no phone
+  outcome is inferred.
+
+## Verified candidate and APK — 2026-10-31
+
+Clean source **`5a0b4a6f6c341cdcdf07ddffe730d862f37bd19d`** passes the complete project gate:
+**1278 tests / 174 suites**, zero failures/errors/skips, **1145 s** overall. The JVM unit task
+executes in **376.8 s**. All **85** gate phases pass, including **1368** page assertions,
+**57** engine assertions, native audio, PWA and server checks. Fresh lint analyses execute:
+**0 errors / 79 warnings**, **142.3 s**. All **840** frozen inputs match after checks and APK build.
+Existing JDK17 with the process-local C1 verification configuration is retained.
+
+Minified, test-signed release **1.4.0 (1403)** builds in **98 s**:
+[protracktor-release-1.4.0-1403-5a0b4a6-20261031-220709.apk](../dist/protracktor-release-1.4.0-1403-5a0b4a6-20261031-220709.apk),
+**11,979,371 bytes**, SHA-256
+`53b2272d345afc78c4eda28d3fcfbbf2eb0ef712db7ebf7c0777b70dd6be8cab`.
+Independent checks confirm package/version, non-debuggable release, signature with the test
+certificate, ZIP integrity, 16 KB ZIP/native alignment, R8 mapping, one DEX and 21 native libraries.
+The filename and verification receipt identify source `5a0b4a6`; subsequent documentation does
+not relabel this APK or its versionCode.
+
+**Ready for the phone trial, unmerged.** Host/Robolectric evidence does not establish physical
+touch, scroll comfort, timing or playback on the reporting device. No push, release tag, AAB or
+store publication is performed.
 
 ## Phone trial
 
@@ -86,8 +108,8 @@ History entry/query resets and per-page positions retain the existing C107/B49 o
 4. Start playback by tapping History and use Next/Previous. Its existing entries must not jump
    to the top or acquire new counts from that History-origin playback. Queue/source navigation
    must keep the captured context while the visible History can refresh independently.
-5. Clear History during playback or a pending filter, then start another track. Old rows must
-   stay cleared; only subsequently recorded plays may appear. A normal new History entry reads
+5. Clear History during playback or a pending filter, then start another track. Old in-flight
+   reads must not restore erased rows; subsequent recorded plays may appear. A normal new History entry reads
    the current database. Queue's source action retains its captured view; another committed
    play refreshes that view without resetting its phrase/page or changing playback.
 
