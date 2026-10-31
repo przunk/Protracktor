@@ -47,3 +47,10 @@ wrap. Catalogue/platform sub-options retain compact 16 px icons and their existi
 availability semantics. Three real-browser appearance/state guards fail before correction and
 pass afterward, alongside both C126 cases. The original phone Search PNG has been inspected;
 the complete viewport/theme matrix and full gate remain pending.
+
+## C128 focused checkpoint — 2026-10-31
+
+The shared destination-header Back rule now also covers Random. Its toolbar uses the same 16 px
+side inset as Browse. The actual browser style/hit-target comparison fails before correction and
+passes after it, together with all five C126/C127 browser checks. Navigation callbacks, captions
+and the single dice are unchanged. The complete matrix/full gate remain pending.

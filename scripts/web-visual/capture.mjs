@@ -202,6 +202,12 @@ async function captureProfile(browser, base, output, profile, report) {
     await take('queue');
     await click('#queue-close');
     await browse(); await take('browse');
+    const backAppearance = selector => page.locator(selector).evaluate(node => {
+      const style = getComputedStyle(node);
+      return Object.fromEntries(['backgroundColor', 'color', 'fontSize', 'borderRadius', 'borderTopWidth',
+        'paddingTop', 'paddingRight'].map(key => [key, style[key]]));
+    });
+    const browseBackStyle = await backAppearance('#browseback');
     await browse(/Online catalogues|Katalogi online/); await take('online-catalogues');
     await page.locator('#browselist .bname', { hasText: /^Modland$/ }).click();
     await page.locator('#browselist .bname', { hasText: /^Protracker$/ }).click();
@@ -261,6 +267,13 @@ async function captureProfile(browser, base, output, profile, report) {
     await page.waitForFunction(() => /^(Pause|Pauza)$/.test(document.querySelector('#playpause').title));
     await click('#playpause');
     await take('random');
+    await verify('C128: Random Back shares Browse styling and is reachable within the header inset', async () => {
+      assert.deepEqual(await backAppearance('#random-back'), browseBackStyle);
+      assert(await page.locator('#random-back').evaluate(node => {
+        const r = node.getBoundingClientRect();
+        return r.left >= 12 && document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === node;
+      }));
+    });
     await click('#random-filter'); await take('random-filter');
     await click('#tab-settings');
     await page.locator('#settings').waitFor({ state: 'visible' });
