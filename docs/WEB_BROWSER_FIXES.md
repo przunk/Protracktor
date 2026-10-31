@@ -63,3 +63,46 @@ exposes content above the header. A real browser coverage/Close hit-target guard
 correction and passes on the 412 px Dark and 320 px Light profiles. Both original scrolled PNGs
 were inspected and show a clear top strip. All seven C126–C129 browser checks pass on both
 profiles; the full five-profile matrix, project gate/lint and clean-source package are next.
+
+## Final verification and handoff — 2026-10-31
+
+Checked source: **`30112cfe803b579b068d4912422b478f44feccb0`**, clean tree, on `fix/web-browser-polish`.
+The four fix commits are `f26d58d` (C126), `849d805` (C127), `11a0429` (C128) and `30112cf`
+(C129). The visual-tooling parent remains included. This is an unmerged/unpublished handoff;
+no physical-device acceptance is inferred.
+
+- **Full project gate:** **1266 tests / 173 suites**, zero failures/errors/skips, **1259 s**.
+  The JVM unit task executes; 9 Gradle tasks execute and 22 remain up to date. All companion
+  phases pass, including 25 fresh-page starts, **1368 ESM page assertions** and **57 engine checks**.
+  Existing JDK17 with the process-local C1 verification configuration is retained.
+- **Lint:** all three analyses execute; **0 fatal / 0 errors / 79 warnings**, **149.2 s**.
+- **Browser:** all **35 regression guards** pass in the five Chromium 156.0.8078.4 profiles;
+  **90 original PNGs / 15 overview sheets**, zero page exceptions or unexpected external
+  requests. The agent inspected every overview and the critical original History, Search,
+  Random and compact Settings renders. Root horizontal overflow is absent. Initial Settings
+  Close geometry matches the before-fix phone measurement.
+- **Source identity:** all **838** frozen gate inputs match before packaging. Packaging changes
+  only generated `web/vendor/legal/build.json` and `web/sw.js`; UI/script/engine bytes still
+  identify the checked candidate. Later documentation does not relabel these artifacts.
+- **Extracted WEB package:** executable launcher, real HTTP/MIME/redirects, all **111** worker
+  assets/integrity fetches, **14** components/**19** notice files and the **19** engine exports
+  pass. Real WASM renders non-silent ProTracker PCM and reaches equal Mono channels after the
+  shared transition. The WASM hash remains
+  `b711abb3141a62db046e8e7123989a8713a1c235df2c94f2c2469c42770cbaff`; no engine rebuild is needed.
+
+Run the standard gate with `./scripts/test-protracktor.sh`; the dedicated real-browser phase is
+`./scripts/capture-web.sh` after its explicit setup. These results cover the inspected sources
+and profiles, not Windows/Firefox, physical touch/headsets, audible quality, background/lock-screen
+routing or actual installed-PWA activation/update. C104 stays open. No merge, push, release tag or
+APK is produced by this handoff.
+
+### Artifacts
+
+- [Updated gallery](../dist/web-visual-30112cf-2026-10-31T18-43-29-407Z/index.html) and [visual assessment](../dist/web-visual-30112cf-2026-10-31T18-43-29-407Z/REVIEW.md).
+- [Portable visual report](../dist/protracktor-web-visual-fixes-30112cf-20261031.tar.gz): **8957315 bytes**,
+  SHA-256 `51bda2678aa205040e87f6387cd5f10d3f2173a4d9ebf967bf0d42fec6eadf02`.
+- [Installable WEB distribution](../dist/protracktor-web-30112cf-20261031-200521-791608657.tar.gz): **1610349 bytes**,
+  SHA-256 `a14a6a4238a22d5d90dc138b0e8b7f467ed3df2f9ab7bb7da63af6e808374fa8`. Source metadata is `30112cfe803b579b068d4912422b478f44feccb0`, `dirty: false`.
+
+The report archive contains the images, assessment and exact gate results. The WEB archive
+contains the player/server/assets; browser tooling and synthetic screenshot data are not shipped.

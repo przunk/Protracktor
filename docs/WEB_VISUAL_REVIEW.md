@@ -4,6 +4,13 @@ Selected: **2026-10-31**. Branch: `feature/web-visual-review`, from develop `571
 The previous WEB parity and navigation changes are already integrated. This stage adds a way
 to inspect actual browser rendering without requiring screenshots to be supplied manually.
 
+**Repair follow-up, 2026-10-31:** the subsequently approved C126–C129 corrections are complete
+on unmerged `fix/web-browser-polish`, checked source `30112cf`. All 35 Chromium guards, the full
+project gate and lint pass; 90 new originals are captured; all 15 overview sheets and critical originals have been inspected. See the
+[repair handoff and current gallery](WEB_BROWSER_FIXES.md#final-verification-and-handoff--2026-10-31).
+The failed baseline findings/images below retain their original source and identity; they are
+not the result of the corrected run. No public deployment or physical acceptance is claimed.
+
 ## Scope
 
 Use a pinned Playwright installation with a local headless Chromium. Keep tooling dependencies
