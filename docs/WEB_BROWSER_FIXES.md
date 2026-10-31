@@ -38,3 +38,12 @@ also fails before correction (rapid edits/clear/departure produce native receive
 passes after correction: one Evening match, eight restored rows after clearing, cancellation on
 departure and no page errors. The eighteen-view phone capture exits 0. This is focused host and
 headless-browser evidence from the working tree, not a full gate, phone test or publication.
+
+## C127 focused checkpoint — 2026-10-31
+
+Search and Random now share basic chip/disabled/focus styling. Search category tiles use the
+existing action palette, 24 px icons above labels and a common top alignment even when captions
+wrap. Catalogue/platform sub-options retain compact 16 px icons and their existing pressed and
+availability semantics. Three real-browser appearance/state guards fail before correction and
+pass afterward, alongside both C126 cases. The original phone Search PNG has been inspected;
+the complete viewport/theme matrix and full gate remain pending.

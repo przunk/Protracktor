@@ -227,6 +227,33 @@ async function captureProfile(browser, base, output, profile, report) {
     await click('#browsesubmit');
     await page.locator('#browselist .bname').first().waitFor();
     await take('search-results');
+    const scopeAppearance = () => page.evaluate(() => {
+      const root = document.querySelector('#search-scopes'), model = getComputedStyle(document.querySelector('#browseclose'));
+      const visible = node => !node.closest('[hidden]') && node.getBoundingClientRect().width > 0;
+      const tiles = [...root.querySelectorAll('.search-scope-tiles .chip')];
+      const buttons = [...root.querySelectorAll('.chip')].filter(visible);
+      const iconTops = tiles.map(button => button.querySelector('svg').getBoundingClientRect().top);
+      return tiles.length === 3 && tiles.every(button => {
+        const style = getComputedStyle(button);
+        return style.backgroundColor === model.backgroundColor && style.color === model.color;
+      }) && iconTops.every(top => Math.abs(top - iconTops[0]) <= 1) && buttons.every(button => {
+        const svg = button.querySelector('svg'), rect = svg.getBoundingClientRect(), style = getComputedStyle(button);
+        return rect.width > 0 && rect.width <= 24 && rect.height <= 24
+          && getComputedStyle(svg).fill === style.color && button.getBoundingClientRect().height >= 40;
+      });
+    });
+    await verify('C127: scope tiles use themed colours and bounded icons', async () => assert(await scopeAppearance()));
+    await click('[data-search-scope="online"]');
+    await verify('C127: catalogue sub-options retain bounded icons and selection semantics', async () => {
+      assert(await scopeAppearance());
+      assert(await page.locator('[data-search-scope="catalogue:modland"]').isVisible());
+      assert.equal(await page.locator('[data-search-scope="online"]').getAttribute('aria-pressed'), 'true');
+    });
+    await click('[data-search-scope="platform"]');
+    await verify('C127: platform sub-options remain visible and themed', async () => {
+      assert(await scopeAppearance());
+      assert(await page.locator('[data-search-scope="platform:amiga"]').isVisible());
+    });
     await browse(/Saved places|Zapisane miejsca/); await take('saved-places');
     await browse(/^Random$|^Losowo$/);
     await page.locator('#randomhead').waitFor({ state: 'visible' });
