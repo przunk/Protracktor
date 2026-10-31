@@ -282,6 +282,16 @@ async function captureProfile(browser, base, output, profile, report) {
     await take('settings-language-theme');
     await page.locator('#open-source').scrollIntoViewIfNeeded();
     await take('settings-bottom');
+    await verify('C129: scrolled Settings header covers the top inset and keeps Close reachable', async () => {
+      assert(await page.locator('#settings .sheet').evaluate(sheet => {
+        const header = sheet.querySelector('.browsehead'), close = header.querySelector('[data-close]');
+        const panel = sheet.getBoundingClientRect(), head = header.getBoundingClientRect(), button = close.getBoundingClientRect();
+        const top = document.elementFromPoint(head.x + head.width / 2, panel.top + 6);
+        const target = document.elementFromPoint(button.x + button.width / 2, button.y + button.height / 2);
+        return sheet.scrollTop > 0 && head.top <= panel.top + 1 && header.contains(top)
+          && close.contains(target) && button.top >= panel.top + 8 && button.bottom < panel.bottom;
+      }));
+    });
     assert.equal(errors.length, 0, `Browser page errors: ${errors.join('\n')}`);
     assert.equal(blocked.length, 0, `Unexpected external requests: ${blocked.join('\n')}`);
     assert.deepEqual(entry.checks.filter(check => !check.passed), [], 'Browser regression checks failed');

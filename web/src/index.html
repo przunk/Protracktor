@@ -321,9 +321,10 @@
   }
   .overlay[hidden] { display: none; }
   .sheet {
+    --sheet-top-inset: 22px;
     background: var(--surface-container);
     border-radius: var(--shape-xl);
-    padding: 22px 24px 16px;
+    padding: var(--sheet-top-inset) 24px 16px;
     max-width: 420px; width: 100%;
     box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
     text-align: center;
@@ -333,10 +334,13 @@
      sheet that runs past the bottom -- Settings on a phone -- had nothing that could bring the rest
      into view. Its heading stays, so Close is always there. */
   .sheet { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-  .sheet > .browsehead { position: sticky; top: 0; z-index: 1; background: var(--surface-container); }
+  /* Cover the scrollport's top padding while retaining the original heading position. */
+  .sheet > .browsehead { position: sticky; top: calc(-1 * var(--sheet-top-inset)); z-index: 1;
+    margin-top: calc(-1 * var(--sheet-top-inset)); padding-top: var(--sheet-top-inset);
+    background: var(--surface-container); }
   @media (max-width: 560px) {
     .overlay { padding: 12px; }
-    .sheet { padding: 18px 16px 12px; }
+    .sheet { --sheet-top-inset: 18px; padding: var(--sheet-top-inset) 16px 12px; }
     /* The owner, 2026-09-24: settings as a panel of nearly the whole height. */
     #settings .sheet { height: 100%; }
   }

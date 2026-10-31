@@ -54,3 +54,12 @@ The shared destination-header Back rule now also covers Random. Its toolbar uses
 side inset as Browse. The actual browser style/hit-target comparison fails before correction and
 passes after it, together with all five C126/C127 browser checks. Navigation callbacks, captions
 and the single dice are unchanged. The complete matrix/full gate remain pending.
+
+## C129 focused checkpoint — 2026-10-31
+
+The shared sheet header now includes the sheet's responsive top inset in its sticky background.
+Equal negative margin and padding retain the initial heading position; the scrollport no longer
+exposes content above the header. A real browser coverage/Close hit-target guard fails before
+correction and passes on the 412 px Dark and 320 px Light profiles. Both original scrolled PNGs
+were inspected and show a clear top strip. All seven C126–C129 browser checks pass on both
+profiles; the full five-profile matrix, project gate/lint and clean-source package are next.
