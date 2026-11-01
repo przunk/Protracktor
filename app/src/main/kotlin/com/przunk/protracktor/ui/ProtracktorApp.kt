@@ -58,6 +58,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -121,6 +124,25 @@ fun ProtracktorApp(
     }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
+    var playlistSearchOpen by rememberSaveable(state.activePlaylistId) { mutableStateOf(false) }
+    var playlistQuery by rememberSaveable(state.activePlaylistId) { mutableStateOf("") }
+    var playlistSearchFocused by remember { mutableStateOf(false) }
+    var playlistSearchBounds by remember { mutableStateOf<Rect?>(null) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val finishPlaylistEditing = {
+        if (playlistSearchFocused) {
+            focusManager.clearFocus()
+            keyboard?.hide()
+            playlistSearchFocused = false
+        }
+    }
+    val closePlaylistSearch = {
+        finishPlaylistEditing()
+        playlistSearchOpen = false
+        playlistQuery = ""
+    }
+
 
     // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition
     // caused by anything else does not restart it.
@@ -254,6 +276,14 @@ fun ProtracktorApp(
     // Its own scroll position. Sharing the playlist's would put the Random view wherever the
     // playlist was left, in a list of a different length.
     val randomState = rememberLazyListState()
+    val playlistSearchState = rememberLazyListState()
+    LaunchedEffect(showQueue, showSettings, showBrowse, showRandom, scanning, showNowPlaying) {
+        if (showQueue || showSettings || showBrowse || showRandom || scanning || showNowPlaying) closePlaylistSearch()
+    }
+    LaunchedEffect(playlistQuery) {
+        if (playlistSearchOpen) playlistSearchState.scrollToItem(0)
+    }
+
 
     // Newly added tracks land at the end of the list, out of sight. Going to them is half the
     // confirmation that anything happened; the notice is the other half.
@@ -264,6 +294,10 @@ fun ProtracktorApp(
     MessageSnackbar(state.message, snackbarHostState, undoLabel, viewModel::undoRemoval, viewModel::dismissMessage)
 
     // Over everything, so a row's menu dims all but its row (the owner, 2026-09-26).
+    BackHandler(enabled = playlistSearchOpen) {
+        if (playlistSearchFocused) finishPlaylistEditing() else closePlaylistSearch()
+    }
+
     val menuFocus = remember { MenuFocus() }
     CompositionLocalProvider(LocalMenuFocus provides menuFocus) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -284,6 +318,19 @@ fun ProtracktorApp(
                                 onSendToBrowser = viewModel::sendQueueToBrowser,
                                 onRescan = viewModel::rescan,
                                 onSettings = { showSettings = true },
+                                searchOpen = playlistSearchOpen,
+                                searchFocused = playlistSearchFocused,
+                                query = playlistQuery,
+                                onSearch = {
+                                    playlistSearchState.requestScrollToItem(playlistState.firstVisibleItemIndex,
+                                        playlistState.firstVisibleItemScrollOffset)
+                                    playlistSearchOpen = true
+                                },
+                                onQueryChange = { playlistQuery = it },
+                                onCloseSearch = closePlaylistSearch,
+                                onFinishEditing = finishPlaylistEditing,
+                                onSearchFocus = { playlistSearchFocused = it },
+                                onSearchBounds = { playlistSearchBounds = it },
                             )
                         } else TopAppBar(
                             navigationIcon = {
@@ -354,6 +401,7 @@ fun ProtracktorApp(
                     }
                 },
                 bottomBar = {
+                    PlaylistSearchShield(playlistSearchFocused, finishPlaylistEditing) {
                     PlayerDock(
                         state = state,
                         onSeek = viewModel::seekTo,
@@ -371,6 +419,7 @@ fun ProtracktorApp(
                         onShuffle = viewModel::toggleShuffle,
                         onRepeat = viewModel::cycleRepeat,
                     )
+                    }
                 },
                 snackbarHost = {
                     SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) }
@@ -530,8 +579,9 @@ fun ProtracktorApp(
                 } else {
                     PlaylistScreen(
                         state = state,
-                        listState = playlistState,
-                        onPlayAt = viewModel::playAt,
+                        listState = if (playlistSearchOpen) playlistSearchState else playlistState,
+                        searchQuery = playlistQuery,
+                        onPlayAt = { index -> finishPlaylistEditing(); viewModel.playAt(index) },
                         onRemoveAt = viewModel::removeTrack,
                         onMove = viewModel::moveTrack,
                         onEnqueue = { viewModel.enqueueTrack(it) },
@@ -577,6 +627,7 @@ fun ProtracktorApp(
                 }
                 }
             }
+            PlaylistSearchDimming(playlistSearchFocused, playlistSearchBounds)
             MenuFocusDimming(menuFocus)
         }
     }
@@ -632,6 +683,7 @@ fun ProtracktorApp(
                     ?.let { index ->
                         {
                             showNowPlaying = false
+                            closePlaylistSearch()
                             scope.launch { playlistState.animateScrollToItem(index) }
                         }
                     },
@@ -766,8 +818,16 @@ internal fun PlaylistTopBar(
     onSendToBrowser: () -> Unit,
     onRescan: () -> Unit,
     onSettings: () -> Unit,
+    searchOpen: Boolean = false,
+    searchFocused: Boolean = false,
+    query: String = "",
+    onSearch: () -> Unit = {},
+    onQueryChange: (String) -> Unit = {},
+    onCloseSearch: () -> Unit = {},
+    onFinishEditing: () -> Unit = {},
+    onSearchFocus: (Boolean) -> Unit = {},
+    onSearchBounds: (Rect) -> Unit = {},
 ) {
-    val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     val preferredActionWidth = slimActionWidth(
         stringResource(R.string.action_browse), stringResource(R.string.action_discard),
         stringResource(R.string.action_save), stringResource(R.string.action_send_to_browser),
@@ -781,130 +841,89 @@ internal fun PlaylistTopBar(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = TOP_BAR_EDGE, vertical = TOP_BAR_SEAM),
         ) {
-            // The name across the whole width, so it is never the thing that gives way, and the
-            // count beside it rather than under it, which is what lets this row be short.
-            Surface(
-                onClick = onChoosePlaylist,
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // A floor, not a fixed height: at a large system font two lines need more than
-                    // any number written here, and a fixed one would cut the second.
-                    .defaultMinSize(minHeight = PLAYLIST_CHIP_HEIGHT)
-                    .semantics { contentDescription = choosePlaylistLabel },
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
-                ) {
-                    // **The text takes every pixel the chevron does not**, so the chevron is at the
-                    // right edge whatever the name is. Giving the name a weight it need not fill
-                    // left the slack unclaimed and the chevron floating in the middle of the bar.
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+            PlaylistSearchHeader(
+                name = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
+                count = state.queue.tracks.size,
+                searchOpen = searchOpen,
+                query = query,
+                onChoosePlaylist = onChoosePlaylist,
+                onSearch = onSearch,
+                onQueryChange = onQueryChange,
+                onClose = onCloseSearch,
+                onDone = onFinishEditing,
+                onFocus = onSearchFocus,
+                onBounds = onSearchBounds,
+            )
+            PlaylistSearchShield(searchFocused, onFinishEditing) {
+                // Keep Browse left and Settings right. When all actions cannot fit at their preferred
+                // width, shrink the group evenly rather than clipping the final button.
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val actionCount = 2 + (if (state.dirty) 2 else 0) + (if (state.queue.tracks.isNotEmpty()) 1 else 0)
+                    // Divide physical pixels first so rounding cannot steal width from the last action.
+                    val availableActionWidth = with(LocalDensity.current) { (constraints.maxWidth / actionCount).toDp() }
+                    val actionWidth = minOf(preferredActionWidth, availableActionWidth)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        LabelledAction(
+                            icon = PlayerIcons.Cloud,
+                            label = stringResource(R.string.action_browse),
+                            onClick = onBrowse,
+                            // Arriving at Browse buzzes; pressing the way in as well would be two for one.
+                            haptic = null,
+                            slim = true,
+                            modifier = Modifier.width(actionWidth),
                         )
-                        if (state.queue.tracks.isNotEmpty()) {
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.track_count,
-                                    state.queue.tracks.size,
-                                    state.queue.tracks.size,
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
+                        Spacer(Modifier.weight(1f))
+                        // Only while there is something to save. A permanently lit Save teaches nothing
+                        // about whether the list on screen is the list on disk.
+                        if (state.dirty) {
+                            LabelledAction(
+                                icon = PlayerIcons.Discard,
+                                label = stringResource(R.string.action_discard),
+                                onClick = onDiscard,
+                                slim = true,
+                                modifier = Modifier.width(actionWidth),
+                            )
+                            LabelledAction(
+                                icon = PlayerIcons.Save,
+                                label = stringResource(R.string.action_save),
+                                onClick = onSave,
+                                slim = true,
+                                modifier = Modifier.width(actionWidth),
                             )
                         }
-                    }
-                    Icon(imageVector = PlayerIcons.DropDown, contentDescription = null)
-                }
-            }
-
-            // Keep Browse left and Settings right. When all actions cannot fit at their preferred
-            // width, shrink the group evenly rather than clipping the final button.
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val actionCount = 2 + (if (state.dirty) 2 else 0) + (if (state.queue.tracks.isNotEmpty()) 1 else 0)
-                // Divide physical pixels first so rounding cannot steal width from the last action.
-                val availableActionWidth = with(LocalDensity.current) { (constraints.maxWidth / actionCount).toDp() }
-                val actionWidth = minOf(preferredActionWidth, availableActionWidth)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    LabelledAction(
-                        icon = PlayerIcons.Cloud,
-                        label = stringResource(R.string.action_browse),
-                        onClick = onBrowse,
-                        // Arriving at Browse buzzes; pressing the way in as well would be two for one.
-                        haptic = null,
-                        slim = true,
-                        modifier = Modifier.width(actionWidth),
-                    )
-                    Spacer(Modifier.weight(1f))
-                    // Only while there is something to save. A permanently lit Save teaches nothing
-                    // about whether the list on screen is the list on disk.
-                    if (state.dirty) {
+                        // It acts on the whole playlist, so it sits with the app's own actions rather than
+                        // in a row menu. Only while there is a list to send.
+                        if (state.queue.tracks.isNotEmpty()) {
+                            LabelledAction(
+                                // **The icon says which of the two things a press will do.** With nobody
+                                // paired it opens the camera, so it is a code; paired, it sends, so it is a
+                                // link.
+                                icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
+                                label = stringResource(R.string.action_send_to_browser),
+                                onClick = onSendToBrowser,
+                                onLongClick = onRescan,
+                                longClickLabel = stringResource(R.string.action_pair_again),
+                                slim = true,
+                                modifier = Modifier.width(actionWidth),
+                            )
+                        }
                         LabelledAction(
-                            icon = PlayerIcons.Discard,
-                            label = stringResource(R.string.action_discard),
-                            onClick = onDiscard,
-                            slim = true,
-                            modifier = Modifier.width(actionWidth),
-                        )
-                        LabelledAction(
-                            icon = PlayerIcons.Save,
-                            label = stringResource(R.string.action_save),
-                            onClick = onSave,
+                            icon = PlayerIcons.Settings,
+                            label = stringResource(R.string.settings_title),
+                            onClick = onSettings,
+                            haptic = null,
                             slim = true,
                             modifier = Modifier.width(actionWidth),
                         )
                     }
-                    // It acts on the whole playlist, so it sits with the app's own actions rather than
-                    // in a row menu. Only while there is a list to send.
-                    if (state.queue.tracks.isNotEmpty()) {
-                        LabelledAction(
-                            // **The icon says which of the two things a press will do.** With nobody
-                            // paired it opens the camera, so it is a code; paired, it sends, so it is a
-                            // link.
-                            icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
-                            label = stringResource(R.string.action_send_to_browser),
-                            onClick = onSendToBrowser,
-                            onLongClick = onRescan,
-                            longClickLabel = stringResource(R.string.action_pair_again),
-                            slim = true,
-                            modifier = Modifier.width(actionWidth),
-                        )
-                    }
-                    LabelledAction(
-                        icon = PlayerIcons.Settings,
-                        label = stringResource(R.string.settings_title),
-                        onClick = onSettings,
-                        haptic = null,
-                        slim = true,
-                        modifier = Modifier.width(actionWidth),
-                    )
                 }
             }
         }
     }
 }
-
-/**
- * The name's own row: the name, and under it what the playlist holds.
- *
- * Two lines, which the full width affords — the row the actions have to themselves is what stops
- * them taking the name's space (`docs/STATUS.md` C48).
- */
-private val PLAYLIST_CHIP_HEIGHT = 56.dp
-
-
-
 
 /** The gap between any two controls on the top bar. */
 private val TOP_BAR_SEAM = 6.dp

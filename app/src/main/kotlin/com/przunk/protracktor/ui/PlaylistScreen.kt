@@ -43,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Composable
@@ -73,6 +74,7 @@ import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SupportedFormats
+import com.przunk.protracktor.player.PlaylistSearch
 import com.przunk.protracktor.player.TrackRef
 
 /** The selected playlist editor; its draft is independent of the active playback source. */
@@ -106,6 +108,7 @@ fun PlaylistScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onEnqueue: ((TrackRef) -> Unit)? = null,
+    searchQuery: String = "",
 ) {
     if (state.queue.tracks.isEmpty()) {
         if (stateKnown) {
@@ -131,28 +134,44 @@ fun PlaylistScreen(
         return
     }
 
-    PlaylistBody(
-        tracks = state.queue.tracks,
-        listState = listState,
-        currentIndex = state.sourcePlaybackIndex.takeIf { !state.awayFromPlaylist },
-        contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) },
-        onEnqueue = onEnqueue,
-        onPlayAt = onPlayAt,
-        onRemoveAt = onRemoveAt,
-        onMove = onMove,
-        onShowNeighbours = onShowNeighbours,
-        onShareFile = onShareFile,
-        onShareAudio = onShareAudio,
-        onShareLink = onShareLink,
-        onSendToWeb = onSendToWeb,
-        onAddToOtherPlaylist = onAddToOtherPlaylist,
-        onAddSelectedToPlaylist = onAddSelectedToPlaylist,
-        onRemoveMany = onRemoveMany,
-        contentPadding = contentPadding,
-        enabled = true,
-        modifier = modifier,
-        loadingCurrent = state.loadingTrack,
-    )
+    val sourceIndices = remember(state.queue.tracks, searchQuery) {
+        PlaylistSearch.indices(state.queue.tracks, searchQuery)
+    }
+    if (sourceIndices.isEmpty() && state.queue.tracks.isNotEmpty()) {
+        Box(modifier.fillMaxSize().padding(contentPadding).padding(24.dp), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.playlist_search_no_matches), style = MaterialTheme.typography.bodyLarge)
+        }
+        return
+    }
+    val visibleTracks = remember(state.queue.tracks, sourceIndices) {
+        if (sourceIndices.size == state.queue.tracks.size) state.queue.tracks else sourceIndices.map(state.queue.tracks::get)
+    }
+    key(listState) {
+        PlaylistBody(
+            tracks = visibleTracks,
+            sourceIndices = sourceIndices,
+            reorderable = searchQuery.isBlank(),
+            listState = listState,
+            currentIndex = state.sourcePlaybackIndex.takeIf { !state.awayFromPlaylist }?.let { sourceIndices.indexOf(it).takeIf { i -> i >= 0 } },
+            contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) }?.let { sourceIndices.indexOf(it).takeIf { i -> i >= 0 } },
+            onEnqueue = onEnqueue,
+            onPlayAt = { onPlayAt(sourceIndices[it]) },
+            onRemoveAt = { onRemoveAt(sourceIndices[it]) },
+            onMove = onMove,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareAudio = onShareAudio,
+            onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onAddSelectedToPlaylist = onAddSelectedToPlaylist,
+            onRemoveMany = { indices -> onRemoveMany(indices.map(sourceIndices::get)) },
+            contentPadding = contentPadding,
+            enabled = true,
+            modifier = modifier,
+            loadingCurrent = state.loadingTrack,
+        )
+    }
 }
 
 @Composable
@@ -216,6 +235,7 @@ internal fun PlaylistBody(
     followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
     onEnqueue: ((TrackRef) -> Unit)? = null,
     contextIndex: Int? = null,
+    sourceIndices: List<Int>? = null,
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -253,13 +273,14 @@ internal fun PlaylistBody(
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = keyOf) { index, track ->
+            val sourceIndex = sourceIndices?.get(index) ?: index
             QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } },
                 enabled = enabled && !selecting, canSwipe = { draggingId == null },
                 // Raise and move the swipe clip itself, not a child underneath neighbouring rows.
-                modifier = Modifier.testTag("enqueue-row-$index").then(if (track.id == draggingId)
+                modifier = Modifier.testTag("enqueue-row-$sourceIndex").then(if (track.id == draggingId)
                     Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset } else Modifier)) {
             TrackRow(
-                index = index,
+                index = sourceIndex,
                 track = track,
                 showFileName = showFileName,
                 playedBefore = listenedIds?.contains(track.id),

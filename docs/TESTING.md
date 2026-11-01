@@ -6,6 +6,29 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## B55 playlist search trial — 2026-11-01
+
+On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved edits:
+
+1. Open Search beside the playlist chooser. Confirm its row does not grow and the replacement
+   animates smoothly. The keyboard opens and the surrounding interface dims.
+2. Type part of a title, author or filename; try an accent-free phrase. Results preserve original
+   order/numbers. A phrase with no matches explains the empty filtered view.
+3. Tap a result. Keyboard/dimming end; the phrase/results remain. Next/Previous still traverse the
+   full playlist, including tracks hidden by the filter. Pending manual requests remain intact.
+4. Refocus the field; dimming returns. Done ends editing. A touch on dimmed header/dock ends editing
+   without triggering that underlying action. Back ends editing, then closes search.
+5. Close search using the field's back action. Confirm the original header, all tracks and the
+   previous normal-list viewport return. Clear only the phrase and verify reorder handles return.
+6. Remove a filtered track, undo it, select matching rows for bulk actions, and swipe right to
+   enqueue a match. Hidden rows must not be removed/enqueued accidentally. Save/Discard continue
+   to act on the full edited playlist.
+7. Leave for Browse/Queue/Settings or switch playlists. Search must not leak into another view or
+   playlist. Confirm that opening/closing it never stops music.
+
+Automated source checks and browser captures are recorded in [the contract](PLAYLIST_SEARCH.md).
+Phone gestures, keyboard integration and animation quality remain **unchecked** until this trial.
+
 ## C130 WEB normalization startup — Firefox trial pending, 2026-10-31
 
 Candidate **fc86ef8** passes the complete 1278-test gate/lint and six clean-source Chromium

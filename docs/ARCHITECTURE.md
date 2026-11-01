@@ -1,5 +1,20 @@
 # Architecture
 
+## Playlist search projection — branch candidate, 2026-11-01
+
+B55 filters the editor's read model without replacing its playback order. `PlaylistSearch.indices`
+returns original Kotlin source positions; the Compose screen maps row and bulk actions through
+those positions, and uses separate normal/search list states. List-follow state is scoped to the
+list state so closing a filter is not misread as a new playback step. WEB retains all row
+occurrences and hides nonmatches, preserving each handler's full-list position. `PlaylistSearchView`
+owns only focus, phrase, presentation and viewport restoration. Both use the established folded
+word search and require no database migration, metadata scan or network call.
+
+The header transitions within its existing row. Dimming is drawing-only over selectable results;
+chrome shields consume the first touch while editing, and playback keeps the phrase without
+editing focus. Pending and source queues remain owned by the existing player modules.
+[Contract](PLAYLIST_SEARCH.md).
+
 ## WEB library download lifetimes — branch candidate, 2026-10-29
 
 LibraryDownloads is the common owner for the approved five-step plan, step locks, immutable

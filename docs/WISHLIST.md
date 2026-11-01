@@ -23,15 +23,17 @@ currently clear results are a related, separate discussion in
 [Q17](OPEN_QUESTIONS.md#q17--search-results-after-changing-the-filter).
 No timing policy, platform scope or implementation is selected by recording this request.
 
-## B55. Search within the open playlist — TODO, recorded 2026-10-31
+## B55. Search within the open playlist — branch candidate, 2026-11-01
 
-Request recorded 2026-10-31: add a way to find tracks within the playlist currently being viewed.
-This is distinct from History search (B49/W10) and Search's existing saved-playlist scope (W11),
-which searches across saved playlists rather than filtering the open editor.
+User request recorded 2026-10-31; compact-header interaction selected 2026-11-01. Search replaces
+its existing chooser row with an animated field. Focus dims the surrounding interface; playing a
+match restores normal brightness while retaining the filter. Closing search restores the full
+list and previous viewport. Match title, author, filename and path with the existing word/accent
+rule, including unsaved edits, while retaining the full playlist as playback context.
 
-Discuss matching fields, live filtering versus explicit submission, the scope of unsaved edits
-and how filtered rows interact with selection, reordering and playback. No UI, matching rule or
-playback-context change has been selected; record this as future work without altering the list.
+Implementation is on `feature/playlist-search`, unmerged and awaiting checks and phone feedback.
+History search (B49/W10), cross-playlist search (W11) and B56 remain separate.
+[Selected behaviour, constraints and verification](PLAYLIST_SEARCH.md).
 
 ## B54. Floating playback controls — accepted experiment, default Off
 
