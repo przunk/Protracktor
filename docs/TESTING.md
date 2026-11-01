@@ -6,6 +6,24 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## B54 Settings availability — trial pending, 2026-11-01
+
+Use the combined 1.5.0-preparation APK after complete automated verification:
+
+1. Settings shows Floating controls Off on an installation without the new preference. Ordinary
+   Play remains usable; enabling availability alone neither starts a panel nor requests permission.
+2. Start music while Off, enable it in Settings, then hold dock Play/Pause. Grant Display over
+   other apps if requested; denied/cancelled access must explain the outcome without changing audio.
+3. Test panel taps, Previous/Next file holds, dragging, edge docking and the Hide target over Maps.
+   Hide preserves playback. Returning to Settings and turning the choice Off removes the panel.
+4. Reopen/restart: retain the saved availability, never show a panel automatically. Off during a
+   pending permission request must prevent its late grant from showing a panel, even after On again.
+5. Check EN/PL, both themes, larger text, lock/unlock and permission revocation. Verify no orphan
+   overlay/drop target remains after Off or service exit. Record the installed build and device.
+
+Earlier enabled-experiment phone feedback is retained separately; this new Settings/lifecycle
+interaction is **unchecked on a phone** until the combined candidate is installed and tested.
+
 ## B55 playlist search trial — 2026-11-01
 
 The corrected focus area and overall appearance received positive phone feedback; integration

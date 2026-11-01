@@ -271,6 +271,8 @@
 
     <string name="notification_stop">Stop</string>
     <string name="floating_show">Floating controls</string>
+    <string name="settings_floating_controls_detail">Hold Play/Pause to show controls over other apps. Turning this off hides the panel. Requires Display over other apps permission.</string>
+    <string name="floating_disabled">Enable Floating controls in Settings first.</string>
     <string name="floating_hide">Hide floating controls</string>
     <string name="floating_hide_short">Hide</string>
     <string name="floating_move">Move</string>

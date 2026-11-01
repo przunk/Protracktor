@@ -186,6 +186,8 @@
 
     <string name="notification_stop">Zatrzymaj</string>
     <string name="floating_show">Pływające przyciski</string>
+    <string name="settings_floating_controls_detail">Przytrzymaj Odtwórz/Pauza, aby pokazać sterowanie nad innymi aplikacjami. Wyłączenie chowa panel. Wymagane jest zezwolenie Display over other apps.</string>
+    <string name="floating_disabled">Najpierw włącz pływające przyciski w ustawieniach.</string>
     <string name="floating_hide">Ukryj pływające przyciski</string>
     <string name="floating_hide_short">Ukryj</string>
     <string name="floating_move">Przesuń</string>
