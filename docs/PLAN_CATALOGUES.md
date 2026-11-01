@@ -73,7 +73,20 @@ The reference collection of `.sap`. Natural pair with ASAP.
 - **Future direction:** `docs/WISHLIST.md` B19 envisions server-hosted periodic index dumps to allow
   offline browsing in addition to live search.
 
-### AMP (amp.dascene.net) — investigated 2026-09-04, and the answer is no
+### AMP (amp.dascene.net)
+
+**Release integration selected 2026-11-01:** use the existing songdb-indexed Android catalogue
+in planned 1.5.0, with attribution and an informational follow-up. This supersedes the earlier
+approval hold without claiming a maintainer reply or individual permission. Original research,
+trial and pinned data remain historical; [current contract and limits](PLAN_AMP.md).
+
+**Superseding trial decision, 2026-10-18:** the owner authorized implementation on an isolated,
+unmerged branch, with a default-on in-app test switch. A ready-made AMP index was found in the
+existing songdb source project, so no crawler is needed. One public module path returned valid
+gzip without a Referer or bypass. Neither fact supplies maintainer permission: **merge and release
+still require AMP approval**. See [the trial plan](PLAN_AMP.md) for pinned data, protocol evidence,
+scope and checks. The owner confirmed sending the permission request on 2026-10-18; a reply remains
+pending. The older survey below is historical, not the current index finding.
 
 **Follow-up, 2026-10-13:** the owner renewed AMP (Amiga Music Preservation) as an exploration
 TODO under A7. The earlier access finding below remains historical evidence, not a newly

@@ -14,6 +14,12 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
@@ -44,7 +50,7 @@ class SettingsStereoMixTest {
     @Before fun start() {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
         activity.get().getSharedPreferences("protracktor_preferences", Context.MODE_PRIVATE)
-            .edit().remove("stereo_mix").commit()
+            .edit().remove("stereo_mix").putBoolean("amp_enabled", false).commit()
     }
 
     @After fun stop() {
@@ -60,6 +66,7 @@ class SettingsStereoMixTest {
                 SettingsScreen(
                     playAllSubsongs = false, stereoMix = selected.value,
                     volumeNormalization = false, onVolumeNormalizationChanged = {},
+                    floatingControlsEnabled = false, onFloatingControlsEnabledChanged = {},
                     onStereoMixSelected = { mode ->
                         requests += mode
                         Appearance.selectStereoMix(activity.get(), mode)
@@ -93,6 +100,22 @@ class SettingsStereoMixTest {
         compose.onNodeWithText("Original").performClick().assertIsSelected()
         assertEquals(listOf(StereoMix.NARROW, StereoMix.MONO, StereoMix.ORIGINAL), requests)
         assertEquals(StereoMix.ORIGINAL, Appearance.stereoMix(activity.get()))
+    }
+
+    // A short viewport keeps the unrelated native About footer outside this host check.
+    @Test
+    @Config(qualifiers = "en-w360dp-h360dp-xhdpi")
+    fun `AMP availability is not a Settings control`() {
+        show()
+        val list = compose.onNode(hasScrollToIndexAction()).assertExists()
+        val heading = activity.get().getString(R.string.settings_online_section)
+        list.performScrollToNode(hasText(heading))
+        // Keep every control immediately below the section heading in the viewport.
+        val offset = compose.onNodeWithText(heading).fetchSemanticsNode().boundsInRoot.top -
+            list.fetchSemanticsNode().boundsInRoot.top
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, offset) }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("AMP catalogue").assertDoesNotExist()
     }
 
     @Test fun `reopening Settings reflects the stored mode without requesting a new selection`() {

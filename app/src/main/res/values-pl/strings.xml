@@ -35,6 +35,8 @@
     <string name="random_reroll_list">Rozpocznij nową listę Random</string>
     <string name="random_double_tap_hint">Dotknij dwukrotnie kostki, aby wylosować nową listę</string>
     <string name="notice_catalogue_not_in_trial">Ten katalog jest niedostępny w eksperymencie QUEUE. Jego dane pozostają zapisane dla wersji AMP.</string>
+    <string name="notice_amp_disabled">AMP jest niedostępne w tej wersji aplikacji. Zapisane playlisty, historia i zakładki pozostają zachowane.</string>
+    <string name="notice_amp_unavailable">Nie można odczytać utworu z AMP. Serwis może być niedostępny, blokować dostęp aplikacji lub mieć inny plik niż indeks. Zabezpieczenia dostępu nie były obchodzone.</string>
     <string name="saved_places_title">Zapisane miejsca</string>
     <string name="saved_places_body">Foldery autorów i gier, do których chcesz wrócić.</string>
     <string name="saved_places_empty">Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.</string>
@@ -186,6 +188,8 @@
 
     <string name="notification_stop">Zatrzymaj</string>
     <string name="floating_show">Pływające przyciski</string>
+    <string name="settings_floating_controls_detail">Przytrzymaj Odtwórz/Pauza, aby pokazać sterowanie nad innymi aplikacjami. Wyłączenie chowa panel. Wymagane jest zezwolenie Display over other apps.</string>
+    <string name="floating_disabled">Najpierw włącz pływające przyciski w ustawieniach.</string>
     <string name="floating_hide">Ukryj pływające przyciski</string>
     <string name="floating_hide_short">Ukryj</string>
     <string name="floating_move">Przesuń</string>

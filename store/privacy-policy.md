@@ -1,7 +1,7 @@
 # Protracktor privacy policy
 
 Effective date: 2026-10-25
-Updated: 2026-10-29
+Updated: 2026-11-01
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -50,13 +50,15 @@ connect over HTTPS to:
 - `modland.com` to download its catalogue index, the tracks you play, and those in a folder you
   open when **Cache folders ahead** is on (Settings; on Wi-Fi only unless you choose otherwise);
 - `asma.atari.org` to download the ASMA collection;
+- `amp.dascene.net` to download a selected AMP track and any format-required companion, cached
+  on the device. No speculative music prefetch is used;
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
 - `deepsid.chordian.net` to download the SID song-length database of the High Voltage SID
   Collection, from DeepSID's copy of it;
 - `raw.githubusercontent.com` to download song metadata and song lengths published by the
-  audacious-uade-tools project, Modland's favourites list, and a song database used by the Amiga
+  audacious-uade-tools project, the AMP path index, Modland's favourites list, and a song database used by the Amiga
   decoder;
 - `svn.code.sf.net` to download the Atari ST replay routines published by the sc68 project;
 - `gitlab.com` to download the Amiga replay routines published by the UADE project.
@@ -197,12 +199,15 @@ może łączyć się przez HTTPS z:
 - `modland.com`, aby pobrać indeks, odtwarzane utwory oraz utwory z otwartego folderu, gdy
   włączone jest **Pobieraj foldery z wyprzedzeniem** (Ustawienia; domyślnie tylko przez Wi-Fi);
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
+- `amp.dascene.net`, aby pobrać wybrany utwór AMP i pliki towarzyszące wymagane przez format,
+  zapisywane w pamięci podręcznej urządzenia. Muzyka nie jest pobierana z wyprzedzeniem;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
 - `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,
   z kopii tej kolekcji w serwisie DeepSID;
 - `raw.githubusercontent.com`, aby pobrać metadane i długości utworów publikowane przez projekt
-  audacious-uade-tools, listę ulubionych Modlandu oraz bazę utworów używaną przez dekoder Amigi;
+  audacious-uade-tools, indeks ścieżek AMP, listę ulubionych Modlandu oraz bazę utworów używaną
+  przez dekoder Amigi;
 - `svn.code.sf.net`, aby pobrać procedury odtwarzające Atari ST publikowane przez projekt sc68;
 - `gitlab.com`, aby pobrać procedury odtwarzające Amigi publikowane przez projekt UADE.
 

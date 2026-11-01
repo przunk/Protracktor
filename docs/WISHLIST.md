@@ -39,7 +39,16 @@ Detailed physical-browser and device checklist outcomes are recorded separately.
 History search (B49/W10), cross-playlist search (W11) and B56 remain separate.
 [Selected behaviour, constraints and verification](PLAYLIST_SEARCH.md).
 
-## B54. Floating playback controls — accepted experiment, default Off
+## B54. Floating playback controls — Settings opt-in selected for 1.5.0
+
+Selected 2026-11-01: replace the compile-time gate with a saved default-Off Settings choice.
+Enable the existing dock hold without automatic panel display; Off hides the panel without
+pausing, and process restart preserves availability without restoring an overlay. Implementation
+is on `feature/floating-controls-settings`; the combined AMP/controls candidate 2794a1db passes
+the full gate/lint and APK inspection. Phone trial and develop integration remain pending.
+[Current artifact and results](RELEASE_1.5.0_PREPARATION.md). Earlier experiment handoffs below retain their source identity and are historical.
+
+### Original experimental integration — 2026-10-26
 
 Decision, 2026-10-26: retain the satisfactory phone trial in develop with
 `FloatingControls.ENABLED = false`. This is experimental integration only; public availability

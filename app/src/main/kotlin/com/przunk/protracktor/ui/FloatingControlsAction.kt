@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,19 +30,23 @@ import com.przunk.protracktor.player.FloatingControls
 internal data class FloatingControlsToggle(val onToggle: () -> Unit, val label: String)
 
 @Composable
-internal fun rememberFloatingControlsAction(available: Boolean): FloatingControlsToggle? =
-    if (FloatingControls.ENABLED) rememberFloatingControlsPermission(available) else null
+internal fun rememberFloatingControlsAction(available: Boolean, enabled: Boolean): FloatingControlsToggle? {
+    val action = rememberFloatingControlsPermission(available, enabled)
+    return action.takeIf { enabled }
+}
 
-/** Retained permission component; the app enters through the gated action above. */
+/** Keep the result receiver registered so disabling the preference also retires a pending grant. */
 @Composable
 internal fun rememberFloatingControlsPermission(
     available: Boolean,
+    enabled: Boolean,
     request: (Context, Boolean) -> Unit = FloatingControls::request,
 ): FloatingControlsToggle {
     val context = LocalContext.current
     val visible by FloatingControls.visible.collectAsState()
     val currentVisible by rememberUpdatedState(visible)
     val currentAvailable by rememberUpdatedState(available)
+    val currentEnabled by rememberUpdatedState(enabled)
     val currentRequest by rememberUpdatedState(request)
     var explain by rememberSaveable { mutableStateOf(false) }
     var waiting by rememberSaveable { mutableStateOf(false) }
@@ -50,15 +55,24 @@ internal fun rememberFloatingControlsPermission(
         if (waiting) {
             waiting = false
             when {
+                !currentEnabled -> Unit
                 !Settings.canDrawOverlays(context) -> problem = R.string.floating_permission_denied
                 !currentAvailable -> problem = R.string.floating_no_track
                 else -> currentRequest(context, true)
             }
         }
     }
+    LaunchedEffect(enabled) {
+        if (!enabled) {
+            waiting = false
+            explain = false
+            problem = null
+        }
+    }
     val toggle = remember {
         {
             when {
+                !currentEnabled -> Unit
                 waiting -> Unit
                 currentVisible -> currentRequest(context, false)
                 !currentAvailable -> problem = R.string.floating_no_track

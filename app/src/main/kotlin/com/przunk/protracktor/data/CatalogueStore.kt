@@ -6,8 +6,8 @@ package com.przunk.protracktor.data
 import android.content.ContentValues
 import android.content.Context
 import com.przunk.protracktor.net.Catalogue
-import com.przunk.protracktor.net.CatalogueRetention
 import com.przunk.protracktor.net.CatalogueEntry
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.Platforms
 import kotlinx.coroutines.Dispatchers
@@ -171,19 +171,11 @@ class CatalogueStore(context: Context) {
     }
 
     /**
-     * Throws away rows belonging to catalogues this build no longer offers.
-     *
-     * **This is what makes turning a catalogue off mean something.** `Catalogue.all` decides what is
-     * browsable, so removing an entry from it hides a catalogue immediately — and leaves its rows in
-     * the database, taking space and appearing in a global search, which is not "off" but "hidden".
-     * UnExoticA is behind a switch for a reason (`docs/PLAN_UNEXOTICA.md`), and the reason is that
-     * the switch might actually be thrown.
-     *
-     * Run once at start-up. Cheap when there is nothing to do: a `DELETE ... NOT IN` over an indexed
-     * column that matches no rows.
+     * Drops removed implementations, retaining the AMP index even in a build with its gate Off.
+     * Queries enforce availability without deleting downloaded data.
      */
     suspend fun pruneUnknownCatalogues() = withContext(Dispatchers.IO) {
-        val known = Catalogue.all.map { it.id } + CatalogueRetention.ids
+        val known = Catalogue.known.map { it.id }
         val placeholders = known.joinToString(",") { "?" }
         val ids = known.toTypedArray()
 
@@ -213,11 +205,23 @@ class CatalogueStore(context: Context) {
     }
 
     /** @return how many of [entries] this build can open, which is what the catalogue then reports. */
-    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String): Int =
+    suspend fun replaceIndex(
+        catalogue: Catalogue,
+        entries: List<CatalogueEntry>,
+        backends: String,
+        ampTicket: Long? = if (catalogue == Amp) Amp.access.capture() else null,
+    ): Int =
         withContext(Dispatchers.IO) {
+            fun ensureAmpAvailable() {
+                if (catalogue == Amp && (ampTicket == null || !Amp.access.allows(ampTicket))) {
+                    throw kotlinx.coroutines.CancellationException("AMP index request was retired")
+                }
+            }
+            ensureAmpAvailable()
             val db = helper.writableDatabase
             var playableCount = 0
             db.transaction {
+                ensureAmpAvailable()
                 insertWithOnConflict(
                     "catalogues", null,
                     ContentValues().apply {
@@ -250,6 +254,7 @@ class CatalogueStore(context: Context) {
                 )
                 insert.use { statement ->
                     entries.forEach { entry ->
+                        ensureAmpAvailable()
                         // **Every row, whether this build can play it or not.** The two halves of
                         // the name go in beside it, and the verdict is `playable` -- which one
                         // `UPDATE` re-decides when the format list changes, instead of a download
@@ -284,6 +289,7 @@ class CatalogueStore(context: Context) {
                     ContentValues().apply { put("track_count", playableCount) },
                     "id = ?", arrayOf(catalogue.id),
                 )
+                ensureAmpAvailable()
             }
             playableCount
         }
@@ -334,8 +340,9 @@ class CatalogueStore(context: Context) {
                     "AND t.playable = 1)"
             )
         }
+        val visible = catalogueVisibility(Amp.access.enabled)
         helper.readableDatabase
-            .rawQuery("SELECT COUNT(*) FROM catalogue_tracks WHERE playable = 1" + CatalogueRetention.visibility, null)
+            .rawQuery("SELECT COUNT(*) FROM catalogue_tracks WHERE playable = 1" + visible.first, visible.second)
             .use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
@@ -393,10 +400,11 @@ class CatalogueStore(context: Context) {
             }
             val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
             val byPlatform = platformClause(platforms)
+            val visible = catalogueVisibility(Amp.access.enabled)
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + CatalogueRetention.visibility,
-                words.second + scope.second + byPlatform.second,
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}${visible.first}",
+                words.second + scope.second + byPlatform.second + visible.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
 
@@ -410,8 +418,10 @@ class CatalogueStore(context: Context) {
      * One grouped scan, and only when the filter is drawn.
      */
     suspend fun platformCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
+        val visible = catalogueVisibility(Amp.access.enabled)
         helper.readableDatabase.rawQuery(
-            SchemaSql.PLATFORM_COUNTS_BASE + CatalogueRetention.visibility + " GROUP BY platform", emptyArray(),
+            SchemaSql.PLATFORM_COUNTS_BASE +
+                visible.first + " GROUP BY platform", visible.second,
         ).use { row ->
             buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
         }
@@ -450,10 +460,11 @@ class CatalogueStore(context: Context) {
             // matching everything.
             val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
             val byPlatform = platformClause(platforms)
+            val visible = catalogueVisibility(Amp.access.enabled)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + CatalogueRetention.visibility + " ORDER BY title LIMIT ?",
-                words.second + scope.second + byPlatform.second + arrayOf(limit.toString()),
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}${visible.first} ORDER BY title LIMIT ?",
+                words.second + scope.second + byPlatform.second + visible.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
 
@@ -507,7 +518,7 @@ class CatalogueStore(context: Context) {
             val (where, arguments) = randomWhere(catalogueIds, platforms, favouritesOnly)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
-                    "$where" + CatalogueRetention.visibility + " ORDER BY RANDOM() LIMIT $count",
+                    "$where ORDER BY RANDOM() LIMIT $count",
                 arguments,
             ).use { it.toTracks() }
         }
@@ -547,6 +558,7 @@ internal fun randomWhere(
     catalogueIds: Set<String>,
     platforms: Set<String>,
     favouritesOnly: Boolean,
+    ampEnabled: Boolean = Amp.access.enabled,
 ): Pair<String, Array<String>> {
     val clauses = mutableListOf("playable = 1")
     val arguments = mutableListOf<String>()
@@ -563,8 +575,14 @@ internal fun randomWhere(
         arguments += FavouriteStore.MODLAND_ID
         clauses += "path IN (SELECT path FROM modland_favourites)"
     }
-    return " WHERE " + clauses.joinToString(" AND ") to arguments.toTypedArray()
+    val visible = catalogueVisibility(ampEnabled)
+    return " WHERE " + clauses.joinToString(" AND ") + visible.first to
+        (arguments.toTypedArray() + visible.second)
 }
+
+/** Shared by search, counts and Random; retained AMP rows must be invisible while off. */
+internal fun catalogueVisibility(ampEnabled: Boolean): Pair<String, Array<String>> =
+    if (ampEnabled) "" to emptyArray() else " AND catalogue_id != ?" to arrayOf(Amp.id)
 
 /**
  * The statement that re-decides every stored row's `playable`, and its arguments --

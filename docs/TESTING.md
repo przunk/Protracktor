@@ -6,6 +6,49 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## B54 Settings availability — trial pending, 2026-11-01
+
+Use combined source **2794a1db**, minified test-signed **APK 1.4.0 (1434)**. Complete host
+verification passes; physical checks below remain unchecked. [Artifact/results](RELEASE_1.5.0_PREPARATION.md).
+
+1. Settings shows Floating controls Off on an installation without the new preference. Ordinary
+   Play remains usable; enabling availability alone neither starts a panel nor requests permission.
+2. Start music while Off, enable it in Settings, then hold dock Play/Pause. Grant Display over
+   other apps if requested; denied/cancelled access must explain the outcome without changing audio.
+3. Test panel taps, Previous/Next file holds, dragging, edge docking and the Hide target over Maps.
+   Hide preserves playback. Returning to Settings and turning the choice Off removes the panel.
+4. Reopen/restart: retain the saved availability, never show a panel automatically. Off during a
+   pending permission request must prevent its late grant from showing a panel, even after On again.
+5. Check EN/PL, both themes, larger text, lock/unlock and permission revocation. Verify no orphan
+   overlay/drop target remains after Off or service exit. Record the installed build and device.
+
+Earlier enabled-experiment phone feedback is retained separately; this new Settings/lifecycle
+interaction is **unchecked on a phone** until the combined candidate is installed and tested.
+
+## AMP build-gate correction — phone checks pending, 2026-11-02
+
+The previous APK 1432 contains an AMP Settings switch and is superseded for this check. Use
+**APK 1.4.0 (1434)**, source **2794a1db**, with `Amp.ENABLED = true`. The complete gate/lint,
+false-constant host profile and artifact inspection pass. [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
+
+1. Settings has **no AMP availability switch** in EN/PL. Floating controls keeps its own default-Off
+   setting. AMP still appears as an archive/index and in Music sources with a link and credit.
+2. Download the AMP index explicitly; browse format/author, search, bookmark, add to a playlist
+   and play a selected track. There must be no automatic catalogue download at startup.
+3. Queue AMP from Random, History and a playlist, including duplicates. Check FIFO, source return,
+   swiping/removing rows and context continuation after a manual AMP occurrence.
+4. Cache a selected track and replay offline. Other AMP rows must not be prefetched by browsing
+   or changing Random filters. Missing/unavailable tracks should provide understandable feedback.
+5. Restart and reuse the index/cache/saved references. An old trial preference must not hide AMP
+   in an enabled build. No data reset or deletion is required to upgrade from the trial.
+6. Recheck other catalogues, normalization, notification/heart, Bluetooth and floating controls.
+   AMP browser playback and bulk phone-to-WEB transfer remain outside this integration.
+
+The disabled flag is a developer rebuild, not a phone setting: host checks must confirm omitted
+catalogue/index choices, rejected module/index/cache access and retained SQLite/user references,
+including attempts to re-enable internal access. Existing old trial checklists below are historical.
+Physical behaviour of the replacement APK is **unchecked** until installed and tested.
+
 ## B55 playlist search trial — 2026-11-01
 
 The corrected focus area and overall appearance received positive phone feedback; integration
@@ -419,6 +462,34 @@ or empty filename fields and The Mod Archive's filename fragment. Preserve exist
 Page-message checks and real-file WASM rendering passed on the host. Private-window playback
 feedback is recorded above; normal-session activation, Information and AAC export remain
 unchecked. [Evidence and scope](WEB_DECODER_FILENAMES.md).
+
+## AMP rebase — phone checks pending, 2026-10-26
+
+`feature/amp-catalogue` now includes develop through `e581a25`. **No new APK has been built for
+this rebase.** All scenarios below remain unchecked on a phone; the original positive AMP trial
+does not verify its interaction with the current unified queue. Retain existing app data.
+
+1. Check **Settings → Online catalogues → AMP catalogue (experimental)** in EN/PL. The initial
+   default remains On; a previously saved choice survives restart. Browse the retained AMP index,
+   search, open an author and replay a cached track without redownloading the index.
+2. While another source plays, enqueue AMP, another file and the same AMP file again. Verify
+   FIFO order, separate occurrences, tap/Next/Previous, swipe/Undo and return to source. Mere
+   queue admission must not fetch AMP music or change the current source.
+3. Turn AMP Off while its manual occurrence plays or loads. Playback stops, its parked source
+   and other waiting requests remain, and no late transfer starts. A new disabled AMP enqueue
+   explains the block. Existing playlist/History/bookmark data remains. Next can reach another
+   source; re-enabling does not start audio until explicitly requested.
+4. Repeat Off/On with AMP playing directly from an author or Random, and with a non-AMP manual
+   track over an AMP source. The actual current track decides what stops. Verify paused resume
+   and queue identity after re-enabling, rather than resuming an unrelated saved playlist.
+5. Recheck disabling during index/file downloads, rapid Off/On, offline cached playback, Random
+   history and no speculative AMP prefetch using the original AMP checklist below. Recheck a
+   previously repaired legacy/nested Modland download with the new combined transport.
+6. Verify normalization, dock/Queue navigation, notification controls and Bluetooth with the
+   combined build. Floating controls remain default Off and should have no activation shortcut.
+
+[Host evidence and limits](PR_AMP_CATALOGUE.md#rebase-verification--2026-10-26).
+Maintainer permission and an explicit integration decision remain separate requirements.
 
 ## B54 Floating controls — experimental, disabled by default
 
@@ -1034,6 +1105,43 @@ replacement by the old code-1221 AMP APK. AMP integration is deferred. Do not un
 
 Report installed artifact/SHA, steps and expected/observed results. Compilation, host UI tests
 and signing checks do not establish device audio/gesture behaviour. [Experiment](QUEUE_EXPERIMENT.md).
+
+## AMP isolated trial — positive owner test, 2026-10-18
+
+Only install the APK from `feature/amp-catalogue`; this feature is not approved for merge or
+publication. **The owner tested AMP and reported that it works well on 2026-10-18.** Individual
+results were not supplied, so the checklist below remains a reference for detailed checks,
+not a record that every scenario passed. Maintainer permission and owner merge authorization
+remain pending.
+
+1. In **Settings → Online catalogues**, find **AMP catalogue (experimental)**. Its initial value is on;
+   changing it and restarting the app must preserve the chosen value. Check Polish as well.
+2. In **Browse → Online catalogues**, download AMP's index explicitly (about 23 MiB), then browse
+   a format and author. It must not download the folder's music just because it is open.
+3. Try **MOD → Major Tom → MOD.human race gold**. Verify audible playback, title/author, History,
+   the played-before marker, and the cached-phone indicator. Replay while offline after caching.
+   Try another MOD and a different supported format; one sample is not archive-wide validation.
+4. Search an author/title with AMP in the online scope; open the author, bookmark the folder,
+   add a track to a playlist, save it and reopen it. Existing user-data rules must remain unchanged.
+5. In Random, new AMP selections may play only when reached; merely preparing the next picks
+   must not download AMP music. Changing scope while replaying history must keep the heard list
+   and walk it before drawing from the new scope (C97).
+6. Turn AMP off while an AMP tune plays or loads: it must stop, not restart later. It disappears
+   from available catalogues/search/new Random draws. Existing playlist/history entries and
+   bookmarks remain stored; playing a retained AMP entry must explain that AMP is off, even
+   when its bytes are cached. Playing from another source must still work. Check filter-opening
+   latency with the retained AMP index as well; device performance is not proved by host tests.
+   Pressing Play while AMP is off must explain why it cannot play, not start the old playlist.
+   Re-enable and press Play: resume the same AMP context rather than a different saved track.
+7. Disable during an AMP index/file download, then quickly enable again. The old transfer must
+   not start music or replace the index with late/empty results. Retry explicitly after the
+   cancelled request retires; existing index data must survive disabling and app restart.
+8. Enable again: retained index, bookmarks and playlist tracks should be usable without another
+   index download. Simulate no network or a blocked response: show an unavailable message, not
+   HTML passed to a decoder or an empty successful index.
+
+Report the installed versionCode/source APK and exact steps. A successful phone trial does not
+remove the separate AMP permission requirement. [Plan](PLAN_AMP.md).
 
 *Started 2026-09-15, because a build was handed over with a fix in it that no check in this
 repository can reach.*

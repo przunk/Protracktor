@@ -8,6 +8,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CatalogueTracksTest {
+    @Test fun `temporarily disabled AMP still produces the same guarded identity`() {
+        val row = CatalogueTrack("amp", "A/Artist/MOD.song.gz", "MOD", "Artist", "MOD.song", 42)
+        val before = CatalogueTracks.referenceOf(row)
+        com.przunk.protracktor.net.Amp.access.setEnabled(false)
+        try {
+            assertEquals("amp://A/Artist/MOD.song.gz", before.id)
+            assertEquals(before, CatalogueTracks.referenceOf(row))
+        } finally { com.przunk.protracktor.net.Amp.access.setEnabled(true) }
+    }
     @Test
     fun `Modland reference keeps encoded URL identity and the catalogue title as file name`() {
         val row = CatalogueTrack("modland", "Protracker/A + B/file name.mod", "Protracker", "A + B", "Display title", 123)

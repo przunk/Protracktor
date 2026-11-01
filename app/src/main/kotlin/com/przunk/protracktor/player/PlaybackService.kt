@@ -19,6 +19,7 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.przunk.protracktor.R
 import com.przunk.protracktor.AppLocale
+import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.MainActivity
 import com.przunk.protracktor.data.DatabaseAccess
 import com.przunk.protracktor.data.DatabaseAccessState
@@ -89,10 +90,6 @@ class PlaybackService : Service() {
             return
         }
         controller = PlaybackController.get(this)
-        if (FloatingControls.ENABLED) {
-            floating = FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
-                controller::next, controller::savePlayingToPlaylist, controller::previousFile, controller::nextFile)
-        }
         createChannel()
         createSession()
 
@@ -126,11 +123,12 @@ class PlaybackService : Service() {
         scope.launch {
             controller.state.collect { publishSession(it) }
         }
-        floating?.let { window ->
-            scope.launch {
-                FloatingControls.visible.collectLatest { visible ->
-                    if (visible) controller.state.map(FloatingControlsState::of).distinctUntilChanged()
-                        .collect(window::update)
+        scope.launch {
+            FloatingControls.visible.collectLatest { visible ->
+                if (visible) controller.state.map { state ->
+                    if (state.floatingControlsEnabled) FloatingControlsState.of(state) else null
+                }.distinctUntilChanged().collect { state ->
+                    if (state == null) floating?.close() else floating?.update(state)
                 }
             }
         }
@@ -175,12 +173,7 @@ class PlaybackService : Service() {
             return START_NOT_STICKY
         }
         when (intent?.action) {
-            FloatingControls.SHOW -> floating?.let { window ->
-                if (started) {
-                    window.update(FloatingControlsState.of(controller.state.value))
-                    window.show()
-                } else FloatingControls.unavailable(this)
-            }
+            FloatingControls.SHOW -> showFloatingControls()
             FloatingControls.HIDE -> floating?.close()
             ACTION_PLAY_PAUSE -> controller.togglePlayPause()
             ACTION_NEXT -> controller.next()
@@ -201,6 +194,19 @@ class PlaybackService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun showFloatingControls() {
+        if (!started || !Appearance.floatingControlsEnabled(this)) {
+            FloatingControls.unavailable(this)
+            return
+        }
+        // The service may have started while the preference was Off; create the host only on demand.
+        val window = floating ?: FloatingControlsWindow(this, controller::previous, controller::togglePlayPause,
+            controller::next, controller::savePlayingToPlaylist, controller::previousFile, controller::nextFile)
+            .also { floating = it }
+        window.update(FloatingControlsState.of(controller.state.value))
+        window.show()
+    }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)

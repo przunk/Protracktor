@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -38,6 +39,7 @@ class FloatingControlsActionTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private var playTaps = 0
     private val panelRequests = mutableListOf<Boolean>()
+    private val enabled = mutableStateOf(true)
     @Before fun start() {
         FloatingControls.setVisible(false)
         ShadowSettings.setCanDrawOverlays(false)
@@ -49,7 +51,7 @@ class FloatingControlsActionTest {
     }
     private fun show(available: Boolean = true, playing: Boolean = false, loading: Boolean = false) {
         activity.get().setContent { MaterialTheme {
-            val action = rememberFloatingControlsPermission(available) { _, show -> panelRequests += show }
+            val action = rememberFloatingControlsPermission(available, enabled.value) { _, show -> panelRequests += show }
             PlayerDock(
                 PlayerUiState(queue = PlayQueue(listOf(TrackRef("song", "Song"))).startAt(0),
                     restored = available, playing = playing, loadingTrack = loading),
@@ -166,6 +168,22 @@ class FloatingControlsActionTest {
         compose.waitForIdle()
         ShadowSettings.setCanDrawOverlays(true)
         compose.runOnIdle { activity.get().activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_CANCELED, Intent()) }
+        assertEquals(true, requestedPanel())
+    }
+
+    @Test fun `turning the preference off retires a pending grant even if enabled again before return`() {
+        show()
+        holdPlay()
+        compose.onNodeWithText("Open settings").performClick()
+        val request = shadowOf(activity.get()).nextStartedActivityForResult
+        compose.runOnIdle { enabled.value = false }
+        compose.waitForIdle()
+        compose.runOnIdle { enabled.value = true }
+        compose.waitForIdle()
+        ShadowSettings.setCanDrawOverlays(true)
+        compose.runOnIdle { activity.get().activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_OK, Intent()) }
+        assertNull(requestedPanel())
+        holdPlay()
         assertEquals(true, requestedPanel())
     }
 }

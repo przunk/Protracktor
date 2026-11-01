@@ -6,6 +6,7 @@ import android.app.Application
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.Appearance
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.data.ProtracktorDatabase
 import com.przunk.protracktor.data.HistoryStore
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +39,10 @@ class ManualQueueControllerTest {
     private val tracks = listOf("A", "B", "C").map(::track)
 
     @Before fun start() {
+        // An earlier trial's user preference must never override the compiled catalogue gate.
+        app.getSharedPreferences("protracktor_preferences", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("amp_enabled", false).commit()
+        Amp.access.setEnabled(true)
         Appearance.selectCacheAhead(app, CacheAhead.OFF)
         controller = PlaybackController.get(app)
         await { controller.state.value.restored && controller.browse.value.knowsWhatIsHeld }
@@ -49,6 +54,7 @@ class ManualQueueControllerTest {
     }
 
     @After fun stop() {
+        Amp.access.setEnabled(true)
         if (::controller.isInitialized) {
             val scope = ReflectionHelpers.getField<CoroutineScope>(controller, "scope")
             scope.cancel()
@@ -83,6 +89,49 @@ class ManualQueueControllerTest {
         assertFalse(state.value.playing)
         assertEquals(2, state.value.schedule.pending.size)
         assertNotEquals(state.value.schedule.pending[0].id, state.value.schedule.pending[1].id)
+    }
+
+    @Test fun `AMP admission ignores the old preference and preserves the context`() {
+        val amp = TrackRef("amp://A/Artist/MOD.song.gz", "AMP song", fileName = "MOD.song")
+        val before = state.value
+        try {
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+
+            Amp.access.setEnabled(false)
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+            assertEquals(app.getString(com.przunk.protracktor.R.string.notice_amp_disabled), state.value.message!!.text)
+
+            Amp.access.setEnabled(true)
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp, amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+        } finally {
+            Amp.access.setEnabled(true)
+        }
+    }
+
+    @Test fun `retained AMP reference cannot play when access is unavailable`() {
+        val amp = TrackRef("amp://A/Artist/MOD.song.gz", "AMP song", fileName = "MOD.song")
+        state.value = state.value.copy(queue = PlayQueue(listOf(amp)).startAt(0), playback = null)
+        val before = state.value
+        try {
+            Amp.access.setEnabled(false)
+            controller.togglePlayPause()
+            assertEquals(before.current, state.value.current)
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.schedule, state.value.schedule)
+            assertFalse(state.value.playing)
+            assertEquals(app.getString(com.przunk.protracktor.R.string.notice_amp_disabled), state.value.message!!.text)
+        } finally {
+            Amp.access.setEnabled(true)
+        }
     }
 
     @Test fun `Clear preserves paused transport and draft and Undo restores only the playback plan`() {

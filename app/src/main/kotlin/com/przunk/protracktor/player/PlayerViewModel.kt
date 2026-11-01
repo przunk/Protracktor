@@ -113,6 +113,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setCacheAhead(mode: CacheAhead) = controller.setCacheAhead(mode)
     fun setStereoMix(mode: StereoMix) = controller.setStereoMix(mode)
     fun setVolumeNormalization(enabled: Boolean) = controller.setVolumeNormalization(enabled)
+    fun setFloatingControlsEnabled(enabled: Boolean) = controller.setFloatingControlsEnabled(enabled)
     fun setShareAudioMinutes(minutes: Int) = controller.setShareAudioMinutes(minutes)
     fun setWebPlayer(base: String) = controller.setWebPlayer(base)
 

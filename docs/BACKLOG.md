@@ -2032,7 +2032,21 @@ foreground scan.
 
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
-**Renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
+**Release integration selected 2026-11-01:** include the existing Android AMP implementation
+in planned 1.5.0, with source attribution and an informational follow-up. Availability is the
+code constant `Amp.ENABLED = true`; there is no AMP user preference. A disabled rebuild is the
+withdrawal path, preserving existing data. The earlier approval
+hold is superseded; no reply or individual maintainer approval is claimed. Current implementation,
+fresh combined verification and phone acceptance are tracked in [PLAN_AMP](PLAN_AMP.md).
+
+**Historical AMP trial selected 2026-10-18:** implementation on `feature/amp-catalogue`, separate from develop.
+Use the ready-made songdb index and on-demand files, not a crawler. A persistent in-app switch
+defaults on for this private trial. No merge or release before explicit AMP maintainer permission
+and owner acceptance. [Trial plan](PLAN_AMP.md); the owner confirmed sending the permission request
+on 2026-10-18 and reported a positive overall phone test on the same date. Individual checklist
+results were not supplied. A reply, explicit permission and owner merge authorization remain pending.
+
+**Historical renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
 Retain it under A7, without a duplicate wishlist number. The first task is to establish an
 approved index/download route; the earlier investigation found no sanctioned machine-readable
 access. The request does not authorize crawling or scraping. See the dated follow-up in

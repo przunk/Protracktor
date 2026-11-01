@@ -6,6 +6,19 @@ verification and remaining physical checks are in [Status](STATUS.md) and
 [the implementation ledger](WEB_IMPLEMENTATION.md). B55 adds local filtering of the open editor
 on both platforms without replacing playback ownership.
 
+## Floating-controls availability — branch work, 2026-11-01
+
+The saved default-Off Appearance preference feeds PlayerUiState and Settings through the existing
+controller/VM. Availability is independent of FloatingControls.visible, which remains session-only.
+The command gateway rejects Show while disabled but allows Hide after opting out. The foreground
+service creates the overlay host only for an explicit Show; an already-running service therefore
+supports later opt-in without a restart. Playback-state observation is gated by panel visibility.
+
+The application shell retains its permission-result receiver while opted out, retires outstanding
+requests on Off and rechecks enabled/current-track state on return. Preference changes do not
+play, pause or replace the source context. No transport owner, service type or permission is added.
+[Selected 1.5.0 contract](FLOATING_CONTROLS.md#settings-availability-for-150--selected-2026-11-01).
+
 ## Playlist search projection — accepted for integration, 2026-11-01
 
 B55 filters the editor's read model without replacing its playback order. `PlaylistSearch.indices`
@@ -551,6 +564,42 @@ The application is built and released as 1.0.0. The numbered sections preserve t
 as it grew; dated measurements and superseded designs are historical evidence, not a statement
 that every original proposal is the current implementation. The following ownership map records
 the current boundaries and the proposed post-1.0.0 extractions.
+
+### AMP catalogue boundary — selected release integration, 2026-11-01
+
+`Amp` adapts a pinned songdb index into the existing catalogue rows and stable `amp://` identities.
+Its remote unit is one gzip-compressed module, unpacked by `TrackFiles` before the existing
+decoder is called. The gzip suffix remains in the fetch/cache identity, not the decoder filename.
+There is no schema change or second music database. Index format groups use filename prefixes
+rather than encoder version strings; source-declared Face The Music retains its canonical name
+because the filename-only FTM fallback means FamiTracker. Platform inference uses the existing
+shared rules, not an archive-wide assumption that every AMP tune is Amiga music.
+
+`Catalogue.known` describes implementations, while `Catalogue.all` describes current availability.
+This distinction prevents the startup prune from deleting an AMP index in a disabled build.
+Search/count/Random SQL share `catalogueVisibility`; direct catalogue reads reject disabled IDs.
+`Amp.ENABLED` fixes availability for the build. There is no AMP Appearance preference,
+PlayerUiState field, VM action or controller toggle; legacy trial preferences are ignored.
+
+After the 2026-10-26 rebase, `CatalogueRetention.blocksReference` follows catalogue
+availability instead of rejecting every AMP reference. The unified queue can therefore accept
+enabled AMP requests while still rejecting disabled ones with the AMP-specific explanation.
+Search, counts, Random and playable totals share the same `catalogueVisibility` rule. Manual
+occurrence identity, FIFO order and source continuation remain the current queue's responsibility.
+
+`AmpAccess` owns transfer tickets and active HTTP disconnect callbacks, bounded by the build
+gate even for explicit internal re-enable requests. The retained epoch checks are internal
+transfer ownership, not a runtime setting. Network/cache
+delivery and `TrackFiles` reads validate that epoch, so an off/on cycle cannot adopt old bytes.
+`LibraryDownloads` also checks it before replacing an index and always retires progress. Catalogue
+overview/platform reads discard results from an older switch epoch. User playlists, History and
+bookmarks are not deleted. A disabled build rejects AMP reads while other catalogues remain usable.
+
+AMP is excluded from music read-ahead, background metadata resolution and bulk browser transfer;
+folder prefetch remains Modland-only. The stable client User-Agent is unchanged. AMP HTML is
+rejected without ExoticA's cookie retry, and no Referer is forged. The release integration keeps
+these limits; no individual maintainer approval is claimed. The build gate cannot revoke
+already installed copies remotely. [Current decision and historical evidence](PLAN_AMP.md).
 
 ---
 

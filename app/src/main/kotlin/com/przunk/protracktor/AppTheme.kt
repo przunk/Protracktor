@@ -45,6 +45,7 @@ object Appearance {
     private const val SHARE_AUDIO_MINUTES = "share_audio_minutes"
     private const val STEREO_MIX = "stereo_mix"
     private const val VOLUME_NORMALIZATION = "volume_normalization"
+    private const val FLOATING_CONTROLS = "floating_controls_enabled"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -177,6 +178,14 @@ object Appearance {
         com.przunk.protracktor.player.StereoMix.fromStored(prefs(context).getString(STEREO_MIX, null))
 
     fun volumeNormalization(context: Context): Boolean = prefs(context).getBoolean(VOLUME_NORMALIZATION,false)
+
+    fun floatingControlsEnabled(context: Context): Boolean = prefs(context).getBoolean(FLOATING_CONTROLS, false)
+
+    fun selectFloatingControlsEnabled(context: Context, enabled: Boolean): Boolean {
+        if (floatingControlsEnabled(context) == enabled) return false
+        prefs(context).edit().putBoolean(FLOATING_CONTROLS, enabled).apply()
+        return true
+    }
 
     fun selectVolumeNormalization(context: Context, enabled: Boolean): Boolean {
         if (volumeNormalization(context)==enabled) return false

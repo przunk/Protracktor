@@ -35,6 +35,8 @@
     <string name="random_reroll_list">Start a new Random list</string>
     <string name="random_double_tap_hint">Double-tap the dice to reroll the list</string>
     <string name="notice_catalogue_not_in_trial">This catalogue is unavailable in the QUEUE experiment. Its saved data is kept for the AMP build.</string>
+    <string name="notice_amp_disabled">AMP is unavailable in this build. Your saved playlists, History and bookmarks are kept.</string>
+    <string name="notice_amp_unavailable">Cannot read this AMP track. The service may be unavailable, block app access, or have a different file than the index. No access protection was bypassed.</string>
     <string name="saved_places_title">Saved places</string>
     <string name="saved_places_body">Author and game folders to return to later.</string>
     <string name="saved_places_empty">Nothing saved yet. Open an author or game folder in an online catalogue and choose Bookmark.</string>
@@ -271,6 +273,8 @@
 
     <string name="notification_stop">Stop</string>
     <string name="floating_show">Floating controls</string>
+    <string name="settings_floating_controls_detail">Hold Play/Pause to show controls over other apps. Turning this off hides the panel. Requires Display over other apps permission.</string>
+    <string name="floating_disabled">Enable Floating controls in Settings first.</string>
     <string name="floating_hide">Hide floating controls</string>
     <string name="floating_hide_short">Hide</string>
     <string name="floating_move">Move</string>

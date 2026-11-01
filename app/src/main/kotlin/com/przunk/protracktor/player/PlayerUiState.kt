@@ -35,6 +35,7 @@ data class PlayerUiState(
     val playAllSubsongs: Boolean = false,
     val stereoMix: StereoMix = StereoMix.ORIGINAL,
     val volumeNormalization: Boolean = false,
+    val floatingControlsEnabled: Boolean = false,
     /**
      * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
      *

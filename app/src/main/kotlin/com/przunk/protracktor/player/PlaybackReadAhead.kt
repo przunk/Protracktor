@@ -51,9 +51,11 @@ internal class PlaybackReadAhead(
         // The eviction rule, and it is exact rather than a budget: what is no longer coming is no
         // longer wanted. Pressing previous or switching playlists drops what was read for the path
         // not taken, at the moment it stops being the path.
-        prefetched.keys.retainAll(wanted.mapTo(mutableSetOf()) { it.id })
+        // Until AMP permission is obtained, only explicit playback may fetch its music.
+        val permitted = wanted.filterNot { it.id.startsWith("amp://") }
+        prefetched.keys.retainAll(permitted.mapTo(mutableSetOf()) { it.id })
 
-        val missing = wanted.distinctBy { it.id }.filter { it.id !in prefetched }
+        val missing = permitted.distinctBy { it.id }.filter { it.id !in prefetched }
         if (missing.isEmpty()) return
 
         val job = scope.launch(start = CoroutineStart.LAZY) {
