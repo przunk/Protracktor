@@ -10,7 +10,7 @@ occurrences and hides nonmatches, preserving each handler's full-list position. 
 owns only focus, phrase, presentation and viewport restoration. Both use the established folded
 word search and require no database migration, metadata scan or network call.
 
-The header transitions within its existing row. Dimming is drawing-only over selectable results;
+The header transitions within its existing row. Dimming excludes both the field and result viewport;
 chrome shields consume the first touch while editing, and playback keeps the phrase without
 editing focus. Closing an inactive search does not clear focus in another destination. Pending
 and source queues remain owned by the existing player modules.

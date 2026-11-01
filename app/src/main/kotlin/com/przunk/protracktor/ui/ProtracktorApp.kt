@@ -59,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
@@ -128,6 +130,8 @@ fun ProtracktorApp(
     var playlistQuery by rememberSaveable(state.activePlaylistId) { mutableStateOf("") }
     var playlistSearchFocused by remember { mutableStateOf(false) }
     var playlistSearchBounds by remember { mutableStateOf<Rect?>(null) }
+    var playlistResultsBounds by remember { mutableStateOf<Rect?>(null) }
+    val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val finishPlaylistEditing = {
@@ -602,6 +606,15 @@ fun ProtracktorApp(
                         // another, and the empty screen must not speak before either has landed.
                         stateKnown = state.restored && browse.knowsWhatIsHeld,
                         contentPadding = insets,
+                        modifier = Modifier.onGloballyPositioned { coordinates ->
+                            // The list retains content padding and its viewport; only the scrim's cutout changes.
+                            val bounds = coordinates.boundsInRoot()
+                            val top = (bounds.top + with(density) { insets.calculateTopPadding().toPx() })
+                                .coerceAtMost(bounds.bottom)
+                            val bottom = (bounds.bottom - with(density) { insets.calculateBottomPadding().toPx() })
+                                .coerceAtLeast(top)
+                            playlistResultsBounds = Rect(bounds.left, top, bounds.right, bottom)
+                        },
                     )
                 }
                 }
@@ -627,7 +640,7 @@ fun ProtracktorApp(
                 }
                 }
             }
-            PlaylistSearchDimming(playlistSearchFocused, playlistSearchBounds)
+            PlaylistSearchDimming(playlistSearchFocused, playlistSearchBounds, playlistResultsBounds)
             MenuFocusDimming(menuFocus)
         }
     }

@@ -9,8 +9,8 @@ it does not change catalogue search, saved queries or B56.
 - The playlist chooser shares its existing row with a subtle, labelled Search action on the right.
   Opening search replaces that row with a full-width field, animated in both directions. It adds
   no row and preserves header height. The other action buttons and the dock retain their layout.
-- Entering search focuses the field and opens the keyboard. Editing dims the surrounding UI,
-  including the list; results remain tappable. A result starts playback, dismisses the keyboard
+- Entering search focuses the field and opens the keyboard. The field and result list remain
+  fully bright as the focused area; editing dims only surrounding header/dock controls. A result starts playback, dismisses the keyboard
   and removes dimming while retaining the phrase and filtered list. Refocusing dims again.
 - Dimmed header/dock controls dismiss editing on the first press instead of activating underneath.
   The field has a clear-query action and a separate close-search action. Closing restores the
@@ -69,3 +69,11 @@ Candidate: clean source **0ddb961**, minified test-signed **1.4.0 (1415)**, buil
 `259148132b0460c11d3017770a0669852e68b990f87cb109d1fc94599c0c496a`.
 
 The branch remains unmerged; no push, WEB deployment, AAB or release tag was made.
+
+## Result emphasis correction — 2026-11-01
+
+Phone feedback identified that the first candidate darkens the result list while typing. The
+focused area must contain both the field and the results. The original field-only cutout was
+too narrow; the correction must preserve ordinary result brightness while keeping header/dock
+controls dimmed. Pixel comparisons now cover this requirement. Correction verification and a
+replacement APK are pending; the first candidate's evidence above remains historical.

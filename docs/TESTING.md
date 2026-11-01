@@ -16,7 +16,8 @@ these do not establish the phone interaction below.
 On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved edits:
 
 1. Open Search beside the playlist chooser. Confirm its row does not grow and the replacement
-   animates smoothly. The keyboard opens and the surrounding interface dims.
+   animates smoothly. The keyboard opens; the field and result list stay fully bright while
+   surrounding header/dock controls dim.
 2. Type part of a title, author or filename; try an accent-free phrase. Results preserve original
    order/numbers. A phrase with no matches explains the empty filtered view.
 3. Tap a result. Keyboard/dimming end; the phrase/results remain. Next/Previous still traverse the

@@ -196,6 +196,20 @@ async function captureProfile(browser, base, output, profile, report) {
       assert.equal(await page.locator('#queue .track:visible').count(), 1);
       assert.equal(await page.locator('.app').evaluate(el => el.classList.contains('playlist-search-editing')), true);
     });
+    await verify('B55: editing keeps result pixels bright while dimming chrome', async () => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.locator('#playlist-search-input').press('Enter');
+      const result = page.locator('#queue .track:visible').first();
+      const chrome = page.locator('#showqueue');
+      const normalRow = await result.screenshot();
+      const normalChrome = await chrome.screenshot();
+      await page.locator('#playlist-search-input').focus();
+      const editingRow = await result.screenshot();
+      const editingChrome = await chrome.screenshot();
+      assert.ok(editingRow.equals(normalRow), 'Result pixels must not dim while editing');
+      assert.ok(!editingChrome.equals(normalChrome), 'Surrounding chrome must still dim');
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+    });
     await take('playlist-search-editing');
     await verify('B55: result playback retains filter and full context with normal chrome', async () => {
       await click('#queue .track:visible .text');

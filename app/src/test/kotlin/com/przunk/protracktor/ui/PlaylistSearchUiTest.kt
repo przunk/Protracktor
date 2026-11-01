@@ -3,6 +3,10 @@
 package com.przunk.protracktor.ui
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.ViewGroup
+import java.io.File
 import androidx.compose.ui.test.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -76,6 +80,39 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
         compose.onNodeWithTag("playlist-search-field").performClick()
         frame(250)
         compose.onNodeWithTag("playlist-search-dimming").assertExists()
+    }
+
+    @Test fun `editing keeps result pixels bright while dimming surrounding controls`() {
+        openSearch()
+        compose.onNodeWithTag("playlist-search-field").performTextInput("space")
+        compose.onNodeWithTag("playlist-search-field").performImeAction()
+        frame(250)
+        val row = compose.onNodeWithTag("enqueue-row-2").fetchSemanticsNode().boundsInRoot
+        val field = compose.onNodeWithTag("playlist-search-field").fetchSemanticsNode().boundsInRoot
+        val chrome = compose.onNodeWithText(application.getString(R.string.action_browse)).fetchSemanticsNode().boundsInRoot
+        fun picture(): Bitmap {
+            val content = activity.get().findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+            return Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
+                .also { content.draw(Canvas(it)) }
+        }
+        val normal = picture()
+        compose.onNodeWithTag("playlist-search-field").performClick()
+        frame(250)
+        val editing = picture()
+        val pictures = File(System.getProperty("java.io.tmpdir"), "protracktor-playlist-search-pixels").apply { mkdirs() }
+        for ((name, bitmap) in listOf("normal" to normal, "editing" to editing)) {
+            File(pictures, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
+        val x = (row.left + 4).toInt()
+        val y = row.center.y.toInt()
+        assertTrue("The result sample must contain visible background", android.graphics.Color.red(normal.getPixel(x, y)) > 64)
+        assertEquals("Search results belong to the focused area", normal.getPixel(x, y), editing.getPixel(x, y))
+        assertEquals("The field must remain undimmed", normal.getPixel(field.center.x.toInt(), (field.bottom - 4).toInt()),
+            editing.getPixel(field.center.x.toInt(), (field.bottom - 4).toInt()))
+        val chromeX = chrome.center.x.toInt()
+        val chromeY = (chrome.top + 4).toInt()
+        assertTrue("Surrounding controls must still dim", android.graphics.Color.red(editing.getPixel(chromeX, chromeY))
+            < android.graphics.Color.red(normal.getPixel(chromeX, chromeY)))
     }
 
     @Test fun `filtered removal deletes the original occurrence and never its displayed index`() {

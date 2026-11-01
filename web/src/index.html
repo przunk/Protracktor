@@ -179,14 +179,16 @@
   .search-inline svg { width: 24px; height: 24px; fill: currentColor; }
   .playlist-search-form:focus-within { outline: 2px solid var(--primary); outline-offset: -2px; }
   .app { position: relative; isolation: isolate; }
-  .app::after { content: ''; position: absolute; inset: 0; background: #000; opacity: 0;
+  .app > header, .app > footer { position: relative; }
+  .app > header::after, .app > footer::after {
+    content: ''; position: absolute; inset: 0; background: #000; opacity: 0;
     z-index: 30; pointer-events: none; transition: opacity 180ms; }
-  .app.playlist-search-editing::after { opacity: .42; }
+  .app.playlist-search-editing > header::after, .app.playlist-search-editing > footer::after { opacity: .42; }
   .playlist-search-editing .playlist-search-form { z-index: 31; }
   #queue > .track[hidden] { display: none; }
   #playlist-search-empty { padding: 12px 20px; }
   @media (prefers-reduced-motion: reduce) {
-    .playlist-chooser, .playlist-search-form, .app::after { transition: none; }
+    .playlist-chooser, .playlist-search-form, .app > header::after, .app > footer::after { transition: none; }
   }
 
   /* --- top bar ------------------------------------------------------------------------------ */

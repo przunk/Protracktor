@@ -22,11 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -136,17 +135,17 @@ internal fun PlaylistSearchShield(editing: Boolean, onDismiss: () -> Unit, conte
     }
 }
 
-/** A drawing-only scrim: choosing a dimmed result still reaches its original row handler. */
+/** The field and results stay bright; the drawing-only scrim never intercepts row actions. */
 @Composable
-internal fun PlaylistSearchDimming(editing: Boolean, field: Rect?) {
+internal fun PlaylistSearchDimming(editing: Boolean, field: Rect?, results: Rect?) {
     val alpha by animateFloatAsState(if (editing) 0.42f else 0f, tween(180), label = "playlist-search-dim")
     if (alpha <= 0f || field == null) return
     Canvas(Modifier.fillMaxSize().testTag("playlist-search-dimming")) {
-        val shape = Path().apply {
-            fillType = PathFillType.EvenOdd
-            addRect(Rect(Offset.Zero, size))
-            addRect(field)
+        withTransform({
+            clipRect(field.left, field.top, field.right, field.bottom, ClipOp.Difference)
+            results?.let { clipRect(it.left, it.top, it.right, it.bottom, ClipOp.Difference) }
+        }) {
+            drawRect(Color.Black.copy(alpha = alpha))
         }
-        drawPath(shape, Color.Black.copy(alpha = alpha))
     }
 }
