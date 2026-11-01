@@ -6,6 +6,19 @@ verification and remaining physical checks are in [Status](STATUS.md) and
 [the implementation ledger](WEB_IMPLEMENTATION.md). B55 adds local filtering of the open editor
 on both platforms without replacing playback ownership.
 
+## Floating-controls availability — branch work, 2026-11-01
+
+The saved default-Off Appearance preference feeds PlayerUiState and Settings through the existing
+controller/VM. Availability is independent of FloatingControls.visible, which remains session-only.
+The command gateway rejects Show while disabled but allows Hide after opting out. The foreground
+service creates the overlay host only for an explicit Show; an already-running service therefore
+supports later opt-in without a restart. Playback-state observation is gated by panel visibility.
+
+The application shell retains its permission-result receiver while opted out, retires outstanding
+requests on Off and rechecks enabled/current-track state on return. Preference changes do not
+play, pause or replace the source context. No transport owner, service type or permission is added.
+[Selected 1.5.0 contract](FLOATING_CONTROLS.md#settings-availability-for-150--selected-2026-11-01).
+
 ## Playlist search projection — accepted for integration, 2026-11-01
 
 B55 filters the editor's read model without replacing its playback order. `PlaylistSearch.indices`

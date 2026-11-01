@@ -34,6 +34,10 @@ tune cannot; what neither knows is measured while the tune plays.
 ignoring case and accents in titles, authors, filenames and paths. Android and WEB retain the
 full playback context; closing search restores the full list and its previous scroll position.
 
+Android [floating controls](docs/FLOATING_CONTROLS.md) are available through a default-Off Settings
+choice. After enabling it, hold Play/Pause to request a movable panel above other apps. Android's
+overlay permission is required; enabling availability does not show a panel automatically.
+
 Optional [volume normalization](docs/VOLUME_NORMALIZATION.md) reduces track-to-track loudness
 differences during Android and browser playback; it does not process exported audio.
 

@@ -60,6 +60,7 @@ class SettingsStereoMixTest {
                 SettingsScreen(
                     playAllSubsongs = false, stereoMix = selected.value,
                     volumeNormalization = false, onVolumeNormalizationChanged = {},
+                    floatingControlsEnabled = false, onFloatingControlsEnabledChanged = {},
                     onStereoMixSelected = { mode ->
                         requests += mode
                         Appearance.selectStereoMix(activity.get(), mode)

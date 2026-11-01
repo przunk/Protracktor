@@ -7,6 +7,15 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## 1.5.0 preparation — in progress, 2026-11-01
+
+The next selected release is 1.5.0: saved default-Off floating-controls availability in Settings,
+then current AMP integration, an informational follow-up/attribution and a combined phone trial.
+The prior AMP approval hold is replaced by this project decision; no maintainer reply or new
+permission is claimed. Preserve the original AMP branch and historical handoffs. No release
+version change, release refs or publication occurs during feature preparation.
+[Scope and remaining gates](RELEASE_1.5.0_PREPARATION.md).
+
 ## B55 Playlist search — accepted, 2026-11-01
 
 `feature/playlist-search` implements live filtering on Android and WEB in the existing chooser

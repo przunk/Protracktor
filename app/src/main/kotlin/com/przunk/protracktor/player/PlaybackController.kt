@@ -157,6 +157,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val _state = MutableStateFlow(PlayerUiState(
         stereoMix = Appearance.stereoMix(context),
         volumeNormalization = Appearance.volumeNormalization(context),
+        floatingControlsEnabled = Appearance.floatingControlsEnabled(context),
         cacheAhead = Appearance.cacheAhead(context),
         shareAudioMinutes = Appearance.shareAudioMinutes(context),
     ))
@@ -2710,6 +2711,12 @@ class PlaybackController private constructor(private val context: Context) {
         Appearance.selectVolumeNormalization(context,enabled)
         _state.update { it.copy(volumeNormalization=enabled) }
         refreshNormalization()
+    }
+
+    fun setFloatingControlsEnabled(enabled: Boolean) {
+        Appearance.selectFloatingControlsEnabled(context, enabled)
+        _state.update { it.copy(floatingControlsEnabled = enabled) }
+        if (!enabled) FloatingControls.request(context, show = false)
     }
 
     fun setShareAudioMinutes(minutes: Int) {

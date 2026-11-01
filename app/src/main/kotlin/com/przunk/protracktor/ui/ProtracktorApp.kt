@@ -116,8 +116,9 @@ fun ProtracktorApp(
     onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // When enabled, keep the permission result registered even when Now Playing is closed.
-    val floatingControls = rememberFloatingControlsAction(state.restored && state.current != null)
+    // Keep the permission receiver registered across dock and Settings availability changes.
+    val floatingControls = rememberFloatingControlsAction(state.restored && state.current != null,
+        state.floatingControlsEnabled)
     val savedPlaces by viewModel.savedPlacesState.collectAsStateWithLifecycle()
     val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
     val recentQueries by viewModel.recentSearches.collectAsStateWithLifecycle()
@@ -458,6 +459,8 @@ fun ProtracktorApp(
                         onStereoMixSelected = viewModel::setStereoMix,
                         volumeNormalization = state.volumeNormalization,
                         onVolumeNormalizationChanged = viewModel::setVolumeNormalization,
+                        floatingControlsEnabled = state.floatingControlsEnabled,
+                        onFloatingControlsEnabledChanged = viewModel::setFloatingControlsEnabled,
                         selectedLanguage = selectedLanguage,
                         cacheBytes = browse.storageBytes.first,
                         archiveBytes = browse.archiveBytes,

@@ -1,5 +1,26 @@
 # B54 — Floating playback controls
 
+## Settings availability for 1.5.0 — selected 2026-11-01
+
+Replace the compile-time distribution gate with a saved **Settings → Floating controls** choice,
+default Off. This enables the dock's existing Play/Pause hold; turning the preference On does
+not request permission, show a panel or start playback. A new process retains the choice but
+never restores a visible overlay automatically. Turning it Off hides the panel without pausing.
+
+The service can already be playing when the choice changes. Construct the window host lazily on
+an explicit Show request, and observe playback only while the panel is visible. Check the saved
+choice again at the command boundary; Hide must remain usable after turning the choice Off.
+The permission-result receiver remains registered while disabled so an outstanding grant cannot
+reactivate the feature. Off retires that request, including an Off → On cycle before its return.
+
+Implementation: `feature/floating-controls-settings`, based on develop `ed1bc88`. The new real
+Settings entry failed its host UI test before implementation. Focused host tests cover the real
+Settings switch, late opt-in in an existing service, actual window removal, saved preference and
+permission-return races. A negative control removing lazy host creation fails the panel assertion.
+All 21 focused tests / four suites pass in 70 s. The full combined gate and AMP/controls APK are pending; phone acceptance is required
+before develop integration. The earlier compile-time gate and handoff records below are historical and are
+superseded only for this selected runtime availability policy. No schema or permission is added.
+
 ## Experimental integration and distribution gate — 2026-10-26
 
 The practical phone trial was reported satisfactory and integration into develop was approved

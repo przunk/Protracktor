@@ -11,6 +11,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.player.FloatingControls
+import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.player.PlayQueue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef
@@ -38,6 +39,7 @@ class FloatingControlsGateTest {
         FloatingControls.setVisible(false)
         ShadowSettings.setCanDrawOverlays(false)
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
+        Appearance.selectFloatingControlsEnabled(activity.get(), false)
     }
 
     @After fun stop() {
@@ -45,17 +47,18 @@ class FloatingControlsGateTest {
         activity.get().setContent { }; compose.waitForIdle(); activity.close()
     }
 
-    @Test fun `disabled experiment cannot start a service even with overlay permission granted`() {
+    @Test fun `disabled preference cannot start a service even with overlay permission granted`() {
         ShadowSettings.setCanDrawOverlays(true)
         FloatingControls.request(activity.get(), show = true)
         assertNull(shadowOf(activity.get().application).nextStartedService)
         assertFalse(FloatingControls.visible.value)
     }
 
-    @Test fun `disabled experiment offers no hold action or permission flow and ordinary Play remains usable`() {
+    @Test fun `disabled preference offers no hold action and ordinary Play remains usable`() {
         var taps = 0
         activity.get().setContent { MaterialTheme {
-            val action = rememberFloatingControlsAction(available = true)
+            val action = rememberFloatingControlsAction(available = true,
+                enabled = Appearance.floatingControlsEnabled(activity.get()))
             PlayerDock(
                 PlayerUiState(queue = PlayQueue(listOf(TrackRef("song", "Song"))).startAt(0), restored = true),
                 onSeek = {}, onKeep = {}, onExpand = {}, onBrowse = {}, onPlayPause = { taps++ },
@@ -75,9 +78,25 @@ class FloatingControlsGateTest {
         assertEquals(before + 1, taps)
     }
 
-    @Test fun `disabled requests leave playback service untouched for Hide as well`() {
+    @Test fun `Hide remains available after disabling the preference`() {
         FloatingControls.setVisible(true)
         FloatingControls.request(activity.get(), show = false)
+        assertEquals(FloatingControls.HIDE, shadowOf(activity.get().application).nextStartedService?.action)
+    }
+
+    @Test fun `opt in persists without activating a panel and an unchanged selection is not written again`() {
+        assertFalse(Appearance.floatingControlsEnabled(activity.get()))
+        assertTrue(Appearance.selectFloatingControlsEnabled(activity.get(), true))
+        assertFalse(Appearance.selectFloatingControlsEnabled(activity.get(), true))
+        assertTrue(Appearance.floatingControlsEnabled(android.content.ContextWrapper(activity.get())))
+        assertFalse(FloatingControls.visible.value)
         assertNull(shadowOf(activity.get().application).nextStartedService)
+    }
+
+    @Test fun `enabled preference allows an explicit Show request without restoring panel visibility`() {
+        Appearance.selectFloatingControlsEnabled(activity.get(), true)
+        FloatingControls.request(activity.get(), true)
+        assertEquals(FloatingControls.SHOW, shadowOf(activity.get().application).nextStartedService?.action)
+        assertFalse(FloatingControls.visible.value)
     }
 }

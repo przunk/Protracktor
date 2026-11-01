@@ -98,6 +98,8 @@ fun SettingsScreen(
     onDeleteReplayRoutines: () -> Unit,
     volumeNormalization: Boolean,
     onVolumeNormalizationChanged: (Boolean) -> Unit,
+    floatingControlsEnabled: Boolean,
+    onFloatingControlsEnabledChanged: (Boolean) -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -166,6 +168,25 @@ fun SettingsScreen(
                         modifier = Modifier.semantics {
                             contentDescription = context.getString(R.string.settings_volume_normalization)
                         },
+                    )
+                },
+            )
+        }
+
+        item {
+            ListItem(
+                leadingContent = { Icon(PlayerIcons.FloatingControls, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.floating_show)) },
+                supportingContent = { Text(stringResource(R.string.settings_floating_controls_detail),
+                    style = MaterialTheme.typography.bodySmall) },
+                trailingContent = {
+                    Switch(
+                        checked = floatingControlsEnabled,
+                        onCheckedChange = { enabled ->
+                            haptics.toggle(enabled)
+                            onFloatingControlsEnabledChanged(enabled)
+                        },
+                        modifier = Modifier.semantics { contentDescription = context.getString(R.string.floating_show) },
                     )
                 },
             )
