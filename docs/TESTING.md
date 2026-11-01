@@ -8,9 +8,9 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 
 ## B55 playlist search trial — 2026-11-01
 
-Candidate: clean source **0ddb961**, minified test-signed release **1.4.0 (1415)**.
-[APK and automated evidence](PLAYLIST_SEARCH.md#implementation-and-evidence--2026-11-01).
-The 1,288-test Android suite, 1,396 WEB page assertions, companion checks and lint passed;
+Candidate: clean source **c884b4c**, minified test-signed release **1.4.0 (1417)**.
+[APK and automated evidence](PLAYLIST_SEARCH.md#result-emphasis-correction--2026-11-01).
+The 1,289-test Android suite, 1,396 WEB page assertions, companion checks and lint passed;
 these do not establish the phone interaction below.
 
 On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved edits:

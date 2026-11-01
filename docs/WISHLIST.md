@@ -26,9 +26,9 @@ No timing policy, platform scope or implementation is selected by recording this
 ## B55. Search within the open playlist — branch candidate, 2026-11-01
 
 User request recorded 2026-10-31; compact-header interaction selected 2026-11-01. Search replaces
-its existing chooser row with an animated field. Focus dims the surrounding interface; playing a
-match restores normal brightness while retaining the filter. Closing search restores the full
-list and previous viewport. Match title, author, filename and path with the existing word/accent
+its existing chooser row with an animated field. Focus keeps the field/results bright and dims
+surrounding controls; playing a match restores normal brightness while retaining the filter.
+Closing search restores the full list and previous viewport. Match title, author, filename and path with the existing word/accent
 rule, including unsaved edits, while retaining the full playlist as playback context.
 
 Implementation is on `feature/playlist-search`, unmerged; automated checks passed and a release

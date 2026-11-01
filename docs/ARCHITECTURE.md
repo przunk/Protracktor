@@ -10,9 +10,10 @@ occurrences and hides nonmatches, preserving each handler's full-list position. 
 owns only focus, phrase, presentation and viewport restoration. Both use the established folded
 word search and require no database migration, metadata scan or network call.
 
-The header transitions within its existing row. Dimming excludes both the field and result viewport;
-chrome shields consume the first touch while editing, and playback keeps the phrase without
-editing focus. Closing an inactive search does not clear focus in another destination. Pending
+The header transitions within its existing row. Explicit rectangular clipping excludes the field
+and existing result viewport from dimming without changing list padding or scroll state. WEB
+limits its scrims to header/footer instead. Chrome shields consume the first touch while editing,
+and playback keeps the phrase without editing focus. Closing an inactive search does not clear focus in another destination. Pending
 and source queues remain owned by the existing player modules.
 [Contract](PLAYLIST_SEARCH.md).
 

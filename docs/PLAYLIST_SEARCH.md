@@ -31,6 +31,9 @@ it does not change catalogue search, saved queries or B56.
 
 ## Implementation and evidence — 2026-11-01
 
+This records the first candidate; the corrected focus-area candidate and replacement APK are
+[below](#result-emphasis-correction--2026-11-01).
+
 Implemented on `feature/playlist-search`, from develop `d22afc5`; integration awaits the phone
 trial and explicit approval. The matching projection is pure Kotlin/JavaScript; the existing
 player remains the owner of the complete playback order. No dependency, schema or release
@@ -73,7 +76,37 @@ The branch remains unmerged; no push, WEB deployment, AAB or release tag was mad
 ## Result emphasis correction — 2026-11-01
 
 Phone feedback identified that the first candidate darkens the result list while typing. The
-focused area must contain both the field and the results. The original field-only cutout was
-too narrow; the correction must preserve ordinary result brightness while keeping header/dock
-controls dimmed. Pixel comparisons now cover this requirement. Correction verification and a
-replacement APK are pending; the first candidate's evidence above remains historical.
+focused area now contains both the field and results; only surrounding header/dock controls dim.
+Android excludes the existing visible result viewport, after Scaffold padding, using explicit
+rectangular clipping. It does not change list padding, measurement or scroll state. WEB confines
+its scrims to header and footer, keeping results outside them throughout focus transitions.
+
+Agent verification at clean application source **c884b4c**:
+
+- **Checked:** all **1,289 Android tests / 176 suites**, zero failures/errors/skips,
+  actual execution in **587.7 s**. All eight production-shell search cases pass,
+  including a native View raster comparison that checks result/field brightness and dimmed
+  surrounding controls. The result sample failed before correction. This is host rendering,
+  not a phone keyboard or gesture test.
+- **Checked:** **1,396 page assertions**, all **83 companion stages**, including 25 startup
+  scenarios, engine/PCM/worklet, native audio, migrations, icons, PWA and server. Independent gate
+  sections ran in parallel with the unit suite; lint ran after it. A timed Dock fixture first
+  acknowledged an earlier decoder request. Its actions now await the new correlated open;
+  the full-page rerun and remaining gate tail passed. Only that test fixture changed after the
+  APK; all application inputs still match the tested source.
+- **Checked:** fresh lint, **0 errors / 79 warnings**, **117.7 s**.
+- **Checked:** five clean-source Chromium profiles, **55/55 guards**, no page errors. Full-row PNG
+  comparisons reject dimmed results while also proving chrome still dims. The agent inspected
+  all five editing originals and the native after-correction bitmap.
+  [Updated capture gallery](../dist/web-visual-c884b4c-2026-11-01T20-26-29-083Z/index.html).
+- **Partially checked:** release packaging, R8, non-debuggable manifest, verified test certificate,
+  version and 16 KB ZIP alignment. Physical Android/Firefox behaviour remains **unchecked**;
+  repeat [the phone trial](TESTING.md#b55-playlist-search-trial--2026-11-01), especially brightness
+  while typing and after tapping a result.
+
+Replacement: clean source **c884b4c**, minified test-signed **1.4.0 (1417)**, built in
+**72 s**, **12,024,267 bytes**.
+[Release APK](../dist/protracktor-release-1.4.0-1417-c884b4c-20261101-214011.apk). SHA-256:
+`9e0cce09da4cbab64807d8e1d2c77d73f6dd115f637a3c05b2b74f7195983a22`.
+
+The first APK remains historical evidence. This candidate is unmerged; no push or WEB deployment.

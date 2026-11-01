@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { decoderOpenAfter } from './fixtures/page-playback.mjs';
 
 /** DockIdentityLayoutTest's identity/count/action cases through the browser's production page. */
 export default async function checkDock({ window, check }) {
@@ -21,7 +22,7 @@ export default async function checkDock({ window, check }) {
   api.clearPlaybackQueue(); await api.discardEdits();
   await api.storeNow.save({ id: 'dock-editor', name: 'Dock draft', tracks: [] });
   await api.choosePlaylist('dock-editor'); api.showPanel(null);
-  api.playFromBrowse(tracks, 0); await settle(); opened(5);
+  await decoderOpenAfter(window, () => api.playFromBrowse(tracks, 0)); opened(5);
   check($('title').textContent === 'Battle of honour' && $('sub').textContent === 'Treks · PC · 1998',
     'native Battle of honour identity keeps title above its shared author/platform/year summary');
   check($('title').closest('.nowhead') === $('nowkeep').closest('.nowhead')
@@ -80,7 +81,7 @@ export default async function checkDock({ window, check }) {
   check(tune.hidden, 'a failed file never inherits the previous subsong counter');
   opened(1); check(tune.hidden, 'a single-tune file keeps the ordinary footer without an old count');
   await api.saveEdits(); await api.choosePlaylist('dock-editor'); api.showPanel(null);
-  $('queue').querySelector('.track .text').click(); await settle(); opened(5);
+  await decoderOpenAfter(window, () => $('queue').querySelector('.track .text').click()); opened(5);
   check($('nowkeep').hidden && slot.contains($('nowkeep')) && style(slot).width === '48px'
     && style(upper).gridTemplateColumns === titlePolicy,
     'an owned source hides Add while retaining its upper-row slot and title sizing');
