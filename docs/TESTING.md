@@ -8,7 +8,8 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 
 ## B54 Settings availability — trial pending, 2026-11-01
 
-Use the combined 1.5.0-preparation APK after complete automated verification:
+Use combined source **8a2ca43e**, minified test-signed **APK 1.4.0 (1432)**. Complete host
+verification passes; physical checks below remain unchecked. [Artifact/results](RELEASE_1.5.0_PREPARATION.md).
 
 1. Settings shows Floating controls Off on an installation without the new preference. Ordinary
    Play remains usable; enabling availability alone neither starts a panel nor requests permission.
@@ -26,7 +27,9 @@ interaction is **unchecked on a phone** until the combined candidate is installe
 
 ## AMP release integration — phone checks pending, 2026-11-01
 
-Use the combined candidate; older AMP checklists below describe their original trials.
+Use the combined **APK 1.4.0 (1432)**, source **8a2ca43e**; its full gate/lint and artifact
+inspection pass. Older AMP checklists below describe their original trials.
+[Artifact/results](RELEASE_1.5.0_PREPARATION.md).
 
 1. AMP catalogue defaults On if no preference exists. Download its index explicitly; browse a
    format/author, search, save a place, add to a playlist and play a selected track.

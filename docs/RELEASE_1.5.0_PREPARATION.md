@@ -47,7 +47,7 @@ both state/callback pairs. The source trial remains `feature/amp-catalogue` (`e7
 
 The floating-controls stage passes 21 focused tests, with a failing lazy-host negative control;
 the AMP stage passes 64 focused tests. These are stage checks, not a complete combined gate.
-Full tests/lint and the minified release APK are next; phone behaviour remains unchecked.
+The complete combined gate and minified release APK are verified below; phone behaviour remains unchecked.
 Draft Play notes and [full 1.5.0 notes](RELEASE_NOTES_1.5.0.md) prepare the release description,
 without creating a release/tag or asserting publication.
 
@@ -60,3 +60,45 @@ and AMP-with-ASMA cases, so neither platform's actual output is filtered before 
 A negative control changing the WEB AMP expectation to a downloadable step fails the production
 WEB check. The fixture is already declared as a Gradle test input. Full verification is repeated
 with the corrected scope; no application download behaviour was changed for this correction.
+
+## Verified candidate and APK — 2026-11-01
+
+Agent-run host verification and artifact inspection are complete for clean source
+**`8a2ca43eb8917fa9ce0379b4db610e5dcd1df861`**, `test/1.5.0-candidate`. This is ready for a phone trial, not accepted for
+develop integration or released. Later documentation commits do not relabel this APK.
+
+| Check | Result |
+| --- | --- |
+| Complete host gate | **1,319 tests / 180 suites**, zero failures/errors/skips; all **85** gate stages pass; **1487 s** overall |
+| Executed Android unit task | **561.8 s**; compilation reused, all tests executed rather than served from cache |
+| Actual-ESM WEB page | **1,396 assertions** |
+| Real WASM engine | **57 checks**; other PCM/worklet, native audio, packaging, storage, icon, PWA and server stages pass |
+| Fresh lint | **0 errors / 82 warnings**, **132.3 s** |
+| Minified test-signed release APK | [APK 1.4.0 (1432)](../dist/protracktor-release-1.4.0-1432-8a2ca43e-20261101-232154.apk); **12,093,731 bytes**, built in **175 s** |
+| APK inspection | Non-debuggable, embedded source/version match, ZIP CRCs, three native ABIs and 16 KB ZIP alignment verified; AMP/overlay host retained by R8 and AMP credit packaged |
+| Source consistency | **844 tracked inputs** match across verification and packaging |
+| Phone behaviour | **Unchecked** for this combined candidate; historical trials retain their original scope |
+
+APK SHA-256: `eef30d78943696a50029d55406930df1c43565cd862c5d9b10e807d7b04b7a99`.
+
+The current test name remains **1.4.0 (1432)**; 1.5.0 is selected only by the release
+procedure after acceptance. Schema stays 23. Develop `ed1bc88`, master/tag v1.4.0 `5b6936e` and
+the original AMP branch `e728fa6` are preserved. No AAB, release tag, upload, push or WEB deployment
+was made. Host logs, JUnit/lint XML, failure/negative-control evidence, frozen input hashes and
+artifact inspection are retained locally in ignored `user/release-1.5/`.
+
+### Phone handoff and publication
+
+Use [the current checklists](TESTING.md): enable Floating controls while music is already playing,
+then hold Play/Pause and check the permission flow, transport/file holds, dragging/Hide and Off.
+Restart to confirm saved availability without an automatic panel. Check AMP browse/search,
+selected cached playback, manual queue and Off/On with retained data. Verify EN/PL and both themes.
+
+The informational email is prepared in ignored
+`docs/letters/2026-11-01-amp-integration-follow-up-draft.md` and remains **not sent**. Its stable
+User-Agent and selected-file/companion, cache, attribution and no-prefetch claims match the code.
+There is no connected mail-sending tool; manual sending is required before publication.
+
+After phone acceptance, merge the combined candidate so the shared fixture correction and release
+notes accompany both features. Then run the interactive release procedure from develop, upload the
+AAB and push the selected refs as described above. No individual AMP maintainer approval is claimed.

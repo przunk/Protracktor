@@ -1,4 +1,4 @@
-# AMP catalogue trial
+# AMP catalogue
 
 Implementation selected 2026-10-18. Branch `feature/amp-catalogue`, originally from develop `a421afc`.
 The original private trial waited for explicit AMP maintainer approval. The following decision
@@ -24,13 +24,16 @@ Settings → Music sources credits AMP and links to its website. Disabling the c
 playback/transfers and removes it from available catalogues without deleting user data. This is
 a local switch, not remote revocation; withdrawing integration needs an application update and
 does not alter older installed copies. Prepare the follow-up locally for manual sending; do not
-record it as sent before confirmation. Current combined gate/APK and phone verification remain
-pending. Release versionName changes only in the release procedure; current builds remain 1.4.0.
+record it as sent before confirmation. The complete combined gate and minified APK are verified;
+current phone verification remains pending.
+[Results and artifact](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
+Release versionName changes only in the release procedure; current builds remain 1.4.0.
 
 Focused current-integration checks: **64 tests / seven suites**, zero failures/errors/skips,
 **223 s** including compilation. They cover index/HTTP/cache ownership, the real queue controller,
-Settings persistence, source attribution and bilingual privacy. The complete combined gate,
-minified APK and physical phone trial are still pending.
+Settings persistence, source attribution and bilingual privacy. The complete combined gate
+and minified APK are now verified; the physical phone trial is pending.
+[Current combined evidence](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
 
 ## Rebase — 2026-10-26
 

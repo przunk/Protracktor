@@ -57,9 +57,11 @@ to a quiet start and later gain jump. No new WEB deployment is implied by this A
 
 ## Verification and exclusions
 
-The individual stages pass focused host checks. The full combined gate/lint, minified test APK
-and current phone trial are pending; update [preparation](RELEASE_1.5.0_PREPARATION.md) with their
-actual results. Previous device feedback and artifacts retain their original identities.
+The combined source **8a2ca43e** passes **1319 tests / 180 suites**, all **85** gate stages,
+**1396 WEB page assertions**, **57 engine checks**, and fresh lint **0 errors / 82 warnings**.
+A minified test-signed **APK 1.4.0 (1432)** is prepared and inspected. Current phone acceptance
+is pending; [preparation](RELEASE_1.5.0_PREPARATION.md) records exact artifact/source/hash and limits.
+Previous device feedback and artifacts retain their original identities.
 Database schema stays 23; no destructive migration or new dependency is selected.
 
 C122 Redmi startup crash remains under observation. No stack trace or reproduced mechanism

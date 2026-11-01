@@ -17,8 +17,9 @@ Implementation: `feature/floating-controls-settings`, based on develop `ed1bc88`
 Settings entry failed its host UI test before implementation. Focused host tests cover the real
 Settings switch, late opt-in in an existing service, actual window removal, saved preference and
 permission-return races. A negative control removing lazy host creation fails the panel assertion.
-All 21 focused tests / four suites pass in 70 s. The full combined gate and AMP/controls APK are pending; phone acceptance is required
-before develop integration. The earlier compile-time gate and handoff records below are historical and are
+All 21 focused tests / four suites pass in 70 s. The complete combined gate and minified
+AMP/controls APK are verified; phone acceptance is required before develop integration.
+[Current results and artifact](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01). The earlier compile-time gate and handoff records below are historical and are
 superseded only for this selected runtime availability policy. No schema or permission is added.
 
 ## Experimental integration and distribution gate — 2026-10-26

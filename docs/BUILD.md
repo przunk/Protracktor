@@ -3,7 +3,18 @@
 Everything comes from the shared toolchain in `/mnt/workspace/.tooling`. Nothing needs to be
 installed system-wide, and no build here writes to another project's state.
 
-## Isolated AMP trial, 2026-10-18
+## Planned 1.5.0 candidate — 2026-11-01
+
+Use the normal minified `scripts/build-release.sh` for the combined AMP/floating-controls phone
+trial. Test builds retain versionName 1.4.0 and use commit-derived codes with source SHA; the
+interactive release procedure selects 1.5.0 only after acceptance. Schema remains 23.
+
+The project decision of 2026-11-01 supersedes the historical AMP approval hold below, without
+claiming an individual maintainer reply or approval. Source attribution and a manual informational
+follow-up accompany the integration. [Current source, checks and APK](RELEASE_1.5.0_PREPARATION.md).
+Develop/master/tags and store publication are not changed by preparing this test artifact.
+
+## Historical isolated AMP trial, 2026-10-18
 
 `feature/amp-catalogue` defaults its persistent AMP switch on for private testing. Build its
 minified test-signed APK with the normal `scripts/build-release.sh`; do not run a store release,

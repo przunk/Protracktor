@@ -1,13 +1,14 @@
-# AMP catalogue trial — implementation and evidence
+# AMP catalogue — implementation and evidence
 
 Selected 2026-10-18. Branch `feature/amp-catalogue`, original base develop `a421afc`;
 rebased onto **`e581a25`** on 2026-10-26.
-## Release integration — in progress, 2026-11-01
 
-The original trial branch stays intact at `e728fa6`. It is being merged into
+## Release integration — phone trial pending, 2026-11-01
+
+The original trial branch stays intact at `e728fa6`. It has been merged into
 `feature/amp-release-integration` from current develop `ed1bc88`, preserving current queue,
 History, playlist filtering, cache and normalization. Only STATUS/TESTING had textual conflicts;
-all runtime integration still requires fresh checks and a combined phone trial.
+fresh combined host checks and packaging pass; a combined phone trial is still required.
 
 AMP remains Android-only, with the saved default-On catalogue switch and existing bounded
 individual downloads. Attribution/privacy now describe the selected release integration instead
@@ -18,8 +19,9 @@ release tags remain unchanged. The dated checks below are historical, not curren
 
 Focused current-integration checks: **64 tests / seven suites**, zero failures/errors/skips,
 **223 s** including compilation. They cover index/HTTP/cache ownership, the real queue controller,
-Settings persistence, source attribution and bilingual privacy. The complete combined gate,
-minified APK and physical phone trial are still pending.
+Settings persistence, source attribution and bilingual privacy. The complete combined gate
+and minified APK are now verified; the physical phone trial is pending.
+[Current combined evidence](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
 
 ## Rebase verification — 2026-10-26
 
