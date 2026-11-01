@@ -45,7 +45,8 @@ Selected 2026-11-01: replace the compile-time gate with a saved default-Off Sett
 Enable the existing dock hold without automatic panel display; Off hides the panel without
 pausing, and process restart preserves availability without restoring an overlay. Implementation
 is on `feature/floating-controls-settings`; the combined AMP/controls candidate 2794a1db passes
-the full gate/lint and APK inspection. Phone trial and develop integration remain pending.
+the full gate/lint and APK inspection. Integration is approved and merged as **3519f05b**,
+2026-11-02; detailed device/checklist outcomes remain separately unreported.
 [Current artifact and results](RELEASE_1.5.0_PREPARATION.md). Earlier experiment handoffs below retain their source identity and are historical.
 
 ### Original experimental integration — 2026-10-26

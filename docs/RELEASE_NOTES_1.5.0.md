@@ -60,8 +60,9 @@ to a quiet start and later gain jump. No new WEB deployment is implied by this A
 The corrected source **2794a1db** passes **1323 tests / 181 suites**, all
 **85** gate stages, **1396 WEB page assertions**, **57 engine
 checks**, and fresh lint **0 errors / 81 warnings**. Actual false-constant checks
-also pass. A minified test-signed **APK 1.4.0 (1434)** is prepared and inspected; phone
-acceptance remains pending. [Preparation](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02) records exact
+also pass. A minified test-signed **APK 1.4.0 (1434)** is prepared and inspected; develop
+integration is approved and completed as **3519f05b**, 2026-11-02. Individual phone checklist
+outcomes remain separately unreported. [Preparation](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02) records exact
 artifact/source/hash and limits. Earlier APK 1432 and other historical feedback keep their
 original identities. Schema stays 23; no destructive migration or new dependency is selected.
 

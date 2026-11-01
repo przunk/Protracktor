@@ -4,6 +4,26 @@ Selected 2026-11-01. This is preparation, not an application release or confirma
 Keep versionName 1.4.0 until the release procedure selects 1.5.0. Preserve master/tags, prior
 artifacts, database schema 23 and the separate normalization-slider experiment.
 
+## Develop integration — approved and merged, 2026-11-02
+
+Integration of the combined candidate is approved and completed as **`3519f05baad6c67556572c3e103219f812de4d7b`**.
+The merge tree equals `test/1.5.0-candidate` **`3e15b122452c7ee5d1a7df1a3878fe571ba94581`** exactly; all 845 checked inputs
+match application source `2794a1db`. AMP stays `Amp.ENABLED = true` without a Settings switch;
+Floating controls keeps its saved default-Off Settings opt-in. The original AMP trial is retained.
+
+The supplied minified test APK **1.4.0 (1434)** keeps its source, signature and SHA-256. Previous
+host results remain evidence for that source: 1323 tests / 181 suites, 85 gate stages, 1396 page
+assertions, 57 engine checks and fresh lint 0 errors / 81 warnings. No new app test or APK is
+claimed for this identical-tree integration. The merge approval supplies no itemized device,
+installed-build or checklist outcomes; those remain separately unreported.
+
+Master/tag v1.4.0 stay at `5b6936e`; no 1.5.0 version commit/tag, store AAB, upload, push or WEB
+deployment is made. Release notes are prepared. The corrected AMP follow-up remains drafted and
+not confirmed sent; no reply or individual maintainer approval is claimed. The next release step
+is the interactive 1.5.0 procedure from develop, with signing/upload/push performed separately.
+Earlier dated pending-integration statements describe their original handoffs and are superseded
+by this record; they do not assert further physical verification.
+
 ## Approved scope
 
 1. Replace the disabled floating-controls constant with a saved default-Off Settings choice.

@@ -9,7 +9,8 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 ## B54 Settings availability — trial pending, 2026-11-01
 
 Use combined source **2794a1db**, minified test-signed **APK 1.4.0 (1434)**. Complete host
-verification passes; physical checks below remain unchecked. [Artifact/results](RELEASE_1.5.0_PREPARATION.md).
+verification passes and integration is approved/merged as 3519f05b. Individual physical checklist
+outcomes below were not separately reported. [Artifact/results](RELEASE_1.5.0_PREPARATION.md).
 
 1. Settings shows Floating controls Off on an installation without the new preference. Ordinary
    Play remains usable; enabling availability alone neither starts a panel nor requests permission.
@@ -23,7 +24,7 @@ verification passes; physical checks below remain unchecked. [Artifact/results](
    overlay/drop target remains after Off or service exit. Record the installed build and device.
 
 Earlier enabled-experiment phone feedback is retained separately; this new Settings/lifecycle
-interaction is **unchecked on a phone** until the combined candidate is installed and tested.
+integration is approved and merged as 3519f05b. Individual checklist outcomes remain unreported.
 
 ## AMP build-gate correction — phone checks pending, 2026-11-02
 
@@ -47,7 +48,9 @@ false-constant host profile and artifact inspection pass. [Current artifact and 
 The disabled flag is a developer rebuild, not a phone setting: host checks must confirm omitted
 catalogue/index choices, rejected module/index/cache access and retained SQLite/user references,
 including attempts to re-enable internal access. Existing old trial checklists below are historical.
-Physical behaviour of the replacement APK is **unchecked** until installed and tested.
+The replacement candidate is approved and merged as **3519f05b**, 2026-11-02. This approval does
+not provide separate device/build/checklist outcomes; do not mark individual cases passed from
+the merge instruction alone.
 
 ## B55 playlist search trial — 2026-11-01
 

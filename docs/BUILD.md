@@ -3,7 +3,7 @@
 Everything comes from the shared toolchain in `/mnt/workspace/.tooling`. Nothing needs to be
 installed system-wide, and no build here writes to another project's state.
 
-## Planned 1.5.0 candidate — 2026-11-01
+## Integrated 1.5.0 preparation — 2026-11-02
 
 Use the normal minified `scripts/build-release.sh` for the combined AMP/floating-controls phone
 trial. AMP availability is the code constant `Amp.ENABLED`, currently true; a false build
@@ -14,7 +14,8 @@ interactive release procedure selects 1.5.0 only after acceptance. Schema remain
 The project decision of 2026-11-01 supersedes the historical AMP approval hold below, without
 claiming an individual maintainer reply or approval. Source attribution and a manual informational
 follow-up accompany the integration. [Current source, checks and APK](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
-Develop/master/tags and store publication are not changed by preparing this test artifact.
+Develop integration is approved and completed as **3519f05b**; master/tags and store publication
+are unchanged. Existing APK identity remains 1.4.0 (1434), source 2794a1db.
 
 ## Historical isolated AMP trial, 2026-10-18
 

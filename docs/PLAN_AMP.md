@@ -28,7 +28,8 @@ AMP reads, including cached/saved references, while retaining playlists, History
 the existing index. There is no per-installation switch or remote revocation; older installed
 builds keep their compiled availability. Prepare the follow-up locally for manual sending; do not
 record it as sent before confirmation. The complete corrected gate and replacement APK 1434 are verified;
-current phone verification remains pending.
+integration is approved and merged as **3519f05b** on 2026-11-02. Detailed physical outcomes remain
+separately unreported.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 Release versionName changes only in the release procedure; current builds remain 1.4.0.
 
@@ -36,7 +37,7 @@ Earlier integration stage: **64 tests / seven suites**, zero failures/errors/ski
 **223 s** including compilation. They covered index/HTTP/cache ownership, the real queue controller,
 the former Settings persistence, attribution and privacy. The Settings part is superseded by the
 build-gate correction; current results include the complete corrected gate and disabled-build
-profile. Physical phone acceptance remains pending.
+profile. Integration is approved and merged as 3519f05b; specific phone outcomes remain unreported.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 ## Build-gate correction — selected 2026-11-01
@@ -131,7 +132,8 @@ The minified test APK 1.2.0 (1221) is prepared and its signature/assets are veri
 The owner reported on 2026-10-18 that AMP works well in phone testing; individual checklist
 results were not supplied. At that historical handoff, maintainer permission and project integration authorization were
 pending. The publication hold is superseded by the 2026-11-01 decision above; the current combined
-candidate still requires phone acceptance before develop integration.
+candidate was subsequently approved and merged as 3519f05b; individual phone outcomes remain
+unreported.
 [Implementation evidence](PR_AMP_CATALOGUE.md).
 
 ### Disabled-build verification — 2026-11-01

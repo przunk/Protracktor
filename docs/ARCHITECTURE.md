@@ -6,7 +6,10 @@ verification and remaining physical checks are in [Status](STATUS.md) and
 [the implementation ledger](WEB_IMPLEMENTATION.md). B55 adds local filtering of the open editor
 on both platforms without replacing playback ownership.
 
-## Floating-controls availability — branch work, 2026-11-01
+## Floating-controls availability — integrated, 2026-11-02
+
+Integrated with AMP as **3519f05b** after approval; checked application source remains 2794a1db.
+No playback rules change during this identical-tree merge.
 
 The saved default-Off Appearance preference feeds PlayerUiState and Settings through the existing
 controller/VM. Availability is independent of FloatingControls.visible, which remains session-only.

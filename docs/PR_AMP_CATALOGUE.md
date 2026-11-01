@@ -3,12 +3,13 @@
 Selected 2026-10-18. Branch `feature/amp-catalogue`, original base develop `a421afc`;
 rebased onto **`e581a25`** on 2026-10-26.
 
-## Release integration — phone trial pending, 2026-11-01
+## Release integration — approved and merged, 2026-11-02
 
 The original trial branch stays intact at `e728fa6`. It has been merged into
 `feature/amp-release-integration` from current develop `ed1bc88`, preserving current queue,
 History, playlist filtering, cache and normalization. Only STATUS/TESTING had textual conflicts;
-fresh combined host checks and packaging pass; a combined phone trial is still required.
+fresh combined host checks and packaging pass. The combined candidate is approved and merged
+as **3519f05b**; the merge tree matches candidate 3e15b122 exactly.
 
 AMP remains Android-only, with **`Amp.ENABLED = true`** and bounded individual downloads.
 The 2026-11-01 clarification removes the Settings preference and its state/controller plumbing;
@@ -17,14 +18,15 @@ internal transfer access. Corrected source 2794a1db passes the complete gate and
 inspection; previous results remain historical. Attribution/privacy describe the selected integration instead
 of an unpublished experiment. The earlier publication hold is superseded by the project decision
 in [PLAN_AMP](PLAN_AMP.md#release-integration--selected-2026-11-01). There is no maintainer reply
-or individual approval, and the informational follow-up has not been sent. Develop, master and
-release tags remain unchanged. The dated checks below are historical, not current verification.
+or individual approval, and the informational follow-up has not been sent. Master and
+release tags remain unchanged. Develop now includes approved merge 3519f05b; original trial
+checks below remain historical.
 
 Earlier integration stage: **64 tests / seven suites**, zero failures/errors/skips,
 **223 s** including compilation. They covered index/HTTP/cache ownership, the real queue controller,
 the former Settings persistence, attribution and privacy. The Settings part is superseded by the
 build-gate correction; current results include the complete corrected gate and disabled-build
-profile. Physical phone acceptance remains pending.
+profile. Integration is approved; individual phone outcomes were not separately supplied.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 ## Rebase verification — 2026-10-26

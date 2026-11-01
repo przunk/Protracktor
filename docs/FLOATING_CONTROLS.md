@@ -18,7 +18,8 @@ Settings entry failed its host UI test before implementation. Focused host tests
 Settings switch, late opt-in in an existing service, actual window removal, saved preference and
 permission-return races. A negative control removing lazy host creation fails the panel assertion.
 All 21 focused tests / four suites pass in 70 s. The complete combined gate and minified
-AMP/controls APK are verified; phone acceptance is required before develop integration.
+AMP/controls APK are verified. Integration is approved and merged as **3519f05b** on 2026-11-02;
+detailed device/checklist outcomes were not separately supplied.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02). The earlier compile-time gate and handoff records below are historical and are
 superseded only for this selected runtime availability policy. No schema or permission is added.
 
