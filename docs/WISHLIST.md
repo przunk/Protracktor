@@ -31,7 +31,8 @@ match restores normal brightness while retaining the filter. Closing search rest
 list and previous viewport. Match title, author, filename and path with the existing word/accent
 rule, including unsaved edits, while retaining the full playlist as playback context.
 
-Implementation is on `feature/playlist-search`, unmerged and awaiting checks and phone feedback.
+Implementation is on `feature/playlist-search`, unmerged; automated checks passed and a release
+APK is prepared. Phone feedback remains pending.
 History search (B49/W10), cross-playlist search (W11) and B56 remain separate.
 [Selected behaviour, constraints and verification](PLAYLIST_SEARCH.md).
 

@@ -8,6 +8,11 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 
 ## B55 playlist search trial — 2026-11-01
 
+Candidate: clean source **0ddb961**, minified test-signed release **1.4.0 (1415)**.
+[APK and automated evidence](PLAYLIST_SEARCH.md#implementation-and-evidence--2026-11-01).
+The 1,288-test Android suite, 1,396 WEB page assertions, companion checks and lint passed;
+these do not establish the phone interaction below.
+
 On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved edits:
 
 1. Open Search beside the playlist chooser. Confirm its row does not grow and the replacement
