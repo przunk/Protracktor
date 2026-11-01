@@ -13,7 +13,7 @@ interactive release procedure selects 1.5.0 only after acceptance. Schema remain
 
 The project decision of 2026-11-01 supersedes the historical AMP approval hold below, without
 claiming an individual maintainer reply or approval. Source attribution and a manual informational
-follow-up accompany the integration. [Current source, checks and APK](RELEASE_1.5.0_PREPARATION.md).
+follow-up accompany the integration. [Current source, checks and APK](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 Develop/master/tags and store publication are not changed by preparing this test artifact.
 
 ## Historical isolated AMP trial, 2026-10-18

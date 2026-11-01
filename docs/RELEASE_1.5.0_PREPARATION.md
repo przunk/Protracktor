@@ -73,7 +73,8 @@ retained playlist/History/cache references. No schema or data reset is involved.
 
 The real Settings absence regression failed against the preceding UI. Test a false-constant
 build and a deliberately broken re-enable guard, restore true, then run the complete gate/lint
-and build a replacement APK. Current results and packaging for this correction are pending.
+and build a replacement APK. Complete host verification and replacement packaging are recorded in [Replacement APK after the AMP build-gate correction — 2026-11-02](#replacement-apk-after-the-amp-build-gate-correction--2026-11-02);
+phone behaviour remains unchecked.
 The 1432 artifact below is historical and still contains the rejected AMP Settings entry.
 
 ## Verified candidate and APK — 2026-11-01
@@ -131,7 +132,40 @@ fails the build-gate assertions. The initial UI absence test also failed on the 
 The host UI fixture uses a bounded catalogue-section viewport because the unrelated About footer
 requires Android JNI. The target availability section is rendered and inspected.
 
-Restore `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
+Restored `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
 is seeded before real controller startup in the admission tests, covering an upgrade from an
-opted-out trial. Those current full checks and the replacement APK remain pending. Earlier
+opted-out trial. The full gate and replacement artifact now pass; [current results](#replacement-apk-after-the-amp-build-gate-correction--2026-11-02). Earlier
 artifact/source identities are retained; no develop merge or release is performed here.
+
+## Replacement APK after the AMP build-gate correction — 2026-11-02
+
+Agent-run verification is complete for clean source **`2794a1db22e8b100eba9d839ce6f89e536c09dff`** on
+`test/1.5.0-candidate`, with **`Amp.ENABLED = true`**. AMP has no Settings control, stored
+availability or UI/VM/controller toggle. Old trial preferences are ignored. Floating controls
+keeps its independent saved default-Off switch. The earlier 1432 APK remains historical.
+
+| Check | Result |
+| --- | --- |
+| Full executed Android suite | **1,323 tests / 181 suites**, zero failures/errors/skips, **547.1 s** |
+| Complete gate | All **85** stages exit 0; **1415 s** overall |
+| WEB and engine | **1,396 actual-ESM page assertions**, **57 engine checks**, all other companion stages pass |
+| Fresh lint | **0 errors / 81 warnings**, **118.7 s** |
+| Disabled build | Actual false constant: **12 tests / eight suites**, zero failures/errors/skips; broken re-enable clamp fails |
+| Minified test-signed release | [APK 1.4.0 (1434)](../dist/protracktor-release-1.4.0-1434-2794a1db-20261102-001444.apk); **12,087,871 bytes**, built in **168 s** |
+| Artifact inspection | Non-debuggable; version/source/test signature, ZIP CRCs, three ABIs and 16 KB ZIP alignment verified; AMP/overlay host retained by R8 |
+| AMP control removal | No settings_amp resources or amp_enabled preference key in DEX; packaged credit and privacy exactly match their sources |
+| Source consistency | All **845 tracked inputs** match verification/packaging |
+| Phone behaviour | **Unchecked** for this replacement APK; use the current [checklists](TESTING.md) |
+
+SHA-256: `1fbfb5c569e0ff10f3cae92219a0b59aecd9dc4162da8e274fa6a44f5a8108e2`.
+
+This test build keeps **1.4.0 (1434)**, schema 23. The release procedure selects 1.5.0 after
+phone acceptance. Develop/master/tags and the original AMP branch are unchanged. No store AAB,
+release, push or WEB deployment was made. The AMP follow-up is corrected and **not sent**; there
+is no connected mail tool. Detailed receipts, logs, JUnit/lint XML, source hashes and inspection
+are retained locally in ignored `user/release-1.5/amp-build-gate/`.
+
+Test the absence of an AMP switch, normal AMP playback/cache/queue and the independent floating
+controls opt-in. After acceptance, merge this combined candidate, then use the interactive
+release procedure and publication workflow above. A false build requires a new application
+update; it cannot remotely alter installed copies or erase their saved data.

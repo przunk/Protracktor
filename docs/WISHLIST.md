@@ -44,7 +44,7 @@ History search (B49/W10), cross-playlist search (W11) and B56 remain separate.
 Selected 2026-11-01: replace the compile-time gate with a saved default-Off Settings choice.
 Enable the existing dock hold without automatic panel display; Off hides the panel without
 pausing, and process restart preserves availability without restoring an overlay. Implementation
-is on `feature/floating-controls-settings`; the combined AMP/controls candidate 8a2ca43e passes
+is on `feature/floating-controls-settings`; the combined AMP/controls candidate 2794a1db passes
 the full gate/lint and APK inspection. Phone trial and develop integration remain pending.
 [Current artifact and results](RELEASE_1.5.0_PREPARATION.md). Earlier experiment handoffs below retain their source identity and are historical.
 

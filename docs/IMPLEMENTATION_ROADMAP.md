@@ -56,7 +56,7 @@ focus area and integration approved on 2026-11-01. It is no longer open inventor
 | ID | Remaining work | State |
 | --- | --- | --- |
 | B56 | Consider searching while typing | Request recorded 2026-10-31; result retrieval, distinct from recent-query suggestions and existing live History filtering. Views/sources, timing and cancellation need discussion; no implementation selected. [Wishlist](WISHLIST.md#b56-consider-searching-while-typing--discussion-recorded-2026-10-31). |
-| B54 | Floating playback controls | Saved default-Off Settings opt-in selected for 1.5.0, 2026-11-01; implementation on feature/floating-controls-settings. Retain explicit dock hold, no automatic overlay after restart, immediate Hide on Off. Combined source 8a2ca43e passes the full 1319-test gate/lint; APK 1.4.0 (1432) prepared. Phone feedback and develop integration pending. Earlier disabled-constant experiment remains historical. [Contract](FLOATING_CONTROLS.md). |
+| B54 | Floating playback controls | Saved default-Off Settings opt-in selected for 1.5.0, 2026-11-01; implementation on feature/floating-controls-settings. Retain explicit dock hold, no automatic overlay after restart, immediate Hide on Off. Combined source 2794a1db passes the full 1323-test gate/lint; APK 1.4.0 (1434) prepared. Phone feedback and develop integration pending. Earlier disabled-constant experiment remains historical. [Contract](FLOATING_CONTROLS.md). |
 | B53 | Integrate a free music library | Proposal recorded 2026-10-25. Identify the intended service and URL before assessing access and integration; no provider or implementation selected. [Wishlist](WISHLIST.md#b53-integrate-a-free-music-library--idea-recorded-2026-10-25). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |
 | B50 | Animated multi-page tutorial on first launch and/or from Settings | User request recorded 2026-10-21; TODO, analysis only. Safe animated previews recommended; startup, dismissal and upgrade choices remain open. Shares index guidance with A46; no implementation authorized. [Analysis](TUTORIAL_ANALYSIS.md). |
@@ -200,10 +200,9 @@ for current evidence, intentional exclusions and unchecked physical behaviour. C
   2026-11-01, superseding the earlier maintainer-approval hold. Preserve the original trial;
   integrate on `feature/amp-release-integration`. Pinned songdb index, code gate `Amp.ENABLED = true`, individual cached downloads, attribution
   and no crawling/prefetch/bulk transfer. The 2026-11-01 clarification removes the AMP user
-  preference; replacement candidate verification/APK are pending.
+  preference; corrected source 2794a1db passes the complete gate/lint and replacement APK inspection.
   No reply or individual maintainer approval is recorded. Follow-up draft is prepared for manual
-  sending; combined source 8a2ca43e passes the full gate/lint and APK inspection. Phone acceptance
-  and develop integration remain pending. Historical trial and
+  sending; phone acceptance and develop integration remain pending. Historical trial and
   rebase checks are retained in [the evidence](PR_AMP_CATALOGUE.md); [current contract](PLAN_AMP.md).
 - **Web relay:** UnExoticA and The Mod Archive need separate access/infrastructure decisions for
   browser integration; Android permission does not approve server-side relaying.

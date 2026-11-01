@@ -27,16 +27,17 @@ Settings → Music sources credits AMP and links to its website. To withdraw acc
 AMP reads, including cached/saved references, while retaining playlists, History, bookmarks and
 the existing index. There is no per-installation switch or remote revocation; older installed
 builds keep their compiled availability. Prepare the follow-up locally for manual sending; do not
-record it as sent before confirmation. The complete combined gate and minified APK are verified;
+record it as sent before confirmation. The complete corrected gate and replacement APK 1434 are verified;
 current phone verification remains pending.
-[Results and artifact](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
+[Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 Release versionName changes only in the release procedure; current builds remain 1.4.0.
 
-Focused current-integration checks: **64 tests / seven suites**, zero failures/errors/skips,
-**223 s** including compilation. They cover index/HTTP/cache ownership, the real queue controller,
-Settings persistence, source attribution and bilingual privacy. The complete combined gate
-and minified APK are now verified; the physical phone trial is pending.
-[Current combined evidence](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
+Earlier integration stage: **64 tests / seven suites**, zero failures/errors/skips,
+**223 s** including compilation. They covered index/HTTP/cache ownership, the real queue controller,
+the former Settings persistence, attribution and privacy. The Settings part is superseded by the
+build-gate correction; current results include the complete corrected gate and disabled-build
+profile. Physical phone acceptance remains pending.
+[Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 ## Build-gate correction — selected 2026-11-01
 
@@ -49,8 +50,10 @@ Existing transfer-ticket checks remain internal; production has no runtime enabl
 
 The real Settings absence test fails against the previous candidate. Validate the same build-gate
 and transfer/retention tests with the constant false, including an attempted re-enable, then restore
-true for the full combined gate and replacement release APK. These checks and the new artifact
-are pending; earlier source 8a2ca43e / APK 1432 below retain their historical identity.
+true for the full combined gate and replacement release APK. The corrected candidate now passes
+the complete gate and APK inspection;
+[Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
+Earlier source 8a2ca43e / APK 1432 retain their historical identity.
 
 ## Rebase — 2026-10-26
 
@@ -141,7 +144,7 @@ fails the build-gate assertions. The initial UI absence test also failed on the 
 The host UI fixture uses a bounded catalogue-section viewport because the unrelated About footer
 requires Android JNI. The target availability section is rendered and inspected.
 
-Restore `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
+Restored `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
 is seeded before real controller startup in the admission tests, covering an upgrade from an
-opted-out trial. Those current full checks and the replacement APK remain pending. Earlier
+opted-out trial. The current full gate and replacement APK pass; [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02). Earlier
 artifact/source identities are retained; no develop merge or release is performed here.

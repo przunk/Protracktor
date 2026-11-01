@@ -8,7 +8,7 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 
 ## B54 Settings availability — trial pending, 2026-11-01
 
-Use combined source **8a2ca43e**, minified test-signed **APK 1.4.0 (1432)**. Complete host
+Use combined source **2794a1db**, minified test-signed **APK 1.4.0 (1434)**. Complete host
 verification passes; physical checks below remain unchecked. [Artifact/results](RELEASE_1.5.0_PREPARATION.md).
 
 1. Settings shows Floating controls Off on an installation without the new preference. Ordinary
@@ -25,11 +25,11 @@ verification passes; physical checks below remain unchecked. [Artifact/results](
 Earlier enabled-experiment phone feedback is retained separately; this new Settings/lifecycle
 interaction is **unchecked on a phone** until the combined candidate is installed and tested.
 
-## AMP build-gate correction — replacement trial pending, 2026-11-01
+## AMP build-gate correction — phone checks pending, 2026-11-02
 
-The previous APK 1432 contains an AMP Settings switch and is superseded for this check. A new
-candidate will use the code constant `Amp.ENABLED = true`; false-constant host verification and
-full replacement checks/packaging are pending. [Current results](RELEASE_1.5.0_PREPARATION.md).
+The previous APK 1432 contains an AMP Settings switch and is superseded for this check. Use
+**APK 1.4.0 (1434)**, source **2794a1db**, with `Amp.ENABLED = true`. The complete gate/lint,
+false-constant host profile and artifact inspection pass. [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 1. Settings has **no AMP availability switch** in EN/PL. Floating controls keeps its own default-Off
    setting. AMP still appears as an archive/index and in Music sources with a link and credit.

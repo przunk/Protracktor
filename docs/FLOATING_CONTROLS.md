@@ -19,7 +19,7 @@ Settings switch, late opt-in in an existing service, actual window removal, save
 permission-return races. A negative control removing lazy host creation fails the panel assertion.
 All 21 focused tests / four suites pass in 70 s. The complete combined gate and minified
 AMP/controls APK are verified; phone acceptance is required before develop integration.
-[Current results and artifact](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01). The earlier compile-time gate and handoff records below are historical and are
+[Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02). The earlier compile-time gate and handoff records below are historical and are
 superseded only for this selected runtime availability policy. No schema or permission is added.
 
 ## Experimental integration and distribution gate — 2026-10-26

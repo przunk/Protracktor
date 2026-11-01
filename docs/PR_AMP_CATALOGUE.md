@@ -13,18 +13,19 @@ fresh combined host checks and packaging pass; a combined phone trial is still r
 AMP remains Android-only, with **`Amp.ENABLED = true`** and bounded individual downloads.
 The 2026-11-01 clarification removes the Settings preference and its state/controller plumbing;
 old saved values are ignored. A disabled build retains user data and cannot be re-enabled through
-internal transfer access. Current correction verification/replacement APK are pending; the
-previous candidate's complete results remain historical. Attribution/privacy now describe the selected release integration instead
+internal transfer access. Corrected source 2794a1db passes the complete gate and replacement APK
+inspection; previous results remain historical. Attribution/privacy describe the selected integration instead
 of an unpublished experiment. The earlier publication hold is superseded by the project decision
 in [PLAN_AMP](PLAN_AMP.md#release-integration--selected-2026-11-01). There is no maintainer reply
 or individual approval, and the informational follow-up has not been sent. Develop, master and
 release tags remain unchanged. The dated checks below are historical, not current verification.
 
-Focused current-integration checks: **64 tests / seven suites**, zero failures/errors/skips,
-**223 s** including compilation. They cover index/HTTP/cache ownership, the real queue controller,
-Settings persistence, source attribution and bilingual privacy. The complete combined gate
-and minified APK are now verified; the physical phone trial is pending.
-[Current combined evidence](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
+Earlier integration stage: **64 tests / seven suites**, zero failures/errors/skips,
+**223 s** including compilation. They covered index/HTTP/cache ownership, the real queue controller,
+the former Settings persistence, attribution and privacy. The Settings part is superseded by the
+build-gate correction; current results include the complete corrected gate and disabled-build
+profile. Physical phone acceptance remains pending.
+[Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 ## Rebase verification — 2026-10-26
 
