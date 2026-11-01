@@ -21,9 +21,11 @@ and verification status is tracked in [`docs/STATUS.md`](docs/STATUS.md).
 It plays tracker modules, Atari ST, Atari 8-bit, Commodore 64, the ZX Spectrum AY trackers, the
 Amiga synth trackers, the Amiga custom replayers through UADE (TFMX, Hippel, Future Composer and
 the rest — their replay routines downloaded on request) and seven console families, with playlists,
-background playback and a media session. Local folders are scanned by opening every file rather than by trusting its name. Four
+background playback and a media session. Local folders are scanned by opening every file rather than by trusting its name. Five
 online archives: Modland and ASMA browse offline from a downloaded index, The Mod Archive searches
-live, and UnExoticA provides indexed Amiga game soundtracks. Jools Wills (BuZz) approved the
+live, UnExoticA provides indexed Amiga game soundtracks, and AMP adds scene music through a
+songdb index with individual cached downloads. AMP has a saved Settings switch; attribution and
+the planned-release decision are recorded in [the AMP plan](docs/PLAN_AMP.md). Jools Wills (BuZz) approved the
 proposed UnExoticA use; that permission and the agreed stable User-Agent are recorded on
 2026-10-07 in [`docs/PLAN_UNEXOTICA.md`](docs/PLAN_UNEXOTICA.md). Its build-time switch remains
 available for operational reversibility, not because permission is pending.

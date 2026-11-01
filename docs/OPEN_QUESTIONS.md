@@ -182,7 +182,8 @@ First-ever Random entry still starts automatically. C97's heard-history boundary
 [Full decisions, transitions, architecture, APK interchange and tests](QUEUE_EXPERIMENT.md).
 The historical test-only code-1221 exception ended before integration; all new builds use the
 commit count. Higher-code APKs cannot ordinarily be replaced by the older AMP APK. AMP remains
-separate and deferred until after the next queue iteration; its permission hold is unchanged.
+a separate trial in that historical record. The 2026-11-01 [AMP integration decision](PLAN_AMP.md)
+supersedes the earlier publication hold; current combined phone acceptance remains pending.
 
 Unselected extensions are not included: visible speculative Random picks, new Random mode rules,
 or persistence of every temporary session across process death. Existing finite-result limits,

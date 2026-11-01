@@ -35,6 +35,10 @@
     <string name="random_reroll_list">Rozpocznij nową listę Random</string>
     <string name="random_double_tap_hint">Dotknij dwukrotnie kostki, aby wylosować nową listę</string>
     <string name="notice_catalogue_not_in_trial">Ten katalog jest niedostępny w eksperymencie QUEUE. Jego dane pozostają zapisane dla wersji AMP.</string>
+    <string name="settings_amp">Katalog AMP</string>
+    <string name="settings_amp_detail">Przeglądaj muzykę zachowaną przez AMP, korzystając z indeksu songdb. Wyłączenie ukrywa AMP oraz zatrzymuje odtwarzanie i pobieranie z tego źródła. Zapisane listy zostają.</string>
+    <string name="notice_amp_disabled">AMP jest wyłączone. Włącz katalog w ustawieniach, aby odtworzyć ten utwór.</string>
+    <string name="notice_amp_unavailable">Nie można odczytać utworu z AMP. Serwis może być niedostępny, blokować dostęp aplikacji lub mieć inny plik niż indeks. Zabezpieczenia dostępu nie były obchodzone.</string>
     <string name="saved_places_title">Zapisane miejsca</string>
     <string name="saved_places_body">Foldery autorów i gier, do których chcesz wrócić.</string>
     <string name="saved_places_empty">Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.</string>

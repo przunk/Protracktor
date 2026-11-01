@@ -8,7 +8,8 @@ import com.przunk.protracktor.net.Catalogue
 
 internal object CatalogueTracks {
     fun referenceOf(track: CatalogueTrack): TrackRef {
-        val catalogue = Catalogue.byId(track.catalogueId)
+        // Availability can change while a query returns; it must never change track identity.
+        val catalogue = Catalogue.known.firstOrNull { it.id == track.catalogueId }
         return TrackRef(
             // The URL is the identity. A catalogue track has no document URI and never will, and
             // the URL is what both the cache and the player key on.

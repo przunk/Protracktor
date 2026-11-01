@@ -45,9 +45,17 @@ object Appearance {
     private const val SHARE_AUDIO_MINUTES = "share_audio_minutes"
     private const val STEREO_MIX = "stereo_mix"
     private const val VOLUME_NORMALIZATION = "volume_normalization"
+    private const val AMP_ENABLED = "amp_enabled"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+
+    /** Default-on only on the isolated AMP trial branch, never an approval for publication. */
+    fun ampEnabled(context: Context): Boolean = prefs(context).getBoolean(AMP_ENABLED, true)
+
+    fun selectAmpEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(AMP_ENABLED, enabled).apply()
+    }
 
     fun theme(context: Context): AppTheme = AppTheme.fromStored(prefs(context).getString(THEME, null))
 

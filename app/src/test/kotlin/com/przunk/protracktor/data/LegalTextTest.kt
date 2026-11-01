@@ -57,6 +57,15 @@ class LegalTextTest {
         }
     }
 
+    @Test fun `AMP host and user controlled downloads are disclosed in both languages`() {
+        for (polish in listOf(false, true)) {
+            val bullets = LegalText.privacyBlocks(policy, polish).filterIsInstance<LegalText.Block.Bullet>()
+            assertTrue(bullets.any { it.text.startsWith("amp.dascene.net") })
+            assertTrue(bullets.first { it.text.startsWith("amp.dascene.net") }.text.contains(
+                if (polish) "własny przełącznik" else "own Settings switch"))
+        }
+    }
+
     @Test
     fun `wrapped lines join into one paragraph`() {
         val blocks = LegalText.privacyBlocks(

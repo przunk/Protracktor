@@ -104,13 +104,13 @@ sealed class Catalogue(
          * test for `owning` did, immediately. Deferring to first access is the fix, because by then
          * every object in the list has finished initialising.
          */
-        val all: List<Catalogue> by lazy {
-            // UnExoticA is conditional and nothing else is: the question in
-            // `docs/PLAN_UNEXOTICA.md` is unanswered, so it comes out again by flipping one
-            // constant. Absent here is absent everywhere -- `byId`, `owning`, the browse screen
-            // and the stored index all read it from this list.
-            listOf(Modland, Asma, ModArchive) + if (UnExoticA.ENABLED) listOf(UnExoticA) else emptyList()
+        val known: List<Catalogue> by lazy {
+            listOf(Modland, Asma, ModArchive) +
+                (if (UnExoticA.ENABLED) listOf(UnExoticA) else emptyList()) + Amp
         }
+
+        /** A runtime switch hides AMP without deleting its index or user-owned references. */
+        val all: List<Catalogue> get() = known.filter { it != Amp || Amp.access.enabled }
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }
 

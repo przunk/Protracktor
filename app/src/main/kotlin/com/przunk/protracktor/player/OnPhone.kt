@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.UnExoticA
 
 /**
@@ -33,6 +34,10 @@ object OnPhone {
     }
 
     fun checkFor(id: String): Check {
+        if (id.startsWith("amp://")) {
+            return Amp.pathFrom(id)?.let(Amp::downloadUrl)
+                ?.takeIf { Amp.access.enabled }?.let { Check.Cached(it) } ?: Check.Never
+        }
         UnExoticA.pathFrom(id)?.let { path ->
             return UnExoticA.archiveUrlFor(path)?.let { Check.Cached(it) } ?: Check.Never
         }
