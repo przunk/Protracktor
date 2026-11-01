@@ -47,6 +47,7 @@ data class PlayerUiState(
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     /** When an opened folder's tracks are fetched ahead (A55, D4). */
     val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
+    val ampEnabled: Boolean = true,
     /** The database is being migrated or re-decided, and the screen says so (A60). */
     val preparingDatabase: Boolean = false,
     /** The longest a tune shared as audio runs, in minutes (A62). */

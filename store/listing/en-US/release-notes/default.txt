@@ -1,8 +1,8 @@
 Based on user feedback:
 
-- Optional volume normalization in Settings reduces volume differences between tracks.
-- Return from Queue to its source without interrupting playback.
-- Clearer compact player with stable controls and more room for track details.
-- Consistent spacing in Browse and Online catalogues.
-- Fixed some older Modland download links, including nested folders.
-- More reliable loading and initial subsong indicators.
+- Search the current playlist as you type without changing playback.
+- History updates while open.
+- AMP catalogue: browse, search and cache selected tracks.
+- Optional floating controls: enable in Settings, then hold Play/Pause.
+- Clearer Light theme, aligned controls and readable system bars.
+- Improved volume normalization.

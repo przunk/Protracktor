@@ -35,6 +35,15 @@ failing. A hash lookup would let it know before it offers the file.
 **And it carries index sources for about fifty archives**, UnExoticA among them — which is how this
 was found.
 
+## AMP trial source, 2026-10-18
+
+The isolated Android AMP trial uses `songdb/sources/site/amp.tsv`, pinned to
+`ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f`. Its 23,820,617 bytes contain 176,970 eleven-column
+file rows and 9,917 four-column subsong continuations. File paths are in column eleven;
+column eight is the uncompressed size. This reuses the existing GPL-2.0-or-later songdb source,
+not a new library or a licence to redistribute AMP music. Maintainer permission is still pending.
+[Protocol and checksum](../PLAN_AMP.md). The index itself is downloaded on request, not bundled.
+
 ## UnExoticA, measured from it
 
 8,713 tunes with paths. **Our format list covers 4,479 — 51.4%.** The half we do not cover is

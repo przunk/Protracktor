@@ -8,6 +8,7 @@ import com.przunk.protracktor.net.Asma
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
 import com.przunk.protracktor.net.Modland
+import com.przunk.protracktor.net.Amp
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -24,6 +25,45 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LibraryDownloadsTest {
+    @Test fun `retiring an AMP index write does not cancel unrelated selected metadata downloads`() = runBlocking {
+        val f = Fixture(this)
+        f.payloads[Amp.indexUrl] = listOf("hash", "1", "3000", "player", "uade", "Protracker", "0", "42", "crc", "crc", "A/Artist/MOD.song.gz")
+            .joinToString("\t").toByteArray()
+        f.beforeReplace = { catalogue ->
+            if (catalogue == Amp) {
+                Amp.access.setEnabled(false)
+                Amp.access.setEnabled(true)
+                throw kotlinx.coroutines.CancellationException("AMP write retired")
+            }
+        }
+        try {
+            f.downloads.downloadSelected(setOf(Amp.id, DownloadPlan.SONG_METADATA))
+            drain()
+            assertTrue("metadata is still fetched after retiring AMP", "metadata" in f.events)
+            assertTrue("lengths are still fetched after retiring AMP", "songdb-lengths" in f.events)
+            assertFalse(Amp.id in f.indexed)
+            assertTrue(f.busy.isEmpty())
+        } finally { Amp.access.setEnabled(true) }
+    }
+    @Test fun `disabling AMP during index fetch retires progress and does not publish or store late data`() = runBlocking {
+        val f = Fixture(this)
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        f.beforeFetch = { if (it == Amp.indexUrl) { entered.complete(Unit); release.await() } }
+        f.payloads[Amp.indexUrl] = listOf("hash", "1", "3000", "player", "uade", "Protracker", "0", "42", "crc", "crc", "A/Artist/MOD.song.gz")
+            .joinToString("\t").toByteArray()
+        f.downloads.indexCatalogue(Amp.id)
+        entered.await()
+        try {
+            Amp.access.setEnabled(false)
+            Amp.access.setEnabled(true)
+            release.complete(Unit)
+            coroutineContext.job.children.toList().joinAll()
+            assertFalse(Amp.id in f.indexed)
+            assertFalse(Amp.id in f.busy)
+            assertFalse("catalogue-stored" in f.events)
+        } finally { release.complete(Unit); Amp.access.setEnabled(true) }
+    }
     private companion object {
         const val METADATA = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/1bad3e8/tsv/pretty/md5/metadata.tsv"
         const val LENGTHS = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/1bad3e8/tsv/pretty/md5/songlengths.tsv"
@@ -55,6 +95,7 @@ class LibraryDownloadsTest {
             METADATA to byteArrayOf(1), LENGTHS to byteArrayOf(2), FAVOURITES to byteArrayOf(3),
         )
         var beforeFetch: suspend (String) -> Unit = {}
+        var beforeReplace: suspend (Catalogue) -> Unit = {}
         var storeArchiveSucceeds = true
         var playable = 1
         var metadataCount = 20
@@ -75,6 +116,7 @@ class LibraryDownloadsTest {
             return storeArchiveSucceeds
         }
         override suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>): Int {
+            beforeReplace(catalogue)
             events += "index:${catalogue.id}"
             indexed[catalogue.id] = entries
             return playable

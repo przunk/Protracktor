@@ -196,10 +196,13 @@ for current evidence, intentional exclusions and unchecked physical behaviour. C
 - **A7 / HVSC:** browse the collection itself; SID song-length lookup already exists.
 - **A7 / Aminet:** indexing and archive extraction.
 - **Catalogue candidates:** investigate vgmrips, snesmusic and zxart if selected.
-- **A7 / AMP (Amiga Music Preservation):** renewed owner TODO, 2026-10-13. Establish an approved
-  access/index/download route before deciding integration. The 2026-09-04 investigation found no
-  sanctioned machine-readable route; this request does not authorize crawling, scraping or contact
-  with maintainers. Reuse A7, not a duplicate wishlist item.
+- **A7 / AMP (Amiga Music Preservation):** selected for planned 1.5.0 integration on
+  2026-11-01, superseding the earlier maintainer-approval hold. Preserve the original trial;
+  integrate on `feature/amp-release-integration`. Pinned songdb index, saved default-On Settings
+  switch, individual cached downloads, attribution and no crawling/prefetch/bulk transfer.
+  No reply or individual maintainer approval is recorded. Follow-up draft is prepared for manual
+  sending; combined host gate/APK and phone acceptance remain pending. Historical trial and
+  rebase checks are retained in [the evidence](PR_AMP_CATALOGUE.md); [current contract](PLAN_AMP.md).
 - **Web relay:** UnExoticA and The Mod Archive need separate access/infrastructure decisions for
   browser integration; Android permission does not approve server-side relaying.
 - **Web handoff:** optionally retain several From the phone playlists rather than only the latest;

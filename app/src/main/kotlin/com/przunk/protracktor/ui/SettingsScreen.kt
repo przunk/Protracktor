@@ -89,6 +89,8 @@ fun SettingsScreen(
     onFallbackLengthChanged: (Int) -> Unit,
     cacheAhead: CacheAhead,
     onCacheAheadSelected: (CacheAhead) -> Unit,
+    ampEnabled: Boolean,
+    onAmpEnabledChanged: (Boolean) -> Unit,
     shareAudioMinutes: Int,
     onShareAudioMinutesSelected: (Int) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
@@ -325,6 +327,23 @@ fun SettingsScreen(
         // **Fetching a folder ahead** (`docs/BACKLOG.md` A55). Its own group because it spends the
         // user's data, and that is a question about the network, not about sound or looks.
         item { HorizontalDivider(); Section(R.string.settings_online_section) }
+
+        item {
+            val label = stringResource(R.string.settings_amp)
+            ListItem(
+                modifier = Modifier.clickable { onAmpEnabledChanged(!ampEnabled) },
+                leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
+                headlineContent = { Text(label) },
+                supportingContent = { Text(stringResource(R.string.settings_amp_detail)) },
+                trailingContent = {
+                    Switch(
+                        checked = ampEnabled,
+                        onCheckedChange = onAmpEnabledChanged,
+                        modifier = Modifier.semantics { contentDescription = label },
+                    )
+                },
+            )
+        }
 
         item {
             SettingChoice(

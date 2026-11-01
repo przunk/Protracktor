@@ -1,12 +1,14 @@
-# Shared selected-download plan; WEB credits intentionally omit excluded songdb lengths.
-# cases: 9
-case	selected	expected
-empty	-	-
-modland	modland	modland,favourites
-asma	asma	asma
-metadata	songmetadata	songlengths,trackmetadata
-all	songmetadata,asma,modland	modland,favourites,asma,songlengths,trackmetadata
-unknown	unknown	-
-mixed	unknown,asma,songmetadata	asma,songlengths,trackmetadata
-no-live	modarchive,amp,replayroutines	-
-duplicated	modland,modland,songmetadata	modland,favourites,songlengths,trackmetadata
+# Shared download selections; Android includes AMP while WEB stays Modland/ASMA-only.
+# cases: 11
+case	selected	android	web
+empty	-	-	-
+modland	modland	modland,favourites	modland,favourites
+asma	asma	asma	asma
+metadata	songmetadata	songlengths,trackmetadata	songlengths,trackmetadata
+all	songmetadata,asma,modland	modland,favourites,asma,songlengths,trackmetadata	modland,favourites,asma,songlengths,trackmetadata
+unknown	unknown	-	-
+mixed	unknown,asma,songmetadata	asma,songlengths,trackmetadata	asma,songlengths,trackmetadata
+excluded-and-live	modarchive,amp,replayroutines	amp	-
+duplicated	modland,modland,songmetadata	modland,favourites,songlengths,trackmetadata	modland,favourites,songlengths,trackmetadata
+amp	amp	amp	-
+amp-and-asma	amp,asma	asma,amp	asma

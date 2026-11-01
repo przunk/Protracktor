@@ -14,6 +14,12 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
@@ -40,11 +46,12 @@ class SettingsStereoMixTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private val selected = mutableStateOf(StereoMix.ORIGINAL)
     private val requests = mutableListOf<StereoMix>()
+    private val amp = mutableStateOf(true)
 
     @Before fun start() {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
         activity.get().getSharedPreferences("protracktor_preferences", Context.MODE_PRIVATE)
-            .edit().remove("stereo_mix").commit()
+            .edit().remove("stereo_mix").remove("amp_enabled").commit()
     }
 
     @After fun stop() {
@@ -55,6 +62,7 @@ class SettingsStereoMixTest {
 
     private fun show() {
         selected.value = Appearance.stereoMix(activity.get())
+        amp.value = Appearance.ampEnabled(activity.get())
         activity.get().setContent {
             MaterialTheme {
                 SettingsScreen(
@@ -75,6 +83,10 @@ class SettingsStereoMixTest {
                     onThemeSelected = {}, onDynamicColourChanged = {}, onToggleAllSubsongs = {},
                     fallbackLengthSeconds = 300, onFallbackLengthChanged = {},
                     cacheAhead = CacheAhead.DEFAULT, onCacheAheadSelected = {},
+                    ampEnabled = amp.value, onAmpEnabledChanged = {
+                        Appearance.selectAmpEnabled(activity.get(), it)
+                        amp.value = it
+                    },
                     shareAudioMinutes = 3, onShareAudioMinutesSelected = {}, onLanguageSelected = {},
                     onClearCache = {}, onDeleteIndex = {}, onDeleteSongMetadata = {}, onDeleteReplayRoutines = {},
                 )
@@ -94,6 +106,19 @@ class SettingsStereoMixTest {
         compose.onNodeWithText("Original").performClick().assertIsSelected()
         assertEquals(listOf(StereoMix.NARROW, StereoMix.MONO, StereoMix.ORIGINAL), requests)
         assertEquals(StereoMix.ORIGINAL, Appearance.stereoMix(activity.get()))
+    }
+
+    @Test fun `AMP switch starts on and click persists off across reopening Settings`() {
+        show()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("AMP catalogue"))
+        compose.onNodeWithContentDescription("AMP catalogue")
+            .assertIsOn().performClick().assertIsOff()
+        assertEquals(false, Appearance.ampEnabled(activity.get()))
+        activity.get().setContent { }
+        compose.waitForIdle()
+        show()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("AMP catalogue"))
+        compose.onNodeWithContentDescription("AMP catalogue").assertIsOff()
     }
 
     @Test fun `reopening Settings reflects the stored mode without requesting a new selection`() {

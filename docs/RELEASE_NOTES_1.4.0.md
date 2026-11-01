@@ -18,8 +18,8 @@ The unchanged script-generated [release ledger](../store/play-console/releases.m
 artifact metadata and upload-certificate fingerprint. Its uploaded-notes wording identifies
 the tagged text, not independent confirmation of an upload.
 
-Copy-ready Play notes: [English](../store/listing/en-US/release-notes/default.txt) and
-[Polish](../store/listing/pl-PL/release-notes/default.txt), both within the project's 500-character
+Copy-ready Play notes: [English](https://github.com/przunk/Protracktor/blob/v1.4.0/store/listing/en-US/release-notes/default.txt) and
+[Polish](https://github.com/przunk/Protracktor/blob/v1.4.0/store/listing/pl-PL/release-notes/default.txt), both within the project's 500-character
 limit and matching `v1.4.0`. Earlier notes remain at their release tags.
 
 ## Features and user-reported improvements

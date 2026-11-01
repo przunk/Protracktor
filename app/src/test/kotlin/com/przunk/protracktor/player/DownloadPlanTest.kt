@@ -81,15 +81,15 @@ class DownloadPlanTest {
         val count = lines.first { it.startsWith("# cases: ") }.substringAfter(": ").toInt()
         val rows = lines.filter { it.isNotBlank() && !it.startsWith("#") }
         require(count > 0)
-        assertEquals("case\tselected\texpected", rows.first())
+        assertEquals("case\tselected\tandroid\tweb", rows.first())
         assertEquals("A shared selection is missing", count, rows.size - 1)
         fun ids(value: String): List<String> = if (value == "-") emptyList() else value.split(',')
         rows.drop(1).forEach { line ->
             val fields = line.split('\t')
-            assertEquals(3, fields.size)
+            assertEquals(4, fields.size)
             assertEquals(fields[0], ids(fields[2]), DownloadPlan.stepsFor(ids(fields[1]).toSet()))
         }
-        // The shared step is credits-only in WEB; its intentionally narrower byte cost is tested there.
+        // WEB excludes AMP and songdb lengths; platform expectations are explicit, never filtered out of results.
     }
 
 }

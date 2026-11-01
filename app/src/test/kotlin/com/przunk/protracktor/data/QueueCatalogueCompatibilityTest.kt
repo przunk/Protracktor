@@ -4,11 +4,14 @@ package com.przunk.protracktor.data
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.CatalogueEntry
+import com.przunk.protracktor.net.CatalogueRetention
 import com.przunk.protracktor.net.Modland
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -23,12 +26,15 @@ class QueueCatalogueCompatibilityTest {
     private val database get() = ProtracktorDatabase.of(context).writableDatabase
 
     @Before fun seed() = runBlocking {
+        Amp.access.setEnabled(false)
         database.delete("catalogues", null, null)
         CatalogueStore(context).replaceIndex(Modland,
             listOf(CatalogueEntry("Protracker/Artist/visible.mod", "Protracker", "Artist", "visible.mod", 42)), "test")
         database.execSQL("INSERT INTO catalogues(id, display_name, track_count, archive_count, complete) VALUES ('amp', 'AMP', 1, 1, 1)")
         database.execSQL("INSERT INTO catalogue_tracks(catalogue_id,path,format,author,title,size,ext,pre,playable,platform) VALUES ('amp','A/Artist/MOD.retained.gz','MOD','Artist','MOD.retained',42,'mod','mod',1,'amiga')")
     }
+
+    @After fun restoreAccess() { Amp.access.setEnabled(true) }
 
     @Test fun `startup preserves AMP index for return to its APK`() = runBlocking {
         CatalogueStore(context).pruneUnknownCatalogues()
@@ -38,7 +44,7 @@ class QueueCatalogueCompatibilityTest {
         }
     }
 
-    @Test fun `retained AMP never leaks into discovery or explicit catalogue reads`() = runBlocking {
+    @Test fun `disabled AMP never leaks into discovery or explicit catalogue reads`() = runBlocking {
         val store = CatalogueStore(context)
         assertEquals(1, store.countMatches("", emptySet()))
         assertEquals(listOf("modland"), store.search("", emptySet(), 10).map { it.catalogueId })
@@ -51,6 +57,18 @@ class QueueCatalogueCompatibilityTest {
         assertTrue(store.tracks("amp", "MOD", "Artist").isEmpty())
         assertFalse(store.hasGroup("amp", "MOD", "Artist"))
         assertNull(store.locate("amp", "A/Artist/MOD.retained.gz"))
+        assertTrue(CatalogueRetention.blocksReference("amp://A/Artist/MOD.retained.gz"))
+    }
+
+    @Test fun `enabled AMP remains playable and discoverable with queue retention guards`() = runBlocking {
+        Amp.access.setEnabled(true)
+        val store = CatalogueStore(context)
+        assertFalse(CatalogueRetention.blocksReference("amp://A/Artist/MOD.retained.gz"))
+        assertEquals(2, store.countMatches("", emptySet()))
+        assertEquals(setOf("amp", "modland"), store.search("", emptySet(), 10).map { it.catalogueId }.toSet())
+        assertEquals(setOf("amp", "modland"), store.randomSample(10).map { it.catalogueId }.toSet())
+        assertEquals(2, store.platformCounts()["amiga"])
+        assertNotNull(store.locate("amp", "A/Artist/MOD.retained.gz"))
     }
 
     @Test fun `AMP playlist History and bookmark survive pruning and database reopen`() = runBlocking {

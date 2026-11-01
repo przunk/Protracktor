@@ -37,3 +37,26 @@ After phone acceptance, merge the approved features, finalize EN/PL Play notes a
 notes. The interactive `scripts/release.sh 1.5.0 --check` / `scripts/release.sh 1.5.0`, AAB upload
 and `scripts/push-protracktor.sh master develop v1.5.0` remain the release terminal workflow.
 No release, tag, upload, push or WEB deployment is performed by this preparation record.
+
+## Combined candidate — 2026-11-01
+
+`test/1.5.0-candidate` combines `feature/floating-controls-settings` (`17a7161`) and
+`feature/amp-release-integration` (`8972f7cf`) without changing develop. AppTheme retains both
+independent saved keys, controller initialization restores both choices, and Settings receives
+both state/callback pairs. The source trial remains `feature/amp-catalogue` (`e728fa6`).
+
+The floating-controls stage passes 21 focused tests, with a failing lazy-host negative control;
+the AMP stage passes 64 focused tests. These are stage checks, not a complete combined gate.
+Full tests/lint and the minified release APK are next; phone behaviour remains unchecked.
+Draft Play notes and [full 1.5.0 notes](RELEASE_NOTES_1.5.0.md) prepare the release description,
+without creating a release/tag or asserting publication.
+
+### Shared download fixture correction
+
+The first combined full gate stopped at 392 cases: 391 passed and one assertion failed.
+The shared WEB download fixture expected AMP to be unavailable on Android too; Android now
+correctly offers its index. The fixture has explicit Android/WEB expectations and dedicated AMP
+and AMP-with-ASMA cases, so neither platform's actual output is filtered before assertion.
+A negative control changing the WEB AMP expectation to a downloadable step fails the production
+WEB check. The fixture is already declared as a Gradle test input. Full verification is repeated
+with the corrected scope; no application download behaviour was changed for this correction.

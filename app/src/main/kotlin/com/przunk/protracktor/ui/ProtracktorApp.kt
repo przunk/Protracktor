@@ -487,6 +487,8 @@ fun ProtracktorApp(
                         onFallbackLengthChanged = viewModel::setFallbackLength,
                         cacheAhead = state.cacheAhead,
                         onCacheAheadSelected = viewModel::setCacheAhead,
+                        ampEnabled = state.ampEnabled,
+                        onAmpEnabledChanged = viewModel::setAmpEnabled,
                         shareAudioMinutes = state.shareAudioMinutes,
                         onShareAudioMinutesSelected = viewModel::setShareAudioMinutes,
                         onLanguageSelected = onLanguageSelected,

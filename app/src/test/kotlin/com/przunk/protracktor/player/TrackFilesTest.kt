@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.UnExoticA
+import com.przunk.protracktor.net.Amp
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -18,13 +19,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TrackFilesTest {
-    @Test fun `retained AMP references cannot fall through to document or network reads`() = runBlocking {
-        val access = Access(byteArrayOf(1))
-        val files = TrackFiles(access, Dispatchers.Default) {}
-        assertNull(files.read(track("amp://A/Artist/MOD.song.gz")))
-        assertTrue(access.calls.isEmpty())
+    @Test fun `AMP main and companion reads are blocked when disabled including retained refs`() = runBlocking {
+        val access = Access(byteArrayOf(1, 2, 3))
+        val files = files(access)
+        Amp.access.setEnabled(false)
+        try {
+            assertNull(files.read(track("amp://A/Artist/MOD.song.gz")))
+            assertTrue(files.companions(track("amp://A/Artist/mdat.song.gz", "mdat.song")).isEmpty())
+            assertTrue(access.calls.isEmpty())
+        } finally { Amp.access.setEnabled(true) }
     }
 
+    @Test fun `AMP gzip uses its module URL and decoder receives unpacked bytes`() = runBlocking {
+        val original = byteArrayOf(1, 2, 3)
+        val packed = java.io.ByteArrayOutputStream().also { output ->
+            java.util.zip.GZIPOutputStream(output).use { it.write(original) }
+        }.toByteArray()
+        val access = Access(packed)
+        org.junit.Assert.assertArrayEquals(original, files(access).read(track("amp://A/Artist/MOD.song.gz", "MOD.song")))
+        assertEquals(listOf("fetch:https://amp.dascene.net/modules/A/Artist/MOD.song.gz", "refreshed"), access.calls)
+    }
     private val payload = byteArrayOf(1, 2, 3)
     private fun track(id: String, name: String = id.substringAfterLast('/')) =
         TrackRef(id = id, title = name, fileName = name)

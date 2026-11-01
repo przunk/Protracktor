@@ -30,6 +30,8 @@ object DownloadSizes {
     const val MODLAND_MB = 6
     const val ASMA_MB = 20
     const val UNEXOTICA_MB = 2
+    /** Pinned AMP songdb index: 23,820,617 bytes, measured 2026-10-18. */
+    const val AMP_MB = 23
     const val SONG_LENGTHS_MB = 5
     /** The metadata and the song lengths, one tick since A52 (`docs/PLAN_SONGDB_LENGTHS.md` D1). */
     const val TRACK_METADATA_MB = 26
@@ -37,5 +39,5 @@ object DownloadSizes {
 
     /** What the button says. The parts are rounded up individually, so this is a ceiling. */
     const val EVERYTHING_MB =
-        MODLAND_MB + ASMA_MB + UNEXOTICA_MB + SONG_LENGTHS_MB + TRACK_METADATA_MB + FAVOURITES_MB
+        MODLAND_MB + ASMA_MB + UNEXOTICA_MB + AMP_MB + SONG_LENGTHS_MB + TRACK_METADATA_MB + FAVOURITES_MB
 }

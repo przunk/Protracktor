@@ -12,9 +12,9 @@ const test = async (name, run) => { try { await run(); } catch (error) { console
 await test('shared native plans, choice order, approved source filtering and explicit credits-only size', async () => {
   const lines = fs.readFileSync('docs/rules/download-plan-cases.tsv', 'utf8').trim().split('\n');
   const expected = Number(lines.find((row) => row.startsWith('# cases: ')).slice(9));
-  const rows = lines.filter((row) => !row.startsWith('#')); assert.equal(rows.shift(), 'case\tselected\texpected'); assert.equal(rows.length, expected); assert(expected > 0);
+  const rows = lines.filter((row) => !row.startsWith('#')); assert.equal(rows.shift(), 'case\tselected\tandroid\tweb'); assert.equal(rows.length, expected); assert(expected > 0);
   const ids = (value) => value === '-' ? [] : value.split(',');
-  for (const line of rows) { const [name, selected, wanted] = line.split('\t'); assert.deepEqual(downloadSteps(ids(selected)), ids(wanted), name); }
+  for (const line of rows) { const [name, selected, , wanted] = line.split('\t'); assert.deepEqual(downloadSteps(ids(selected)), ids(wanted), name); }
   assert.deepEqual(downloadSteps(['unexotica']), []); // Approved WEB scope is narrower than native.
   assert.equal(downloadMegabytes(['modland', 'asma', 'songmetadata']), 47); assert.equal(downloadMegabytes(['songmetadata']),20); assert.equal(downloadMegabytes([]),0);
   assert.deepEqual(missingDownloads({modland:true,asma:false,songmetadata:false}),['asma','songmetadata']);

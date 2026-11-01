@@ -26,6 +26,16 @@ import org.junit.Test
 
 class PlaybackReadAheadTest {
     @Test(timeout = 5_000)
+    fun `AMP speculation never reads music while ordinary read ahead still works`() = runBlocking {
+        val calls = mutableListOf<String>()
+        val ahead = PlaybackReadAhead(this) { calls += it.id; byteArrayOf(1) }
+        ahead.prepare(listOf(track("amp://A/Artist/MOD.song.gz"), track("https://other/song.mod")))
+        drain()
+        assertEquals(listOf("https://other/song.mod"), calls)
+        assertNull(ahead.take("amp://A/Artist/MOD.song.gz"))
+        assertTrue(ahead.take("https://other/song.mod") != null)
+    }
+    @Test(timeout = 5_000)
     fun `a late result for the same id cannot replace bytes from the new request`() = runBlocking {
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()

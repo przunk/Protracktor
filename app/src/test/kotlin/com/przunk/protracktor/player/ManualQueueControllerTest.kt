@@ -85,6 +85,60 @@ class ManualQueueControllerTest {
         assertNotEquals(state.value.schedule.pending[0].id, state.value.schedule.pending[1].id)
     }
 
+    @Test fun `AMP queue requests follow the catalogue switch without replacing context`() {
+        val amp = TrackRef("amp://A/Artist/MOD.song.gz", "AMP song", fileName = "MOD.song")
+        val before = state.value
+        try {
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+
+            controller.setAmpEnabled(false)
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+            assertEquals(app.getString(com.przunk.protracktor.R.string.notice_amp_disabled), state.value.message!!.text)
+
+            controller.setAmpEnabled(true)
+            controller.enqueueTrack(amp)
+            assertEquals(listOf(amp, amp), state.value.schedule.pending.map { it.track })
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(before.current, state.value.current)
+        } finally {
+            controller.setAmpEnabled(true)
+        }
+    }
+
+    @Test fun `disabling AMP stops its manual occurrence and retains context and waiting requests`() {
+        val amp = TrackRef("amp://A/Artist/MOD.song.gz", "AMP song", fileName = "MOD.song")
+        val before = state.value
+        try {
+            controller.enqueueTrack(amp)
+            controller.enqueueTrack(track("X"))
+            val selected = requireNotNull(state.value.schedule.playRequest(
+                state.value.schedule.pending.first().id, state.value.activePlayback))
+            state.value = state.value.copy(schedule = selected.schedule, playing = true, loadingTrack = true)
+
+            controller.setAmpEnabled(false)
+            assertEquals(amp, state.value.current)
+            assertFalse(state.value.playing)
+            assertFalse(state.value.loadingTrack)
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(listOf(track("X")), state.value.schedule.pending.map { it.track })
+            assertEquals(app.getString(com.przunk.protracktor.R.string.notice_amp_disabled), state.value.message!!.text)
+
+            controller.setAmpEnabled(true)
+            assertEquals(amp, state.value.current)
+            assertFalse(state.value.playing)
+            assertEquals(before.activePlayback, state.value.activePlayback)
+            assertEquals(listOf(track("X")), state.value.schedule.pending.map { it.track })
+        } finally {
+            controller.setAmpEnabled(true)
+        }
+    }
+
     @Test fun `Clear preserves paused transport and draft and Undo restores only the playback plan`() {
         controller.enqueueTrack(track("X"))
         val before = state.value

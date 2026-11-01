@@ -1,8 +1,8 @@
 Zmiany na podstawie uwag użytkowników:
 
-- Opcjonalna normalizacja głośności w ustawieniach.
-- Powrót z kolejki do źródła bez przerywania muzyki.
-- Czytelniejszy zwinięty odtwarzacz, stabilne przyciski i więcej miejsca na dane utworu.
-- Spójne odstępy w Browse i Online catalogues.
-- Naprawione pobieranie wybranych starszych adresów Modlandu, także w zagnieżdżonych folderach.
-- Stabilniejsze ładowanie i poprawne wskazanie początkowego subsongu.
+- Szukanie na bieżącej playliście podczas pisania, bez zmiany odtwarzania.
+- Historia aktualizuje się bez wychodzenia z widoku.
+- Katalog AMP: przeglądanie, wyszukiwanie i cache wybranych utworów.
+- Opcjonalne pływające przyciski: włącz w ustawieniach, potem przytrzymaj Odtwórz/Pauza.
+- Czytelniejszy jasny motyw, wyrównane przyciski i widoczne paski systemowe.
+- Poprawiona normalizacja głośności.
