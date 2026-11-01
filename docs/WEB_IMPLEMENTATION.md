@@ -8,6 +8,20 @@ as separate feature/substage commits. The ignored local GOAL.md is the execution
 Source inspection and host checks are not physical-browser acceptance. No automatic merge,
 push, publication, APK, release version change or AMP integration is part of this work.
 
+## Current development update — 2026-11-01
+
+All W01–W25 scopes below are implemented and integrated into development. The original handoff,
+publication measurements and dated checkpoints retain their own source identities; they are not
+a current list of missing features.
+
+[B55 search inside the open playlist](PLAYLIST_SEARCH.md) adds live filtering of the current
+editor on Android and WEB, independently of W11 cross-playlist/catalogue search. Its checked
+application source is `c884b4c`: the field and results stay bright while surrounding controls dim,
+and playback continues using the complete source order. Phone feedback accepts the corrected
+Android appearance and integration is approved. The WEB implementation passes five Chromium
+profiles / 55 visual guards; physical WEB/Firefox acceptance and a new deployment remain separate.
+[Current verification and acceptance](PLAYLIST_SEARCH.md#acceptance-and-integration-approval--2026-11-01).
+
 ## Final technical handoff — 2026-10-30
 
 **Publication check, 2026-10-30:** the public [GitHub Pages player](https://przunk.github.io/Protracktor/)

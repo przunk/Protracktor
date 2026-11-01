@@ -8,12 +8,17 @@ runs the actual WEB packaging scripts against disposable reproducibility/identit
 
 ## B55 playlist search trial — 2026-11-01
 
-Candidate: clean source **c884b4c**, minified test-signed release **1.4.0 (1417)**.
+The corrected focus area and overall appearance received positive phone feedback; integration
+into `develop` is approved on 2026-11-01. The installed build/device and individual scenario
+outcomes were not separately supplied. This is visual phone acceptance, not a completed physical
+WEB/Firefox trial or an implied pass of every keyboard, gesture and accessibility case below.
+
+Accepted handoff: clean source **c884b4c**, minified test-signed release **1.4.0 (1417)**.
 [APK and automated evidence](PLAYLIST_SEARCH.md#result-emphasis-correction--2026-11-01).
 The 1,289-test Android suite, 1,396 WEB page assertions, companion checks and lint passed;
 these do not establish the phone interaction below.
 
-On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved edits:
+For remaining checks on the accepted handoff, use EN/PL, Dark/Light and a playlist with unsaved edits:
 
 1. Open Search beside the playlist chooser. Confirm its row does not grow and the replacement
    animates smoothly. The keyboard opens; the field and result list stay fully bright while
@@ -33,7 +38,8 @@ On the candidate release APK, test EN/PL, Dark/Light and a playlist with unsaved
    playlist. Confirm that opening/closing it never stops music.
 
 Automated source checks and browser captures are recorded in [the contract](PLAYLIST_SEARCH.md).
-Phone gestures, keyboard integration and animation quality remain **unchecked** until this trial.
+The reported focus-area/appearance outcome is accepted. Remaining individual gesture, keyboard,
+accessibility and animation cases stay **unchecked** until their outcomes are supplied.
 
 ## C130 WEB normalization startup — Firefox trial pending, 2026-10-31
 

@@ -12,8 +12,8 @@ browsing without replacing what is playing. The active playback context and manu
 independent of the list currently on screen.
 
 **Protracktor is in closed testing on Google Play.** This README describes the current development
-code; a tagged release can have fewer features. Prepared store bundles, their versions, exact
-source commits/tags and hashes are recorded in
+code; a tagged release or deployed browser copy can have fewer features. Prepared store bundles,
+their versions, exact source commits/tags and hashes are recorded in
 [`store/play-console/releases.md`](store/play-console/releases.md) by `scripts/release.sh`.
 Preparing a bundle or creating a tag does not establish upload or publication. Current release
 and verification status is tracked in [`docs/STATUS.md`](docs/STATUS.md).
@@ -30,12 +30,16 @@ available for operational reversibility, not because permission is pending.
 HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` the one an Amiga
 tune cannot; what neither knows is measured while the tune plays.
 
+[Search inside the open playlist](docs/PLAYLIST_SEARCH.md) filters its current draft as you type,
+ignoring case and accents in titles, authors, filenames and paths. Android and WEB retain the
+full playback context; closing search restores the full list and its previous scroll position.
+
 Optional [volume normalization](docs/VOLUME_NORMALIZATION.md) reduces track-to-track loudness
 differences during Android and browser playback; it does not process exported audio.
 
-The **browser player** in `web/` supports Modland, ASMA and HVSC, browser playlists, an independent
-playback context and manual queue, History/search/bookmarks, retained music and optional offline
-ASMA. It can also receive a playlist from the phone. See [WEB_SERVER](docs/WEB_SERVER.md) to run
+The **browser player** in `web/` browses Modland and ASMA and uses HVSC duration data. It supports
+browser playlists, an independent playback context and manual queue, History/search/bookmarks,
+retained music and optional offline ASMA. It can also receive a playlist from the phone. See [WEB_SERVER](docs/WEB_SERVER.md) to run
 it and the [browser trial checklist](docs/WEB_PARITY_CHECKLIST.md) for verification and platform
 limits. Browser system controls depend on the browser's Media Session routing.
 
@@ -77,7 +81,10 @@ source comments may refer to their historical paths.
 | [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
 | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | what the app has to do, each requirement traced to the complaint it came from |
 | [`docs/LAUNCH_READINESS.md`](docs/LAUNCH_READINESS.md) | what is left before the public launch, in Play Console and here, and where the web player goes |
-| [`docs/PLAN_WEB_PARITY.md`](docs/PLAN_WEB_PARITY.md) | the browser brought level with the app, W1–W11 |
+| [`docs/WEB_IMPLEMENTATION.md`](docs/WEB_IMPLEMENTATION.md) | implemented WEB scopes W01–W25, Android comparisons and dated verification |
+| [`docs/WEB_PARITY_CHECKLIST.md`](docs/WEB_PARITY_CHECKLIST.md) | current browser trial, including playlist search, and remaining platform checks |
+| [`docs/PLAYLIST_SEARCH.md`](docs/PLAYLIST_SEARCH.md) | search within the current playlist, focus behaviour, playback context and acceptance |
+| [`docs/PLAN_WEB_PARITY.md`](docs/PLAN_WEB_PARITY.md) | historical WEB stages W1–W11; current state is in the implementation ledger |
 | [`docs/PLAN_ROUND_13.md`](docs/PLAN_ROUND_13.md) | the round after 0.7.0: titles, accent-blind search, the dock, folders cached ahead |
 | [`docs/PLAN_SONGDB_LENGTHS.md`](docs/PLAN_SONGDB_LENGTHS.md) | where Amiga tunes get their length, and in what order the sources are asked |
 | [`docs/PLAN_INSTRUMENT_NAMES.md`](docs/PLAN_INSTRUMENT_NAMES.md) | instrument and sample names in Now Playing, planned before any code |

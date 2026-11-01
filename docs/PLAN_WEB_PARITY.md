@@ -5,10 +5,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # The page catches up with the APK
 
-For the current identified gaps, see the
-[WEB and Android comparison dated 2026-10-26](WEB_ANDROID_PARITY_2026-10-26.md).
-This plan retains the earlier implementation history; its early missing-feature descriptions
-are not a current backlog.
+For current implementation and remaining verification, use the
+[WEB implementation ledger](WEB_IMPLEMENTATION.md), [browser trial](WEB_PARITY_CHECKLIST.md)
+and [Status](STATUS.md). The [comparison dated 2026-10-26](WEB_ANDROID_PARITY_2026-10-26.md)
+records the original gaps before W01–W25 were completed. B55's later local playlist filtering is
+covered by [its own contract](PLAYLIST_SEARCH.md).
+This plan retains earlier implementation history; its early missing-feature descriptions are
+not a current backlog.
 
 **Done 2026-09-22: W1–W11 merged to `develop`, checked by the owner in a browser. W6 and W7 (Polish,
 a light theme) remain for after the public launch, as decided (W-D3).**

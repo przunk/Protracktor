@@ -16,6 +16,15 @@ The technical candidate is source **abd505a11f389509e92dfab6ad3f496d0364fa1a** a
 `88cd7b0ab3068fc69cd2f830c08f1805a089d7dde76723a1bb948b3e19f36644`.
 Later documentation commits do not identify another tested application.
 
+## Current-code additions — 2026-11-01
+
+The archive above is the original W01–W25 handoff. Later development includes the C130
+normalization correction and B55 local playlist filtering; use the current source/package
+identity from Status rather than assuming they exist in that archive or a retained PWA cache.
+B55's checked Android/WEB application source is `c884b4c`; local Chromium captures pass 55 guards
+across five profiles. Positive phone appearance feedback does not establish a physical browser
+result. [Accepted B55 contract and evidence](PLAYLIST_SEARCH.md).
+
 ## Environments to record
 
 | Environment | State |
@@ -74,6 +83,11 @@ PWA installation; plain HTTP on a LAN is not an equivalent installation environm
 - [ ] **W11:** Search held catalogues, platforms and all saved browser playlists. Check short/
   empty phrases, duplicate IDs, result order/cap and unavailable-scope explanations. Returning
   from Queue restores the producing query/scope, not an unsubmitted draft. No local-folder scope.
+- [ ] **B55:** Search beside the playlist chooser replaces its existing row. While typing, the
+  field and results stay bright and header/dock controls dim. Match title/author/filename/path,
+  including accents, then play a result: keep the filter, restore normal brightness and retain
+  full-playlist Next/Previous. Clear restores reorder grips; Close restores all rows and the
+  previous viewport. Removal/bulk/enqueue must act only on the intended original occurrences.
 - [ ] **W12:** Reorder playlist rows by drag, arrows and menu; check live crossings, cancellation,
   scroll and Save/Discard. A legacy playlist with duplicate URLs must retain the correct playing
   occurrence when another row is deleted/restored. From the phone remains protected.

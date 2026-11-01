@@ -10,8 +10,9 @@ it does not change catalogue search, saved queries or B56.
   Opening search replaces that row with a full-width field, animated in both directions. It adds
   no row and preserves header height. The other action buttons and the dock retain their layout.
 - Entering search focuses the field and opens the keyboard. The field and result list remain
-  fully bright as the focused area; editing dims only surrounding header/dock controls. A result starts playback, dismisses the keyboard
-  and removes dimming while retaining the phrase and filtered list. Refocusing dims again.
+  fully bright as the focused area; editing dims only surrounding header/dock controls. A result
+  starts playback, dismisses the keyboard and removes dimming while retaining the phrase and
+  filtered list. Refocusing dims again.
 - Dimmed header/dock controls dismiss editing on the first press instead of activating underneath.
   The field has a clear-query action and a separate close-search action. Closing restores the
   full playlist and its previous scroll position. Back/Escape first ends editing, then closes
@@ -31,11 +32,11 @@ it does not change catalogue search, saved queries or B56.
 
 ## Implementation and evidence — 2026-11-01
 
-This records the first candidate; the corrected focus-area candidate and replacement APK are
+This records the first candidate; the accepted focus-area correction and replacement APK are
 [below](#result-emphasis-correction--2026-11-01).
 
-Implemented on `feature/playlist-search`, from develop `d22afc5`; integration awaits the phone
-trial and explicit approval. The matching projection is pure Kotlin/JavaScript; the existing
+Implemented on `feature/playlist-search`, from develop `d22afc5`. This first handoff was followed
+by the correction and integration approval recorded below. The matching projection is pure Kotlin/JavaScript; the existing
 player remains the owner of the complete playback order. No dependency, schema or release
 version changes are included.
 
@@ -43,8 +44,8 @@ Agent verification:
 
 - **Checked:** 1,288 Android JVM tests / 176 suites, zero failures/errors/skips, actual execution
   in 524 s at source `d5b048f`. Candidate `0ddb961` has byte-identical application inputs;
-  subsequent changes only repair page fixtures. This includes three matching/projection cases and seven production-shell Compose
-  cases under Robolectric SDK 29. A wrong filtered-removal index fails its regression check;
+  subsequent changes only repair page fixtures. This includes three matching/projection cases
+  and seven production-shell Compose cases under Robolectric SDK 29. A wrong filtered-removal index fails its regression check;
   inactive search clearing another destination's focus also failed before correction.
 - **Checked:** 1,396 production-page ESM/DOM assertions, all companion domain/storage/startup,
   engine/PCM/worklet, native audio, migration, icon, PWA and server checks. A wrong filtered
@@ -71,7 +72,7 @@ Candidate: clean source **0ddb961**, minified test-signed **1.4.0 (1415)**, buil
 [Release APK](../dist/protracktor-release-1.4.0-1415-0ddb961-20261101-210355.apk). SHA-256:
 `259148132b0460c11d3017770a0669852e68b990f87cb109d1fc94599c0c496a`.
 
-The branch remains unmerged; no push, WEB deployment, AAB or release tag was made.
+At this first handoff the branch was unmerged; no push, WEB deployment, AAB or release tag was made.
 
 ## Result emphasis correction — 2026-11-01
 
@@ -100,13 +101,24 @@ Agent verification at clean application source **c884b4c**:
   all five editing originals and the native after-correction bitmap.
   [Updated capture gallery](../dist/web-visual-c884b4c-2026-11-01T20-26-29-083Z/index.html).
 - **Partially checked:** release packaging, R8, non-debuggable manifest, verified test certificate,
-  version and 16 KB ZIP alignment. Physical Android/Firefox behaviour remains **unchecked**;
-  repeat [the phone trial](TESTING.md#b55-playlist-search-trial--2026-11-01), especially brightness
-  while typing and after tapping a result.
+  version and 16 KB ZIP alignment. The reported phone result and remaining physical checks are
+  separated in [the trial record](TESTING.md#b55-playlist-search-trial--2026-11-01).
 
 Replacement: clean source **c884b4c**, minified test-signed **1.4.0 (1417)**, built in
 **72 s**, **12,024,267 bytes**.
 [Release APK](../dist/protracktor-release-1.4.0-1417-c884b4c-20261101-214011.apk). SHA-256:
 `9e0cce09da4cbab64807d8e1d2c77d73f6dd115f637a3c05b2b74f7195983a22`.
 
-The first APK remains historical evidence. This candidate is unmerged; no push or WEB deployment.
+The first APK remains historical evidence. No new push or WEB deployment is implied.
+
+## Acceptance and integration approval — 2026-11-01
+
+The corrected field/results emphasis and overall appearance were reported satisfactory on the
+phone, and integration into `develop` is approved. The accepted handoff is the release APK above;
+its source `c884b4c`, version, timestamp and hash remain unchanged. The exact installed build,
+device and individual keyboard, gesture, playback and accessibility outcomes were not separately
+supplied. This feedback does not establish a physical WEB/Firefox result.
+
+The implementation is complete. Later commits contain only the Dock test-fixture correction and
+documentation; integration retains the checked application inputs. Browser publication and a new
+store release are separate steps. General catalogue live search (B56/Q17) remains undecided.

@@ -23,16 +23,19 @@ currently clear results are a related, separate discussion in
 [Q17](OPEN_QUESTIONS.md#q17--search-results-after-changing-the-filter).
 No timing policy, platform scope or implementation is selected by recording this request.
 
-## B55. Search within the open playlist — branch candidate, 2026-11-01
+## ~~B55. Search within the open playlist~~ — completed and accepted, 2026-11-01
 
 User request recorded 2026-10-31; compact-header interaction selected 2026-11-01. Search replaces
 its existing chooser row with an animated field. Focus keeps the field/results bright and dims
 surrounding controls; playing a match restores normal brightness while retaining the filter.
-Closing search restores the full list and previous viewport. Match title, author, filename and path with the existing word/accent
-rule, including unsaved edits, while retaining the full playlist as playback context.
+Closing search restores the full list and previous viewport. Match title, author, filename and
+path with the existing word/accent rule, including unsaved edits, while retaining the full playlist
+as playback context.
 
-Implementation is on `feature/playlist-search`, unmerged; automated checks passed and a release
-APK is prepared. Phone feedback remains pending.
+Implemented on Android and WEB through `feature/playlist-search`. Corrected result emphasis and
+overall appearance received positive phone feedback on 2026-11-01; integration into `develop` is
+approved. Automated checks passed; APK 1.4.0 (1417), source `c884b4c`, retains its original identity.
+Detailed physical-browser and device checklist outcomes are recorded separately.
 History search (B49/W10), cross-playlist search (W11) and B56 remain separate.
 [Selected behaviour, constraints and verification](PLAYLIST_SEARCH.md).
 

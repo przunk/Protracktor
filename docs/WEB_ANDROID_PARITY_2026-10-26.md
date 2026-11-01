@@ -7,8 +7,14 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 Date: **2026-10-26**.
 
-The browser player has the core playback features, but trails Android most visibly in playback
-context and manual queue handling, search, music discovery and audio processing. This inventory
+**Historical inventory:** the gaps below describe the 2026-10-26 source, not current missing
+functionality. W01–W25 were subsequently implemented and integrated on 2026-10-30; see
+[the implementation ledger](WEB_IMPLEMENTATION.md) and [current browser trial](WEB_PARITY_CHECKLIST.md).
+B55 local playlist filtering was added on both platforms on 2026-11-01; its
+[contract](PLAYLIST_SEARCH.md) is separate from the original W11 scope.
+
+At the inspected revision, the browser player has core playback features but trails Android in
+playback context and manual queue handling, search, music discovery and audio processing. This inventory
 records the identified gaps, including features introduced between releases 1.0.0 and 1.4.0 and
 older Android functionality. It is an analysis, not an implementation plan or a decision to port
 every platform-specific behaviour.

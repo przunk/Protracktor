@@ -1,6 +1,12 @@
 # Architecture
 
-## Playlist search projection — branch candidate, 2026-11-01
+Current WEB development includes all W01–W25 scopes integrated on 2026-10-30. The dated WEB
+sections retain their design/checkpoint evidence, not an open implementation backlog. Current
+verification and remaining physical checks are in [Status](STATUS.md) and
+[the implementation ledger](WEB_IMPLEMENTATION.md). B55 adds local filtering of the open editor
+on both platforms without replacing playback ownership.
+
+## Playlist search projection — accepted for integration, 2026-11-01
 
 B55 filters the editor's read model without replacing its playback order. `PlaylistSearch.indices`
 returns original Kotlin source positions; the Compose screen maps row and bulk actions through
@@ -17,7 +23,7 @@ and playback keeps the phrase without editing focus. Closing an inactive search 
 and source queues remain owned by the existing player modules.
 [Contract](PLAYLIST_SEARCH.md).
 
-## WEB library download lifetimes — branch candidate, 2026-10-29
+## WEB library download lifetimes — 2026-10-29
 
 LibraryDownloads is the common owner for the approved five-step plan, step locks, immutable
 progress and the selected operation's AbortController. Individual actions use the same providers.
@@ -39,7 +45,7 @@ credits only. Its 47 MiB estimate omits excluded songdb/UADE durations. WEB uses
 permitted canonical HVSC website file because native's byte-identical DeepSID copy lacks CORS.
 No proxy, schema or dependency is added. [Sources, parity and verification](WEB_IMPLEMENTATION.md#w22--selected-library-downloads-2026-10-29).
 
-## WEB speculative music ownership — branch candidate, 2026-10-29
+## WEB speculative music ownership — 2026-10-29
 
 PlaybackReadAhead owns completed, consume-on-open RAM buffers (4 MiB/file, 8 MiB total).
 PlaybackController's native candidate rule is represented once by readAheadCandidates: distinct
@@ -61,7 +67,7 @@ The adapter therefore reports unknown: Wi-Fi only visibly pauses folder work, Al
 Physical bearer names or throughput classes never silently authorize data spending. Startup does
 not fetch speculative music or write defaults. [Reference and checks](WEB_IMPLEMENTATION.md#w19--shared-playback-read-ahead-and-folder-policy-2026-10-29).
 
-## WEB playback preferences — branch candidate, 2026-10-28
+## WEB playback preferences — 2026-10-28
 
 `PlaybackPreferences` reads shuffle, repeat and the existing play-all key synchronously before
 constructing either workspace order. Unknown values fall back without writes; partial storage
@@ -77,7 +83,7 @@ late saved reads; existing explicit URL handoff follows restore and keeps its es
 No schema change, autoplay, phone-byte retention change or Android production modification.
 
 
-## WEB subsong following — branch candidate, 2026-10-28
+## WEB subsong following — 2026-10-28
 
 `SubsongStripView` keeps keyed numeric chips across current-only updates. Opening a file/count or
 freshly opening Now Playing reveals its actual current. Later advances move only when the previous
@@ -94,7 +100,7 @@ live view. Dock expansion uses the actual metadata/subsong snapshot, updated on 
 so inspecting another file cannot resurrect its controls or an earlier tune's metadata. Browser
 system-metadata refresh remains W25; no new transport, storage, mode or Android behaviour is added.
 
-## WEB Browse positions — branch candidate, 2026-10-28
+## WEB Browse positions — 2026-10-28
 
 `BrowseScroll` holds per-session level offsets and pending departed-row identities. Its native-
 derived restore decisions are Nothing, Wait for loading/empty rows, Scroll to the exact current
@@ -114,7 +120,7 @@ places starts its refresh before attempting restoration, so old membership canno
 return marker before a newly inserted bookmark changes the row's index. This changes no playback,
 playlist, manual-request, storage or source-navigation ownership.
 
-## WEB dock identity — branch candidate, 2026-10-28
+## WEB dock identity — 2026-10-28
 
 The identity card has independent title/Add and metadata/Tune rows. A permanent 48 by 32 px Add
 slot prevents changes of source or subsong count from shifting the save target or narrowing the
@@ -127,7 +133,7 @@ subsong modes display the full localized Tune N of M label. Existing metadata/ma
 reused. Card/Keep/Queue have independent pointer and keyboard ownership, with the expanded state
 published for assistive technology. This is presentation work, not a new transport state owner.
 
-## WEB Browse bulk selection — branch candidate, 2026-10-28
+## WEB Browse bulk selection — 2026-10-28
 
 `TrackSelection` owns selected URL identities independently of the playlist editor and playback.
 Its owner identifies the producing folder, submitted Search query/scope or History query/page.
@@ -154,7 +160,7 @@ keep their buffers; reference serialization removes them at the storage/share bo
 handoff autosaves do not retain every replaced phone payload. Nothing persists audio or adds a
 scanner, bulk manual queue operation, export renderer, schema or dependency.
 
-## WEB playlist-file transfer — branch candidate, 2026-10-28
+## WEB playlist-file transfer — 2026-10-28
 
 `PlaylistTransfer` has no editor/transport ownership. It captures selected draft references for
 active exports and reads persisted contents for another playlist, retaining the initial label.
@@ -180,7 +186,7 @@ protected phone list during a pending index save. With no held bytes, nonnetwork
 visibly unavailable. Empty/detached buffers are discarded; persisted/local metadata alone never
 proves playable bytes. No schema change, file scanner, filesystem grant or audio persistence.
 
-## WEB live row reorder — branch candidate, 2026-10-28
+## WEB live row reorder — 2026-10-28
 
 `RowReorder` is shared by editable playlists and the pending manual block. Whole-row crossings
 commit immediately, as native does; gesture cancellation stops further movement and retains
@@ -202,7 +208,7 @@ it belongs to that editor. No decoder command, pending-manual edit or playback r
 Save/Discard remain the selected draft's responsibility. Physical touch, capture and painting
 still require a real browser check.
 
-## WEB scoped library search — branch candidate, 2026-10-28
+## WEB scoped library search — 2026-10-28
 
 `SearchBrowser` owns explicit-submit query/scope state and request cancellation. An immutable
 producing result stays separate from pending field/chip edits. Scope-kind changes clear stale
@@ -234,7 +240,7 @@ Missing copies remain visible with a reason and no replay action. Approved brows
 remain Modland/ASMA; no live archive, AMP, proxy, filesystem or new dependency is introduced.
 [Contract and verification](WEB_IMPLEMENTATION.md#w11--search-scopelibrary-analysis-2026-10-28).
 
-## WEB live History filter — branch candidate, 2026-10-28
+## WEB live History filter — 2026-10-28
 
 `HistoryBrowser` owns raw query, matching page/count/rows and loading/failure state; it does not
 own playback or recent general searches. Requests carry a generation and AbortController,
@@ -251,7 +257,7 @@ with recent searches, while `history-filter.js` owns phrase matching and bounded
 `HistoryFilterParityTest` and JS consume one declared TSV input. Android production is unchanged.
 [Reference, checklist and evidence](WEB_IMPLEMENTATION.md#w10--live-history-search-analysis-2026-10-28).
 
-## WEB recent searches — branch candidate, 2026-10-28
+## WEB recent searches — 2026-10-28
 
 `RecentSearchHistory` owns bounded query history and serialized settings writes, separately from
 playback History and Browse snapshots. `query-text.js` and `recent-searches.js` port Kotlin trimming, case and
@@ -302,8 +308,9 @@ cancel additional pointers and suppress abandoned click/context-menu events. Men
 actions use the same callbacks as pointer controls. Departures alone fade; remaining rows move
 without a whole-list appearance animation. Exact visual/gesture behaviour still needs a browser.
 
-This adds no Android production/schema/native changes or dependencies. W03 still needs W10/W11 route wiring; W06-W25
-remain open; the old WEB plan's simplified queue is no longer the W01-W02 branch contract.
+The initial W01–W02 checkpoint added no Android production/schema/native changes or dependencies.
+Its then-pending W03/W10/W11 route wiring and W06–W25 scopes were subsequently completed and
+integrated on 2026-10-30; the old WEB plan's simplified queue is not the current contract.
 
 W03 adds `source-navigation.js` and an immutable route on `PlaybackContext`. The route holds
 view/query/result fields, separately from actual decoder jobs and live catalogue/storage owners.
@@ -312,7 +319,8 @@ preserve the active order; Discard authorizes abandoning a draft after destinati
 rather than erasing it before an asynchronous read. Source, panel and editor generations retire
 old completions. Browse result closures bind their original query, and older reads cannot append
 to a restored route. This checkpoint passes the combined navigation
-host gate; W10/W11 query/scope wiring remains pending. [Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
+host gate. W10/W11 query/scope wiring was completed by the subsequent scopes.
+[Evidence](WEB_IMPLEMENTATION.md#w03-source-navigation-checkpoint--2026-10-27).
 
 W04 separates the remembered Random record/view from the active source. DOM-free `RandomHistory`
 ports the native heard boundary, cursor, serial sampling and generation/cancellation rules;
