@@ -20,6 +20,7 @@ import { PlayOrder, PlaybackContext, PlaybackWorkspace } from './playback-contex
 import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { QueueView } from './queue-view.js';
+import { PlaylistSearchView, playlistMatches } from './playlist-search.js';
 import { RowReorder } from './row-reorder.js';
 import { moveItems, moveEditorTrack } from './list-reorder.js';
 import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
@@ -65,6 +66,7 @@ import { setUiText, setUiAttribute, makeUiText } from './ui-text.js';
 const $ = (id) => document.getElementById(id);
 const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
+let playlistSearch = null;
 let remoteMusic = null, musicCacheView = null, offlineAsma = null, asmaView = null;
 let readAhead = null, folderPrefetch = null, browsedFolder = null;
 let libraryDownloads = null, downloadPicker = null;
@@ -588,7 +590,7 @@ function playlistReorderOwner() {
 }
 
 function canReorderPlaylist() {
-  return editorShown && workspace.editor.id !== PHONE && !randomView && !selected.size;
+  return editorShown && workspace.editor.id !== PHONE && !randomView && !selected.size && !playlistSearch?.filtering;
 }
 
 function movePlaylistRow(id, target) {
@@ -1639,7 +1641,10 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  */
 function followPlaying() {
   // Not while rows are being ticked: a list that moves under a working finger fights it.
-  if (!playlistReorder?.active && !selected.size && visibleIndex() >= 0) revealRow($('queue').children[visibleIndex()]);
+  if (!playlistReorder?.active && !selected.size && visibleIndex() >= 0) {
+    const row = $('queue').children[visibleIndex()];
+    if (row && !row.hidden) revealRow(row);
+  }
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
   if (!$('browse').hidden) {
@@ -1771,7 +1776,8 @@ function render() {
   // And its rows follow what is playing and what is being fetched, since the list on screen during
   // a digression is Browse's rather than this one.
   if (!$('browse').hidden) markPlayingIn($('browselist'));
-  if (selected.size) selected = new Set([...selected].filter((entry) => tracks.includes(entry)));
+  if (selected.size) selected = new Set([...selected].filter((entry) => tracks.includes(entry)
+    && (!playlistSearch?.filtering || playlistMatches(entry, playlistSearch.query))));
   renderingPlaylist = true;
   if (playlistReorder?.active && (!canReorderPlaylist() || playlistRows.length !== tracks.length
     || playlistRows.some((row, i) => row.entry !== tracks[i]))) playlistReorder.cancel();
@@ -1844,7 +1850,7 @@ function render() {
     setUiAttribute(menu, 'aria-label', uiMessageText('More for {name}', { name: entry.name }));
     menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
     // Stopped here, or opening the menu would also start the track underneath it.
-    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(descriptor.entry, menu, playlistRows.indexOf(descriptor)); };
+    menu.onclick = (event) => { playlistSearch?.finishEditing(); event.stopPropagation(); openRowMenu(descriptor.entry, menu, playlistRows.indexOf(descriptor)); };
 
     const transient = !editorShown;
     li.repaintTitle = () => {
@@ -1875,7 +1881,7 @@ function render() {
         // an order dealt earlier played only what came after it -- the same tunes from any start,
         // and the ones before it never. And it is the first: back stops at it, since what played
         // before belonged to another order. The phone's `PlayQueue.startAt` does the same.
-        if (editorShown) playEditorAt(i);
+        if (editorShown) { playlistSearch?.finishEditing(); playEditorAt(i); }
         else if (randomView) playRememberedRandomAt(i, randomView, tracks);
         else playAt(i);
       };
@@ -1908,6 +1914,7 @@ function render() {
     row.node.repaintTitle();
   }
   renderingPlaylist = false;
+  playlistSearch?.apply(playlistRows);
   updateSelectBar();
   setUiText($('count'), tracks.length
     ? uiPluralText(tracks.length, '{n} track', '{n} tracks')
@@ -3427,6 +3434,7 @@ function setQueue(urls, at = 0, { persist = true } = {}) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which, { preserveBrowse = false } = {}) {
+  if (which) playlistSearch?.close({ restoreFocus: false });
   if (which !== 'nowplaying') { ++descriptionGeneration; subsongStripView?.hide(); }
   ++panelVisit;
   if (which !== 'addto' && !$('addto').hidden) {
@@ -3788,6 +3796,7 @@ async function choosePlaylist(id) {
 
 /** Load a selected editor while retaining the independently playing source and cursor. */
 async function switchTo(id, { preservePlayback = false, requireExisting = false, canActivate = () => true, onMissing = () => {} } = {}) {
+  playlistSearch?.close({ restoreFocus: false });
   const asked = ++editorAsked;
   let playlist;
   try { playlist = await playlists.get(id); }
@@ -4685,6 +4694,14 @@ $('browseback').onclick = async () => {
   await renderBrowse();
 };
 $('browseclose').onclick = returnToPlaylist;
+
+playlistSearch = new PlaylistSearchView({
+  root: document.querySelector('.app'), heading: $('playlist-heading'), input: $('playlist-search-input'),
+  opener: $('playlist-search-open'), closer: $('playlist-search-close'), clear: $('playlist-search-clear'),
+  chooser: $('playlist-chooser'), form: $('playlist-search-form'), list: $('queue'),
+  viewport: document.querySelector('main'), empty: $('playlist-search-empty'), changed: render,
+  handlesBack: () => $('menu').hidden && !selected.size,
+});
 
 $('playlistchip').onclick = () => {
   renderPlaylists();

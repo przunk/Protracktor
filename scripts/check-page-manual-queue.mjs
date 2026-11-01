@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Actual page/MessagePort counterparts of Android ManualQueueControllerTest.
+import { decoderOpenAfter } from './fixtures/page-playback.mjs';
 import { played, catalogue } from '../web/src/store.js';
 import * as archive from '../web/src/catalogue.js';
 
@@ -12,12 +13,11 @@ export default async function checkManualQueue({ window, check }) {
   const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   const command = () => window.__toWorklet.filter((message) => message.type === 'open').at(-1);
   const opens = () => window.__toWorklet.filter((message) => message.type === 'open').length;
-  const tap = async (id) => {
+  const tap = (id) => decoderOpenAfter(window, () => {
     $(id).dispatchEvent(new window.Event('pointerdown'));
     $(id).dispatchEvent(new window.Event('pointerup'));
     $(id).click();
-    await settle();
-  };
+  });
   const opened = (title = 'Manual test') => api.onWorklet({ type: 'opened', requestId: command()?.requestId,
     describe: `title\t${title}`, duration: 90, rate: 44100, subsongs: 1, current: 0, canSeek: true });
   const add = (at) => {
@@ -32,8 +32,7 @@ export default async function checkManualQueue({ window, check }) {
   await api.storeNow.save({ id: 'manual-A', name: 'Manual A', tracks: a, index: 0 });
   await api.storeNow.save({ id: 'manual-B', name: 'Manual B', tracks: b, index: 0 });
   await api.choosePlaylist('manual-A');
-  $('queue').querySelector('li.track').click();
-  await settle();
+  await decoderOpenAfter(window, () => $('queue').querySelector('li.track').click());
   opened('A is playing');
   if ($('shuffle').classList.contains('on')) $('shuffle').click();
   for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
@@ -114,8 +113,8 @@ export default async function checkManualQueue({ window, check }) {
     'a failed actual manual occurrence can be retried through Play');
 
   // Manual History origin follows the requested row, not the suspended source context.
-  api.playFromBrowse(a, 0, 'history');
-  await settle(); opened();
+  await decoderOpenAfter(window, () => api.playFromBrowse(a, 0, 'history'));
+  opened();
   api.endSession();
   const beforeCount = (await played.recent()).find((entry) => entry.url === b[0].url)?.playCount ?? 0;
   add(0);
@@ -126,7 +125,7 @@ export default async function checkManualQueue({ window, check }) {
   await played.record(h);
   const historyBefore = (await played.recent()).find((entry) => entry.url === h.url);
   await api.choosePlaylist('manual-A');
-  $('queue').querySelector('li.track').click(); await settle(); opened();
+  await decoderOpenAfter(window, () => $('queue').querySelector('li.track').click()); opened();
   api.showPanel('browse'); await api.browseTo(['history']);
   const historyRow = [...$('browselist').querySelectorAll('li.btrack')].find((row) => row.dataset.url === h.url);
   check(!!historyRow, 'the History-origin test uses an actual retained History row');
@@ -146,7 +145,7 @@ export default async function checkManualQueue({ window, check }) {
   await catalogue.putAll(records.records);
   await catalogue.putAll([{ key: 'modland:meta', tracks: records.tracks, total: records.tracks,
     phoneOnly: 0, buckets: records.buckets, formats: records.formats, fingerprint: 'manual-test' }]);
-  await api.rerollRandom(); await settle(); opened('Random source');
+  await decoderOpenAfter(window, () => api.rerollRandom()); opened('Random source');
   const heard = api.queueNow().join();
   api.endSession(); add(1); await tap('next');
   const failedOpen = command();

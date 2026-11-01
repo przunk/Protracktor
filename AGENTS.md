@@ -9,12 +9,12 @@ deviates from it, and per that document's §1 the more specific rule wins here.
 | --- | --- |
 | code, comments, KDoc | English (unchanged) |
 | branch names, commit messages, PR descriptions | English (unchanged) |
-| **documents in `docs/` and the project root** | **English** — overrides workspace §4, which says Polish |
+| **documents in `docs/` and the project root** | **English** — aligned with workspace §4 |
 | conversation with the owner | Polish (unchanged) |
 | strings in the app | Polish + English (R10) |
 
-Decided by the owner on 2026-08-31, and on 2026-08-31 confirmed to apply **to this project only**.
-The workspace-wide rule is unchanged and still says Polish for every other project.
+English documentation was selected for this project on 2026-08-31. The current workspace §4
+also defaults to English for project documentation; this project retains that language.
 
 ## Merging waits for the owner
 

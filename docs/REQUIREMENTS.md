@@ -38,6 +38,11 @@ cursor into it, not a random draw at each transition.
 The user creates and names playlists (for example "Lotus 3"). Shuffle and repeat operate within
 the active playlist, never across the whole library.
 
+For playlist playback, this means the active playback source, independently of the editor/view
+currently displayed. The accepted context/manual queue and B55 playlist filtering preserve that
+source order; filtering does not replace it with just visible matches. Explicit manual requests
+retain their FIFO priority. [Playback context](QUEUE_CONTEXT_ANALYSIS.md), [playlist filtering](PLAYLIST_SEARCH.md).
+
 ## R7 — Navigation without accidental side-swiping
 
 Browsing is not a neighbouring page you slide onto by accident. It is entered deliberately.

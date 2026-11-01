@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { sameEditorDocument } from './fixtures/page-playback.mjs';
 
 /** Whole-ASMA downloads, real row playback and confirmed deletion through the production UI. */
 export default async function checkOfflineAsma({ window, check }) {
@@ -63,7 +64,7 @@ export default async function checkOfflineAsma({ window, check }) {
     await api.storeNow.save({id:'asma-kept-document',name:'ASMA kept',tracks:[{url:target,name:'Robots'}]});
     await api.enqueueTrack({url:target,name:'Manual Robots'});api.onWorklet({type:'position',seconds:17});
     const state={context:api.planNow().context,schedule:api.scheduleNow(),editor:api.editorNow(),audio:api.contextNow(),actual:api.actualNow(),commands:window.__toWorklet.length,elapsed:$('elapsed').textContent};
-    const continuity = () => api.planNow().context === state.context && api.scheduleNow() === state.schedule && api.editorNow() === state.editor
+    const continuity = () => api.planNow().context === state.context && api.scheduleNow() === state.schedule && sameEditorDocument(api.editorNow(), state.editor)
       && api.contextNow() === state.audio && api.actualNow() === state.actual && window.__toWorklet.length === state.commands && $('elapsed').textContent === state.elapsed;
     await api.musicStore.write('https://example.test/asma-ordinary.mod',await new window.Response(new Uint8Array([1,2,3])).blob());
     await until(() => api.musicNow().state.bytes > 0);

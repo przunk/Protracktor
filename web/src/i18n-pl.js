@@ -7,6 +7,12 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  'Search playlist': 'Szukaj na playliście',
+  'Search playlist…': 'Szukaj na playliście…',
+  'Close playlist search': 'Zamknij wyszukiwanie na playliście',
+  'Clear search': 'Wyczyść wyszukiwanie',
+  'No playlist tracks match this phrase. Clear search to show the full list.': 'Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.',
+
   'Volume normalization': 'Normalizacja głośności',
   'Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.': 'Zmniejsza różnice głośności między utworami. Przy pierwszym odsłuchu wyrównanie może być mniej dokładne. Nie wpływa na eksportowane audio.',
   'ASMA could not be downloaded: {reason}': 'Nie udało się pobrać ASMA: {reason}',

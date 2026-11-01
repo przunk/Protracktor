@@ -1,11 +1,34 @@
 # Status
 
-Updated: 2026-10-31 — C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-11-01 — B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B55 Playlist search — accepted, 2026-11-01
+
+`feature/playlist-search` implements live filtering on Android and WEB in the existing chooser
+row, with animated open/close and restoration of the full list/previous viewport. The field and
+results remain fully bright while typing; surrounding header/dock controls dim. Playing a match
+ends editing and retains the phrase. Original indices preserve full-playlist playback and row
+operations, including unsaved edits.
+
+Phone feedback on dimmed results is addressed in clean source **c884b4c**. Fresh verification:
+**1,289 Android tests / 176 suites**, **1,396 page assertions**, all companion stages,
+lint **0 errors / 79 warnings**, and five Chromium profiles with **55/55 visual guards**.
+Pixel comparisons exercise both bright results and retained chrome dimming. The companion run
+required a test-only Dock correlated-open correction and a full-page rerun/tail continuation;
+application inputs are unchanged after APK packaging.
+
+The corrected field/results emphasis and overall appearance were reported satisfactory on the
+phone; integration of `feature/playlist-search` into `develop` is approved. The minified,
+test-signed APK **1.4.0 (1417)** and its source/hash remain the handoff artifact. Exact installed
+build/device and individual keyboard, gesture, playback and accessibility outcomes were not
+separately supplied; physical WEB/Firefox acceptance remains open. Integration retains the
+checked application inputs and does not prepare a new APK, store release or WEB deployment.
+[Accepted contract, artifact and verification limits](PLAYLIST_SEARCH.md#acceptance-and-integration-approval--2026-11-01).
 
 ## B52 Slider experiment parked — 2026-10-28
 

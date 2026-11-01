@@ -25,7 +25,8 @@ context. This is a recommendation, not an accepted requirement.
 
 Decide separately whether new query text should also trigger retrieval
 ([B56](WISHLIST.md#b56-consider-searching-while-typing--discussion-recorded-2026-10-31)).
-Existing recent-query suggestions and live History search do not settle either question.
+Existing recent-query suggestions, live History search and local playlist filtering
+([B55](PLAYLIST_SEARCH.md)) do not settle either catalogue-search question.
 
 ---
 

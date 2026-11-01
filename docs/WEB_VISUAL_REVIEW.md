@@ -12,6 +12,13 @@ The failed baseline findings/images below retain their original source and ident
 not the result of the corrected run. Local gh-pages `fbd75a7` is prepared; push, public deployment
 and physical acceptance remain pending. [Integration record](WEB_BROWSER_FIXES.md#integration-and-pages-preparation--2026-10-31).
 
+**Current capture update, 2026-11-01:** B55 adds open/editing/playing/empty/closed playlist-search
+states and a pixel comparison proving that results remain bright while chrome dims. Clean
+source `c884b4c` passes **55/55 guards** across the same five profiles. The agent inspected the
+five editing originals and the native after-correction bitmap. Positive phone feedback accepts
+the Android appearance; physical browser acceptance remains separate. The baseline/repair
+records below remain historical. [Current gallery and evidence](PLAYLIST_SEARCH.md#result-emphasis-correction--2026-11-01).
+
 ## Scope
 
 Use a pinned Playwright installation with a local headless Chromium. Keep tooling dependencies

@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-31. Inventory of unfinished, deferred and undecided work.
+Updated: 2026-11-01. Inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The unpublished version-history correction restored baseline 1.1.0 before release 1.2.0.
 The latest prepared tagged AAB is **1.4.0 (1304)**. Version 1.4.0 is confirmed in Google Play
@@ -42,15 +42,20 @@ Granular checklist/accessibility outcomes remain unreported. [Contract and accep
 C118 was reported working in the phone trial and merged with approval as `204e7f7`, 2026-10-31.
 B52 normalization was retained after
 a reported phone comparison and merged as **4aab46e** on 2026-10-23. Its default-Off control
-and fixed -23 LUFS target remain; concise Settings copy passed the 1163-test full gate/lint.
+remains. The initial fixed -23 LUFS target and concise Settings copy passed the 1163-test full
+gate/lint; the accepted 2026-10-27 change (`641b875`) sets current development playback to
+**-18 LUFS**. Prepared release 1.4.0 retains -23 LUFS.
 It is no longer unfinished inventory work. No APK was requested for the integration step;
 later device builds and remaining checks are recorded in the [contract](VOLUME_NORMALIZATION.md).
 [Baseline evidence](QUEUE_EXPERIMENT.md).
 
+B55 playlist search is complete on Android and WEB, with positive phone feedback on the corrected
+focus area and integration approved on 2026-11-01. It is no longer open inventory work.
+[Accepted contract and remaining platform checks](PLAYLIST_SEARCH.md#acceptance-and-integration-approval--2026-11-01).
+
 | ID | Remaining work | State |
 | --- | --- | --- |
 | B56 | Consider searching while typing | Request recorded 2026-10-31; result retrieval, distinct from recent-query suggestions and existing live History filtering. Views/sources, timing and cancellation need discussion; no implementation selected. [Wishlist](WISHLIST.md#b56-consider-searching-while-typing--discussion-recorded-2026-10-31). |
-| B55 | Search within the open playlist | Request recorded 2026-10-31; distinct from searching across saved playlists. Matching, draft handling and filtered-row actions need discussion; no implementation selected. [Wishlist](WISHLIST.md#b55-search-within-the-open-playlist--todo-recorded-2026-10-31). |
 | B54 | Floating playback controls | Experiment merged as afab610, 2026-10-26, with `FloatingControls.ENABLED = false`. Public availability/announcements require a later explicit decision. Source 0e9d361 passed 54 focused checks/lint and minified Off APK verification; full suite not repeated, as requested. Enabled trial APK 1.4.0 (1313), source 2497632, remains unchanged. Detailed device cases are not individually confirmed. [Contract and evidence](FLOATING_CONTROLS.md). |
 | B53 | Integrate a free music library | Proposal recorded 2026-10-25. Identify the intended service and URL before assessing access and integration; no provider or implementation selected. [Wishlist](WISHLIST.md#b53-integrate-a-free-music-library--idea-recorded-2026-10-25). |
 | B51 | Save a selected subsong as a playlist entry instead of the whole multi-subsong file | Request recorded 2026-10-21; useful for files reporting hundreds of subsongs. Explicit selection, not automatic expansion. Entry identity, playback/queue behaviour and persistence/export need design; no implementation selected. [Wishlist](WISHLIST.md#b51-save-an-individual-subsong-in-a-playlist--todo-recorded-2026-10-21). |

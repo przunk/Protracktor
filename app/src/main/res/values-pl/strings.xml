@@ -580,4 +580,10 @@
         <item quantity="many">%1$,d zostało na telefonie, który je wysłał.</item>
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
+
+    <string name="playlist_search_action">Szukaj</string>
+    <string name="playlist_search_hint">Szukaj na playliście…</string>
+    <string name="playlist_search_close">Zamknij wyszukiwanie na playliście</string>
+    <string name="playlist_search_clear">Wyczyść wyszukiwanie</string>
+    <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
 </resources>

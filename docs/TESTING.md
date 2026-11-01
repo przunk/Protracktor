@@ -6,6 +6,41 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## B55 playlist search trial — 2026-11-01
+
+The corrected focus area and overall appearance received positive phone feedback; integration
+into `develop` is approved on 2026-11-01. The installed build/device and individual scenario
+outcomes were not separately supplied. This is visual phone acceptance, not a completed physical
+WEB/Firefox trial or an implied pass of every keyboard, gesture and accessibility case below.
+
+Accepted handoff: clean source **c884b4c**, minified test-signed release **1.4.0 (1417)**.
+[APK and automated evidence](PLAYLIST_SEARCH.md#result-emphasis-correction--2026-11-01).
+The 1,289-test Android suite, 1,396 WEB page assertions, companion checks and lint passed;
+these do not establish the phone interaction below.
+
+For remaining checks on the accepted handoff, use EN/PL, Dark/Light and a playlist with unsaved edits:
+
+1. Open Search beside the playlist chooser. Confirm its row does not grow and the replacement
+   animates smoothly. The keyboard opens; the field and result list stay fully bright while
+   surrounding header/dock controls dim.
+2. Type part of a title, author or filename; try an accent-free phrase. Results preserve original
+   order/numbers. A phrase with no matches explains the empty filtered view.
+3. Tap a result. Keyboard/dimming end; the phrase/results remain. Next/Previous still traverse the
+   full playlist, including tracks hidden by the filter. Pending manual requests remain intact.
+4. Refocus the field; dimming returns. Done ends editing. A touch on dimmed header/dock ends editing
+   without triggering that underlying action. Back ends editing, then closes search.
+5. Close search using the field's back action. Confirm the original header, all tracks and the
+   previous normal-list viewport return. Clear only the phrase and verify reorder handles return.
+6. Remove a filtered track, undo it, select matching rows for bulk actions, and swipe right to
+   enqueue a match. Hidden rows must not be removed/enqueued accidentally. Save/Discard continue
+   to act on the full edited playlist.
+7. Leave for Browse/Queue/Settings or switch playlists. Search must not leak into another view or
+   playlist. Confirm that opening/closing it never stops music.
+
+Automated source checks and browser captures are recorded in [the contract](PLAYLIST_SEARCH.md).
+The reported focus-area/appearance outcome is accepted. Remaining individual gesture, keyboard,
+accessibility and animation cases stay **unchecked** until their outcomes are supplied.
+
 ## C130 WEB normalization startup — Firefox trial pending, 2026-10-31
 
 Candidate **fc86ef8** passes the complete 1278-test gate/lint and six clean-source Chromium
