@@ -3,11 +3,11 @@
 
 package com.przunk.protracktor.net
 
-/** One availability epoch owns a transfer; off/on cannot resurrect a previous request. */
+/** Transfer tickets are bounded by the build gate, including attempts to re-enable retired work. */
 internal class AmpAccess(initiallyEnabled: Boolean = true) {
     private val lock = Any()
     private var epoch = 0L
-    private var active = initiallyEnabled
+    private var active = initiallyEnabled && Amp.ENABLED
     private val transfers = mutableSetOf<() -> Unit>()
 
     val enabled: Boolean get() = synchronized(lock) { active }
@@ -16,9 +16,10 @@ internal class AmpAccess(initiallyEnabled: Boolean = true) {
     fun allows(ticket: Long): Boolean = synchronized(lock) { active && epoch == ticket }
 
     fun setEnabled(enabled: Boolean): Boolean {
+        val available = enabled && Amp.ENABLED
         val cancelled = synchronized(lock) {
-            if (active == enabled) return false
-            active = enabled
+            if (active == available) return false
+            active = available
             epoch++
             transfers.toList().also { transfers.clear() }
         }

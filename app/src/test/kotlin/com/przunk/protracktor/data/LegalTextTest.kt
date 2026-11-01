@@ -62,7 +62,7 @@ class LegalTextTest {
             val bullets = LegalText.privacyBlocks(policy, polish).filterIsInstance<LegalText.Block.Bullet>()
             assertTrue(bullets.any { it.text.startsWith("amp.dascene.net") })
             assertTrue(bullets.first { it.text.startsWith("amp.dascene.net") }.text.contains(
-                if (polish) "własny przełącznik" else "own Settings switch"))
+                if (polish) "wybrany utwór" else "selected AMP track"))
         }
     }
 

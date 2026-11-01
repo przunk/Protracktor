@@ -1,13 +1,22 @@
 # Status
 
-Updated: 2026-11-01 — combined AMP/floating-controls candidate 8a2ca43e passes the complete gate; APK 1.4.0 (1432) is prepared, phone acceptance and develop integration pending. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-11-01 — AMP availability is being corrected to a build-time constant; replacement verification/APK pending. The earlier candidate 8a2ca43e / APK 1432 remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Latest combined test candidate — 2026-11-01
+## AMP build-gate correction — in progress, 2026-11-01
+
+AMP uses **`Amp.ENABLED = true`** in code, with no Settings entry, persisted availability or
+controller/VM/UI toggle. Older trial preferences are ignored. A false rebuild must block AMP
+while preserving user data; there is no remote revocation of installed builds. Only Floating
+controls retains its new Settings switch. The preceding APK 1432 has the superseded AMP setting;
+new host verification and a replacement release APK are pending. The Settings absence test fails
+against that preceding implementation. [Current scope](RELEASE_1.5.0_PREPARATION.md).
+
+## Earlier combined test candidate — 2026-11-01
 
 `test/1.5.0-candidate`, checked source **8a2ca43e**, combines the saved default-Off floating-controls
 Settings opt-in and the default-On AMP catalogue. **1,319 tests / 180 suites**, zero failures/errors/skips; all **85** gate stages pass in **1487 s**,
@@ -31,7 +40,7 @@ version change, release refs or publication occurs during feature preparation.
 
 ## AMP release integration — phone trial pending, 2026-11-01
 
-Select AMP for planned release 1.5.0, retaining its saved default-On Settings switch and indexed,
+Select AMP for planned release 1.5.0, using a default-On build-time gate and indexed,
 individual-file access. This supersedes the earlier approval hold. No reply or explicit approval
 from AMP is recorded; the informational follow-up is prepared locally and has not been sent.
 Music sources credits AMP and links to its site; privacy discloses its host in both languages.

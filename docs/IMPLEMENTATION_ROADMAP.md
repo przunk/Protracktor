@@ -198,8 +198,9 @@ for current evidence, intentional exclusions and unchecked physical behaviour. C
 - **Catalogue candidates:** investigate vgmrips, snesmusic and zxart if selected.
 - **A7 / AMP (Amiga Music Preservation):** selected for planned 1.5.0 integration on
   2026-11-01, superseding the earlier maintainer-approval hold. Preserve the original trial;
-  integrate on `feature/amp-release-integration`. Pinned songdb index, saved default-On Settings
-  switch, individual cached downloads, attribution and no crawling/prefetch/bulk transfer.
+  integrate on `feature/amp-release-integration`. Pinned songdb index, code gate `Amp.ENABLED = true`, individual cached downloads, attribution
+  and no crawling/prefetch/bulk transfer. The 2026-11-01 clarification removes the AMP user
+  preference; replacement candidate verification/APK are pending.
   No reply or individual maintainer approval is recorded. Follow-up draft is prepared for manual
   sending; combined source 8a2ca43e passes the full gate/lint and APK inspection. Phone acceptance
   and develop integration remain pending. Historical trial and

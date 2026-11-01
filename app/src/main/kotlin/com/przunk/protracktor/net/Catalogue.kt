@@ -109,7 +109,7 @@ sealed class Catalogue(
                 (if (UnExoticA.ENABLED) listOf(UnExoticA) else emptyList()) + Amp
         }
 
-        /** A runtime switch hides AMP without deleting its index or user-owned references. */
+        /** Build-disabled AMP stays known for retention, but is absent from discovery. */
         val all: List<Catalogue> get() = known.filter { it != Amp || Amp.access.enabled }
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }

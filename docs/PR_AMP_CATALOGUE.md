@@ -10,8 +10,11 @@ The original trial branch stays intact at `e728fa6`. It has been merged into
 History, playlist filtering, cache and normalization. Only STATUS/TESTING had textual conflicts;
 fresh combined host checks and packaging pass; a combined phone trial is still required.
 
-AMP remains Android-only, with the saved default-On catalogue switch and existing bounded
-individual downloads. Attribution/privacy now describe the selected release integration instead
+AMP remains Android-only, with **`Amp.ENABLED = true`** and bounded individual downloads.
+The 2026-11-01 clarification removes the Settings preference and its state/controller plumbing;
+old saved values are ignored. A disabled build retains user data and cannot be re-enabled through
+internal transfer access. Current correction verification/replacement APK are pending; the
+previous candidate's complete results remain historical. Attribution/privacy now describe the selected release integration instead
 of an unpublished experiment. The earlier publication hold is superseded by the project decision
 in [PLAN_AMP](PLAN_AMP.md#release-integration--selected-2026-11-01). There is no maintainer reply
 or individual approval, and the informational follow-up has not been sent. Develop, master and

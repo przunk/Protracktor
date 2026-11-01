@@ -2033,7 +2033,9 @@ foreground scan.
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
 **Release integration selected 2026-11-01:** include the existing Android AMP implementation
-in planned 1.5.0, with source attribution and an informational follow-up. The earlier approval
+in planned 1.5.0, with source attribution and an informational follow-up. Availability is the
+code constant `Amp.ENABLED = true`; there is no AMP user preference. A disabled rebuild is the
+withdrawal path, preserving existing data. The earlier approval
 hold is superseded; no reply or individual maintainer approval is claimed. Current implementation,
 fresh combined verification and phone acceptance are tracked in [PLAN_AMP](PLAN_AMP.md).
 

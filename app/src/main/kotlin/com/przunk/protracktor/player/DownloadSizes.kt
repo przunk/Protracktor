@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.player
 
+import com.przunk.protracktor.net.Amp
+
 /**
  * What the one-press download costs, so the button can say so before it is pressed.
  *
@@ -38,6 +40,7 @@ object DownloadSizes {
     const val FAVOURITES_MB = 1
 
     /** What the button says. The parts are rounded up individually, so this is a ceiling. */
-    const val EVERYTHING_MB =
-        MODLAND_MB + ASMA_MB + UNEXOTICA_MB + AMP_MB + SONG_LENGTHS_MB + TRACK_METADATA_MB + FAVOURITES_MB
+    val EVERYTHING_MB: Int get() =
+        MODLAND_MB + ASMA_MB + UNEXOTICA_MB + (if (Amp.ENABLED) AMP_MB else 0) +
+            SONG_LENGTHS_MB + TRACK_METADATA_MB + FAVOURITES_MB
 }

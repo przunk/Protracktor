@@ -10,7 +10,7 @@ artifacts, database schema 23 and the separate normalization-slider experiment.
    Preserve hold-Play activation, explicit system permission, whole-panel dragging, edge docking,
    Hide target and file holds. Off hides immediately; no automatic panel after process restart.
 2. Integrate the existing Android AMP trial with current development. Retain single-file,
-   user-initiated cached playback, the existing local catalogue switch, no crawler/prefetch/bulk
+   user-initiated cached playback, the build-time `Amp.ENABLED` gate, no crawler/prefetch/bulk
    archive download, stable User-Agent and visible AMP attribution. Individual maintainer reply
    remains absent; the project selects an informational follow-up rather than continuing the
    previous approval hold. Do not describe this as permission granted by AMP. Its published FAQ
@@ -18,8 +18,10 @@ artifacts, database schema 23 and the separate normalization-slider experiment.
    explicitly described there. Source: https://amp.dascene.net/faq.php (indexed text checked
    2026-11-01; direct browser-tool request returned HTTP 403).
 
-AMP's current switch is per installation. Withdrawal requires an application update and cannot
-remotely disable older installed versions. No remote configuration service is selected.
+AMP availability is fixed by **`Amp.ENABLED = true`**. There is no AMP user preference; the
+older trial key is ignored. Withdrawal means setting the constant false and shipping an update.
+A disabled build preserves user data and blocks AMP discovery/transfers, even after an internal
+re-enable attempt. Older installed versions are unaffected; no remote service is selected.
 
 ## Implementation and handoff
 
@@ -41,13 +43,14 @@ No release, tag, upload, push or WEB deployment is performed by this preparation
 ## Combined candidate — 2026-11-01
 
 `test/1.5.0-candidate` combines `feature/floating-controls-settings` (`17a7161`) and
-`feature/amp-release-integration` (`8972f7cf`) without changing develop. AppTheme retains both
-independent saved keys, controller initialization restores both choices, and Settings receives
-both state/callback pairs. The source trial remains `feature/amp-catalogue` (`e728fa6`).
+`feature/amp-release-integration` (`8972f7cf`) without changing develop. AppTheme retains the
+Floating controls saved key and Settings receives its state/callback pair. AMP availability is now compiled; its old
+preference and state/controller plumbing are removed by the clarification below. The source trial remains `feature/amp-catalogue` (`e728fa6`).
 
 The floating-controls stage passes 21 focused tests, with a failing lazy-host negative control;
 the AMP stage passes 64 focused tests. These are stage checks, not a complete combined gate.
-The complete combined gate and minified release APK are verified below; phone behaviour remains unchecked.
+Earlier combined verification is retained below; the build-gate correction requires a new
+complete gate and replacement APK. Phone behaviour remains unchecked.
 Draft Play notes and [full 1.5.0 notes](RELEASE_NOTES_1.5.0.md) prepare the release description,
 without creating a release/tag or asserting publication.
 
@@ -61,7 +64,21 @@ A negative control changing the WEB AMP expectation to a downloadable step fails
 WEB check. The fixture is already declared as a Gradle test input. Full verification is repeated
 with the corrected scope; no application download behaviour was changed for this correction.
 
+## AMP build-gate correction — selected 2026-11-01
+
+Keep AMP availability as **`Amp.ENABLED = true`**; no AMP Settings entry is wanted. Remove its
+saved preference reader/writer and controller/VM/UI state. Old values remain stored but ignored.
+The internal access guard must clamp initial and re-enabled work to the build flag, including
+retained playlist/History/cache references. No schema or data reset is involved.
+
+The real Settings absence regression failed against the preceding UI. Test a false-constant
+build and a deliberately broken re-enable guard, restore true, then run the complete gate/lint
+and build a replacement APK. Current results and packaging for this correction are pending.
+The 1432 artifact below is historical and still contains the rejected AMP Settings entry.
+
 ## Verified candidate and APK — 2026-11-01
+
+**Historical first candidate, superseded by the build-gate correction above.**
 
 Agent-run host verification and artifact inspection are complete for clean source
 **`8a2ca43eb8917fa9ce0379b4db610e5dcd1df861`**, `test/1.5.0-candidate`. This is ready for a phone trial, not accepted for
@@ -92,7 +109,8 @@ artifact inspection are retained locally in ignored `user/release-1.5/`.
 Use [the current checklists](TESTING.md): enable Floating controls while music is already playing,
 then hold Play/Pause and check the permission flow, transport/file holds, dragging/Hide and Off.
 Restart to confirm saved availability without an automatic panel. Check AMP browse/search,
-selected cached playback, manual queue and Off/On with retained data. Verify EN/PL and both themes.
+selected cached playback, manual queue and absence of an AMP availability setting. A false
+constant is checked on the host; it cannot be selected from this APK's UI. Verify EN/PL and both themes.
 
 The informational email is prepared in ignored
 `docs/letters/2026-11-01-amp-integration-follow-up-draft.md` and remains **not sent**. Its stable
@@ -102,3 +120,18 @@ There is no connected mail-sending tool; manual sending is required before publi
 After phone acceptance, merge the combined candidate so the shared fixture correction and release
 notes accompany both features. Then run the interactive release procedure from develop, upload the
 AAB and push the selected refs as described above. No individual AMP maintainer approval is claimed.
+
+### Disabled-build verification — 2026-11-01
+
+The real `Amp.ENABLED = false` build passes **12 checks / eight suites**, zero failures,
+errors or skips, in **43 s**. The same code paths verify initial/re-enabled access, catalogue and
+index choices, download sizes, module/index transfer admission, saved reads, SQLite/user-reference
+retention and the Settings section without an availability control. Removing the re-enable clamp
+fails the build-gate assertions. The initial UI absence test also failed on the previous AMP row.
+The host UI fixture uses a bounded catalogue-section viewport because the unrelated About footer
+requires Android JNI. The target availability section is rendered and inspected.
+
+Restore `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
+is seeded before real controller startup in the admission tests, covering an upgrade from an
+opted-out trial. Those current full checks and the replacement APK remain pending. Earlier
+artifact/source identities are retained; no develop merge or release is performed here.

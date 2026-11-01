@@ -16,10 +16,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
@@ -46,12 +46,11 @@ class SettingsStereoMixTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private val selected = mutableStateOf(StereoMix.ORIGINAL)
     private val requests = mutableListOf<StereoMix>()
-    private val amp = mutableStateOf(true)
 
     @Before fun start() {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
         activity.get().getSharedPreferences("protracktor_preferences", Context.MODE_PRIVATE)
-            .edit().remove("stereo_mix").remove("amp_enabled").commit()
+            .edit().remove("stereo_mix").putBoolean("amp_enabled", false).commit()
     }
 
     @After fun stop() {
@@ -62,7 +61,6 @@ class SettingsStereoMixTest {
 
     private fun show() {
         selected.value = Appearance.stereoMix(activity.get())
-        amp.value = Appearance.ampEnabled(activity.get())
         activity.get().setContent {
             MaterialTheme {
                 SettingsScreen(
@@ -83,10 +81,6 @@ class SettingsStereoMixTest {
                     onThemeSelected = {}, onDynamicColourChanged = {}, onToggleAllSubsongs = {},
                     fallbackLengthSeconds = 300, onFallbackLengthChanged = {},
                     cacheAhead = CacheAhead.DEFAULT, onCacheAheadSelected = {},
-                    ampEnabled = amp.value, onAmpEnabledChanged = {
-                        Appearance.selectAmpEnabled(activity.get(), it)
-                        amp.value = it
-                    },
                     shareAudioMinutes = 3, onShareAudioMinutesSelected = {}, onLanguageSelected = {},
                     onClearCache = {}, onDeleteIndex = {}, onDeleteSongMetadata = {}, onDeleteReplayRoutines = {},
                 )
@@ -108,17 +102,20 @@ class SettingsStereoMixTest {
         assertEquals(StereoMix.ORIGINAL, Appearance.stereoMix(activity.get()))
     }
 
-    @Test fun `AMP switch starts on and click persists off across reopening Settings`() {
+    // A short viewport keeps the unrelated native About footer outside this host check.
+    @Test
+    @Config(qualifiers = "en-w360dp-h360dp-xhdpi")
+    fun `AMP availability is not a Settings control`() {
         show()
-        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("AMP catalogue"))
-        compose.onNodeWithContentDescription("AMP catalogue")
-            .assertIsOn().performClick().assertIsOff()
-        assertEquals(false, Appearance.ampEnabled(activity.get()))
-        activity.get().setContent { }
+        val list = compose.onNode(hasScrollToIndexAction()).assertExists()
+        val heading = activity.get().getString(R.string.settings_online_section)
+        list.performScrollToNode(hasText(heading))
+        // Keep every control immediately below the section heading in the viewport.
+        val offset = compose.onNodeWithText(heading).fetchSemanticsNode().boundsInRoot.top -
+            list.fetchSemanticsNode().boundsInRoot.top
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, offset) }
         compose.waitForIdle()
-        show()
-        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("AMP catalogue"))
-        compose.onNodeWithContentDescription("AMP catalogue").assertIsOff()
+        compose.onNodeWithContentDescription("AMP catalogue").assertDoesNotExist()
     }
 
     @Test fun `reopening Settings reflects the stored mode without requesting a new selection`() {

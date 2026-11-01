@@ -24,7 +24,7 @@ the rest — their replay routines downloaded on request) and seven console fami
 background playback and a media session. Local folders are scanned by opening every file rather than by trusting its name. Five
 online archives: Modland and ASMA browse offline from a downloaded index, The Mod Archive searches
 live, UnExoticA provides indexed Amiga game soundtracks, and AMP adds scene music through a
-songdb index with individual cached downloads. AMP has a saved Settings switch; attribution and
+songdb index with individual cached downloads. AMP availability uses a build-time flag; attribution and
 the planned-release decision are recorded in [the AMP plan](docs/PLAN_AMP.md). Jools Wills (BuZz) approved the
 proposed UnExoticA use; that permission and the agreed stable User-Agent are recorded on
 2026-10-07 in [`docs/PLAN_UNEXOTICA.md`](docs/PLAN_UNEXOTICA.md). Its build-time switch remains

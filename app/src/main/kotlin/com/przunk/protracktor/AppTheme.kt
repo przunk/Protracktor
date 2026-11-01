@@ -46,17 +46,9 @@ object Appearance {
     private const val STEREO_MIX = "stereo_mix"
     private const val VOLUME_NORMALIZATION = "volume_normalization"
     private const val FLOATING_CONTROLS = "floating_controls_enabled"
-    private const val AMP_ENABLED = "amp_enabled"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-
-    /** Catalogue availability is retained independently of its downloaded index. */
-    fun ampEnabled(context: Context): Boolean = prefs(context).getBoolean(AMP_ENABLED, true)
-
-    fun selectAmpEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(AMP_ENABLED, enabled).apply()
-    }
 
     fun theme(context: Context): AppTheme = AppTheme.fromStored(prefs(context).getString(THEME, null))
 

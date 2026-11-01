@@ -6,7 +6,9 @@ installed system-wide, and no build here writes to another project's state.
 ## Planned 1.5.0 candidate — 2026-11-01
 
 Use the normal minified `scripts/build-release.sh` for the combined AMP/floating-controls phone
-trial. Test builds retain versionName 1.4.0 and use commit-derived codes with source SHA; the
+trial. AMP availability is the code constant `Amp.ENABLED`, currently true; a false build
+omits AMP and blocks its retained references without deleting data. There is no AMP switch in
+Settings, and the older trial preference is ignored. Test builds retain versionName 1.4.0 and use commit-derived codes with source SHA; the
 interactive release procedure selects 1.5.0 only after acceptance. Schema remains 23.
 
 The project decision of 2026-11-01 supersedes the historical AMP approval hold below, without

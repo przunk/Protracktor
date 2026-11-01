@@ -51,7 +51,7 @@ connect over HTTPS to:
   open when **Cache folders ahead** is on (Settings; on Wi-Fi only unless you choose otherwise);
 - `asma.atari.org` to download the ASMA collection;
 - `amp.dascene.net` to download a selected AMP track and any format-required companion, cached
-  on the device. The catalogue has its own Settings switch and no speculative music prefetch;
+  on the device. No speculative music prefetch is used;
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
@@ -200,8 +200,7 @@ może łączyć się przez HTTPS z:
   włączone jest **Pobieraj foldery z wyprzedzeniem** (Ustawienia; domyślnie tylko przez Wi-Fi);
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
 - `amp.dascene.net`, aby pobrać wybrany utwór AMP i pliki towarzyszące wymagane przez format,
-  zapisywane w pamięci podręcznej urządzenia. Katalog ma własny przełącznik i nie pobiera muzyki
-  z wyprzedzeniem;
+  zapisywane w pamięci podręcznej urządzenia. Muzyka nie jest pobierana z wyprzedzeniem;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
 - `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,

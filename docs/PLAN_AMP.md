@@ -15,15 +15,18 @@ integration decision, not a claim of permission from AMP. Source: https://amp.da
 
 Preserve `feature/amp-catalogue` at `e728fa6`. Merge it into
 `feature/amp-release-integration` based on develop `ed1bc88`; do not rewrite the original trial.
-Keep its saved default-On catalogue switch, pinned songdb index, schema 23 and all transfer guards.
+Use **`Amp.ENABLED = true`** as the build-time availability gate; keep the pinned songdb index,
+schema 23 and transfer guards. No AMP setting, UI state or controller toggle is exposed. Ignore
+the old trial preference rather than allowing it to override the build.
 AMP stays Android-only. Browsing/search use the explicitly downloaded index; each selected file
 and any format-required companion are fetched on demand and cached. No music read-ahead, folder
 prefetch, archive crawl, bulk browser transfer or access-control bypass is introduced.
 
-Settings → Music sources credits AMP and links to its website. Disabling the catalogue stops its
-playback/transfers and removes it from available catalogues without deleting user data. This is
-a local switch, not remote revocation; withdrawing integration needs an application update and
-does not alter older installed copies. Prepare the follow-up locally for manual sending; do not
+Settings → Music sources credits AMP and links to its website. To withdraw access, set
+`Amp.ENABLED` to false and ship an update. That build hides discovery/index downloads and blocks
+AMP reads, including cached/saved references, while retaining playlists, History, bookmarks and
+the existing index. There is no per-installation switch or remote revocation; older installed
+builds keep their compiled availability. Prepare the follow-up locally for manual sending; do not
 record it as sent before confirmation. The complete combined gate and minified APK are verified;
 current phone verification remains pending.
 [Results and artifact](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
@@ -34,6 +37,20 @@ Focused current-integration checks: **64 tests / seven suites**, zero failures/e
 Settings persistence, source attribution and bilingual privacy. The complete combined gate
 and minified APK are now verified; the physical phone trial is pending.
 [Current combined evidence](RELEASE_1.5.0_PREPARATION.md#verified-candidate-and-apk--2026-11-01).
+
+## Build-gate correction — selected 2026-11-01
+
+The current candidate replaces the initial Settings-based proposal with a code constant.
+Only Floating controls has a new user preference. Remove AMP preference reads, PlayerUiState/VM
+fields and the controller toggle; keep the old preference data untouched and ignored.
+`AmpAccess` bounds its initial state and every re-enable attempt by `Amp.ENABLED`, so disabling
+the build cannot be bypassed by an older preference or a later internal access request.
+Existing transfer-ticket checks remain internal; production has no runtime enable action.
+
+The real Settings absence test fails against the previous candidate. Validate the same build-gate
+and transfer/retention tests with the constant false, including an attempted re-enable, then restore
+true for the full combined gate and replacement release APK. These checks and the new artifact
+are pending; earlier source 8a2ca43e / APK 1432 below retain their historical identity.
 
 ## Rebase — 2026-10-26
 
@@ -51,8 +68,8 @@ this rebase. [Current verification](PR_AMP_CATALOGUE.md#rebase-verification--202
 
 ## Contract
 
-- Android only. An in-app AMP switch defaults **on** and persists
-  the user's choice. Disabled AMP is absent from browsing/search/Random and cannot fetch tracks,
+- Android only. **`Amp.ENABLED` is a code constant, currently true.** Disabled builds omit AMP
+  from browsing/search/Random and cannot fetch tracks,
   including existing playlist/history references. Keep user playlists/history/bookmarks intact.
 - Use the ready-made songdb AMP source index, not a crawler. The existing songdb dependency and
   licensing record are in [the source survey](reference/songdb.md). On 2026-10-18 its public
@@ -66,7 +83,7 @@ this rebase. [Current verification](PR_AMP_CATALOGUE.md#rebase-verification--202
   contract from public primary sources before implementing it; do not invent an API or index IDs.
 - No schema migration, versionName bump, new dependency, web integration or unrelated refactor.
 
-## Stages
+## Original trial stages — historical
 
 1. Verify the index/address/container contract and record limits; write fixtures and parser tests.
 2. Add the catalogue using the existing index/database/playback path and source attribution.
@@ -113,3 +130,18 @@ results were not supplied. At that historical handoff, maintainer permission and
 pending. The publication hold is superseded by the 2026-11-01 decision above; the current combined
 candidate still requires phone acceptance before develop integration.
 [Implementation evidence](PR_AMP_CATALOGUE.md).
+
+### Disabled-build verification — 2026-11-01
+
+The real `Amp.ENABLED = false` build passes **12 checks / eight suites**, zero failures,
+errors or skips, in **43 s**. The same code paths verify initial/re-enabled access, catalogue and
+index choices, download sizes, module/index transfer admission, saved reads, SQLite/user-reference
+retention and the Settings section without an availability control. Removing the re-enable clamp
+fails the build-gate assertions. The initial UI absence test also failed on the previous AMP row.
+The host UI fixture uses a bounded catalogue-section viewport because the unrelated About footer
+requires Android JNI. The target availability section is rendered and inspected.
+
+Restore `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_enabled=false` data
+is seeded before real controller startup in the admission tests, covering an upgrade from an
+opted-out trial. Those current full checks and the replacement APK remain pending. Earlier
+artifact/source identities are retained; no develop merge or release is performed here.

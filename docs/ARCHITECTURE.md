@@ -576,26 +576,29 @@ because the filename-only FTM fallback means FamiTracker. Platform inference use
 shared rules, not an archive-wide assumption that every AMP tune is Amiga music.
 
 `Catalogue.known` describes implementations, while `Catalogue.all` describes current availability.
-This distinction prevents the startup prune from deleting a temporarily disabled AMP index.
+This distinction prevents the startup prune from deleting an AMP index in a disabled build.
 Search/count/Random SQL share `catalogueVisibility`; direct catalogue reads reject disabled IDs.
-The setting is restored before controller stores start and persists through `Appearance`.
+`Amp.ENABLED` fixes availability for the build. There is no AMP Appearance preference,
+PlayerUiState field, VM action or controller toggle; legacy trial preferences are ignored.
 
-After the 2026-10-26 rebase, `CatalogueRetention.blocksReference` follows runtime catalogue
+After the 2026-10-26 rebase, `CatalogueRetention.blocksReference` follows catalogue
 availability instead of rejecting every AMP reference. The unified queue can therefore accept
 enabled AMP requests while still rejecting disabled ones with the AMP-specific explanation.
 Search, counts, Random and playable totals share the same `catalogueVisibility` rule. Manual
 occurrence identity, FIFO order and source continuation remain the current queue's responsibility.
 
-`AmpAccess` owns an enable/disable epoch and active HTTP disconnect callbacks. Network/cache
+`AmpAccess` owns transfer tickets and active HTTP disconnect callbacks, bounded by the build
+gate even for explicit internal re-enable requests. The retained epoch checks are internal
+transfer ownership, not a runtime setting. Network/cache
 delivery and `TrackFiles` reads validate that epoch, so an off/on cycle cannot adopt old bytes.
 `LibraryDownloads` also checks it before replacing an index and always retires progress. Catalogue
 overview/platform reads discard results from an older switch epoch. User playlists, History and
-bookmarks are not deleted. Turning off stops AMP playback, not playback from other catalogues.
+bookmarks are not deleted. A disabled build rejects AMP reads while other catalogues remain usable.
 
 AMP is excluded from music read-ahead, background metadata resolution and bulk browser transfer;
 folder prefetch remains Modland-only. The stable client User-Agent is unchanged. AMP HTML is
 rejected without ExoticA's cookie retry, and no Referer is forged. The release integration keeps
-these limits; no individual maintainer approval is claimed. The local switch cannot revoke
+these limits; no individual maintainer approval is claimed. The build gate cannot revoke
 already installed copies remotely. [Current decision and historical evidence](PLAN_AMP.md).
 
 ---

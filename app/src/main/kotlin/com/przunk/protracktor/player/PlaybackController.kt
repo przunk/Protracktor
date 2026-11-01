@@ -160,7 +160,6 @@ class PlaybackController private constructor(private val context: Context) {
         volumeNormalization = Appearance.volumeNormalization(context),
         floatingControlsEnabled = Appearance.floatingControlsEnabled(context),
         cacheAhead = Appearance.cacheAhead(context),
-        ampEnabled = Appearance.ampEnabled(context).also { Amp.access.setEnabled(it) },
         shareAudioMinutes = Appearance.shareAudioMinutes(context),
     ))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -2699,43 +2698,6 @@ class PlaybackController private constructor(private val context: Context) {
     fun setCacheAhead(mode: CacheAhead) {
         if (!Appearance.selectCacheAhead(context, mode)) return
         _state.update { it.copy(cacheAhead = mode) }
-    }
-
-    fun setAmpEnabled(enabled: Boolean) {
-        if (_state.value.ampEnabled == enabled) return
-        Appearance.selectAmpEnabled(context, enabled)
-        Amp.access.setEnabled(enabled)
-        val stopped = !enabled && _state.value.current?.id?.startsWith("amp://") == true
-        if (stopped) stopPlayback()
-        _state.update {
-            it.copy(ampEnabled = enabled, playing = if (stopped) false else it.playing,
-                loadingTrack = if (stopped) false else it.loadingTrack,
-                message = if (stopped) Message(context.getString(R.string.notice_amp_disabled)) else it.message)
-        }
-        browseWorkflow.cancelSearch()
-        BrowseReadOwner.begin(_browse) { current ->
-            val reset = !enabled && current.openCatalogue?.id == Amp.id
-            current.copy(
-                catalogues = current.catalogues.filter { enabled || it.id != Amp.id },
-                openCatalogue = if (reset) null else current.openCatalogue,
-                openFormat = if (reset) null else current.openFormat,
-                openAuthor = if (reset) null else current.openAuthor,
-                groups = if (reset) emptyList() else current.groups,
-                searchScope = if (!enabled && current.searchScope is SearchScope.Online)
-                    current.searchScope.copy(catalogueIds = current.searchScope.catalogueIds - Amp.id)
-                    else current.searchScope,
-                searchMatches = 0,
-                tracks = if (current.domain == BrowseDomain.HISTORY) current.tracks else
-                    current.tracks.filter { enabled || !it.id.startsWith("amp://") },
-                loading = false,
-            )
-        }
-        randomHistory.changeScope()
-        publishRandomPicks()
-        refreshCatalogues()
-        refreshOnPhone()
-        refreshSavedPlaces()
-        if (_state.value.randomMode) prepareRandomQueue()
     }
 
     fun setStereoMix(mode: StereoMix) {

@@ -21,8 +21,8 @@ Short Play notes: [English](../store/listing/en-US/release-notes/default.txt) an
   [Contract](HISTORY_LIVE_UPDATES.md).
 - **AMP catalogue (A7):** browse/search a downloaded songdb index, open author folders, bookmark
   places and play/cache individually selected tracks using the existing decoders and queue.
-  A saved Settings switch controls availability and stops AMP activity without deleting user
-  playlists, History, bookmarks or the index. AMP is credited in Music sources. No crawler,
+  A build-time flag controls availability. A disabled update blocks AMP access without deleting
+  playlists, History, bookmarks or the index; there is no AMP switch in Settings. AMP is credited in Music sources. No crawler,
   speculative music prefetch, bulk transfer or new decoder is introduced. The prior approval
   hold is superseded by the project decision of 2026-11-01; no maintainer reply or individual
   approval is claimed. The informational follow-up is prepared but not recorded as sent.
@@ -57,9 +57,10 @@ to a quiet start and later gain jump. No new WEB deployment is implied by this A
 
 ## Verification and exclusions
 
-The combined source **8a2ca43e** passes **1319 tests / 180 suites**, all **85** gate stages,
+The earlier candidate **8a2ca43e**, before the build-gate correction, passes **1319 tests / 180 suites**, all **85** gate stages,
 **1396 WEB page assertions**, **57 engine checks**, and fresh lint **0 errors / 82 warnings**.
-A minified test-signed **APK 1.4.0 (1432)** is prepared and inspected. Current phone acceptance
+Its minified test-signed **APK 1.4.0 (1432)** retains its identity. The replacement candidate
+requires fresh checks and packaging after the AMP control change. Current phone acceptance
 is pending; [preparation](RELEASE_1.5.0_PREPARATION.md) records exact artifact/source/hash and limits.
 Previous device feedback and artifacts retain their original identities.
 Database schema stays 23; no destructive migration or new dependency is selected.

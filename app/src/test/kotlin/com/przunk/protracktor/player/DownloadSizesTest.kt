@@ -21,7 +21,7 @@ class DownloadSizesTest {
             DownloadSizes.MODLAND_MB,
             DownloadSizes.ASMA_MB,
             DownloadSizes.UNEXOTICA_MB,
-            DownloadSizes.AMP_MB,
+            if (com.przunk.protracktor.net.Amp.ENABLED) DownloadSizes.AMP_MB else 0,
             DownloadSizes.SONG_LENGTHS_MB,
             DownloadSizes.TRACK_METADATA_MB,
             DownloadSizes.FAVOURITES_MB,

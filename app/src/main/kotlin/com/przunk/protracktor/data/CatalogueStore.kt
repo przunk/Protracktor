@@ -171,8 +171,8 @@ class CatalogueStore(context: Context) {
     }
 
     /**
-     * Drops removed catalogue implementations, not temporarily disabled catalogues. Runtime
-     * visibility is enforced by queries so toggling AMP never destroys a downloaded index.
+     * Drops removed implementations, retaining the AMP index even in a build with its gate Off.
+     * Queries enforce availability without deleting downloaded data.
      */
     suspend fun pruneUnknownCatalogues() = withContext(Dispatchers.IO) {
         val known = Catalogue.known.map { it.id }

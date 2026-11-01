@@ -46,6 +46,16 @@ class AmpRemoteFilesTest {
     @Before fun reset() { Amp.access.setEnabled(true); RemoteFiles(context).clearCache() }
     @After fun restore() { Amp.access.setEnabled(true) }
 
+    @Test fun `compiled availability controls actual transfers and leaves other sources usable`() = runBlocking {
+        var calls = 0
+        val files = RemoteFiles(context) { calls++; Reply(it, payload) }
+        Amp.access.setEnabled(true)
+        assertEquals(Amp.ENABLED, files.fetch(url) != null)
+        assertEquals(Amp.ENABLED, files.fetchIndex(Amp.indexUrl) != null)
+        assertArrayEquals(payload, files.fetch("https://example.org/unrelated.mod"))
+        assertEquals(if (Amp.ENABLED) 3 else 1, calls)
+    }
+
     @Test fun `off blocks cached bytes and indexes but not an unrelated source`() = runBlocking {
         var calls = 0
         val files = RemoteFiles(context) { calls++; Reply(it, payload) }

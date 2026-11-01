@@ -14,6 +14,8 @@ object Amp : Catalogue(
     indexUrl = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/" +
         "ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f/songdb/sources/site/amp.tsv",
 ) {
+    // Withdrawal requires a new build; existing installations keep their compiled availability.
+    const val ENABLED: Boolean = true
     internal val access = AmpAccess()
     override val homeUrl = "https://amp.dascene.net/"
     private const val FILE_BASE = "https://amp.dascene.net/modules/"
