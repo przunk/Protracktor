@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { decoderOpenAfter } from './fixtures/page-playback.mjs';
+
 /** Production playlist and pending-Queue grip events; synthetic geometry is host evidence only. */
 export default async function checkListReorder({ window, check }) {
   const { document } = window, $ = (id) => document.getElementById(id), api = window.__api;
@@ -24,8 +26,8 @@ export default async function checkListReorder({ window, check }) {
   await api.storeNow.save({ id: a, name: 'Reorder A', tracks });
   await api.storeNow.save({ id: b, name: 'Reorder B', tracks });
   await api.choosePlaylist(a);
-  rows()[1].click(); await settle();
-  api.onWorklet({ type: 'opened', describe: 'title\tReorder current\nformat\tProTracker MOD', duration: 90, subsongs: 1, current: 0, canSeek: true, rate: 44100 });
+  const initialOpen = await decoderOpenAfter(window, () => rows()[1].click());
+  api.onWorklet({ type: 'opened', requestId: initialOpen.requestId, describe: 'title\tReorder current\nformat\tProTracker MOD', duration: 90, subsongs: 1, current: 0, canSeek: true, rate: 44100 });
   api.onWorklet({ type: 'position', seconds: 17, subsong: 0 });
   if ($('shuffle').classList.contains('on')) $('shuffle').click();
   api.enqueueTrack(tracks[3]); api.enqueueTrack(tracks[3]); api.enqueueTrack(tracks[2]);

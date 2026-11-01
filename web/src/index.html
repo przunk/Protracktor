@@ -147,6 +147,48 @@
     height: 100%;
   }
 
+
+  .playlist-heading { display: grid; min-width: 0; min-height: 72px; flex: 1; }
+  .playlist-chooser, .playlist-search-form { grid-area: 1 / 1; min-width: 0; display: flex; gap: 6px;
+    opacity: 1; visibility: visible; transform: translateX(0); transition: opacity 180ms, transform 180ms, visibility 180ms; }
+  .playlist-chooser > .playlist { flex: 1; min-width: 0; }
+  .playlist-chooser .playlist .text { flex: 1; }
+  .playlist-heading .playlist .name { font-size: var(--title-medium); font-weight: 500; }
+  .playlist-heading .playlist .count { font-size: 12px; }
+  header > .action { min-width: 52px; padding-inline: 7px; letter-spacing: 0; }
+  .playlist-heading .playlist-search-open { min-width: 48px; padding-inline: 5px; letter-spacing: 0; }
+  .playlist-heading .playlist { padding-inline: 10px; gap: 4px; }
+  @media (max-width: 400px) {
+    .app > header { padding-inline: 8px; gap: 4px; }
+    header > .action { min-width: 48px; padding-inline: 4px; font-size: 10px; }
+    .playlist-chooser { gap: 4px; }
+    .playlist-heading .playlist-search-open { min-width: 44px; padding-inline: 3px; font-size: 10px; }
+    .playlist-heading .playlist { padding-inline: 6px; }
+    .search-inline { min-width: 40px; }
+  }
+  .playlist-chooser .playlist-search-open { background: var(--surface-container); color: var(--on-surface-variant); }
+  .playlist-search-form { gap: 0; align-items: center; border-radius: var(--shape-m); background: var(--surface-container);
+    position: relative; opacity: 0; visibility: hidden; transform: translateX(12px); pointer-events: none; }
+  .search-open .playlist-chooser { opacity: 0; visibility: hidden; transform: translateX(-12px); pointer-events: none; }
+  .search-open .playlist-search-form { opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; }
+  #playlist-search-input { min-width: 0; width: 100%; border: 0; background: transparent; color: var(--on-surface);
+    font: inherit; padding: 12px 0; outline: none; }
+  #playlist-search-input::-webkit-search-cancel-button { display: none; }
+  .search-inline { border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer;
+    display: grid; place-items: center; min-width: 44px; min-height: 48px; border-radius: var(--shape-m); }
+  .search-inline svg { width: 24px; height: 24px; fill: currentColor; }
+  .playlist-search-form:focus-within { outline: 2px solid var(--primary); outline-offset: -2px; }
+  .app { position: relative; isolation: isolate; }
+  .app::after { content: ''; position: absolute; inset: 0; background: #000; opacity: 0;
+    z-index: 30; pointer-events: none; transition: opacity 180ms; }
+  .app.playlist-search-editing::after { opacity: .42; }
+  .playlist-search-editing .playlist-search-form { z-index: 31; }
+  #queue > .track[hidden] { display: none; }
+  #playlist-search-empty { padding: 12px 20px; }
+  @media (prefers-reduced-motion: reduce) {
+    .playlist-chooser, .playlist-search-form, .app::after { transition: none; }
+  }
+
   /* --- top bar ------------------------------------------------------------------------------ */
 
   header {
@@ -946,6 +988,8 @@
       The playlist chip is a button now, as it is on the phone: what is showing, how much is in it,
       and a way to the others. `ui/PlaylistSwitcher.kt` is the shape being copied.
     -->
+    <div id="playlist-heading" class="playlist-heading">
+      <div id="playlist-chooser" class="playlist-chooser">
     <button class="playlist" id="playlistchip">
       <div class="text">
         <div class="name" id="playlistname">From the phone</div>
@@ -953,7 +997,14 @@
       </div>
       <svg viewBox="0 0 24 24" class="chev"><path d="m7 10 5 5 5-5z"/></svg>
     </button>
-    <div class="spacer"></div>
+        <button class="action playlist-search-open" id="playlist-search-open" aria-controls="playlist-search-form" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 14 5 5-1.5 1.5-5-5V15l-.4-.4a6.5 6.5 0 1 1 1.5-1.5l.4.4h.5zM10 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>Search</button>
+      </div>
+      <form id="playlist-search-form" class="playlist-search-form" aria-hidden="true" inert>
+        <button type="button" id="playlist-search-close" class="search-inline" aria-label="Close playlist search" title="Close playlist search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button>
+        <input id="playlist-search-input" type="search" placeholder="Search playlist…" aria-label="Search playlist" autocomplete="off" enterkeyhint="done">
+        <button type="button" id="playlist-search-clear" class="search-inline" aria-label="Clear search" title="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18.3 5.7-1.4-1.4L12 9.2 7.1 4.3 5.7 5.7l4.9 4.9-4.9 4.9 1.4 1.4 4.9-4.9 4.9 4.9 1.4-1.4-4.9-4.9z"/></svg></button>
+      </form>
+    </div>
     <!--
       Only while there is something to save -- the phone's rule: a permanently lit Save teaches
       nothing about whether the list on screen is the list on disk.
@@ -1003,6 +1054,7 @@
     <div id="randomfilter" class="randomfilter" hidden></div>
     <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
+    <p id="playlist-search-empty" class="note" role="status" hidden>No playlist tracks match this phrase. Clear search to show the full list.</p>
     <!--
       The empty playlist (W11, the phone's EmptyPlaylist): what to do next, said only once it is
       known what this browser holds -- so it never offers a download to somebody who has the lot.

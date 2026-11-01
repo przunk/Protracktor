@@ -17,6 +17,7 @@ import fs from 'fs';
 import { webcrypto } from 'node:crypto';
 import path from 'path';
 import { zipFixture } from './fixtures/zip.mjs';
+import { decoderOpenAfter } from './fixtures/page-playback.mjs';
 import { JSDOM } from './../web/node_modules/jsdom/lib/api.js';
 
 const failures = [];
@@ -226,6 +227,8 @@ const platformDataSource = fs.readFileSync('web/src/platforms.js', 'utf8').repla
 const randomCatalogueSource = fs.readFileSync('web/src/random-catalogue.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace("import { PlaylistSearchView, playlistMatches } from './playlist-search.js';",
+    () => `const { PlaylistSearchView, playlistMatches } = (() => { ${fs.readFileSync('web/src/playlist-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { PlaylistSearchView, playlistMatches }; })();`)
   .replace("import { SystemMedia } from './system-media.js';", 'const { SystemMedia } = window.__systemMediaModules;')
   .replace("import { TrackArtwork } from './track-artwork.js';", 'const { TrackArtwork } = window.__systemMediaModules;')
   .replace("import { LibraryDownloads } from './library-downloads.js';",
@@ -414,6 +417,12 @@ check($('status').textContent.length > 0, 'the status line says something');
 }
 check(!!window.__api, 'the script finished loading');
 if (process.env.PROTRACKTOR_PAGE_MODULES === '1') check(window.__loadedModuleCount > 20, 'the production ESM dependency graph was evaluated without flattened module scopes');
+
+if (process.env.PROTRACKTOR_PLAYLIST_SEARCH === '1') {
+  await (await import('./check-page-playlist-search.mjs')).default({ window, check });
+  check(!window.__browserErrors.length, 'playlist Search events leave no browser exceptions');
+  process.exit(failures.length ? 1 : 0);
+}
 
 if (startupCase) {
   await (await import('./check-page-playback-startup.mjs')).verify({ window, check, name: startupCase });
@@ -1741,10 +1750,13 @@ if (window.__api) {
         && !$('history-older').disabled && $('browselist').children.length === 101,
     'History shows the newest hundred, says which, and offers the older ones');
   $('history-older').click();
-  await new Promise((r) => setTimeout(r, 50));
+  await reachPageState(() => $('historyrange').textContent === '101–200 of 520');
   check($('historyrange').textContent === '101–200 of 520' && !$('history-newer').disabled,
     'Older shows the next hundred');
-  for (let i = 0; i < 5; i++) { $('history-older').click(); await new Promise((r) => setTimeout(r, 50)); }
+  for (let page = 2; page <= 5; page++) {
+    $('history-older').click();
+    await reachPageState(() => $('historyrange').textContent.startsWith(`${page * 100 + 1}–`));
+  }
   check($('historyrange').textContent === '501–520 of 520' && $('history-older').disabled,
     'and stops at the last page, which holds what is left');
   check([pager.querySelector('#history-newer'), pager.querySelector('#history-older')].every((b) => b.querySelector('svg')),
@@ -2112,8 +2124,9 @@ if (window.__api) {
   // page is touched, which is what a link opened from another app is.
   api.contextNow().state = 'suspended';
   window.__audioBlocked = true;
-  window.location.hash = `play:${zlib.deflateSync(Buffer.from(line)).toString('base64url')}`;
-  await settle();
+  const sharedOpen = await decoderOpenAfter(window, () => {
+    window.location.hash = `play:${zlib.deflateSync(Buffer.from(line)).toString('base64url')}`;
+  });
   const session = api.awayState();
   check(session?.kind === 'link' && api.queueNow().join() === tune.url,
     'a link sent here plays that one tune');
@@ -2127,7 +2140,7 @@ if (window.__api) {
         && $('sessionicon').querySelector('path'),
     'under a heading that says where it came from');
 
-  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\nformat\tProTracker MOD\n', duration: 200,
+  api.onWorklet({ type: 'opened', requestId: sharedOpen.requestId, describe: 'title\tzoolook\nformat\tProTracker MOD\n', duration: 200,
                   subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
   await settle();
   check($('playpause').title === 'Play' && $('sub').textContent === 'Tap anywhere to play',
@@ -3795,6 +3808,8 @@ if (window.__api?.editorNow) {
   }
 }
 
+await (await import('./check-page-fixtures.mjs')).default({ window, check });
+
 await (await import('./check-page-manual-queue.mjs')).default({ window, check });
 await (await import('./check-page-queue-view.mjs')).default({ window, check });
 await (await import('./check-page-queue-load.mjs')).default({ window, check });
@@ -3834,6 +3849,8 @@ await (await import('./check-page-folder-prefetch.mjs')).default({ window, check
 await (await import('./check-page-downloads.mjs')).default({ window, check });
 await (await import('./check-page-stereo.mjs')).default({ window, check });
 await (await import('./check-page-normalization.mjs')).default({ window, check });
+
+await (await import('./check-page-playlist-search.mjs')).default({ window, check });
 
 check(!window.__browserErrors.some((error) => error.type === 'unhandled exception'), 'page interactions leave no uncaught UI exceptions');
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

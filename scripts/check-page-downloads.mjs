@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { sameEditorDocument } from './fixtures/page-playback.mjs';
 import { Blob as HostBlob } from 'node:buffer';
 import { inflateRawSync } from 'node:zlib';
 import { zipFixture } from './fixtures/zip.mjs';
@@ -137,7 +138,7 @@ export default async function checkDownloads({ window, check }) {
     releaseModland(); await owner().completion;
     check(!owner().running && owner().busy.length === 0 && (await archive.meta('modland'))?.tracks === 1,
       'a dismissed and reopened refresh still commits and releases its locks');
-    check(api.planNow().context === held.context && api.editorNow() === held.editor && api.scheduleNow() === held.schedule
+    check(api.planNow().context === held.context && sameEditorDocument(api.editorNow(), held.editor) && api.scheduleNow() === held.schedule
       && api.contextNow() === held.audio && window.__toWorklet.length === held.commands,
       'all actual download actions preserve the live source, manual FIFO, editor, audio context and decoder commands');
     // A local capability rebuild is not a newer user-selected catalogue installation.

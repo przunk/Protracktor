@@ -184,6 +184,39 @@ async function captureProfile(browser, base, output, profile, report) {
     await page.locator('#queue .track').first().waitFor();
     await close('pair');
     await take('playlist');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await verify('B55: Search replaces the header without adding height', async () => {
+      const before = await page.locator('header').boundingBox();
+      await click('#playlist-search-open');
+      assert.ok(await page.locator('#playlist-search-form').evaluate(el =>
+        getComputedStyle(el).transitionDuration.split(',').some(value => parseFloat(value) > 0)));
+      await page.locator('#playlist-search-input').fill('evening');
+      const after = await page.locator('header').boundingBox();
+      assert.ok(Math.abs(before.height - after.height) < 1);
+      assert.equal(await page.locator('#queue .track:visible').count(), 1);
+      assert.equal(await page.locator('.app').evaluate(el => el.classList.contains('playlist-search-editing')), true);
+    });
+    await take('playlist-search-editing');
+    await verify('B55: result playback retains filter and full context with normal chrome', async () => {
+      await click('#queue .track:visible .text');
+      await page.waitForFunction(() => !document.querySelector('#seek').disabled);
+      assert.equal(await page.locator('.app').evaluate(el => el.classList.contains('playlist-search-editing')), false);
+      assert.equal(await page.locator('#playlist-search-input').inputValue(), 'evening');
+      assert.equal(await page.locator('#queue .track').count(), tracks.length);
+      assert.equal(await page.locator('#queue .track:visible').count(), 1);
+    });
+    await take('playlist-search-playing');
+    await page.locator('#playlist-search-input').fill('absent-result');
+    await page.locator('#playlist-search-empty').waitFor({ state: 'visible' });
+    await take('playlist-search-empty');
+    await verify('B55: closing restores chooser and the full playlist', async () => {
+      await click('#playlist-search-close');
+      await page.locator('#playlistchip').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#queue .track:visible').count(), tracks.length);
+      assert.equal(await page.locator('.app').evaluate(el => el.classList.contains('playlist-search-editing')), false);
+    });
+    await take('playlist-search-closed');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await click('#queue .track:first-child .text');
     await page.locator('#dock-tune').waitFor({ state: 'visible' });
     await page.waitForFunction(() => document.querySelector('#dock-tune').textContent.includes('5'));
@@ -216,10 +249,10 @@ async function captureProfile(browser, base, output, profile, report) {
     await browse(/^History$|^Historia$/); await take('history');
     await page.locator('#historysearch').fill('superseded query');
     await page.locator('#historysearch').fill('evening');
-    await verify('C126: rapid typing filters History using native debounce/cancellation', () => page.waitForFunction(() => {
+    await verify('C126: rapid typing filters History using native debounce/cancellation', () => page.waitForFunction(url => {
       const rows = document.querySelectorAll('#browselist [data-url]');
-      return rows.length === 1 && rows[0].textContent.includes('Evening demo');
-    }, null, { timeout: 3000 }));
+      return rows.length === 1 && rows[0].dataset.url === url;
+    }, tracks[1].url, { timeout: 3000 }));
     await take('history-search');
     await page.locator('#historysearch').fill('');
     await verify('C126: clearing History search restores all eight fixture entries', () => page.waitForFunction(() =>
