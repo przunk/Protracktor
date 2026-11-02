@@ -1,9 +1,10 @@
-# Protracktor 1.5.0 — release notes draft
+# Protracktor 1.5.0 — release notes
 
-Prepared 2026-11-01. Scope: development since `v1.4.0`, plus the combined floating-controls and
-AMP candidate. This is a planned release, not a prepared AAB, release tag, upload or publication.
-Test APKs retain versionName 1.4.0 until the release procedure selects 1.5.0. Source/artifact and
-verification evidence belong in [Status](STATUS.md) and [release preparation](RELEASE_1.5.0_PREPARATION.md).
+Prepared 2026-11-01; updated 2026-11-02. Scope: development since `v1.4.0`, including floating
+controls and AMP. A signed AAB **1.5.0 (1439)** is prepared from **v1.5.0 / b1bd8632**. Upload,
+Play publication and remote push are not yet confirmed. Earlier test APKs keep versionName
+1.4.0 and their original identities. Source/artifact and verification evidence belong in
+[Status](STATUS.md) and [release preparation](RELEASE_1.5.0_PREPARATION.md).
 
 Short Play notes: [English](../store/listing/en-US/release-notes/default.txt) and
 [Polish](../store/listing/pl-PL/release-notes/default.txt). Tagged 1.4.0 notes remain unchanged.
@@ -69,5 +70,5 @@ original identities. Schema stays 23; no destructive migration or new dependency
 C122 Redmi startup crash remains under observation. No stack trace or reproduced mechanism
 establishes a fix. Android Auto, individual saved subsongs (B51), tutorial (B50), free-library
 integration and normalization-target slider are not part of this release scope. AMP remains
-Android-only. Production access, AAB signing/upload, Git push and publication remain separate
-steps; the production-access application was declined again on 2026-10-27.
+Android-only. AAB signing is complete; upload, Git push and publication remain separate steps.
+The production-access application was declined again on 2026-10-27.

@@ -7,6 +7,23 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## 1.5.0 — signed AAB prepared, 2026-11-02
+
+Release source **b1bd8632**, tag **v1.5.0**, versionCode **1439**. Master remains at the tag;
+develop records the artifact evidence separately. Initial bundle signing failed after the release
+refs were created. A manual retry from the unchanged tag succeeded in a reported **17 s**.
+
+[AAB 1.5.0 (1439)](../dist/protracktor-1.5.0-1439.aab): **22,398,574 bytes**;
+SHA-256 `7986ebc27ee099dd11813c2b5089b2639a4791e7cbbb2ec214469926438f0a75`.
+Agent checks confirm the hash, size, ZIP integrity and JAR signature; the public signing
+certificate matches prior releases. The version commit changes only versionName from 1.4.0
+to 1.5.0. Earlier detailed test results below retain their original source/build identities;
+no app tests or rebuild were run to record this evidence.
+
+**Upload, Play publication and remote push are not yet confirmed.** No WEB deployment is implied.
+[Release evidence](../store/play-console/releases.md) and
+[preparation/recovery record](RELEASE_1.5.0_PREPARATION.md).
+
 ## AMP and floating controls — approved and merged, 2026-11-02
 
 AMP is controlled by **`Amp.ENABLED = true`**, with no availability setting or persisted choice.

@@ -1,8 +1,30 @@
 # Release 1.5.0 preparation
 
-Selected 2026-11-01. This is preparation, not an application release or confirmation of upload.
-Keep versionName 1.4.0 until the release procedure selects 1.5.0. Preserve master/tags, prior
-artifacts, database schema 23 and the separate normalization-slider experiment.
+Selected 2026-11-01. Updated 2026-11-02: the release procedure selected 1.5.0 and a signed AAB
+is prepared. Upload, Play publication and remote push are not yet confirmed. Earlier dated
+preparation records retain their original source/artifact identities. Database schema remains
+23; the normalization-slider experiment stays separate.
+
+## Signed AAB and release recovery — 2026-11-02
+
+The release procedure reached the version/tag stage, creating **v1.5.0** at
+**b1bd8632870b09ee58bcea33e11c83391be82565** with versionCode **1439** and fast-forwarding master.
+Signing then failed; develop and master already contained the version commit. The successful
+manual retry ran `scripts/build-bundle.sh` from the unchanged tag, taking a reported **17 s**.
+The complete release procedure was not restarted and the tag was not moved or recreated.
+
+[AAB 1.5.0 (1439)](../dist/protracktor-1.5.0-1439.aab) is **22,398,574 bytes**, SHA-256
+`7986ebc27ee099dd11813c2b5089b2639a4791e7cbbb2ec214469926438f0a75`.
+Agent-run inspection confirms the size/hash, ZIP integrity and JAR signature. Its public
+certificate fingerprint matches previous releases. The only source change from the accepted
+develop state is versionName 1.4.0 → 1.5.0. Previous detailed host checks remain attributed to
+their original builds; no new app test execution or build is claimed for this record.
+
+Returned to develop to record [release evidence](../store/play-console/releases.md), leaving
+master and v1.5.0 at the artifact source. Upload to Play Console, Git push and publication remain
+unconfirmed. Next: upload this AAB with the tagged EN/PL notes, then run
+`./scripts/push-protracktor.sh master develop v1.5.0` from the release terminal.
+Local inspection receipts are in ignored `user/release-1.5/aab-1.5.0-*` files.
 
 ## Develop integration — approved and merged, 2026-11-02
 

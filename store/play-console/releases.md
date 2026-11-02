@@ -6,6 +6,36 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.5.0 — versionCode 1439
+
+**Artifact prepared** for Google Play closed testing on 2026-11-02. Upload to Play Console and
+publication are not yet confirmed. Release notes: `store/listing/*/release-notes/default.txt`
+at `v1.5.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-1.5.0-1439.aab` |
+| Size | 22398574 bytes |
+| SHA-256 | `7986ebc27ee099dd11813c2b5089b2639a4791e7cbbb2ec214469926438f0a75` |
+| versionCode | 1439 — `git rev-list --count v1.5.0`, not written by hand |
+| versionName | 1.5.0 |
+| Commit | `b1bd8632870b09ee58bcea33e11c83391be82565` |
+| Tag | `v1.5.0` |
+| Built | 2026-11-02 |
+
+**Signer**, read from the bundle by the agent using `keytool -printcert -jarfile`:
+`E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+It matches the previous releases. The agent verified the reported file hash, size, ZIP integrity
+and JAR signature; this does not establish Play upload or device behaviour.
+
+The release procedure created the version commit, fast-forwarded master and created the tag,
+then stopped during bundle signing. The bundle was successfully rebuilt manually from the
+unchanged tag using `scripts/build-bundle.sh`; the reported retry took 17 seconds. This evidence
+is committed on develop; master and the tag remain at the artifact source.
+
+**What changed since v1.4.0**: `git log --oneline v1.4.0..v1.5.0`,
+`docs/RELEASE_NOTES_1.5.0.md` and `docs/STATUS.md`.
+
 ## 1.4.0 — versionCode 1304
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.4.0`.
