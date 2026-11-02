@@ -18,7 +18,8 @@ internal transfer access. Corrected source 2794a1db passes the complete gate and
 inspection; previous results remain historical. Attribution/privacy describe the selected integration instead
 of an unpublished experiment. The earlier publication hold is superseded by the project decision
 in [PLAN_AMP](PLAN_AMP.md#release-integration--selected-2026-11-01). There is no maintainer reply
-or individual approval, and the informational follow-up has not been sent. Master and
+or individual approval. Sending of the informational follow-up on 2026-11-01 was confirmed on
+2026-11-02; its final sent wording was not supplied. Master and
 release tags remain unchanged. Develop now includes approved merge 3519f05b; original trial
 checks below remain historical.
 

@@ -25,7 +25,7 @@ Short Play notes: [English](../store/listing/en-US/release-notes/default.txt) an
   playlists, History, bookmarks or the index; there is no AMP switch in Settings. AMP is credited in Music sources. No crawler,
   speculative music prefetch, bulk transfer or new decoder is introduced. The prior approval
   hold is superseded by the project decision of 2026-11-01; no maintainer reply or individual
-  approval is claimed. The informational follow-up is prepared but not recorded as sent.
+  approval is claimed. The informational follow-up was sent on 2026-11-01, confirmed on 2026-11-02.
   [Access contract and historical trial evidence](PLAN_AMP.md).
 - **Floating controls (B54):** default-Off Settings opt-in enables the existing Play/Pause hold
   for controls over another app. Overlay permission remains explicit. Drag the panel, dock it

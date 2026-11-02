@@ -18,8 +18,9 @@ claimed for this identical-tree integration. The merge approval supplies no item
 installed-build or checklist outcomes; those remain separately unreported.
 
 Master/tag v1.4.0 stay at `5b6936e`; no 1.5.0 version commit/tag, store AAB, upload, push or WEB
-deployment is made. Release notes are prepared. The corrected AMP follow-up remains drafted and
-not confirmed sent; no reply or individual maintainer approval is claimed. The next release step
+deployment is made. Release notes are prepared. The AMP follow-up was sent on **2026-11-01**,
+confirmed on 2026-11-02; its final sent wording was not supplied. No reply or individual maintainer
+approval is claimed. The next release step
 is the interactive 1.5.0 procedure from develop, with signing/upload/push performed separately.
 Earlier dated pending-integration statements describe their original handoffs and are superseded
 by this record; they do not assert further physical verification.
@@ -51,9 +52,10 @@ the AMP integration branch without rewriting that history. Combine the feature b
 a test candidate to supply one minified, test-signed APK. Inspect permission/lifecycle races,
 retained AMP data and queue/cache ownership; run complete tests/lint before the handoff.
 
-Prepare an English follow-up email, with credits and exact access behaviour, before publication.
-Correspondence remains local and is not claimed sent until sending is confirmed. The current
-workspace has no email-sending tool; the prepared text is for manual sending.
+The English informational follow-up was sent manually on 2026-11-01, confirmed on 2026-11-02.
+Correspondence remains local. The retained draft was subsequently corrected against the final
+candidate; the final sent wording was not supplied, so that draft is not an exact sent-message
+record. No AMP reply or individual approval is recorded.
 
 After phone acceptance, merge the approved features, finalize EN/PL Play notes and full release
 notes. The interactive `scripts/release.sh 1.5.0 --check` / `scripts/release.sh 1.5.0`, AAB upload
@@ -133,10 +135,11 @@ Restart to confirm saved availability without an automatic panel. Check AMP brow
 selected cached playback, manual queue and absence of an AMP availability setting. A false
 constant is checked on the host; it cannot be selected from this APK's UI. Verify EN/PL and both themes.
 
-The informational email is prepared in ignored
-`docs/letters/2026-11-01-amp-integration-follow-up-draft.md` and remains **not sent**. Its stable
-User-Agent and selected-file/companion, cache, attribution and no-prefetch claims match the code.
-There is no connected mail-sending tool; manual sending is required before publication.
+Sending of the informational email on **2026-11-01** was confirmed on 2026-11-02. The ignored
+`docs/letters/2026-11-01-amp-integration-follow-up-draft.md` retains the prepared text and sending
+record. Its stable User-Agent and selected-file/companion, cache, attribution and no-prefetch
+claims match the code. The retained draft was corrected on 2026-11-02; the final sent wording was
+not supplied and is not inferred from that later revision. No reply or approval is recorded.
 
 After phone acceptance, merge the combined candidate so the shared fixture correction and release
 notes accompany both features. Then run the interactive release procedure from develop, upload the
@@ -181,8 +184,9 @@ SHA-256: `1fbfb5c569e0ff10f3cae92219a0b59aecd9dc4162da8e274fa6a44f5a8108e2`.
 
 This test build keeps **1.4.0 (1434)**, schema 23. The release procedure selects 1.5.0 after
 phone acceptance. Develop/master/tags and the original AMP branch are unchanged. No store AAB,
-release, push or WEB deployment was made. The AMP follow-up is corrected and **not sent**; there
-is no connected mail tool. Detailed receipts, logs, JUnit/lint XML, source hashes and inspection
+release, push or WEB deployment was made. At this handoff, sending of the corrected AMP follow-up
+had not been confirmed; the later confirmation of sending on 2026-11-01 is recorded above.
+Detailed receipts, logs, JUnit/lint XML, source hashes and inspection
 are retained locally in ignored `user/release-1.5/amp-build-gate/`.
 
 Test the absence of an AMP switch, normal AMP playback/cache/queue and the independent floating

@@ -201,8 +201,9 @@ for current evidence, intentional exclusions and unchecked physical behaviour. C
   integrate on `feature/amp-release-integration`. Pinned songdb index, code gate `Amp.ENABLED = true`, individual cached downloads, attribution
   and no crawling/prefetch/bulk transfer. The 2026-11-01 clarification removes the AMP user
   preference; corrected source 2794a1db passes the complete gate/lint and replacement APK inspection.
-  No reply or individual maintainer approval is recorded. Follow-up draft is prepared for manual
-  sending; integration is approved and merged as **3519f05b**, 2026-11-02. Detailed device
+  No reply or individual maintainer approval is recorded. The follow-up was sent on 2026-11-01,
+  confirmed on 2026-11-02; final sent wording was not supplied. Integration is approved and merged
+  as **3519f05b**, 2026-11-02. Detailed device
   outcomes remain separately unreported. Historical trial and
   rebase checks are retained in [the evidence](PR_AMP_CATALOGUE.md); [current contract](PLAN_AMP.md).
 - **Web relay:** UnExoticA and The Mod Archive need separate access/infrastructure decisions for

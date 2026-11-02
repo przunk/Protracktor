@@ -24,7 +24,9 @@ Inspection confirms no AMP-setting resources or old preference key in DEX, match
 privacy/credit, source/version/signature, ZIP integrity/alignment and native ABIs. All 845 inputs
 remain unchanged. Integration is approved and merged as **3519f05b**; the merge tree equals
 candidate **3e15b122** exactly. Individual device/checklist results were not supplied. No new
-tests/build, release or push were performed for integration. The corrected AMP follow-up is drafted, not sent. [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
+tests/build, release or push were performed for integration. The AMP follow-up was sent on
+**2026-11-01**, confirmed on 2026-11-02; the final sent wording was not supplied. No maintainer
+reply or individual approval is recorded. [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 
 ## Earlier combined test candidate — 2026-11-01
 
@@ -52,7 +54,9 @@ version change, release refs or publication occurs during feature preparation.
 
 Select AMP for planned release 1.5.0, using a default-On build-time gate and indexed,
 individual-file access. This supersedes the earlier approval hold. No reply or explicit approval
-from AMP is recorded; the informational follow-up is prepared locally and has not been sent.
+from AMP is recorded. The informational follow-up was sent on 2026-11-01, confirmed on
+2026-11-02; its final sent wording was not supplied. Earlier draft-status statements below
+describe the information available before that confirmation.
 Music sources credits AMP and links to its site; privacy discloses its host in both languages.
 
 `feature/amp-release-integration` combines current develop `ed1bc88` with the preserved

@@ -26,8 +26,10 @@ Settings → Music sources credits AMP and links to its website. To withdraw acc
 `Amp.ENABLED` to false and ship an update. That build hides discovery/index downloads and blocks
 AMP reads, including cached/saved references, while retaining playlists, History, bookmarks and
 the existing index. There is no per-installation switch or remote revocation; older installed
-builds keep their compiled availability. Prepare the follow-up locally for manual sending; do not
-record it as sent before confirmation. The complete corrected gate and replacement APK 1434 are verified;
+builds keep their compiled availability. The informational follow-up was sent on 2026-11-01,
+confirmed on 2026-11-02. Its final sent wording was not supplied; the retained local draft is not
+an exact sent-message record. No maintainer reply or individual approval is recorded.
+The complete corrected gate and replacement APK 1434 are verified;
 integration is approved and merged as **3519f05b** on 2026-11-02. Detailed physical outcomes remain
 separately unreported.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
