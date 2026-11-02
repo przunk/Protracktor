@@ -1,7 +1,8 @@
 # Release 1.5.0 preparation
 
 Selected 2026-11-01. Updated 2026-11-02: the release procedure selected 1.5.0 and a signed AAB
-is prepared. Upload, Play publication and remote push are not yet confirmed. Earlier dated
+is prepared; upload to Play Console is confirmed on this date. Availability to testers, Play
+publication and remote push are not yet confirmed. Earlier dated
 preparation records retain their original source/artifact identities. Database schema remains
 23; the normalization-slider experiment stays separate.
 
@@ -21,8 +22,8 @@ develop state is versionName 1.4.0 → 1.5.0. Previous detailed host checks rema
 their original builds; no new app test execution or build is claimed for this record.
 
 Returned to develop to record [release evidence](../store/play-console/releases.md), leaving
-master and v1.5.0 at the artifact source. Upload to Play Console, Git push and publication remain
-unconfirmed. Next: upload this AAB with the tagged EN/PL notes, then run
+master and v1.5.0 at the artifact source. Upload to Play Console was confirmed on 2026-11-02;
+availability to testers, Git push and publication remain unconfirmed. Next: run
 `./scripts/push-protracktor.sh master develop v1.5.0` from the release terminal.
 Local inspection receipts are in ignored `user/release-1.5/aab-1.5.0-*` files.
 

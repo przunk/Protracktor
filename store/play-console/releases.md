@@ -6,6 +6,14 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.5.0 — upload confirmed, 2026-11-02
+
+Upload of `dist/protracktor-1.5.0-1439.aab` to Play Console is confirmed on 2026-11-02.
+The artifact retains versionCode 1439 and SHA-256
+`7986ebc27ee099dd11813c2b5089b2639a4791e7cbbb2ec214469926438f0a75`.
+Availability to testers, publication and Git push have not been confirmed. This lifecycle event
+is separate from the unchanged preparation evidence below.
+
 ## 1.5.0 — versionCode 1439
 
 **Artifact prepared** for Google Play closed testing on 2026-11-02. Upload to Play Console and

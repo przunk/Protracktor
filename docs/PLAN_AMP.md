@@ -34,8 +34,9 @@ integration is approved and merged as **3519f05b** on 2026-11-02. Detailed physi
 separately unreported.
 [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02).
 The release procedure selected versionName 1.5.0 on 2026-11-02; the signed AAB is prepared from
-v1.5.0 / b1bd8632. Earlier test APKs retain 1.4.0 and their original identities. Upload and
-publication remain unconfirmed. [Release evidence](../store/play-console/releases.md).
+v1.5.0 / b1bd8632. Earlier test APKs retain 1.4.0 and their original identities. Upload to Play
+Console is confirmed on 2026-11-02; availability to testers and publication remain unconfirmed.
+[Release evidence](../store/play-console/releases.md).
 
 Earlier integration stage: **64 tests / seven suites**, zero failures/errors/skips,
 **223 s** including compilation. They covered index/HTTP/cache ownership, the real queue controller,
