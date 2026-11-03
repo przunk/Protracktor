@@ -1,11 +1,30 @@
 # Status
 
-Updated: 2026-11-02 — AMP build-gate correction verified at 2794a1db; accepted and merged as 3519f05b; APK 1.4.0 (1434) retains source 2794a1db. The earlier 1432 candidate remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
+Updated: 2026-11-03 — GitHub 1.5.0 APK prepared from the release tag; final signing/publication pending; full tag gate and lint passed. Release refs verified publicly.
+
+Previous integration summary, 2026-11-02 — AMP build-gate correction verified at 2794a1db; accepted and merged as 3519f05b; APK 1.4.0 (1434) retains source 2794a1db. The earlier 1432 candidate remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## GitHub 1.5.0 — APK prepared, signing and publication pending, 2026-11-03
+
+Prepared a minified, resource-shrunk APK from **v1.5.0 / b1bd8632**, versionCode **1439**,
+without changing the tagged sources or using a publishing key. The unsigned intermediate is
+**12,079,683 bytes**; final signing and the downloadable asset hash remain pending.
+
+Agent-run checks on the tag pass **1,323 tests / 181 suites**, all **85** gate stages,
+**1,396 WEB page checks**, **57 engine checks** and fresh lint **0 errors / 81 warnings**.
+The full gate took **1218.1 s**, APK packaging **95.0 s**. Inspection confirms the package/version,
+three native ABIs, non-debuggable release configuration, ZIP integrity and 16 KB alignment.
+All **845** tracked build/check inputs remained unchanged. Phone behaviour of this APK is unchecked.
+
+Public GitHub reads confirm master/tag v1.5.0 at b1bd8632 and develop at 78d797e9; the earlier
+release push is verified. Subsequent documentation records are separate. The public Release
+endpoint still returns 404. The final signature and GitHub publication are not claimed.
+[Preparation and evidence](RELEASE_1.5.0_PREPARATION.md#github-apk-preparation--2026-11-03).
 
 ## 1.5.0 — AAB uploaded to Play Console, 2026-11-02
 
@@ -20,8 +39,9 @@ certificate matches prior releases. The version commit changes only versionName 
 to 1.5.0. Earlier detailed test results below retain their original source/build identities;
 no app tests or rebuild were run to record this evidence.
 
-**Upload to Play Console is confirmed on 2026-11-02.** Availability to testers, Play publication
-and remote push are not yet confirmed. No WEB deployment is implied.
+**Upload to Play Console is confirmed on 2026-11-02.** Availability to testers and Play publication
+are not yet confirmed. The release refs were verified publicly on GitHub on 2026-11-03, as recorded
+above. No WEB deployment is implied.
 [Release evidence](../store/play-console/releases.md) and
 [preparation/recovery record](RELEASE_1.5.0_PREPARATION.md).
 

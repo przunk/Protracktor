@@ -1,10 +1,38 @@
 # Release 1.5.0 preparation
 
-Selected 2026-11-01. Updated 2026-11-02: the release procedure selected 1.5.0 and a signed AAB
-is prepared; upload to Play Console is confirmed on this date. Availability to testers, Play
-publication and remote push are not yet confirmed. Earlier dated
+Selected 2026-11-01. Updated 2026-11-03: the signed AAB was uploaded to Play Console on 2026-11-02,
+and the release refs have been verified publicly on GitHub. A GitHub APK intermediate is prepared;
+final signing and GitHub publication remain pending. Availability to testers and Play publication
+are not yet confirmed. Earlier dated
 preparation records retain their original source/artifact identities. Database schema remains
 23; the normalization-slider experiment stays separate.
+
+## GitHub APK preparation — 2026-11-03
+
+Public GitHub API reads confirm tag v1.5.0 and master at
+**b1bd8632870b09ee58bcea33e11c83391be82565**, and develop at
+**78d797e9131c634735e09947e7d1a518de2889e4**. This verifies the earlier release push; later
+documentation commits remain separate. The public v1.5.0 Release endpoint returns 404.
+
+Built the unsigned APK directly from the unchanged tag, **1.5.0 (1439)**. The external init
+script disables APK signing only, retaining minification and resource shrinking. No publishing
+key is used. The complete tag gate passes **1323 tests / 181 suites**, zero failures/errors/skips,
+all **85** stages, **1396 page checks**, **57 engine checks** and fresh lint **0 errors / 81 warnings**.
+Units executed in **506.0 s**, lint in **89.5 s**, the full gate in **1218.1 s** and APK packaging
+in **95.0 s**. All **845** tracked inputs remain unchanged across checking and packaging.
+
+The unsigned intermediate is **12,079,683 bytes**, SHA-256
+`96a34b77aeffec6efa911111291e3c0abf41d48ed9e4c87d4eb2877a70708896`.
+Inspection confirms version/package, minSdk 29 / targetSdk 36, non-debuggable release, ZIP
+integrity, 16 KB alignment, three native ABIs and the packaged AMP privacy disclosure without
+an AMP Settings control. This intermediate is not the final downloadable release asset.
+
+The manual signing helper binds that exact input hash and checks the previous GitHub publication
+certificate. The existing local 1.4.0 APK matches the public asset digest and verifies with that
+certificate. Helper preflight passes; a wrong hash, noninteractive signing and an unsupported
+argument are rejected without key access. Final publishing-key signing, signed-APK hash,
+on-device behaviour and GitHub publication remain unchecked. English release text and the
+manual handoff are prepared locally; receipts and scripts stay in ignored `user/` and `dist/`.
 
 ## Signed AAB and release recovery — 2026-11-02
 
@@ -23,8 +51,8 @@ their original builds; no new app test execution or build is claimed for this re
 
 Returned to develop to record [release evidence](../store/play-console/releases.md), leaving
 master and v1.5.0 at the artifact source. Upload to Play Console was confirmed on 2026-11-02;
-availability to testers, Git push and publication remain unconfirmed. Next: run
-`./scripts/push-protracktor.sh master develop v1.5.0` from the release terminal.
+availability to testers and Play publication remain unconfirmed. The public release refs were
+verified on 2026-11-03 as recorded above; subsequent documentation has its own push state.
 Local inspection receipts are in ignored `user/release-1.5/aab-1.5.0-*` files.
 
 ## Develop integration — approved and merged, 2026-11-02

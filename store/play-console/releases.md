@@ -6,6 +6,14 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.5.0 — release refs verified on GitHub, 2026-11-03
+
+Agent-run public GitHub API reads verify master and tag v1.5.0 at
+`b1bd8632870b09ee58bcea33e11c83391be82565`, and develop at
+`78d797e9131c634735e09947e7d1a518de2889e4`. The release push is verified; later documentation
+commits have a separate push state. This does not confirm Play publication or availability
+to testers. The original artifact and upload evidence below remains unchanged.
+
 ## 1.5.0 — upload confirmed, 2026-11-02
 
 Upload of `dist/protracktor-1.5.0-1439.aab` to Play Console is confirmed on 2026-11-02.
