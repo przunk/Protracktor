@@ -122,8 +122,8 @@ class PlaybackService : Service() {
         // Position moves without the track changing, so the session needs its own subscription --
         // the notification's would rebuild the whole thing five times a second for nothing.
         scope.launch {
-            controller.state.combine(com.przunk.protracktor.alarms.AlarmRepository.from(this@PlaybackService).state) { state, alarms ->
-                state to (alarms.ringing != null)
+            controller.state.combine(com.przunk.protracktor.alarms.api.MusicAlarms.playbackInterruption(this@PlaybackService)) { state, ringing ->
+                state to ringing
             }.collect { (state, ringing) -> publishSession(state, ringing) }
         }
         scope.launch {

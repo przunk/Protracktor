@@ -150,7 +150,7 @@ fun SettingsScreen(
                 supportingContent = { Text(stringResource(R.string.alarm_intro)) },
                 leadingContent = { Icon(PlayerIcons.Alarm, null) },
                 modifier = Modifier.clickable {
-                    context.startActivity(android.content.Intent(context, com.przunk.protracktor.alarms.AlarmsActivity::class.java))
+                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
                 })
         }
         item { Section(R.string.settings_playback) }

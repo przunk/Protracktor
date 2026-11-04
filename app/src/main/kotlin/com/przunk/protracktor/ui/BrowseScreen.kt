@@ -337,7 +337,7 @@ private fun DomainChooser(
         item {
             DomainRow(PlayerIcons.Alarm, stringResource(R.string.alarm_title),
                 stringResource(R.string.alarm_intro), onClick = {
-                    context.startActivity(android.content.Intent(context, com.przunk.protracktor.alarms.AlarmsActivity::class.java))
+                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
                 })
         }
         item {

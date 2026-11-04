@@ -4,6 +4,7 @@ package com.przunk.protracktor.alarms
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import com.przunk.protracktor.alarms.api.AlarmMusicInput
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PcmExport
@@ -21,10 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-
-internal data class AlarmMusicInput(val bytes: ByteArray, val companions: List<Pair<String, ByteArray>>, val format: String,
-    val metadata: com.przunk.protracktor.data.SongDbMetadata.Entry? = null,
-    val credits: List<com.przunk.protracktor.data.SongDbMetadata.Credit> = emptyList())
 
 /** Explicit setup only. At wake-up neither the native engine nor the music database is used. */
 internal object AlarmMusicPreparer {

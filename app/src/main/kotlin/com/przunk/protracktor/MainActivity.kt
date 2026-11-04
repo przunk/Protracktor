@@ -118,13 +118,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
-                val control = com.przunk.protracktor.alarms.AlarmCoordinator.from(this@MainActivity)
-                control.reconcile()
-                if (control.repository.book.ringing != null && !com.przunk.protracktor.alarms.AlarmService.running) {
+                if (com.przunk.protracktor.alarms.api.MusicAlarms.reconcile(this@MainActivity)) {
                     withContext(Dispatchers.Main) {
                         if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
-                            startForegroundService(Intent(this@MainActivity, com.przunk.protracktor.alarms.AlarmService::class.java))
-                            startActivity(Intent(this@MainActivity, com.przunk.protracktor.alarms.AlarmRingingActivity::class.java))
+                            com.przunk.protracktor.alarms.api.MusicAlarms.openRinging(this@MainActivity)
                         }
                     }
                 }

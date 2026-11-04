@@ -1128,17 +1128,16 @@ class PlaybackController private constructor(private val context: Context) {
     /** Capture the selected tune before asynchronous source reads. */
     fun useForAlarms(ref: TrackRef) {
         val snapshot = _state.value
-        val selected = com.przunk.protracktor.alarms.AlarmMusicSelection.capture(ref, snapshot)
+        val selected = com.przunk.protracktor.alarms.api.AlarmMusicSelection.capture(ref, snapshot)
         scope.launch {
             say(Message(context.getString(R.string.alarm_preparing, ref.title)))
             try {
-                com.przunk.protracktor.alarms.AlarmMusicPreparer.add(context, selected.ref, selected.subsong) {
+                com.przunk.protracktor.alarms.api.MusicAlarms.prepare(context, selected) {
                     nativeReady.await()
                     val bytes = trackFiles.read(ref) ?: error("Track cannot be read")
-                    com.przunk.protracktor.alarms.AlarmMusicInput(bytes, trackFiles.companions(ref), catalogueFormatOf(ref).orEmpty(),
+                    com.przunk.protracktor.alarms.api.AlarmMusicInput(bytes, trackFiles.companions(ref), catalogueFormatOf(ref).orEmpty(),
                         trackMetadata.forMd5(Md5.of(bytes)), trackMetadata.sampleCredits())
                 }
-                withContext(Dispatchers.IO) { com.przunk.protracktor.alarms.AlarmCoordinator.from(context).reconcile() }
                 say(Message(context.getString(R.string.alarm_music_ready)))
             } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
                 say(Message(context.getString(R.string.alarm_prepare_failed)))
@@ -2559,7 +2558,7 @@ class PlaybackController private constructor(private val context: Context) {
     // --- transport ----------------------------------------------------------------------------
 
     private fun alarmBlocksPlayback(): Boolean {
-        if (!com.przunk.protracktor.alarms.AlarmCoordinator.isRinging(context)) return false
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.isRinging(context)) return false
         say(Message(context.getString(R.string.alarm_finish_first)))
         return true
     }

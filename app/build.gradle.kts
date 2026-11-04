@@ -259,6 +259,7 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
     inputs.dir(layout.projectDirectory.dir("schemas")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(layout.projectDirectory.dir("src/main/kotlin")).withPathSensitivity(PathSensitivity.RELATIVE)
     val exportSchemas = providers.gradleProperty("exportSchemas").isPresent
     inputs.property("exportSchemas", exportSchemas)
     systemProperty("protracktor.exportSchemas", exportSchemas.toString())

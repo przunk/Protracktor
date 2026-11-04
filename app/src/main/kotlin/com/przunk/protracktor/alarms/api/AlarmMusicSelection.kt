@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Przunk
 // SPDX-License-Identifier: GPL-3.0-or-later
-package com.przunk.protracktor.alarms
+package com.przunk.protracktor.alarms.api
 
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef

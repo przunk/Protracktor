@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.alarms
 
+import com.przunk.protracktor.alarms.api.AlarmMusicSelection
 import com.przunk.protracktor.player.PlayQueue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef
