@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Worker-thread facade shared by management, receiver and ringing service. */
-internal class AlarmCoordinator private constructor(private val context: Context) {
+internal class AlarmCoordinator private constructor(private val context: Context, private val sources: AlarmSourcePolicy) {
     val repository = AlarmRepository.from(context)
     @Volatile private var recoveryFailure: Throwable? = recoverFeatureState()
     val readFailure: Throwable? get() = repository.readFailure ?: recoveryFailure
@@ -20,11 +20,11 @@ internal class AlarmCoordinator private constructor(private val context: Context
     private fun requireAvailable() { check(readFailure == null) { "Alarm data cannot be opened; it has been preserved" } }
 
     private val quizzes = AlarmQuizFactory(Platforms.all.map { it.id to it.name })
-    private val rules = AlarmRules(quizzes, AlarmRepository::sourceAllowed)
+    private val rules = AlarmRules(quizzes) { sources.allows(it.catalogueId) }
     private val scheduled = MutableStateFlow<AlarmScheduleResult>(AlarmScheduleResult.Idle)
     val scheduling = scheduled.asStateFlow()
-    fun usable(song: AlarmSong) = AlarmRepository.sourceAllowed(song) &&
-        repository.files.audioFile(song.id).length() > 0 && quizzes.canAsk(song, repository.book.songs)
+    fun usable(song: AlarmSong, book: AlarmBook = repository.book) = sources.allows(song.catalogueId) &&
+        repository.files.audioFile(song.id).length() > 0 && quizzes.canAsk(song, book.songs)
 
     @Synchronized fun reconcile(resetTime: Boolean = false) {
         recoveryFailure = recoverFeatureState()
@@ -32,7 +32,7 @@ internal class AlarmCoordinator private constructor(private val context: Context
         val now = AlarmPlatform.clock(context)
         val zone = ZoneId.systemDefault()
         repository.change {
-            val next = rules.reconcile(it, now, zone, resetTime, ::usable).book
+            val next = rules.reconcile(it, now, zone, resetTime) { song -> usable(song, it) }.book
             if (AlarmReadiness.notifications(context) || next.ringing == null) next else next.copy(ringing = null,
                 lastOutcome = AlarmOutcome(next.ringing.alarmIds, now.wallMillis, AlarmOutcomeKind.MISSED))
         }
@@ -40,7 +40,7 @@ internal class AlarmCoordinator private constructor(private val context: Context
         repository.cleanUnusedAudio()
     }
 
-    @Synchronized fun save(alarm: MusicAlarm) {
+    @Synchronized fun save(alarm: MusicAlarm): AlarmScheduleResult {
         requireAvailable()
         repository.change { book ->
             require(book.alarms.any { it.id == alarm.id } || book.alarms.size < AlarmLimits.MAX_ALARMS)
@@ -48,13 +48,13 @@ internal class AlarmCoordinator private constructor(private val context: Context
             val planned = AlarmPlanner.planned(alarm.copy(consumedDate = null), Instant.now(), ZoneId.systemDefault())
             book.copy(alarms = book.alarms.filterNot { it.id == alarm.id } + planned)
         }
-        schedule()
+        return schedule()
     }
     @Synchronized fun deleteAlarm(id: String) {
         requireAvailable()
         repository.change { it.copy(alarms = it.alarms.filterNot { a -> a.id == id }) }; schedule()
     }
-    @Synchronized fun restoreAlarm(alarm: MusicAlarm) {
+    @Synchronized fun restoreAlarm(alarm: MusicAlarm): AlarmScheduleResult {
         requireAvailable()
         repository.change { book ->
             require(book.alarms.none { it.id == alarm.id }) { "This alarm has changed" }
@@ -62,7 +62,7 @@ internal class AlarmCoordinator private constructor(private val context: Context
             require(alarm.songIds.all { id -> book.songs.any { it.id == id } }) { "Alarm music was removed" }
             book.copy(alarms = book.alarms + AlarmPlanner.planned(alarm, Instant.now(), ZoneId.systemDefault()))
         }
-        schedule()
+        return schedule()
     }
     @Synchronized fun deleteSong(id: String) {
         requireAvailable()
@@ -91,11 +91,22 @@ internal class AlarmCoordinator private constructor(private val context: Context
         repository.change { rules.preview(it, id, songIds, AlarmPlatform.clock(context), UUID.randomUUID().toString()).book }
         schedule()
     }
-    @Synchronized fun answer(token: String, choice: String): Boolean {
+    @Synchronized fun answer(token: String, choice: String): AlarmAnswerResult {
         requireAvailable()
-        var accepted = false
-        repository.change { rules.answer(it, token, choice, AlarmPlatform.clock(context)).also { result -> accepted = result.accepted }.book }
-        schedule(); return accepted
+        val before = repository.book
+        val active = before.ringing ?: return AlarmAnswerResult.STALE
+        if (active.token != token) return AlarmAnswerResult.STALE
+        val now = AlarmPlatform.clock(context)
+        if (active.expired(now.elapsedMillis, now.bootCount)) {
+            repository.change { rules.expire(it, now).book }; schedule()
+            return AlarmAnswerResult.EXPIRED
+        }
+        val quiz = active.quiz ?: return AlarmAnswerResult.STALE
+        if (active.backup || quiz.choices.none { it.id == choice }) return AlarmAnswerResult.STALE
+        val result = rules.answer(before, token, choice, now)
+        repository.change { result.book }
+        schedule()
+        return if (result.accepted) AlarmAnswerResult.CORRECT else AlarmAnswerResult.INCORRECT
     }
     @Synchronized fun stop(token: String) {
         requireAvailable()
@@ -109,13 +120,29 @@ internal class AlarmCoordinator private constructor(private val context: Context
         requireAvailable()
         repository.change { rules.failed(it, token, AlarmPlatform.clock(context)).book }; schedule()
     }
-    private fun schedule() { scheduled.value = AndroidAlarmScheduler.schedule(context, repository.book) }
+    @Synchronized fun refreshMusic(sourceKey: String, metadata: AlarmMetadata.Description): AlarmSong? {
+        requireAvailable()
+        val existing = repository.book.songs.firstOrNull { it.sourceKey == sourceKey } ?: return null
+        check(sources.allows(existing.catalogueId)) { "This catalogue is unavailable" }
+        val refreshed = metadata.applyTo(existing)
+        repository.change { it.copy(songs = it.songs.map { song -> if (song.id == existing.id) refreshed else song }) }
+        schedule()
+        return refreshed
+    }
+    @Synchronized fun commitMusic(song: AlarmSong, prepared: java.io.File): AlarmSong {
+        requireAvailable()
+        check(com.przunk.protracktor.alarms.api.MusicAlarms.enabled && sources.allows(song.catalogueId)) { "Alarm music is unavailable" }
+        val saved = repository.add(song, prepared)
+        schedule()
+        return saved
+    }
+    private fun schedule(): AlarmScheduleResult = AndroidAlarmScheduler.schedule(context, repository.book).also { scheduled.value = it }
     companion object {
         private val instances = ConcurrentHashMap<String, AlarmCoordinator>()
         fun from(context: Context): AlarmCoordinator {
             val app = context.applicationContext
             val key = AlarmFileStore.from(app).directory.absolutePath
-            return instances.computeIfAbsent(key) { AlarmCoordinator(app) }
+            return instances.computeIfAbsent(key) { AlarmCoordinator(app, AlarmSourcePolicy.current) }
         }
     }
 }

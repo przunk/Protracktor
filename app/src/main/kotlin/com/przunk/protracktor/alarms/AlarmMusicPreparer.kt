@@ -14,32 +14,50 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 /** Explicit setup only. At wake-up neither the native engine nor the music database is used. */
 internal object AlarmMusicPreparer {
-    private val preparation = Mutex()
-    private val progress = MutableStateFlow<String?>(null)
+    private val lock = Any()
+    private val progress = MutableStateFlow<AlarmPreparation?>(null)
     val preparing = progress.asStateFlow()
-    @Volatile private var job: Job? = null
-    fun cancel() { job?.cancel() }
-    suspend fun add(context: Context, ref: TrackRef, subsong: Int?, load: suspend () -> AlarmMusicInput): AlarmSong {
-        check(preparation.tryLock()) { "Alarm music is already being prepared" }
-        job = currentCoroutineContext()[Job]
-        progress.value = ref.title
-        try { return withContext(Dispatchers.IO) { withTimeout(180_000) {
-            val repository = AlarmRepository.from(context)
-            check(repository.readFailure == null) { "Alarm data cannot be opened" }
+    private var active: Pair<String, Job>? = null
+    fun cancel(id: String): AlarmPreparationCancellation = synchronized(lock) {
+        val current = active ?: return@synchronized AlarmPreparationCancellation.FINISHED
+        if (current.first != id) return@synchronized AlarmPreparationCancellation.CHANGED
+        if (current.second.isCompleted) return@synchronized AlarmPreparationCancellation.FINISHED
+        current.second.cancel()
+        AlarmPreparationCancellation.CANCELLED
+    }
+    suspend fun add(context: Context, ref: TrackRef, subsong: Int?, load: suspend () -> AlarmMusicInput): AlarmSong = coroutineScope {
+        val id = UUID.randomUUID().toString()
+        val owned = async(start = CoroutineStart.LAZY) { prepare(context, ref, subsong, load) }
+        synchronized(lock) {
+            if (active != null) { owned.cancel(); error("Alarm music is already being prepared") }
+            active = id to owned
+            progress.value = AlarmPreparation(id, ref.title)
+        }
+        try { owned.start(); owned.await() }
+        finally { synchronized(lock) { if (active?.first == id) { active = null; progress.value = null } } }
+    }
+    private suspend fun prepare(context: Context, ref: TrackRef, subsong: Int?, load: suspend () -> AlarmMusicInput): AlarmSong {
+        return withContext(Dispatchers.IO) { withTimeout(180_000) {
+            check(com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { "Music alarms are unavailable" }
+            val coordinator = AlarmCoordinator.from(context)
+            check(coordinator.readFailure == null) { "Alarm data cannot be opened" }
             val catalogue = Catalogue.known.firstOrNull { it.pathFrom(ref.id) != null }
-            check(catalogue?.id != "amp" || com.przunk.protracktor.net.Amp.access.enabled)
+            check(AlarmSourcePolicy.current.allows(catalogue?.id)) { "This catalogue is unavailable" }
             val input = load()
+            currentCoroutineContext().ensureActive()
             val (decoder, reason) = NativeEngine.openRendering(input.bytes, ref.fileNameOrTitle, input.companions)
             checkNotNull(decoder) { reason }
             decoder.use { rendering ->
@@ -50,17 +68,9 @@ internal object AlarmMusicPreparer {
                 // Rendering applies selection synchronously; audible Track metadata can still
                 // describe the previous tune while its audio-thread command is pending.
                 val metadata = AlarmMetadata.describe(ref, input.format, rendering.describe(), input.metadata, input.credits)
-                var refreshed: AlarmSong? = null
-                repository.change { book ->
-                    val existing = book.songs.firstOrNull { it.sourceKey == key }
-                    if (existing == null) book else {
-                        refreshed = metadata.applyTo(existing)
-                        book.copy(songs = book.songs.map { if (it.id == existing.id) checkNotNull(refreshed) else it })
-                    }
-                }
-                refreshed?.let { return@withTimeout it }
+                coordinator.refreshMusic(key, metadata)?.let { return@withTimeout it }
                 val id = UUID.randomUUID().toString()
-                val root = repository.files.directory
+                val root = coordinator.repository.files.directory
                 check(root.isDirectory || root.mkdirs())
                 val output = File(root, "$id.preparing")
                 try {
@@ -74,13 +84,13 @@ internal object AlarmMusicPreparer {
                     val platform = Platforms.forCatalogueRow(catalogue?.id.orEmpty(), input.format, ref.fileNameOrTitle)
                     val song = metadata.applyTo(AlarmSong(id, key, metadata.title,
                         metadata.author, platform?.id, catalogue?.id, duration))
-                    check(AlarmRepository.sourceAllowed(song)) { "This catalogue is unavailable" }
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    repository.add(song, output)
+                    coordinator.commitMusic(song, output)
                 } finally { output.delete() }
             }
-        } } } finally {
-            job = null; progress.value = null; preparation.unlock()
-        }
+        } }
     }
 }
+
+internal data class AlarmPreparation(val id: String, val title: String)
+internal enum class AlarmPreparationCancellation { CANCELLED, CHANGED, FINISHED }

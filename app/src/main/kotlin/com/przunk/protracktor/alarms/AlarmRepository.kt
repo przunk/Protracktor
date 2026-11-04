@@ -26,7 +26,7 @@ class AlarmRepository private constructor(val files: AlarmFileStore) {
         val old = book
         val proposed = transform(old)
         if (proposed == old) return old
-        val next = proposed.copy(revision = old.revision + 1).frozen()
+        val next = proposed.committedAfter(old)
         files.write(next)
         mutable.value = next
         return next
@@ -57,11 +57,6 @@ class AlarmRepository private constructor(val files: AlarmFileStore) {
         fun from(context: Context): AlarmRepository {
             val files = AlarmFileStore.from(context)
             return instances.computeIfAbsent(files.directory.absolutePath) { AlarmRepository(files) }
-        }
-        fun sourceAllowed(song: AlarmSong): Boolean = when (song.catalogueId) {
-            "amp" -> com.przunk.protracktor.net.Amp.access.enabled
-            "unexotica" -> com.przunk.protracktor.net.UnExoticA.ENABLED
-            else -> true
         }
     }
 }

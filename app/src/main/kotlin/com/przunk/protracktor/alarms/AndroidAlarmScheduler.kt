@@ -12,7 +12,7 @@ internal sealed interface AlarmScheduleResult {
     data object Idle : AlarmScheduleResult
     data object Disabled : AlarmScheduleResult
     data class Blocked(val remedies: List<AlarmAccess>) : AlarmScheduleResult
-    data class Failed(val cause: SecurityException) : AlarmScheduleResult
+    data class Failed(val cause: RuntimeException) : AlarmScheduleResult
     val armedAt: Long? get() = (this as? Armed)?.atMillis
 }
 
@@ -30,7 +30,14 @@ internal object AndroidAlarmScheduler {
         }
     }
 
-    fun schedule(context: Context, book: AlarmBook): AlarmScheduleResult {
+    fun schedule(context: Context, book: AlarmBook): AlarmScheduleResult = try { scheduleRequested(context, book) }
+    catch (failure: RuntimeException) {
+        try { cancel(context) } catch (cleanup: RuntimeException) { failure.addSuppressed(cleanup) }
+        android.util.Log.w("Protracktor", "Alarm could not be armed", failure)
+        AlarmScheduleResult.Failed(failure)
+    }
+
+    private fun scheduleRequested(context: Context, book: AlarmBook): AlarmScheduleResult {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { cancel(context, retire = true); return AlarmScheduleResult.Disabled }
         val at = AlarmPlanner.earliest(book.alarms)
         if (at == null) { cancel(context); return AlarmScheduleResult.Idle }
@@ -38,13 +45,8 @@ internal object AndroidAlarmScheduler {
         if (!readiness.canSchedule) { cancel(context); return AlarmScheduleResult.Blocked(readiness.blockers) }
         val show = PendingIntent.getActivity(context, 7400, Intent(context, AlarmsActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        return try {
-            context.getSystemService(AlarmManager::class.java).setAlarmClock(AlarmManager.AlarmClockInfo(at, show),
-                checkNotNull(operation(context, book.revision, at)))
-            AlarmScheduleResult.Armed(at, book.revision)
-        } catch (failure: SecurityException) {
-            cancel(context)
-            AlarmScheduleResult.Failed(failure)
-        }
+        context.getSystemService(AlarmManager::class.java).setAlarmClock(AlarmManager.AlarmClockInfo(at, show),
+            checkNotNull(operation(context, book.revision, at)))
+        return AlarmScheduleResult.Armed(at, book.revision)
     }
 }

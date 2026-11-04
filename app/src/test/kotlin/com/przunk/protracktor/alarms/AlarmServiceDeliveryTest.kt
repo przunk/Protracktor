@@ -51,7 +51,7 @@ class AlarmServiceDeliveryTest {
             assertTrue(shadow.lastForegroundNotification.actions.isNullOrEmpty())
             val initial = control.repository.book.ringing!!
             val quiz = initial.quiz!!
-            assertFalse(control.answer(initial.token, quiz.choices.first { it.id != quiz.correctId }.id))
+            assertEquals(AlarmAnswerResult.INCORRECT, control.answer(initial.token, quiz.choices.first { it.id != quiz.correctId }.id))
             shadowOf(Looper.getMainLooper()).idle()
             assertNotEquals(quiz.category, control.repository.book.ringing!!.quiz!!.category)
             assertEquals("Changing a recognition question must not reopen the audio player", 1, players)

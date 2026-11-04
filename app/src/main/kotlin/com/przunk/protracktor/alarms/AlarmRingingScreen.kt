@@ -36,25 +36,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun AlarmRingingScreen(active: RingingAlarm?, waiting: Boolean, failed: Boolean,
+internal fun AlarmRingingScreen(active: AlarmChallenge?, waiting: Boolean, failed: Boolean,
     onAnswer: (String, String) -> Unit, onStop: (String) -> Unit, onClose: () -> Unit,
     audioStatus: AlarmAudioStatus = AlarmAudioStatus.PLAYING,
+    busy: Boolean = false, completion: AlarmCompletion? = null, wrongChoice: String? = null,
+    commandFailed: Boolean = false,
 ) {
     val colours = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
-    var wrong by remember(active?.token) { mutableStateOf<String?>(null) }
     var confirmStop by remember(active?.token) { mutableStateOf(false) }
-    var solved by remember { mutableStateOf(false) }
-    LaunchedEffect(active?.token) { if (active != null) solved = false }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(1000); now = System.currentTimeMillis() } }
-    var hadActive by remember { mutableStateOf(active != null) }
-    LaunchedEffect(active?.token) { if (active != null) hadActive = true }
-    val stopped = active == null && (hadActive || !waiting)
+    val hadActive = completion != null
+    val solved = completion == AlarmCompletion.ANSWERED
+    val stopped = active == null && (completion != null || !waiting)
     val currentClose by rememberUpdatedState(onClose)
     LaunchedEffect(stopped, failed, active?.token) {
-        if (stopped && hadActive && !failed) { delay(1000); currentClose() }
+        if (stopped && !failed) { if (hadActive) delay(1000); currentClose() }
     }
+    LaunchedEffect(wrongChoice) { if (wrongChoice != null) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
     val scroll = key(stopped) { rememberScrollState() }
     Surface(Modifier.fillMaxSize(), color = colours.surface) {
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colours.primaryContainer.copy(alpha = .55f), colours.surface)))
@@ -84,7 +84,7 @@ internal fun AlarmRingingScreen(active: RingingAlarm?, waiting: Boolean, failed:
                     LabelledAction(PlayerIcons.Stop, stringResource(R.string.alarm_stop_anyway), { onStop(active.token) })
                 }
                 else -> {
-                    val quiz = checkNotNull(active.quiz)
+                    val quiz = checkNotNull(active.question)
                     val question = when (quiz.category) {
                         AlarmQuestion.PLATFORM -> R.string.alarm_question_platform
                         AlarmQuestion.AUTHOR -> R.string.alarm_question_author
@@ -97,20 +97,15 @@ internal fun AlarmRingingScreen(active: RingingAlarm?, waiting: Boolean, failed:
                         AlarmAudioStatus.PREPARING, AlarmAudioStatus.STOPPED -> R.string.alarm_loading
                         AlarmAudioStatus.PLAYING -> R.string.alarm_listen
                     }
-                    val feedback = wrong != null && audioStatus == AlarmAudioStatus.PLAYING
+                    val feedback = wrongChoice != null && audioStatus == AlarmAudioStatus.PLAYING
                     Text(stringResource(if (feedback) R.string.alarm_wrong else soundLabel),
                         color = if (feedback) colours.error else colours.onSurfaceVariant, textAlign = TextAlign.Center,
                         modifier = Modifier.heightIn(min = 48.dp).semantics { liveRegion = LiveRegionMode.Polite })
                     quiz.choices.forEach { choice ->
-                        val rejected = wrong == choice.id
+                        val rejected = wrongChoice == choice.id
                         OutlinedButton(onClick = {
-                            if (!quiz.accepts(choice.id)) {
-                                wrong = choice.id
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                            if (quiz.accepts(choice.id)) solved = true
                             onAnswer(active.token, choice.id)
-                        }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = if (rejected) colours.error else colours.onSurface),
                             contentPadding = PaddingValues(16.dp)) {
                             Icon(if (rejected) PlayerIcons.Close else PlayerIcons.Answer, null, Modifier.size(20.dp))
@@ -121,6 +116,9 @@ internal fun AlarmRingingScreen(active: RingingAlarm?, waiting: Boolean, failed:
                     EmergencyStop(onHold = { onStop(active.token) }, onAccessibleClick = { confirmStop = true })
                 }
             }
+            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (commandFailed) Text(stringResource(R.string.alarm_failure), color = colours.error,
+                textAlign = TextAlign.Center, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
             if (active?.preview == true) Text(stringResource(R.string.alarm_preview), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
     }

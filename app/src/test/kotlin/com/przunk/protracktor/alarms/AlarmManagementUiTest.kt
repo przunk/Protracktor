@@ -59,7 +59,7 @@ class AlarmManagementUiTest {
 
     @Test fun `Back occupies the same rectangle in management and editor`() {
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
-            usable = { true }, onBack = {}, onSave = {}, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
+            usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         val before = compose.onNodeWithText(text(R.string.alarm_back)).fetchSemanticsNode().boundsInRoot
         compose.onNodeWithText(text(R.string.alarm_new)).performClick()
         frame()
@@ -72,10 +72,11 @@ class AlarmManagementUiTest {
         val book = mutableStateOf(AlarmBook(songs = listOf(song), alarms = listOf(alarm)))
         val restored = mutableListOf<MusicAlarm>()
         show { AlarmManagement(book.value, 1793773800000, false, true, true, true, false,
-            usable = { true }, onBack = {}, onSave = {}, onDelete = { id ->
+            usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { id ->
                 book.value = book.value.copy(alarms = book.value.alarms.filterNot { it.id == id }); true
             }, onRemoveMusic = {}, onTest = {}, onAccess = {}, onRestore = {
                 restored += it; book.value = book.value.copy(alarms = book.value.alarms + it)
+                AlarmSaveResult.Saved(AlarmScheduleResult.Idle)
             }) }
         compose.onNodeWithText(text(R.string.alarm_delete)).performScrollTo().performClick()
         compose.onNodeWithText(text(R.string.alarm_deleted)).assertExists()
@@ -87,7 +88,7 @@ class AlarmManagementUiTest {
     @Test fun `failed deletion keeps the row and does not offer a false Undo`() {
         val alarm = MusicAlarm("morning", 7, 30, songIds = listOf(song.id), enabled = true)
         show { AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(alarm)), 1793773800000,
-            false, true, true, true, false, usable = { true }, onBack = {}, onSave = {},
+            false, true, true, true, false, usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) },
             onDelete = { false }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_delete)).performScrollTo().performClick()
         compose.onNodeWithText(text(R.string.alarm_deleted)).assertDoesNotExist()
@@ -98,7 +99,7 @@ class AlarmManagementUiTest {
     @Test fun `weekday captions remain on one line and selection is saved`() {
         val saved = mutableListOf<MusicAlarm>()
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
-            usable = { true }, onBack = {}, onSave = saved::add, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
+            usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_new)).performClick()
         frame()
         val monday = compose.onNodeWithContentDescription("Monday").performScrollTo()
@@ -116,7 +117,7 @@ class AlarmManagementUiTest {
     @Test fun `revoked full screen access hides stale armed summaries immediately`() {
         val alarm = MusicAlarm("morning", 7, 30, songIds = listOf(song.id), enabled = true, nextAtMillis = 1793773800000)
         show { AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(alarm)), alarm.nextAtMillis,
-            false, true, true, false, false, usable = { true }, onBack = {}, onSave = {},
+            false, true, true, false, false, usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) },
             onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_not_armed), substring = true).performScrollTo().assertExists()
         compose.onAllNodesWithText("Next alarm ·", substring = true).assertCountEquals(0)
@@ -126,7 +127,7 @@ class AlarmManagementUiTest {
         val alarm = MusicAlarm("morning", 7, 30, songIds = listOf(song.id), enabled = false)
         val saved = mutableListOf<MusicAlarm>()
         show { AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(alarm)), null,
-            false, true, true, true, false, usable = { true }, onBack = {}, onSave = saved::add,
+            false, true, true, true, false, usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) },
             onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_edit)).performScrollTo().performClick()
         frame()
@@ -137,7 +138,7 @@ class AlarmManagementUiTest {
     }
     @Test fun `Info opens general guidance without cluttering the alarm list`() {
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
-            usable = { true }, onBack = {}, onSave = {}, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
+            usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_disclaimer)).assertDoesNotExist()
         compose.onNodeWithText("Info").performClick()
         frame()
@@ -154,7 +155,7 @@ class AlarmManagementUiTest {
             val view = androidx.compose.ui.platform.LocalView.current
             val bottom = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
             androidx.compose.runtime.SideEffect { observedIme = bottom; composeView = view }
-            AlarmEditor(MusicAlarm("morning", 7, 30, songIds = listOf(song.id)), listOf(song), { true }, {}, {})
+            AlarmEditor(MusicAlarm("morning", 7, 30, songIds = listOf(song.id)), listOf(song), { true }, {}, { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) })
         }
         val before = compose.onNodeWithText(text(R.string.alarm_back)).fetchSemanticsNode().boundsInRoot
         compose.onNodeWithText(text(R.string.alarm_name)).performClick()

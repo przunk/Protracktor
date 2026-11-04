@@ -133,3 +133,9 @@ data class AlarmBook(
 }
 
 private fun AlarmSong.frozen() = copy(authorAlternatives = authorAlternatives.toList(), yearAlternatives = yearAlternatives.toList())
+
+/** Only persistence commits a proposal; rules retain the revision they were computed from. */
+internal fun AlarmBook.committedAfter(previous: AlarmBook): AlarmBook {
+    require(revision == previous.revision) { "An alarm proposal cannot assign its own revision" }
+    return copy(revision = Math.addExact(previous.revision, 1)).frozen()
+}

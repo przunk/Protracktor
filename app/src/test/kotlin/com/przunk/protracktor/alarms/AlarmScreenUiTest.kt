@@ -47,10 +47,15 @@ class AlarmScreenUiTest {
         val state = mutableStateOf(AlarmBook(songs = listOf(song), ringing = active))
         val rules = AlarmRules(AlarmQuizFactory(emptyList())) { true }
         val commands = mutableListOf<String>()
-        show { AlarmRingingScreen(state.value.ringing, false, false, onAnswer = { token, choice ->
+        val completion = mutableStateOf<AlarmCompletion?>(null)
+        val wrong = mutableStateOf<String?>(null)
+        show { AlarmRingingScreen(state.value.ringing?.presented(), false, false, onAnswer = { token, choice ->
             commands += choice
-            state.value = rules.answer(state.value, token, choice, AlarmClockReading(100, 100, 1)).book
-        }, onStop = { fail("Answer routed through emergency stop") }, onClose = {}) }
+            val result = rules.answer(state.value, token, choice, AlarmClockReading(100, 100, 1))
+            state.value = result.book
+            completion.value = if (result.accepted) AlarmCompletion.ANSWERED else null
+            wrong.value = choice.takeUnless { result.accepted }
+        }, onStop = { fail("Answer routed through emergency stop") }, onClose = {}, completion = completion.value, wrongChoice = wrong.value) }
         compose.onNodeWithText("C64").performClick()
         compose.mainClock.advanceTimeBy(80)
         compose.onNodeWithText(text(R.string.alarm_wrong)).assertExists()
@@ -63,7 +68,7 @@ class AlarmScreenUiTest {
     }
     @Test fun `accessible emergency action requires confirmation before stopping`() {
         val stopped = mutableListOf<String>()
-        show { AlarmRingingScreen(active, false, false, { _, _ -> }, stopped::add, {}) }
+        show { AlarmRingingScreen(active.presented(), false, false, { _, _ -> }, stopped::add, {}) }
         compose.onNodeWithText(text(R.string.alarm_hold_stop)).performScrollTo()
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
         frame()
@@ -74,7 +79,7 @@ class AlarmScreenUiTest {
     }
     @Test fun `emergency requires a real sustained touch while an ordinary tap is harmless`() {
         val stopped = mutableListOf<String>()
-        show { AlarmRingingScreen(active, false, false, { _, _ -> }, stopped::add, {}) }
+        show { AlarmRingingScreen(active.presented(), false, false, { _, _ -> }, stopped::add, {}) }
         val control = compose.onNodeWithText(text(R.string.alarm_hold_stop)).performScrollTo()
         control.performTouchInput { click() }
         assertTrue(stopped.isEmpty())
@@ -88,7 +93,7 @@ class AlarmScreenUiTest {
     }
     @Test fun `backup audio never asks a question about inaudible music`() {
         val stopped = mutableListOf<String>()
-        show { AlarmRingingScreen(active.copy(backup = true, quiz = null), false, false, { _, _ -> fail() }, stopped::add, {}) }
+        show { AlarmRingingScreen(active.copy(backup = true, quiz = null).presented(), false, false, { _, _ -> fail() }, stopped::add, {}) }
         compose.onNodeWithText("Amiga").assertDoesNotExist()
         compose.onNodeWithText(text(R.string.alarm_stop_anyway)).performClick()
         assertEquals(listOf("token"), stopped)
@@ -97,7 +102,7 @@ class AlarmScreenUiTest {
         val requested = mutableListOf<AlarmAccess>()
         val alarm = MusicAlarm("alarm", 7, 30, songIds = listOf(song.id), enabled = true)
         show { AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(alarm)), null, false,
-            false, true, true, false, usable = { true }, onBack = {}, onSave = {}, onDelete = { true },
+            false, true, true, false, usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true },
             onRemoveMusic = {}, onTest = {}, onAccess = requested::add) }
         compose.onNodeWithText(text(R.string.alarm_exact_action)).performScrollTo().performClick()
         assertEquals(listOf(AlarmAccess.EXACT), requested)
@@ -106,7 +111,7 @@ class AlarmScreenUiTest {
     @Test fun `new alarm editor saves the selected prepared song`() {
         val saved = mutableListOf<MusicAlarm>()
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
-            usable = { true }, onBack = {}, onSave = saved::add, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
+            usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         compose.onNodeWithText(text(R.string.alarm_new)).performClick()
         frame()
         compose.onNodeWithText(text(R.string.alarm_save)).performClick()
@@ -115,7 +120,7 @@ class AlarmScreenUiTest {
     }
     @Test fun `waiting for audio is explicit without rerolling the choices`() {
         val audio = mutableStateOf(AlarmAudioStatus.WAITING_FOCUS)
-        show { AlarmRingingScreen(active, false, false, { _, _ -> }, {}, {}, audioStatus = audio.value) }
+        show { AlarmRingingScreen(active.presented(), false, false, { _, _ -> }, {}, {}, audioStatus = audio.value) }
         compose.onNodeWithText(text(R.string.alarm_waiting_focus)).assertExists()
         compose.onNodeWithText("Amiga").assertExists()
         compose.runOnIdle { audio.value = AlarmAudioStatus.PLAYING }
@@ -125,7 +130,7 @@ class AlarmScreenUiTest {
 
     @Test fun `finger movement during emergency hold does not restart its countdown`() {
         val stopped = mutableListOf<String>()
-        show { AlarmRingingScreen(active, false, false, { _, _ -> }, stopped::add, {}) }
+        show { AlarmRingingScreen(active.presented(), false, false, { _, _ -> }, stopped::add, {}) }
         val control = compose.onNodeWithText(text(R.string.alarm_hold_stop)).performScrollTo()
         control.performTouchInput { down(center); moveBy(androidx.compose.ui.geometry.Offset(70f, -140f)) }
         compose.waitUntil(5_000) {
@@ -138,7 +143,10 @@ class AlarmScreenUiTest {
     @Test fun `successful challenge closes itself after its acknowledgement`() {
         val state = mutableStateOf<RingingAlarm?>(active)
         var closed = 0
-        show { AlarmRingingScreen(state.value, true, false, { _, _ -> state.value = null }, {}, { closed++ }) }
+        val completion = mutableStateOf<AlarmCompletion?>(null)
+        show { AlarmRingingScreen(state.value?.presented(), true, false, { _, _ ->
+            state.value = null; completion.value = AlarmCompletion.ANSWERED
+        }, {}, { closed++ }, completion = completion.value) }
         compose.onNodeWithText("Amiga").performClick()
         compose.waitUntil(2500) {
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
@@ -149,7 +157,10 @@ class AlarmScreenUiTest {
 
     @Test fun `acknowledgement text stays at the same position through its final frames`() {
         val state = mutableStateOf<RingingAlarm?>(active)
-        show { AlarmRingingScreen(state.value, false, false, { _, _ -> state.value = null }, {}, {}) }
+        val completion = mutableStateOf<AlarmCompletion?>(null)
+        show { AlarmRingingScreen(state.value?.presented(), false, false, { _, _ ->
+            state.value = null; completion.value = AlarmCompletion.ANSWERED
+        }, {}, {}, completion = completion.value) }
         compose.onNodeWithText("Amiga").performClick()
         val before = compose.onNodeWithText(text(R.string.alarm_correct)).fetchSemanticsNode().boundsInRoot
         assertTrue(before.width > 0 && before.height > 0)
@@ -168,9 +179,14 @@ class AlarmScreenUiTest {
         val described = song.copy(year = "1992", yearAlternatives = listOf("1991", "1993"))
         val state = mutableStateOf(AlarmBook(3, listOf(described), ringing = active.copy(song = described)))
         val rules = AlarmRules(AlarmQuizFactory(listOf("amiga" to "Amiga", "pc" to "PC", "c64" to "C64"))) { true }
-        show { AlarmRingingScreen(state.value.ringing, false, false, { token, choice ->
-            state.value = rules.answer(state.value, token, choice, AlarmClockReading(100, 100, 1)).book
-        }, {}, {}) }
+        val completion = mutableStateOf<AlarmCompletion?>(null)
+        val wrong = mutableStateOf<String?>(null)
+        show { AlarmRingingScreen(state.value.ringing?.presented(), false, false, { token, choice ->
+            val result = rules.answer(state.value, token, choice, AlarmClockReading(100, 100, 1))
+            state.value = result.book
+            completion.value = if (result.accepted) AlarmCompletion.ANSWERED else null
+            wrong.value = choice.takeUnless { result.accepted }
+        }, {}, {}, completion = completion.value, wrongChoice = wrong.value) }
         compose.onNodeWithText("C64").performClick()
         compose.onNodeWithText(text(R.string.alarm_question_year)).assertExists()
         compose.onNodeWithText(text(R.string.alarm_wrong)).assertExists()

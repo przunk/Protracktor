@@ -24,17 +24,17 @@ class AlarmScreensTest {
             val theme = if (dark) AppTheme.DARK else AppTheme.LIGHT
             val suffix = "$locale-${if (dark) "dark" else "light"}"
             render(720, 1600, atMillis = 128) { ProtracktorTheme(theme, false) {
-                AlarmRingingScreen(RingingAlarm("token", setOf("alarm"), song, quiz, 0, 600000, 1), false, false, { _, _ -> }, {}, {})
+                AlarmRingingScreen(RingingAlarm("token", setOf("alarm"), song, quiz, 0, 600000, 1).presented(), false, false, { _, _ -> }, {}, {})
             } }.saveAs("b57-r3-ringing-$suffix")
             render(720, 1600, atMillis = 128) { ProtracktorTheme(theme, false) {
                 AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(MusicAlarm("alarm", 7, 30, "Morning music", setOf(1,2,3,4,5), listOf(song.id), true, 1793773800000))),
-                    1793773800000, false, true, true, true, false, usable = { true }, onBack = {}, onSave = {}, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {})
+                    1793773800000, false, true, true, true, false, usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {})
             } }.saveAs("b57-r3-management-$suffix")
             val selected = song.copy(id = "lotus", sourceKey = "c".repeat(64), title = "Lotus 3 · Space ninja", author = "Patrick Phelan", platformId = "amiga", year = "1992")
             val music = listOf(selected, song, song.copy(id = "other", sourceKey = "b".repeat(64), title = "Studium Falszu", author = "Jakim", year = "1994"))
             val alarm = MusicAlarm("alarm", 7, 30, "Morning music", setOf(1,2,3,4,5), listOf(selected.id), true)
             render(720, 1600, atMillis = 128) { ProtracktorTheme(theme, false) {
-                AlarmEditor(alarm, music, { true }, {}, {})
+                AlarmEditor(alarm, music, { true }, {}, { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) })
             } }.saveAs("b57-r3-editor-$suffix")
             render(720, 1600, atMillis = 128, gesture = { view ->
                 val start = android.os.SystemClock.uptimeMillis()
@@ -47,7 +47,7 @@ class AlarmScreensTest {
                 for (i in 1..18) touch(android.view.MotionEvent.ACTION_MOVE, i * 16, 1400f - i * 50)
                 touch(android.view.MotionEvent.ACTION_UP, 320, 500f)
             }) { ProtracktorTheme(theme, false) {
-                AlarmEditor(alarm, music, { true }, {}, {})
+                AlarmEditor(alarm, music, { true }, {}, { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) })
             } }.saveAs("b57-r3-editor-music-$suffix")
         }
     }
@@ -61,7 +61,7 @@ class AlarmScreensTest {
                 songIds = listOf(song.id), enabled = true, nextAtMillis = at)))
             render(720, 1600, atMillis = 128) { ProtracktorTheme(theme, false) {
                 AlarmManagement(book, at, false, true, true, true, false, usable = { true }, onBack = {},
-                    onSave = {}, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {})
+                    onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {})
             } }.saveAs("b57-r4-time-$locale-$offset")
         }
     }

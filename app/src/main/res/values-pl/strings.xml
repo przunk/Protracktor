@@ -675,4 +675,6 @@
     <string name="alarm_today">Dzisiaj</string>
     <string name="alarm_tomorrow">Jutro</string>
     <string name="alarm_feature_unavailable">Budzik jest niedostępny w tej wersji aplikacji.</string>
+    <string name="alarm_saved_not_armed">Alarm zapisany, ale nieuzbrojony. Sprawdź uprawnienia i dostępność muzyki.</string>
+    <string name="alarm_preparation_changed">To przygotowanie zostało już zakończone lub zmienione.</string>
 </resources>

@@ -648,4 +648,6 @@
     <string name="alarm_today">Today</string>
     <string name="alarm_tomorrow">Tomorrow</string>
     <string name="alarm_feature_unavailable">Music alarms are unavailable in this build.</string>
+    <string name="alarm_saved_not_armed">Alarm saved, but not armed. Check access and music availability.</string>
+    <string name="alarm_preparation_changed">This preparation has already ended or changed.</string>
 </resources>

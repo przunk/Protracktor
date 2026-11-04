@@ -41,10 +41,10 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun AlarmManagement(book: AlarmBook, armedAt: Long?, dataError: Boolean,
     exact: Boolean, notificationAccess: Boolean, fullscreen: Boolean, muted: Boolean,
-    preparing: String? = null, onCancelPreparation: () -> Unit = {}, onOpenRinging: () -> Unit = {},
-    usable: (AlarmSong) -> Boolean, onBack: () -> Unit, onSave: (MusicAlarm) -> Unit,
+    preparing: AlarmPreparation? = null, onCancelPreparation: (String) -> Unit = {}, onOpenRinging: () -> Unit = {},
+    usable: (AlarmSong) -> Boolean, onBack: () -> Unit, onSave: suspend (MusicAlarm) -> AlarmSaveResult,
     onDelete: suspend (String) -> Boolean, onRemoveMusic: (String) -> Unit, onTest: (String) -> Unit,
-    onAccess: (AlarmAccess) -> Unit, onRestore: (MusicAlarm) -> Unit = onSave,
+    onAccess: (AlarmAccess) -> Unit, onRestore: suspend (MusicAlarm) -> AlarmSaveResult = onSave,
 ) {
     val effectiveArmedAt = armedAt.takeIf { exact && notificationAccess && fullscreen }
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -54,9 +54,25 @@ internal fun AlarmManagement(book: AlarmBook, armedAt: Long?, dataError: Boolean
     val scope = rememberCoroutineScope()
     val deletedLabel = stringResource(R.string.alarm_deleted)
     val undoLabel = stringResource(R.string.action_undo)
+    val failureLabel = stringResource(R.string.alarm_failure)
+    val unarmedLabel = stringResource(R.string.alarm_saved_not_armed)
+    val report: suspend (AlarmSaveResult) -> Unit = { result ->
+        when (result) {
+            AlarmSaveResult.Failed -> snackbar.showSnackbar(failureLabel)
+            is AlarmSaveResult.Saved -> if (result.schedule is AlarmScheduleResult.Blocked || result.schedule is AlarmScheduleResult.Failed)
+                snackbar.showSnackbar(unarmedLabel)
+        }
+    }
     val editor = editing
     if (editor != null) {
-        AlarmEditor(editor, book.songs, usable, { editing = null }) { onSave(it); editing = null }
+        AlarmEditor(editor, book.songs, usable, { editing = null }) { alarm ->
+            val result = onSave(alarm)
+            if (result is AlarmSaveResult.Saved) {
+                editing = null
+                scope.launch { report(result) }
+            }
+            result
+        }
         return
     }
     val now by produceState(Instant.now(), book) {
@@ -88,12 +104,12 @@ internal fun AlarmManagement(book: AlarmBook, armedAt: Long?, dataError: Boolean
                     if (!exact) item { AccessCard(R.string.alarm_exact_needed, R.string.alarm_exact_action) { onAccess(AlarmAccess.EXACT) } }
                     if (!fullscreen) item { AccessCard(R.string.alarm_fullscreen_needed, R.string.alarm_fullscreen_action) { onAccess(AlarmAccess.FULL_SCREEN) } }
                     if (muted) item { AccessCard(R.string.alarm_volume_muted, R.string.alarm_volume_action) { onAccess(AlarmAccess.VOLUME) } }
-                    preparing?.let { title -> item {
+                    preparing?.let { preparation -> item {
                         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
                             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                DetailLine(PlayerIcons.AudioFile, stringResource(R.string.alarm_preparing, title))
+                                DetailLine(PlayerIcons.AudioFile, stringResource(R.string.alarm_preparing, preparation.title))
                                 LinearProgressIndicator(Modifier.fillMaxWidth())
-                                LabelledAction(PlayerIcons.Close, stringResource(R.string.alarm_cancel), onCancelPreparation)
+                                LabelledAction(PlayerIcons.Close, stringResource(R.string.alarm_cancel), { onCancelPreparation(preparation.id) })
                             }
                         }
                     } }
@@ -116,7 +132,7 @@ internal fun AlarmManagement(book: AlarmBook, armedAt: Long?, dataError: Boolean
                                             Icon(PlayerIcons.Alarm, null, tint = MaterialTheme.colorScheme.primary)
                                             Text(alarmTime(alarm.hour, alarm.minute), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Medium)
                                         }
-                                        Switch(alarm.enabled, { onSave(alarm.copy(enabled = it)) }, enabled = !dataError && (alarm.enabled || ready),
+                                        Switch(alarm.enabled, { enabled -> scope.launch { report(onSave(alarm.copy(enabled = enabled))) } }, enabled = !dataError && (alarm.enabled || ready),
                                             modifier = Modifier.semanticsLabel(stringResource(R.string.alarm_enable)))
                                     }
                                     if (alarm.label.isNotBlank()) Row(verticalAlignment = Alignment.Top,
@@ -139,7 +155,7 @@ internal fun AlarmManagement(book: AlarmBook, armedAt: Long?, dataError: Boolean
                                             if (onDelete(alarm.id)) {
                                                 snackbar.currentSnackbarData?.dismiss()
                                                 if (snackbar.showSnackbar(deletedLabel, undoLabel, withDismissAction = true, duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed)
-                                                    onRestore(alarm)
+                                                    report(onRestore(alarm))
                                             }
                                         } }, Modifier.weight(1f), enabled = !dataError)
                                     }
@@ -194,7 +210,7 @@ private fun AlarmHeader(title: String, onBack: () -> Unit, help: String, action:
 }
 
 @Composable internal fun AlarmEditor(alarm: MusicAlarm, songs: List<AlarmSong>, usable: (AlarmSong) -> Boolean,
-    onCancel: () -> Unit, onSave: (MusicAlarm) -> Unit,
+    onCancel: () -> Unit, onSave: suspend (MusicAlarm) -> AlarmSaveResult,
 ) {
     val context = LocalContext.current
     val locale = context.resources.configuration.locales[0]
@@ -204,19 +220,29 @@ private fun AlarmHeader(title: String, onBack: () -> Unit, help: String, action:
     var days by remember(alarm.id) { mutableStateOf(alarm.weekdays) }
     var selected by remember(alarm.id) { mutableStateOf(alarm.songIds.toSet()) }
     val dayColumns = if (LocalDensity.current.fontScale > 1.2f) 3 else 4
-    val canSave = selected.any { id -> songs.any { it.id == id && usable(it) } }
+    val scope = rememberCoroutineScope()
+    var saving by remember(alarm.id) { mutableStateOf(false) }
+    var saveFailed by remember(alarm.id) { mutableStateOf(false) }
+    val canSave = !saving && selected.any { id -> songs.any { it.id == id && usable(it) } }
     BackHandler(onBack = onCancel)
     Surface(Modifier.fillMaxSize()) {
         Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { insets ->
             Column(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) {
                 AlarmHeader(stringResource(R.string.alarm_edit), onCancel, help = alarmHelp(songs.size), action = {
                     LabelledAction(PlayerIcons.Save, stringResource(R.string.alarm_save), {
-                        onSave(alarm.copy(hour = hour, minute = minute, label = label, weekdays = days,
-                            songIds = selected.toList(), enabled = true))
+                        if (!saving) scope.launch {
+                            saving = true; saveFailed = false
+                            try {
+                                saveFailed = onSave(alarm.copy(hour = hour, minute = minute, label = label, weekdays = days,
+                                    songIds = selected.toList(), enabled = true)) == AlarmSaveResult.Failed
+                            } finally { saving = false }
+                        }
                     }, Modifier.width(76.dp), enabled = canSave)
                 })
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (saveFailed) AlarmNotice(PlayerIcons.Info, stringResource(R.string.alarm_failure), error = true)
                     Card(onClick = { TimePickerDialog(context, { _, h, m -> hour = h; minute = m }, hour, minute, DateFormat.is24HourFormat(context)).show() },
                         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {

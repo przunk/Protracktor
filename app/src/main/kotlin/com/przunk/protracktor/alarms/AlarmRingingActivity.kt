@@ -13,12 +13,9 @@ import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import com.przunk.protracktor.ui.theme.enableAppEdgeToEdge
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class AlarmRingingActivity : ComponentActivity() {
+    private val model by lazy { androidx.lifecycle.ViewModelProvider(this, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(application))[AlarmRingingViewModel::class.java] }
     override fun attachBaseContext(newBase: Context) {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { super.attachBaseContext(newBase); return }
         val unlocked = newBase.getSystemService(UserManager::class.java).isUserUnlocked
@@ -34,37 +31,18 @@ class AlarmRingingActivity : ComponentActivity() {
         enableAppEdgeToEdge(theme)
         setContent {
             ProtracktorTheme(theme = theme, dynamicColour = unlocked && Appearance.dynamicColour(this)) {
-                val scope = rememberCoroutineScope()
-                var coordinator by remember { mutableStateOf<AlarmCoordinator?>(null) }
-                var waiting by remember { mutableStateOf(true) }
-                var failed by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    coordinator = withContext(Dispatchers.IO) {
-                        AlarmCoordinator.from(this@AlarmRingingActivity).also { runCatching { it.reconcile() } }
+                val state by model.state.collectAsState()
+                LaunchedEffect(state.active?.token) {
+                    if (state.active != null && !AlarmService.running) {
+                        try { startForegroundService(android.content.Intent(this@AlarmRingingActivity, AlarmService::class.java)) }
+                        catch (failure: RuntimeException) { model.serviceFailed(failure) }
                     }
-                    failed = coordinator?.readFailure != null
-                    if (coordinator?.repository?.book?.ringing != null && !AlarmService.running) {
-                        runCatching { startForegroundService(android.content.Intent(this@AlarmRingingActivity, AlarmService::class.java)) }
-                            .onFailure { failed = true }
-                    }
-                    delay(2500); waiting = false
                 }
                 val audio by AlarmService.audioStatus.collectAsState()
-                val book = coordinator?.repository?.state?.collectAsState()?.value
-                AlarmRingingScreen(book?.ringing, waiting, failed,
-                    onAnswer = { token, choice ->
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) { runCatching { coordinator?.answer(token, choice) } }
-                            if (result.isFailure) android.widget.Toast.makeText(this@AlarmRingingActivity,
-                                com.przunk.protracktor.R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
-                        }
-                    }, onStop = { token ->
-                        // Deliberate UI escape only; swiping a notification never sends this command.
-                        sendBroadcast(android.content.Intent(this, AlarmReceiver::class.java).setAction(AlarmPlatform.STOP).putExtra("token", token))
-                    },
-                    onClose = {
-                        if (failed || coordinator?.repository?.book?.ringing == null) finish()
-                    }, audioStatus = audio)
+                AlarmRingingScreen(state.active, state.waiting, state.failed,
+                    onAnswer = model::answer, onStop = model::stop, onClose = ::finish, audioStatus = audio,
+                    busy = state.busy, completion = state.completion, wrongChoice = state.wrongChoice,
+                    commandFailed = state.commandFailed)
             }
         }
     }

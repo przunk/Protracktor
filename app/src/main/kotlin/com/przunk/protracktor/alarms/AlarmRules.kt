@@ -38,7 +38,7 @@ class AlarmRules(
         val next = previous.copy(alarms = alarms, lastOutcome = if (missed.isEmpty()) previous.lastOutcome else
             AlarmOutcome(missed, now.wallMillis, AlarmOutcomeKind.MISSED))
         return if (next == book) AlarmChange(book, false)
-            else AlarmChange(next.copy(revision = book.revision + 1).frozen(), true)
+            else AlarmChange(next.frozen(), true)
     }
 
     fun delivery(book: AlarmBook, revision: Long, scheduledAt: Long, now: AlarmClockReading,
@@ -72,7 +72,7 @@ class AlarmRules(
                     now.elapsedMillis + AlarmLimits.RINGING_LIMIT_MS, now.bootCount, backup = quiz == null)
             }
         }
-        return AlarmChange(previous.copy(revision = book.revision + 1, alarms = alarms, ringing = ringing, lastOutcome = outcome).frozen(), true)
+        return AlarmChange(previous.copy(alarms = alarms, ringing = ringing, lastOutcome = outcome).frozen(), true)
     }
 
     fun preview(book: AlarmBook, alarmId: String, songIds: Set<String>, now: AlarmClockReading,
@@ -83,7 +83,7 @@ class AlarmRules(
         if (songs.isEmpty()) return AlarmChange(book, false)
         val song = songs[random.nextInt(songs.size)]
         val quiz = quizzes.create(song, previous.songs, random) ?: return AlarmChange(book, false)
-        return AlarmChange(previous.copy(revision = book.revision + 1,
+        return AlarmChange(previous.copy(
             ringing = RingingAlarm(token, setOf(alarmId), song, quiz, now.elapsedMillis,
                 now.elapsedMillis + AlarmLimits.RINGING_LIMIT_MS, now.bootCount, preview = true)).frozen(), true)
     }
@@ -98,7 +98,7 @@ class AlarmRules(
         // A queued tap from the retired question must never match a new answer by row position.
         val next = quizzes.create(active.song, book.songs, excluding = quiz.category,
             choicePrefix = "retry-${book.revision + 1}") ?: return AlarmChange(book, false)
-        return AlarmChange(book.copy(revision = book.revision + 1,
+        return AlarmChange(book.copy(
             ringing = active.copy(quiz = next)).frozen(), false)
     }
 
@@ -112,13 +112,13 @@ class AlarmRules(
         val active = book.ringing ?: return AlarmChange(book, false)
         if (active.token != token) return AlarmChange(book, false)
         val outcome = if (active.preview) book.lastOutcome else AlarmOutcome(active.alarmIds, now.wallMillis, kind)
-        return AlarmChange(book.copy(revision = book.revision + 1, ringing = null, lastOutcome = outcome).frozen(), true)
+        return AlarmChange(book.copy(ringing = null, lastOutcome = outcome).frozen(), true)
     }
 
     fun backup(book: AlarmBook, token: String): AlarmChange {
         val active = book.ringing ?: return AlarmChange(book, false)
         if (active.token != token || active.backup) return AlarmChange(book, false)
-        return AlarmChange(book.copy(revision = book.revision + 1,
+        return AlarmChange(book.copy(
             ringing = active.copy(backup = true, quiz = null)).frozen(), true)
     }
 

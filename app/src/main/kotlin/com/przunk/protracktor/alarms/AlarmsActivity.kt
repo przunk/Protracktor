@@ -13,18 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import com.przunk.protracktor.AppLocale
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import com.przunk.protracktor.ui.theme.enableAppEdgeToEdge
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class AlarmsActivity : ComponentActivity() {
-    private var refresh by mutableIntStateOf(0)
+    private val model by lazy { androidx.lifecycle.ViewModelProvider(this, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(application))[AlarmManagementViewModel::class.java] }
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) AppLocale.wrap(newBase) else newBase)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,42 +28,33 @@ class AlarmsActivity : ComponentActivity() {
         enableAppEdgeToEdge(Appearance.theme(this))
         setContent {
             ProtracktorTheme(theme = Appearance.theme(this), dynamicColour = Appearance.dynamicColour(this)) {
-                var coordinator by remember { mutableStateOf<AlarmCoordinator?>(null) }
-                LaunchedEffect(refresh) {
-                    coordinator = withContext(Dispatchers.IO) {
-                        AlarmNotifications.channel(this@AlarmsActivity)
-                        AlarmCoordinator.from(this@AlarmsActivity).also { runCatching { it.reconcile() } }
-                    }
-                }
+                val state by model.state.collectAsState()
+                LaunchedEffect(model) { model.messages.collect {
+                    android.widget.Toast.makeText(this@AlarmsActivity, it, android.widget.Toast.LENGTH_LONG).show()
+                } }
                 val access = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, result ->
                     if (result == com.przunk.protracktor.permissions.AccessRequestResult.UNAVAILABLE)
                         android.widget.Toast.makeText(this, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
-                    refresh++
+                    model.refresh()
                 }
-                val control = coordinator
-                if (control == null) Surface(Modifier.fillMaxSize()) { Box(Modifier.safeDrawingPadding().padding(24.dp)) {
+                val current = state
+                if (current == null) Surface(Modifier.fillMaxSize()) { Box(Modifier.safeDrawingPadding().padding(24.dp)) {
                     Text(stringResource(R.string.alarm_loading))
                 } } else {
-                    val book by control.repository.state.collectAsState()
-                    val schedule by control.scheduling.collectAsState()
-                    val readiness = AlarmReadiness.inspect(this)
+                    val book = current.book
+                    val readiness = current.readiness
                     val preparing by AlarmMusicPreparer.preparing.collectAsState()
-                    AlarmManagement(book, schedule.armedAt, control.readFailure != null,
-                        preparing = preparing, onCancelPreparation = AlarmMusicPreparer::cancel,
+                    AlarmManagement(book, current.schedule.armedAt, current.dataError,
+                        preparing = preparing, onCancelPreparation = model::cancelPreparation,
                         onOpenRinging = {
                             startForegroundService(Intent(this, AlarmService::class.java))
                             startActivity(Intent(this, AlarmRingingActivity::class.java))
                         },
-                        exact = readiness.exact, notificationAccess = readiness.notifications,
-                        fullscreen = readiness.fullScreen, muted = readiness.muted,
-                        usable = control::usable, onBack = ::finish,
-                        onSave = { alarm -> command { control.save(alarm) } },
-                        onDelete = { id ->
-                            val result = withContext(Dispatchers.IO) { runCatching { control.deleteAlarm(id) } }
-                            if (result.isFailure) android.widget.Toast.makeText(this, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
-                            result.isSuccess
-                        }, onRestore = { alarm -> command { control.restoreAlarm(alarm) } },
-                        onRemoveMusic = { id -> command { control.deleteSong(id) } },
+                        exact = readiness?.exact == true, notificationAccess = readiness?.notifications == true,
+                        fullscreen = readiness?.fullScreen == true, muted = readiness?.muted == true,
+                        usable = { it.id in current.usableIds }, onBack = ::finish,
+                        onSave = model::save, onDelete = model::delete, onRestore = model::restore,
+                        onRemoveMusic = { model.removeMusic(it) },
                         onTest = { id ->
                             startForegroundService(Intent(this, AlarmService::class.java).setAction(AlarmPlatform.TEST).putExtra("id", id))
                             startActivity(Intent(this, AlarmRingingActivity::class.java))
@@ -89,12 +76,5 @@ class AlarmsActivity : ComponentActivity() {
             }
         }
     }
-    private fun command(block: () -> Unit) {
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching(block) }
-            if (result.isFailure) android.widget.Toast.makeText(this@AlarmsActivity, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
-            refresh++
-        }
-    }
-    override fun onResume() { super.onResume(); refresh++ }
+    override fun onResume() { super.onResume(); if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) model.refresh() }
 }

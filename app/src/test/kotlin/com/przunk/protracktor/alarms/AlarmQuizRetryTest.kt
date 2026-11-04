@@ -22,7 +22,7 @@ class AlarmQuizRetryTest {
         assertEquals(AlarmQuestion.YEAR, question.category)
         assertEquals(setOf("1991", "1992", "1993"), question.choices.map { it.value }.toSet())
         assertEquals(active.copy(quiz = next.quiz), next)
-        assertEquals(book.revision + 1, change.book.revision)
+        assertEquals("Rules return an uncommitted proposal", book.revision, change.book.revision)
         assertNull(change.book.lastOutcome)
     }
     @Test fun `retired answer identities cannot solve or reroll the following question`() {
