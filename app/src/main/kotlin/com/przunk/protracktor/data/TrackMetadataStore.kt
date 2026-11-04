@@ -105,4 +105,13 @@ class TrackMetadataStore(context: Context) {
             }
         }
     }
+    /** Bounded real credits for offline recognition choices; only read during explicit preparation. */
+    suspend fun sampleCredits(): List<SongDbMetadata.Credit> = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT DISTINCT author, year FROM track_metadata WHERE author <> '' OR year <> '' LIMIT 128", null,
+        ).use { row -> buildList {
+            while (row.moveToNext()) add(SongDbMetadata.Credit(row.getString(0), row.getString(1)))
+        } }
+    }
+
 }
