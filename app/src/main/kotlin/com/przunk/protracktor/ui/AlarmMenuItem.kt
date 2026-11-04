@@ -10,6 +10,6 @@ import androidx.compose.ui.res.stringResource
 import com.przunk.protracktor.R
 
 @Composable internal fun AlarmMenuItem(onAdd: (() -> Unit)?, onDone: () -> Unit) {
-    if (onAdd != null) DropdownMenuItem(text = { Text(stringResource(R.string.alarm_use_music)) },
+    if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled && onAdd != null) DropdownMenuItem(text = { Text(stringResource(R.string.alarm_use_music)) },
         leadingIcon = { Icon(PlayerIcons.Alarm, null) }, onClick = { onDone(); onAdd() })
 }

@@ -3,6 +3,7 @@
 package com.przunk.protracktor.alarms
 
 import android.content.Context
+import android.content.Intent
 import android.os.SystemClock
 import android.provider.Settings
 
@@ -14,6 +15,9 @@ internal object AlarmPlatform {
     const val NOTIFICATION = 7401
     const val STARTUP_NOTIFICATION = 7400
     const val STARTUP_CHANNEL = "music_alarm_preparation"
+    private const val SERVICE_COMPONENT = "com.przunk.protracktor.alarms.AlarmService"
+    // OFF removes the manifest entry, so R8 may rename/remove the implementation class.
+    fun serviceIntent(context: Context) = Intent().setClassName(context.packageName, SERVICE_COMPONENT)
     fun clock(context: Context) = AlarmClockReading(System.currentTimeMillis(), SystemClock.elapsedRealtime(),
         Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1))
 

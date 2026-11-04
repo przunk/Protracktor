@@ -16,4 +16,12 @@ class AlarmBoundaryTest {
         val violations = sources.filter { implementation.containsMatchIn(it.readText()) }.map { it.relativeTo(root).path }
         assertEquals("Alarm implementation references cross the API boundary", emptyList<String>(), violations)
     }
+    @Test fun `retained compatibility cleanup cannot link a removed component type`() {
+        val source = File("src/main/kotlin/com/przunk/protracktor/alarms/AlarmFeatureLifecycle.kt")
+        assertTrue(source.isFile)
+        // Without a manifest entry, R8 may rename the type before Intent reads Class.getName.
+        val omittedType = Regex("\\b(?:AlarmService|AlarmsActivity|AlarmRingingActivity)\\s*::\\s*class")
+        assertFalse("Compatibility must use stable installed component identities", omittedType.containsMatchIn(source.readText()))
+    }
+
 }

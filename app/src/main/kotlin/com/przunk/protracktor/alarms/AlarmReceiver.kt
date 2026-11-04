@@ -11,6 +11,15 @@ import kotlinx.coroutines.launch
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) {
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try { AlarmFeatureLifecycle.deactivate(context) }
+                catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm shutdown could not finish", failure) }
+                finally { pending?.finish() }
+            }
+            return
+        }
         if (intent.action == AlarmPlatform.FIRE) {
             try { context.startForegroundService(Intent(context, AlarmService::class.java).setAction(AlarmPlatform.FIRE)
                 .putExtra("revision", intent.getLongExtra("revision", -1)).putExtra("at", intent.getLongExtra("at", -1))) }
@@ -33,7 +42,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 else coordinator.reconcile(resetTime = intent.action in setOf(Intent.ACTION_BOOT_COMPLETED,
                     Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED))
             } catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm reconciliation failed", failure) }
-            finally { pending.finish() }
+            finally { pending?.finish() }
         }
     }
 }

@@ -145,7 +145,7 @@ fun SettingsScreen(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
-        item {
+        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
             ListItem(headlineContent = { Text(stringResource(R.string.alarm_title)) },
                 supportingContent = { Text(stringResource(R.string.alarm_intro)) },
                 leadingContent = { Icon(PlayerIcons.Alarm, null) },

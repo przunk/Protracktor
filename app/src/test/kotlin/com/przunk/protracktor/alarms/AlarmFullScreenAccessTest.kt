@@ -54,7 +54,7 @@ class AlarmFullScreenAccessTest {
         assertTrue(control.repository.book.alarms.single().enabled)
         assertFalse(com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.FULL_SCREEN_ALARMS))
         assertNull(control.scheduling.value.armedAt)
-        assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
+        assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).peekNextScheduledAlarm())
     }
     @Test fun `granting full screen access arms the preserved request through the production scheduler`() {
         val (context, control) = ready()
@@ -63,7 +63,7 @@ class AlarmFullScreenAccessTest {
         AccessShadow.allowed = true
         control.reconcile()
         assertNotNull(control.scheduling.value.armedAt)
-        assertNotNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
+        assertNotNull(shadowOf(context.getSystemService(AlarmManager::class.java)).peekNextScheduledAlarm())
         val song = control.repository.book.songs.single()
         val quiz = AlarmQuizFactory(listOf("amiga" to "Amiga", "pc" to "PC", "c64" to "C64")).create(song, listOf(song))!!
         assertNotNull(AlarmNotifications.ringing(context, RingingAlarm("token", setOf("alarm"), song, quiz, 0, 600000, 1)).fullScreenIntent)

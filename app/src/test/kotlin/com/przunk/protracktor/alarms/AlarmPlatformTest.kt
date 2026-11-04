@@ -43,7 +43,7 @@ class AlarmPlatformTest {
         control.save(MusicAlarm("later", 22, 30, songIds = listOf(song.id), enabled = true))
         control.save(MusicAlarm("earlier", 6, 30, songIds = listOf(song.id), enabled = true))
         val manager = context.getSystemService(AlarmManager::class.java)
-        val armed = shadowOf(manager).nextScheduledAlarm
+        val armed = shadowOf(manager).peekNextScheduledAlarm()
         assertNotNull(armed)
         val intent = shadowOf(armed!!.operation).savedIntent
         assertEquals(AlarmReceiver::class.java.name, intent.component!!.className)
@@ -51,7 +51,7 @@ class AlarmPlatformTest {
         assertEquals(control.repository.book.revision, intent.getLongExtra("revision", -1))
         assertEquals(intent.getLongExtra("at", -1), control.scheduling.value.armedAt)
         control.deleteAlarm("later"); control.deleteAlarm("earlier")
-        assertNull(shadowOf(manager).nextScheduledAlarm)
+        assertNull(shadowOf(manager).peekNextScheduledAlarm())
         assertNull(control.scheduling.value.armedAt)
     }
     @Test @Config(sdk = [31]) fun `exact access denial and grant reconcile the saved request`() {
@@ -65,7 +65,7 @@ class AlarmPlatformTest {
         org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
         control.reconcile()
         assertNotNull(control.scheduling.value.armedAt)
-        assertNotNull(shadowOf(manager).nextScheduledAlarm)
+        assertNotNull(shadowOf(manager).peekNextScheduledAlarm())
     }
     @Test fun `notification denial preserves requested enablement but never claims armed`() {
         val context = context()
@@ -74,7 +74,7 @@ class AlarmPlatformTest {
         control.save(MusicAlarm("morning", 7, 0, songIds = listOf(song.id), enabled = true))
         assertTrue(control.repository.book.alarms.single().enabled)
         assertNull(control.scheduling.value.armedAt)
-        assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
+        assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).peekNextScheduledAlarm())
         assertThrows(IllegalStateException::class.java) { control.preview("morning", setOf(song.id)) }
     }
     @Test fun `removing music disables orphan schedules and retains an active audio file`() {

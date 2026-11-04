@@ -20,11 +20,13 @@ import kotlinx.coroutines.withContext
 
 class AlarmRingingActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) {
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { super.attachBaseContext(newBase); return }
         val unlocked = newBase.getSystemService(UserManager::class.java).isUserUnlocked
         super.attachBaseContext(if (unlocked) AppLocale.wrap(newBase) else newBase.createDeviceProtectedStorageContext())
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { finish(); return }
         setShowWhenLocked(true); setTurnScreenOn(true)
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val unlocked = getSystemService(UserManager::class.java).isUserUnlocked
@@ -40,7 +42,7 @@ class AlarmRingingActivity : ComponentActivity() {
                     coordinator = withContext(Dispatchers.IO) {
                         AlarmCoordinator.from(this@AlarmRingingActivity).also { runCatching { it.reconcile() } }
                     }
-                    failed = coordinator?.repository?.readFailure != null
+                    failed = coordinator?.readFailure != null
                     if (coordinator?.repository?.book?.ringing != null && !AlarmService.running) {
                         runCatching { startForegroundService(android.content.Intent(this@AlarmRingingActivity, AlarmService::class.java)) }
                             .onFailure { failed = true }

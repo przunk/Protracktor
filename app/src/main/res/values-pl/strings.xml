@@ -673,4 +673,5 @@
     <string name="alarm_save_enables">Zapisanie zmian włącza alarm. W razie potrzeby wyłącz go na liście budzików.</string>
     <string name="alarm_today">Dzisiaj</string>
     <string name="alarm_tomorrow">Jutro</string>
+    <string name="alarm_feature_unavailable">Budzik jest niedostępny w tej wersji aplikacji.</string>
 </resources>

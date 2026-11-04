@@ -646,4 +646,5 @@
     <string name="alarm_save_enables">Saving changes enables this alarm. Switch it off in Alarms if needed.</string>
     <string name="alarm_today">Today</string>
     <string name="alarm_tomorrow">Tomorrow</string>
+    <string name="alarm_feature_unavailable">Music alarms are unavailable in this build.</string>
 </resources>

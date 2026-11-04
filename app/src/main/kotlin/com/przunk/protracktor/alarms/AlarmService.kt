@@ -35,12 +35,14 @@ class AlarmService : Service() {
     }
     override fun onCreate() {
         super.onCreate()
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { stopSelf(); return }
         AlarmNotifications.channel(this)
         startForeground(AlarmPlatform.STARTUP_NOTIFICATION, AlarmNotifications.ringing(this, null))
         running = true
         audio.value = AlarmAudioStatus.PREPARING
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { stopSelf(); return START_NOT_STICKY }
         pendingCommands++
         scope.launch {
             try {
@@ -58,6 +60,7 @@ class AlarmService : Service() {
                         }
                     }
                 }
+                check(control.readFailure == null) { "Alarm data is unavailable" }
                 coordinator = control
                 if (observer == null) observer = scope.launch {
                     control.repository.state.collect { book -> update(book.ringing) }

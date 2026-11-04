@@ -6,6 +6,70 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+@org.gradle.api.tasks.CacheableTask
+abstract class ConfigureMusicAlarmsManifest : org.gradle.api.DefaultTask() {
+    @get:org.gradle.api.tasks.Input abstract val alarmsEnabled: org.gradle.api.provider.Property<Boolean>
+    @get:org.gradle.api.tasks.InputFile
+    @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+    abstract val inputManifest: org.gradle.api.file.RegularFileProperty
+    @get:org.gradle.api.tasks.OutputFile abstract val outputManifest: org.gradle.api.file.RegularFileProperty
+
+    @org.gradle.api.tasks.TaskAction fun configure() {
+        val input = inputManifest.get().asFile
+        val output = outputManifest.get().asFile
+        output.parentFile.mkdirs()
+        if (alarmsEnabled.get()) { input.copyTo(output, overwrite = true); return }
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        val document = factory.newDocumentBuilder().parse(input)
+        val namespace = "http://schemas.android.com/apk/res/android"
+        val permissions = setOf("android.permission.SCHEDULE_EXACT_ALARM", "android.permission.USE_FULL_SCREEN_INTENT",
+            "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.WAKE_LOCK")
+        val permissionNodes = document.getElementsByTagName("uses-permission")
+        for (i in permissionNodes.length - 1 downTo 0) {
+            val node = permissionNodes.item(i) as org.w3c.dom.Element
+            if (node.getAttributeNS(namespace, "name") in permissions) node.parentNode.removeChild(node)
+        }
+        val removed = setOf("com.przunk.protracktor.alarms.AlarmsActivity",
+            "com.przunk.protracktor.alarms.AlarmRingingActivity", "com.przunk.protracktor.alarms.AlarmService")
+        for (tag in listOf("activity", "service")) {
+            val nodes = document.getElementsByTagName(tag)
+            for (i in nodes.length - 1 downTo 0) {
+                val node = nodes.item(i) as org.w3c.dom.Element
+                val name = node.getAttributeNS(namespace, "name").let { if (it.startsWith('.')) "com.przunk.protracktor$it" else it }
+                if (name in removed) node.parentNode.removeChild(node)
+            }
+        }
+        val receivers = document.getElementsByTagName("receiver")
+        for (i in 0 until receivers.length) {
+            val node = receivers.item(i) as org.w3c.dom.Element
+            if (node.getAttributeNS(namespace, "name").endsWith(".alarms.AlarmReceiver")) {
+                val filters = node.getElementsByTagName("intent-filter")
+                for (j in filters.length - 1 downTo 0) node.removeChild(filters.item(j))
+                val filter = document.createElement("intent-filter")
+                val action = document.createElement("action")
+                action.setAttributeNS(namespace, "android:name", "android.intent.action.MY_PACKAGE_REPLACED")
+                filter.appendChild(action); node.appendChild(filter)
+            }
+        }
+        javax.xml.transform.TransformerFactory.newInstance().newTransformer().transform(
+            javax.xml.transform.dom.DOMSource(document), javax.xml.transform.stream.StreamResult(output))
+    }
+}
+
+val musicAlarmsEnabled = providers.gradleProperty("protracktorMusicAlarms").orElse("true").map { it.toBooleanStrict() }
+
+androidComponents.onVariants { variant ->
+    val transform = tasks.register<ConfigureMusicAlarmsManifest>("configure${variant.name.replaceFirstChar(Char::uppercaseChar)}MusicAlarmsManifest") {
+        alarmsEnabled.set(musicAlarmsEnabled)
+    }
+    variant.artifacts.use(transform)
+        .wiredWithFiles(ConfigureMusicAlarmsManifest::inputManifest, ConfigureMusicAlarmsManifest::outputManifest)
+        .toTransform(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST)
+}
+
 /**
  * The number of commits behind HEAD, used as the versionCode.
  *
@@ -53,6 +117,7 @@ android {
         // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
         // a second, worse timestamp.
         versionName = "1.5.0"
+        buildConfigField("boolean", "MUSIC_ALARMS_ENABLED", musicAlarmsEnabled.get().toString())
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
@@ -127,6 +192,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         prefab = true  // unpacks Oboe's headers and .so from its AAR for CMake to find
     }
@@ -300,6 +366,10 @@ tasks.withType<Test>().configureEach {
     // **Screenshots run on their own** (`docs/WISHLIST.md` B39). Robolectric starts an Android of its
     // own for them, which took the suite from about seventy seconds to about four hundred; a picture
     // is wanted when a screen changes, not on every check. `scripts/screenshots.sh` asks for them.
+    inputs.property("musicAlarmsEnabled", musicAlarmsEnabled)
+    if (musicAlarmsEnabled.get()) exclude("com/przunk/protracktor/features/AlarmFeatureDisabledTest*")
+    else exclude("com/przunk/protracktor/alarms/**")
+
     val screenshots = providers.gradleProperty("screenshots").isPresent
     inputs.property("screenshots", screenshots)
     if (screenshots) {

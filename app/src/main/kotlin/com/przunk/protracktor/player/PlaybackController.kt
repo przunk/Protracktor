@@ -1127,6 +1127,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Capture the selected tune before asynchronous source reads. */
     fun useForAlarms(ref: TrackRef) {
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) {
+            say(Message(context.getString(R.string.alarm_feature_unavailable))); return
+        }
         val snapshot = _state.value
         val selected = com.przunk.protracktor.alarms.api.AlarmMusicSelection.capture(ref, snapshot)
         scope.launch {

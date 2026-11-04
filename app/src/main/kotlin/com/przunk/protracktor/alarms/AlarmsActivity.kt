@@ -25,9 +25,10 @@ import kotlinx.coroutines.withContext
 
 class AlarmsActivity : ComponentActivity() {
     private var refresh by mutableIntStateOf(0)
-    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) AppLocale.wrap(newBase) else newBase)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { finish(); return }
         enableAppEdgeToEdge(Appearance.theme(this))
         setContent {
             ProtracktorTheme(theme = Appearance.theme(this), dynamicColour = Appearance.dynamicColour(this)) {
@@ -51,7 +52,7 @@ class AlarmsActivity : ComponentActivity() {
                     val schedule by control.scheduling.collectAsState()
                     val readiness = AlarmReadiness.inspect(this)
                     val preparing by AlarmMusicPreparer.preparing.collectAsState()
-                    AlarmManagement(book, schedule.armedAt, control.repository.readFailure != null,
+                    AlarmManagement(book, schedule.armedAt, control.readFailure != null,
                         preparing = preparing, onCancelPreparation = AlarmMusicPreparer::cancel,
                         onOpenRinging = {
                             startForegroundService(Intent(this, AlarmService::class.java))

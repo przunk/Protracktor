@@ -334,7 +334,7 @@ private fun DomainChooser(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
+        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
             DomainRow(PlayerIcons.Alarm, stringResource(R.string.alarm_title),
                 stringResource(R.string.alarm_intro), onClick = {
                     com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)

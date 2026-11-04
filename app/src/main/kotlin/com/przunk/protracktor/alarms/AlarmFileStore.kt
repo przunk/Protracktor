@@ -58,8 +58,9 @@ class AlarmFileStore internal constructor(val directory: File) {
     companion object {
         const val MAX_LEDGER_BYTES = 1024 * 1024
         private val stores = ConcurrentHashMap<String, AlarmFileStore>()
+        fun directory(context: Context) = File(context.createDeviceProtectedStorageContext().noBackupFilesDir, "music-alarms")
         fun from(context: Context): AlarmFileStore {
-            val root = File(context.createDeviceProtectedStorageContext().noBackupFilesDir, "music-alarms")
+            val root = directory(context)
             return stores.computeIfAbsent(root.absolutePath) { AlarmFileStore(root) }
         }
     }

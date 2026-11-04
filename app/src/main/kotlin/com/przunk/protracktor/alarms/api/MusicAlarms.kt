@@ -23,30 +23,43 @@ internal data class AlarmMusicInput(val bytes: ByteArray, val companions: List<P
 
 /** Application boundary: ordinary playback never owns the alarm ledger or Android components. */
 internal object MusicAlarms {
-    val enabled: Boolean get() = true
+    val enabled: Boolean get() = com.przunk.protracktor.BuildConfig.MUSIC_ALARMS_ENABLED
 
-    fun openManager(context: Context) = context.startActivity(Intent(context, AlarmsActivity::class.java))
+    fun openManager(context: Context) {
+        if (!enabled) {
+            android.widget.Toast.makeText(context, com.przunk.protracktor.R.string.alarm_feature_unavailable, android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        context.startActivity(Intent(context, AlarmsActivity::class.java))
+    }
 
     /** Called on the lifecycle worker; waking an alarm must not create the ordinary player. */
     fun reconcile(context: Context): Boolean {
+        if (!enabled) { com.przunk.protracktor.alarms.AlarmFeatureLifecycle.deactivate(context); return false }
         val control = AlarmCoordinator.from(context)
         control.reconcile()
-        return control.repository.book.ringing != null && !AlarmService.running
+        return control.readFailure == null && control.repository.book.ringing != null && !AlarmService.running
     }
 
     fun openRinging(context: Context) {
+        if (!enabled) return
         context.startForegroundService(Intent(context, AlarmService::class.java))
         context.startActivity(Intent(context, AlarmRingingActivity::class.java))
     }
 
     suspend fun prepare(context: Context, selected: AlarmMusicSelection, load: suspend () -> AlarmMusicInput) {
+        check(enabled) { context.getString(com.przunk.protracktor.R.string.alarm_feature_unavailable) }
+        withContext(Dispatchers.IO) {
+            val control = AlarmCoordinator.from(context)
+            check(control.readFailure == null) { "Alarm data cannot be opened; it has been preserved" }
+        }
         AlarmMusicPreparer.add(context, selected.ref, selected.subsong, load)
         withContext(Dispatchers.IO) { AlarmCoordinator.from(context).reconcile() }
     }
 
-    fun isRinging(context: Context): Boolean = AlarmCoordinator.isRinging(context)
+    fun isRinging(context: Context): Boolean = enabled && AlarmCoordinator.isRinging(context)
 
-    fun playbackInterruption(context: Context): Flow<Boolean> = flow {
+    fun playbackInterruption(context: Context): Flow<Boolean> = if (!enabled) kotlinx.coroutines.flow.flowOf(false) else flow {
         val repository = withContext(Dispatchers.IO) { AlarmRepository.from(context) }
         emitAll(repository.state.map { it.ringing != null })
     }

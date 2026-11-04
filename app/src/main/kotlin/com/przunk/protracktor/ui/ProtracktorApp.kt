@@ -496,7 +496,7 @@ fun ProtracktorApp(
                 } else if (showBrowse) {
                     BrowseScreen(
                         browse = browse,
-                        onUseForAlarms = viewModel::useForAlarms,
+                        onUseForAlarms = (viewModel::useForAlarms).takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
                         savedPlaces = savedPlaces,
                         onSavePlace = viewModel::saveCurrentPlace,
                         onRemovePlace = viewModel::removeSavedPlace,
@@ -571,7 +571,7 @@ fun ProtracktorApp(
                         onPlayAt = viewModel::playRandomAt,
                         onReroll = viewModel::playRandom,
                         onEnqueue = { viewModel.enqueueTrack(it) },
-                        onUseForAlarms = viewModel::useForAlarms,
+                        onUseForAlarms = (viewModel::useForAlarms).takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
                         onRemoveAt = viewModel::removeRandomAt,
                         onFilter = { choosingRandomScope = true },
                         onShowNeighbours = viewModel::showNeighboursOf,
@@ -592,7 +592,7 @@ fun ProtracktorApp(
                         onRemoveAt = viewModel::removeTrack,
                         onMove = viewModel::moveTrack,
                         onEnqueue = { viewModel.enqueueTrack(it) },
-                        onUseForAlarms = viewModel::useForAlarms,
+                        onUseForAlarms = (viewModel::useForAlarms).takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
                         onShowNeighbours = viewModel::showNeighboursOf,
                         onShareFile = viewModel::shareFile,
                         onShareAudio = viewModel::shareAsAudio,
@@ -719,7 +719,7 @@ fun ProtracktorApp(
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 onShareFile = state.current?.let { track -> { viewModel.shareFile(track) } },
                 onShareAudio = state.current?.let { track -> { viewModel.shareAsAudio(track) } },
-                onUseForAlarms = state.current?.let { track -> { viewModel.useForAlarms(track) } },
+                onUseForAlarms = state.current?.takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled }?.let { track -> { viewModel.useForAlarms(track) } },
                 onShareLink = state.current
                     ?.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { track -> { viewModel.shareLink(track) } },

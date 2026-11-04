@@ -10,6 +10,7 @@ import android.content.Intent
 internal sealed interface AlarmScheduleResult {
     data class Armed(val atMillis: Long, val revision: Long) : AlarmScheduleResult
     data object Idle : AlarmScheduleResult
+    data object Disabled : AlarmScheduleResult
     data class Blocked(val remedies: List<AlarmAccess>) : AlarmScheduleResult
     data class Failed(val cause: SecurityException) : AlarmScheduleResult
     val armedAt: Long? get() = (this as? Armed)?.atMillis
@@ -30,6 +31,7 @@ internal object AndroidAlarmScheduler {
     }
 
     fun schedule(context: Context, book: AlarmBook): AlarmScheduleResult {
+        if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { cancel(context, retire = true); return AlarmScheduleResult.Disabled }
         val at = AlarmPlanner.earliest(book.alarms)
         if (at == null) { cancel(context); return AlarmScheduleResult.Idle }
         val readiness = AlarmReadiness.inspect(context)
