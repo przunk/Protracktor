@@ -574,6 +574,7 @@
     <string name="alarm_backup">Backup sound — the prepared music could not play</string>
     <string name="alarm_stop_anyway">Stop anyway</string>
     <string name="alarm_finish_first">Finish the alarm before starting music.</string>
+    <string name="notice_pending_playlist_changed">The playlist changed. Choose a track again.</string>
     <string name="alarm_intro">Wake up to your music. Prepare a tune from its menu, then choose a time.</string>
     <string name="alarm_use_music">Use for alarms</string>
     <string name="alarm_new">New alarm</string>

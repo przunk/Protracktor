@@ -117,11 +117,5 @@ internal class AlarmCoordinator private constructor(private val context: Context
             val key = AlarmFileStore.from(app).directory.absolutePath
             return instances.computeIfAbsent(key) { AlarmCoordinator(app) }
         }
-        fun isRinging(context: Context): Boolean {
-            val control = from(context)
-            return control.readFailure == null && control.repository.book.ringing?.let {
-                val now = AlarmPlatform.clock(context); !it.expired(now.elapsedMillis, now.bootCount)
-            } == true
-        }
     }
 }

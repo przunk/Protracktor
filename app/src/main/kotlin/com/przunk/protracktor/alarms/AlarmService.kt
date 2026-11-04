@@ -7,7 +7,8 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
-import com.przunk.protracktor.player.PlaybackController
+import com.przunk.protracktor.alarms.api.MusicAlarms
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,6 +20,8 @@ import kotlinx.coroutines.withContext
 
 class AlarmService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var closed = false
+    private var lastStartId = 0
     private var pendingCommands = 0
     private var coordinator: AlarmCoordinator? = null
     private var observer: Job? = null
@@ -43,6 +46,8 @@ class AlarmService : Service() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) { stopSelf(); return START_NOT_STICKY }
+        if (closed) return START_NOT_STICKY
+        lastStartId = startId
         pendingCommands++
         scope.launch {
             try {
@@ -60,16 +65,18 @@ class AlarmService : Service() {
                         }
                     }
                 }
+                if (closed) return@launch
                 check(control.readFailure == null) { "Alarm data is unavailable" }
                 coordinator = control
                 if (observer == null) observer = scope.launch {
                     control.repository.state.collect { book -> update(book.ringing) }
                 }
-            } catch (failure: Exception) {
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) {
                 android.util.Log.w("Protracktor", "Alarm could not ring", failure)
             } finally {
                 pendingCommands--
-                if (pendingCommands == 0) {
+                if (!closed && pendingCommands == 0) {
                     val active = coordinator?.repository?.book?.ringing
                     update(active)
                 }
@@ -78,28 +85,36 @@ class AlarmService : Service() {
         return START_STICKY
     }
     private fun update(active: RingingAlarm?) {
+        if (closed) return
         try { updateResources(active) }
+        catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) {
             android.util.Log.w("Protracktor", "Alarm resources are unavailable", failure)
             silence()
             active?.let { session -> scope.launch(Dispatchers.IO) {
-                runCatching { coordinator?.failed(session.token) }
+                try { coordinator?.failed(session.token) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm resource failure could not be saved", failure) }
             } }
-            stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
+            finishStart()
         }
     }
     private fun updateResources(active: RingingAlarm?) {
         if (active == null) {
             if (pendingCommands > 0) return
-            sound?.close(); sound = null; audioKey = null
-            deadline?.cancel(); wake?.let { if (it.isHeld) it.release() }; wake = null
-            stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return
+            silence(); audioKey = null
+            deadline?.cancel(); deadline = null
+            finishStart(); return
         }
         val now = AlarmPlatform.clock(this)
         if (active.expired(now.elapsedMillis, now.bootCount) || !AlarmReadiness.notifications(this)) {
             silence()
-            scope.launch(Dispatchers.IO) { runCatching { coordinator?.reconcile() } }
-            stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return
+            scope.launch(Dispatchers.IO) {
+                try { coordinator?.reconcile() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm expiry could not be saved", failure) }
+            }
+            finishStart(); return
         }
         val manager = getSystemService(android.app.NotificationManager::class.java)
         val notification = AlarmNotifications.ringing(this, active, announce = announcedToken != active.token)
@@ -113,7 +128,7 @@ class AlarmService : Service() {
         if (audioKey == active.token to active.backup) return
         sound?.close(); deadline?.cancel()
         audioKey = active.token to active.backup
-        PlaybackController.pauseExistingForAlarm()
+        MusicAlarms.interruptExistingPlayback()
         wake?.let { if (it.isHeld) it.release() }
         wake = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:music-alarm").apply {
@@ -122,35 +137,56 @@ class AlarmService : Service() {
         deadline = scope.launch {
             delay((active.deadlineElapsed - SystemClock.elapsedRealtime()).coerceAtLeast(1))
             // The hard audible limit does not depend on a successful storage write.
-            if (audioKey?.first == active.token) silence()
+            if (!owns(active.token)) return@launch
+            silence()
             try { withContext(Dispatchers.IO) { coordinator?.reconcile() } }
+            catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm timeout could not be saved", failure) }
             finally {
-                if (coordinator?.repository?.book?.ringing?.token in listOf(null, active.token)) {
-                    stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
-                }
+                if (owns(active.token) && coordinator?.repository?.book?.ringing?.token in listOf(null, active.token)) finishStart()
             }
         }
-        sound = AlarmSound(this, status = { audio.value = it }) {
-            scope.launch(Dispatchers.IO) {
+        sound = AlarmSound(this, status = { if (owns(active.token, active.backup)) audio.value = it }) {
+            if (owns(active.token, active.backup)) scope.launch {
                 try {
-                    if (active.backup) coordinator?.failed(active.token) else coordinator?.backup(active.token)
-                } catch (failure: Exception) {
+                    withContext(Dispatchers.IO) {
+                        if (active.backup) coordinator?.failed(active.token) else coordinator?.backup(active.token)
+                    }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) {
                     android.util.Log.w("Protracktor", "Alarm audio failure could not be saved", failure)
-                    withContext(Dispatchers.Main) { silence(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }
+                    if (owns(active.token, active.backup)) { silence(); finishStart() }
                 }
             }
         }.also { it.start(coordinator?.repository?.files?.audioFile(active.song.id), active.backup) }
+    }
+    private fun owns(token: String) = !closed && audioKey?.first == token
+    private fun owns(token: String, backup: Boolean) = !closed && audioKey == token to backup
+    private fun finishStart() {
+        if (closed) return
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        val manager = getSystemService(android.app.NotificationManager::class.java)
+        manager.cancel(AlarmPlatform.STARTUP_NOTIFICATION); manager.cancel(AlarmPlatform.NOTIFICATION)
+        stopSelfResult(lastStartId)
     }
     private fun silence() {
         sound?.close(); sound = null
         wake?.let { if (it.isHeld) it.release() }; wake = null
     }
     override fun onDestroy() {
-        running = false
-        silence()
-        audio.value = AlarmAudioStatus.STOPPED
-        scope.cancel(); super.onDestroy()
+        if (!closed) {
+            closed = true
+            running = false
+            scope.cancel()
+            deadline?.cancel(); deadline = null
+            observer?.cancel(); observer = null
+            silence(); audioKey = null
+            audio.value = AlarmAudioStatus.STOPPED
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            val manager = getSystemService(android.app.NotificationManager::class.java)
+            manager.cancel(AlarmPlatform.STARTUP_NOTIFICATION); manager.cancel(AlarmPlatform.NOTIFICATION)
+        }
+        super.onDestroy()
     }
     override fun onBind(intent: Intent?): IBinder? = null
 }

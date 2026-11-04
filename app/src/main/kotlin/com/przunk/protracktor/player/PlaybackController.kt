@@ -76,7 +76,7 @@ class PlaybackController private constructor(private val context: Context) {
         @Volatile private var instance: PlaybackController? = null
 
         /** Alarm delivery must not initialize the ordinary player or its database. */
-        internal fun pauseExistingForAlarm() { instance?.pause() }
+        internal fun pauseExistingForAlarm() { instance?.interruptForAlarm() }
 
         /** A stale scan notification must not start playback or open a database. */
         internal fun stopExistingScan() { instance?.stopScan() }
@@ -643,6 +643,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     init {
+        com.przunk.protracktor.alarms.api.MusicAlarms.warmUp(context)
         savedPlaces.refresh()
         scope.launch {
             _browse.map { it.catalogues }.distinctUntilChanged().collect {
@@ -1798,10 +1799,12 @@ class PlaybackController private constructor(private val context: Context) {
      * this app where retrying is genuinely not the same operation.
      */
     fun playExternal(uri: Uri, suppliedName: String? = null) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { playExternal(uri, suppliedName) }) return
+        val epoch = playbackEpoch
         scope.launch {
             val name = suppliedName?.takeIf { it.isNotBlank() }
                 ?: withContext(Dispatchers.IO) { displayNameOf(uri) }
+            if (epoch != playbackEpoch) return@launch
             playTransient(
                 TrackRef(
                     id = uri.toString(),
@@ -1908,7 +1911,7 @@ class PlaybackController private constructor(private val context: Context) {
      * picks past it are speculation nobody has been shown.
      */
     fun playRandomAt(index: Int) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { playRandomAt(index) }) return
         val pick = randomHistory.select(index) ?: return
         playTransient(pick)
         publishRandomPicks()
@@ -1942,7 +1945,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Explicit double-tap reset: new Random record, same filter, global History untouched. */
     fun playRandom() {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { playRandom() }) return
         val epoch = ++playbackEpoch
         stopPlayback()
         randomHistory.clear()
@@ -2078,7 +2081,7 @@ class PlaybackController private constructor(private val context: Context) {
         randomHistory.changeScope()
         publishRandomPicks()
         if (_state.value.randomMode) {
-            if (_state.value.loadingTrack && openJob == null) randomNext()
+            if (_state.value.loadingTrack && openJob == null && alarmBootstrap == null) randomNext()
             else prepareRandomQueue()
         }
     }
@@ -2091,12 +2094,11 @@ class PlaybackController private constructor(private val context: Context) {
      * walk what you found and the playlist is untouched.
      */
     fun playFromResults(results: List<TrackRef>, index: Int) {
-        if (alarmBlocksPlayback()) return
         if (index !in results.indices) return
-        sessionBrowse = _browse.value
-        val origin = SessionSource.of(_browse.value) ?: SessionSource.Search(_browse.value.query)
-        activateQueue(ActiveQueue(QueueSource.Collection(origin),
-            PlayQueue.results(results.toList(), index, _state.value.transportQueue)))
+        val browse = _browse.value
+        val origin = SessionSource.of(browse) ?: SessionSource.Search(browse.query)
+        playCapturedSelection(ActiveQueue(QueueSource.Collection(origin),
+            PlayQueue.results(results.toList(), index, _state.value.transportQueue)), browse)
     }
 
     /** Restore the active collection's navigation snapshot without changing transport. */
@@ -2560,22 +2562,83 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- transport ----------------------------------------------------------------------------
 
-    private fun alarmBlocksPlayback(): Boolean {
-        if (!com.przunk.protracktor.alarms.api.MusicAlarms.isRinging(context)) return false
-        say(Message(context.getString(R.string.alarm_finish_first)))
+    private var alarmBootstrap: Job? = null
+    private var alarmIntent = 0L
+
+    private fun retireAlarmIntent() {
+        ++alarmIntent
+        alarmBootstrap?.cancel()
+        alarmBootstrap = null
+    }
+
+    private fun alarmBlocksPlayback(retry: () -> Unit): Boolean {
+        when (com.przunk.protracktor.alarms.api.MusicAlarms.playbackGate(context)) {
+            com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Clear -> return false
+            is com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Ringing ->
+                say(Message(context.getString(R.string.alarm_finish_first)))
+            com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Loading -> {
+                retireAlarmIntent()
+                val intent = alarmIntent
+                _state.update { it.copy(loadingTrack = true) }
+                val waiting = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                    try {
+                        com.przunk.protracktor.alarms.api.MusicAlarms.awaitPlaybackGate(context)
+                        if (intent != alarmIntent) return@launch
+                        // Clear ownership before replay: opening a track can retire old work.
+                        alarmBootstrap = null
+                        ++alarmIntent
+                        _state.update { it.copy(loadingTrack = false) }
+                        retry()
+                    } finally {
+                        if (intent == alarmIntent) {
+                            alarmBootstrap = null
+                            _state.update { it.copy(loadingTrack = false) }
+                        }
+                    }
+                }
+                alarmBootstrap = waiting
+                waiting.start()
+            }
+        }
         return true
     }
 
+    private fun interruptForAlarm() {
+        ++playbackEpoch
+        retireAlarmIntent()
+        pendingRetry = null
+        resolveJob?.cancel(); resolveJob = null
+        if (openJob?.isActive == true || _state.value.loadingTrack) cancelPendingPlayback()
+        else pause()
+    }
+
     fun playAt(index: Int) {
-        if (alarmBlocksPlayback()) return
         val state = _state.value
         if (index !in state.queue.tracks.indices) return
-        openAndPlay(state.queue.withRepeat(state.transportQueue.repeat)
-            .withShuffle(state.transportQueue.shuffle).startAt(index))
+        playCapturedSelection(ActiveQueue(QueueSource.Playlist(state.activePlaylistId, state.activePlaylistName.orEmpty()),
+            state.queue.withRepeat(state.transportQueue.repeat).withShuffle(state.transportQueue.shuffle).startAt(index)))
+    }
+
+    /** Navigation during IO bootstrap cannot reinterpret a tap against a different collection. */
+    private fun playCapturedSelection(selection: ActiveQueue, origin: BrowseState? = null, deferred: Boolean = false) {
+        if (alarmBlocksPlayback { playCapturedSelection(selection, origin, deferred = true) }) return
+        val now = _state.value
+        if (deferred && selection.source is QueueSource.Playlist && selection.belongsTo(now.activePlaylistId) &&
+            selection.order.tracks != now.queue.tracks) {
+            // Keep the edit's Undo action while explaining why its old playback request was retired.
+            if (now.message?.actionLabel != null) android.widget.Toast.makeText(context,
+                R.string.notice_pending_playlist_changed, android.widget.Toast.LENGTH_LONG).show()
+            else say(Message(context.getString(R.string.notice_pending_playlist_changed)))
+            return
+        }
+        if (origin != null) sessionBrowse = origin
+        val ready = if (deferred) selection.withOrder(selection.order.withRepeat(now.transportQueue.repeat)
+            .withShuffle(now.transportQueue.shuffle)) else selection
+        activateQueue(ready)
     }
 
     fun next() {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { next() }) return
         val now = _state.value
         // A tune inside the file first, but **only in "play all"**. Making next mean something
         // different depending on the *file* would be the transport behaving differently for
@@ -2597,10 +2660,10 @@ class PlaybackController private constructor(private val context: Context) {
      * Deliberately **not** on the notification or a headset button. Those have no long press, and
      * inventing a double-tap for them would be a second vocabulary for one idea.
      */
-    fun nextFile() { if (!alarmBlocksPlayback()) applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback)) }
+    fun nextFile() { if (!alarmBlocksPlayback { nextFile() }) applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback)) }
 
     fun previous() {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { previous() }) return
         val now = _state.value
         if (now.playAllSubsongs && now.subsong > 0) {
             selectSubsong(now.subsong - 1)
@@ -2610,7 +2673,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
-    fun previousFile() { if (!alarmBlocksPlayback()) applyScheduledStep(_state.value.schedule.previous(_state.value.activePlayback)) }
+    fun previousFile() { if (!alarmBlocksPlayback { previousFile() }) applyScheduledStep(_state.value.schedule.previous(_state.value.activePlayback)) }
 
     /**
      * Moves the playing position.
@@ -2658,7 +2721,7 @@ class PlaybackController private constructor(private val context: Context) {
      * runs into the next, not whether the user may choose one by hand.
      */
     fun selectSubsong(index: Int) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { selectSubsong(index) }) return
         val open = track ?: return
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
@@ -2759,7 +2822,8 @@ class PlaybackController private constructor(private val context: Context) {
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
-        if (!_state.value.playing && alarmBlocksPlayback()) return
+        if (alarmBootstrap != null) { cancelPendingPlayback(); return }
+        if (!_state.value.playing && alarmBlocksPlayback { togglePlayPause() }) return
         val current = _state.value.current
         if (current?.id?.startsWith("amp://") == true && !Amp.access.enabled) {
             say(Message(context.getString(R.string.notice_amp_disabled)))
@@ -2848,19 +2912,21 @@ class PlaybackController private constructor(private val context: Context) {
      * press ends up pausing something that was already paused.
      */
     fun togglePlayPauseTo(play: Boolean) {
+        if (!play && alarmBootstrap != null) { cancelPendingPlayback(); return }
         if (play == _state.value.playing) return
         togglePlayPause()
     }
 
     /** Stops playing without forgetting what was loaded. Used by the notification's stop action. */
     private fun cancelPendingPlayback() {
+        retireAlarmIntent()
         ++playbackEpoch
         stopPlayback()
         _state.update { it.copy(loadingTrack = false, playing = false) }
     }
 
     fun pause() {
-        if (_state.value.loadingTrack) {
+        if (alarmBootstrap != null || _state.value.loadingTrack) {
             cancelPendingPlayback()
             return
         }
@@ -3001,7 +3067,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun startActualPlayback(ref: TrackRef) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { startActualPlayback(ref) }) return
         ++playbackEpoch
         installPendingRetry(ref)
         _state.update { it.copy(playing = false, positionSeconds = 0.0, durationSeconds = 0.0,
@@ -3083,7 +3149,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun playPendingRequest(id: Long) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { playPendingRequest(id) }) return
         val now = _state.value
         now.schedule.current?.request?.takeIf { it.id == id && !now.schedule.consumed }?.let {
             startActualPlayback(it.track)
@@ -3118,7 +3184,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun playContextEntry(id: Long, generation: Long) {
-        if (alarmBlocksPlayback()) return
+        if (alarmBlocksPlayback { playContextEntry(id, generation) }) return
         if (_state.value.schedule.generation != generation) return
         val active = _state.value.activePlayback
         val index = active.entryIds.indexOf(id)
@@ -3299,6 +3365,11 @@ class PlaybackController private constructor(private val context: Context) {
             openMd5 = md5
             opened.knownLengths(openSongLengths)
 
+            ensureActive()
+            if (com.przunk.protracktor.alarms.api.MusicAlarms.isRinging(context)) {
+                opened.close(); track = null; audioFocus.release()
+                return@launch
+            }
             val started = opened.start()
             if (historyGeneration == historyWrites.generation) {
                 listeningTrack = ref
@@ -3529,6 +3600,8 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Releases the module. The process is going away; nothing owns native memory after this. */
     fun release() {
+        retireAlarmIntent()
+        com.przunk.protracktor.alarms.api.MusicAlarms.releasePlayback(context)
         ++playbackEpoch
         resolveJob?.cancel()
         openJob?.cancel()

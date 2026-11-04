@@ -601,6 +601,7 @@
     <string name="alarm_backup">Dźwięk zapasowy — nie udało się odtworzyć przygotowanej muzyki</string>
     <string name="alarm_stop_anyway">Zatrzymaj mimo wszystko</string>
     <string name="alarm_finish_first">Zatrzymaj budzik przed rozpoczęciem odtwarzania muzyki.</string>
+    <string name="notice_pending_playlist_changed">Playlista się zmieniła. Wybierz utwór ponownie.</string>
     <string name="alarm_intro">Obudź się przy swojej muzyce. Przygotuj utwór z jego menu, a następnie wybierz godzinę.</string>
     <string name="alarm_use_music">Do budzika</string>
     <string name="alarm_new">Nowy alarm</string>

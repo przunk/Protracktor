@@ -6,15 +6,12 @@ import android.content.Context
 import android.content.Intent
 import com.przunk.protracktor.alarms.AlarmCoordinator
 import com.przunk.protracktor.alarms.AlarmMusicPreparer
-import com.przunk.protracktor.alarms.AlarmRepository
 import com.przunk.protracktor.alarms.AlarmRingingActivity
 import com.przunk.protracktor.alarms.AlarmService
 import com.przunk.protracktor.alarms.AlarmsActivity
 import com.przunk.protracktor.data.SongDbMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -22,7 +19,27 @@ internal data class AlarmMusicInput(val bytes: ByteArray, val companions: List<P
     val metadata: SongDbMetadata.Entry? = null, val credits: List<SongDbMetadata.Credit> = emptyList())
 
 /** Application boundary: ordinary playback never owns the alarm ledger or Android components. */
+internal sealed interface AlarmPlaybackGate {
+    data object Loading : AlarmPlaybackGate
+    data object Clear : AlarmPlaybackGate
+    data class Ringing(val token: String, val deadlineElapsed: Long) : AlarmPlaybackGate
+}
+
 internal object MusicAlarms {
+    private val observations = java.util.IdentityHashMap<Context, com.przunk.protracktor.alarms.AlarmPlaybackObservation>()
+    @Synchronized private fun observation(context: Context) = observations.getOrPut(context.applicationContext) {
+        com.przunk.protracktor.alarms.AlarmPlaybackObservation(context.applicationContext)
+    }
+    fun warmUp(context: Context) { if (enabled) observation(context) }
+    @Synchronized fun releasePlayback(context: Context) { observations.remove(context.applicationContext)?.close() }
+    fun playbackGate(context: Context): AlarmPlaybackGate =
+        if (enabled) observation(context).current() else AlarmPlaybackGate.Clear
+    suspend fun awaitPlaybackGate(context: Context): AlarmPlaybackGate =
+        if (enabled) observation(context).awaitReady() else AlarmPlaybackGate.Clear
+
+    /** Interrupt only an existing ordinary player; delivery must not initialize its database. */
+    fun interruptExistingPlayback() { com.przunk.protracktor.player.PlaybackController.pauseExistingForAlarm() }
+
     val enabled: Boolean get() = com.przunk.protracktor.BuildConfig.MUSIC_ALARMS_ENABLED
 
     fun openManager(context: Context) {
@@ -34,11 +51,11 @@ internal object MusicAlarms {
     }
 
     /** Called on the lifecycle worker; waking an alarm must not create the ordinary player. */
-    fun reconcile(context: Context): Boolean {
-        if (!enabled) { com.przunk.protracktor.alarms.AlarmFeatureLifecycle.deactivate(context); return false }
+    suspend fun reconcile(context: Context): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) { com.przunk.protracktor.alarms.AlarmFeatureLifecycle.deactivate(context); return@withContext false }
         val control = AlarmCoordinator.from(context)
         control.reconcile()
-        return control.readFailure == null && control.repository.book.ringing != null && !AlarmService.running
+        control.readFailure == null && control.repository.book.ringing != null && !AlarmService.running
     }
 
     fun openRinging(context: Context) {
@@ -57,10 +74,8 @@ internal object MusicAlarms {
         withContext(Dispatchers.IO) { AlarmCoordinator.from(context).reconcile() }
     }
 
-    fun isRinging(context: Context): Boolean = enabled && AlarmCoordinator.isRinging(context)
+    fun isRinging(context: Context): Boolean = playbackGate(context) is AlarmPlaybackGate.Ringing
 
-    fun playbackInterruption(context: Context): Flow<Boolean> = if (!enabled) kotlinx.coroutines.flow.flowOf(false) else flow {
-        val repository = withContext(Dispatchers.IO) { AlarmRepository.from(context) }
-        emitAll(repository.state.map { it.ringing != null })
-    }
+    fun playbackInterruption(context: Context): Flow<Boolean> = if (!enabled) kotlinx.coroutines.flow.flowOf(false)
+        else observation(context).state.map { it is AlarmPlaybackGate.Ringing }
 }

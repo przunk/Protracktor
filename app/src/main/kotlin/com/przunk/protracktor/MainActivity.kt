@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
+            try {
                 if (com.przunk.protracktor.alarms.api.MusicAlarms.reconcile(this@MainActivity)) {
                     withContext(Dispatchers.Main) {
                         if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
@@ -125,7 +125,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            }.onFailure { android.util.Log.w("Protracktor", "Alarm reconciliation failed", it) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm reconciliation failed", failure) }
         }
     }
 
