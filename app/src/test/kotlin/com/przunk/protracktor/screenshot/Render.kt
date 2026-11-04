@@ -28,18 +28,24 @@ internal fun render(
     width: Int,
     height: Int,
     atMillis: Long = 0,
+    gesture: ((View) -> Unit)? = null,
     content: @Composable () -> Unit,
 ): Bitmap {
-    val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
-    activity.setContent(content = content)
-    val view: View = activity.window.decorView
-    view.measure(
-        View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-        View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
-    )
-    view.layout(0, 0, width, height)
-    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(atMillis.coerceAtLeast(FIRST_FRAME_MILLIS)))
-    return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { view.draw(Canvas(it)) }
+    val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+    val activity = controller.get()
+    try {
+        activity.setContent(content = content)
+        val view: View = activity.window.decorView
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+        )
+        view.layout(0, 0, width, height)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(atMillis.coerceAtLeast(FIRST_FRAME_MILLIS)))
+        gesture?.invoke(view)
+        if (gesture != null) shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(64))
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { view.draw(Canvas(it)) }
+    } finally { controller.close() }
 }
 
 /** Where the pictures go: the build directory, never the repository. */
