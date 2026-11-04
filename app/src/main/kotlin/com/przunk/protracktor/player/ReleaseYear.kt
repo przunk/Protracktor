@@ -34,6 +34,8 @@ object ReleaseYear {
 
     private val YEAR = Regex("""(?<!\d)(19[7-9]\d|20\d\d)(?!\d)""")
 
+    fun isSingle(text: String): Boolean = text.length == 4 && YEAR.matches(text)
+
     /** A year, a range, or empty when nothing in the metadata says. */
     fun from(metadata: Map<String, String>): String {
         for (key in KEYS) {
