@@ -93,7 +93,7 @@ class AlarmService : Service() {
             stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return
         }
         val now = AlarmPlatform.clock(this)
-        if (active.expired(now.elapsedMillis, now.bootCount) || !AlarmPlatform.notifications(this)) {
+        if (active.expired(now.elapsedMillis, now.bootCount) || !AlarmReadiness.notifications(this)) {
             silence()
             scope.launch(Dispatchers.IO) { runCatching { coordinator?.reconcile() } }
             stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return

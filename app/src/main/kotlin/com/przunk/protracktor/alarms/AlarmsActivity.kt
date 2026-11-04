@@ -38,21 +38,27 @@ class AlarmsActivity : ComponentActivity() {
                         AlarmCoordinator.from(this@AlarmsActivity).also { runCatching { it.reconcile() } }
                     }
                 }
+                val access = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, result ->
+                    if (result == com.przunk.protracktor.permissions.AccessRequestResult.UNAVAILABLE)
+                        android.widget.Toast.makeText(this, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
+                    refresh++
+                }
                 val control = coordinator
                 if (control == null) Surface(Modifier.fillMaxSize()) { Box(Modifier.safeDrawingPadding().padding(24.dp)) {
                     Text(stringResource(R.string.alarm_loading))
                 } } else {
                     val book by control.repository.state.collectAsState()
-                    val armed by control.armedAt.collectAsState()
+                    val schedule by control.scheduling.collectAsState()
+                    val readiness = AlarmReadiness.inspect(this)
                     val preparing by AlarmMusicPreparer.preparing.collectAsState()
-                    AlarmManagement(book, armed, control.repository.readFailure != null,
+                    AlarmManagement(book, schedule.armedAt, control.repository.readFailure != null,
                         preparing = preparing, onCancelPreparation = AlarmMusicPreparer::cancel,
                         onOpenRinging = {
                             startForegroundService(Intent(this, AlarmService::class.java))
                             startActivity(Intent(this, AlarmRingingActivity::class.java))
                         },
-                        exact = AlarmPlatform.exact(this), notificationAccess = AlarmPlatform.notifications(this),
-                        fullscreen = AlarmPlatform.fullScreen(this), muted = AlarmPlatform.muted(this),
+                        exact = readiness.exact, notificationAccess = readiness.notifications,
+                        fullscreen = readiness.fullScreen, muted = readiness.muted,
                         usable = control::usable, onBack = ::finish,
                         onSave = { alarm -> command { control.save(alarm) } },
                         onDelete = { id ->
@@ -64,7 +70,20 @@ class AlarmsActivity : ComponentActivity() {
                         onTest = { id ->
                             startForegroundService(Intent(this, AlarmService::class.java).setAction(AlarmPlatform.TEST).putExtra("id", id))
                             startActivity(Intent(this, AlarmRingingActivity::class.java))
-                        }, onAccess = { access -> requestAccess(access) })
+                        }, onAccess = { remedy ->
+                            when (remedy) {
+                                AlarmAccess.EXACT -> access.request(com.przunk.protracktor.permissions.AppAccess.EXACT_ALARMS)
+                                AlarmAccess.FULL_SCREEN -> access.request(com.przunk.protracktor.permissions.AppAccess.FULL_SCREEN_ALARMS)
+                                AlarmAccess.NOTIFICATIONS -> {
+                                    val notifications = com.przunk.protracktor.permissions.AppAccess.NOTIFICATIONS
+                                    if (com.przunk.protracktor.permissions.SystemAccess.allowed(this, notifications))
+                                        access.openSettings(notifications, AlarmReadiness.settings(this, remedy))
+                                    else access.request(notifications)
+                                }
+                                AlarmAccess.VOLUME -> runCatching { startActivity(AlarmReadiness.settings(this, remedy)) }
+                                    .onFailure { android.widget.Toast.makeText(this, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show() }.let { }
+                            }
+                        })
                 }
             }
         }
@@ -76,12 +95,5 @@ class AlarmsActivity : ComponentActivity() {
             refresh++
         }
     }
-    private fun requestAccess(access: AlarmAccess) {
-        val intent = AlarmPlatform.settings(this, access)
-        runCatching { startActivity(intent) }.onFailure {
-            android.widget.Toast.makeText(this, R.string.alarm_failure, android.widget.Toast.LENGTH_LONG).show()
-        }
-    }
     override fun onResume() { super.onResume(); refresh++ }
 }
-internal enum class AlarmAccess { EXACT, NOTIFICATIONS, FULL_SCREEN, VOLUME }

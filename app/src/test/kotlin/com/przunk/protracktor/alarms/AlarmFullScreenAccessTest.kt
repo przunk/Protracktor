@@ -38,6 +38,8 @@ class AlarmFullScreenAccessTest {
             override fun createDeviceProtectedStorageContext(): Context = this
             override fun getNoBackupFilesDir(): File = root
         }
+        shadowOf(ApplicationProvider.getApplicationContext<android.app.Application>())
+            .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
         AlarmNotifications.channel(context)
         val control = AlarmCoordinator.from(context)
         val song = AlarmSong("song", "a".repeat(64), "Morning", platformId = "amiga", durationMillis = 3000)
@@ -50,8 +52,8 @@ class AlarmFullScreenAccessTest {
         AccessShadow.allowed = false
         control.save(MusicAlarm("alarm", 7, 30, songIds = listOf("song"), enabled = true))
         assertTrue(control.repository.book.alarms.single().enabled)
-        assertFalse(AlarmPlatform.fullScreen(context))
-        assertNull(control.armedAt.value)
+        assertFalse(com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.FULL_SCREEN_ALARMS))
+        assertNull(control.scheduling.value.armedAt)
         assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
     }
     @Test fun `granting full screen access arms the preserved request through the production scheduler`() {
@@ -60,7 +62,7 @@ class AlarmFullScreenAccessTest {
         control.save(MusicAlarm("alarm", 7, 30, songIds = listOf("song"), enabled = true))
         AccessShadow.allowed = true
         control.reconcile()
-        assertNotNull(control.armedAt.value)
+        assertNotNull(control.scheduling.value.armedAt)
         assertNotNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
         val song = control.repository.book.songs.single()
         val quiz = AlarmQuizFactory(listOf("amiga" to "Amiga", "pc" to "PC", "c64" to "C64")).create(song, listOf(song))!!
@@ -70,7 +72,7 @@ class AlarmFullScreenAccessTest {
         val (context, control) = ready()
         context.getSystemService(NotificationManager::class.java).getNotificationChannel(AlarmPlatform.CHANNEL).importance = NotificationManager.IMPORTANCE_DEFAULT
         control.save(MusicAlarm("alarm", 7, 30, songIds = listOf("song"), enabled = true))
-        assertFalse(AlarmPlatform.notifications(context))
-        assertNull(control.armedAt.value)
+        assertFalse(AlarmReadiness.notifications(context))
+        assertNull(control.scheduling.value.armedAt)
     }
 }

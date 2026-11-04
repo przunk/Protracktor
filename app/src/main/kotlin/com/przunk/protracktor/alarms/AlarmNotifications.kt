@@ -39,7 +39,7 @@ internal object AlarmNotifications {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
         val content = PendingIntent.getActivity(context, 7401, open(Intent.ACTION_VIEW),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val fullScreen = if (active != null && AlarmPlatform.fullScreen(context)) {
+        val fullScreen = if (active != null && com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.FULL_SCREEN_ALARMS)) {
             // An explicit immutable alarm capability, handed only to Android's notification UI.
             val options = if (Build.VERSION.SDK_INT >= 35) ActivityOptions.makeBasic()
                 .setPendingIntentCreatorBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)

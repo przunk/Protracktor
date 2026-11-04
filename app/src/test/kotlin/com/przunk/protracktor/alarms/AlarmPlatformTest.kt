@@ -49,10 +49,10 @@ class AlarmPlatformTest {
         assertEquals(AlarmReceiver::class.java.name, intent.component!!.className)
         assertEquals(AlarmPlanner.earliest(control.repository.book.alarms), intent.getLongExtra("at", -1))
         assertEquals(control.repository.book.revision, intent.getLongExtra("revision", -1))
-        assertEquals(intent.getLongExtra("at", -1), control.armedAt.value)
+        assertEquals(intent.getLongExtra("at", -1), control.scheduling.value.armedAt)
         control.deleteAlarm("later"); control.deleteAlarm("earlier")
         assertNull(shadowOf(manager).nextScheduledAlarm)
-        assertNull(control.armedAt.value)
+        assertNull(control.scheduling.value.armedAt)
     }
     @Test @Config(sdk = [31]) fun `exact access denial and grant reconcile the saved request`() {
         val context = context()
@@ -60,11 +60,11 @@ class AlarmPlatformTest {
         val manager = context.getSystemService(AlarmManager::class.java)
         org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(false)
         control.save(MusicAlarm("morning", 7, 0, songIds = listOf(song.id), enabled = true))
-        assertNull(control.armedAt.value)
+        assertNull(control.scheduling.value.armedAt)
         assertTrue(control.repository.book.alarms.single().enabled)
         org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
         control.reconcile()
-        assertNotNull(control.armedAt.value)
+        assertNotNull(control.scheduling.value.armedAt)
         assertNotNull(shadowOf(manager).nextScheduledAlarm)
     }
     @Test fun `notification denial preserves requested enablement but never claims armed`() {
@@ -73,7 +73,7 @@ class AlarmPlatformTest {
         shadowOf(context.getSystemService(NotificationManager::class.java)).setNotificationsEnabled(false)
         control.save(MusicAlarm("morning", 7, 0, songIds = listOf(song.id), enabled = true))
         assertTrue(control.repository.book.alarms.single().enabled)
-        assertNull(control.armedAt.value)
+        assertNull(control.scheduling.value.armedAt)
         assertNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)
         assertThrows(IllegalStateException::class.java) { control.preview("morning", setOf(song.id)) }
     }
@@ -97,11 +97,11 @@ class AlarmPlatformTest {
         val context = context()
         val manager = context.getSystemService(NotificationManager::class.java)
         shadowOf(manager).setNotificationsEnabled(false)
-        val denied = AlarmPlatform.settings(context, AlarmAccess.NOTIFICATIONS)
+        val denied = AlarmReadiness.settings(context, AlarmAccess.NOTIFICATIONS)
         assertEquals(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS, denied.action)
         assertEquals(context.packageName, denied.getStringExtra(android.provider.Settings.EXTRA_APP_PACKAGE))
         shadowOf(manager).setNotificationsEnabled(true)
-        val channel = AlarmPlatform.settings(context, AlarmAccess.NOTIFICATIONS)
+        val channel = AlarmReadiness.settings(context, AlarmAccess.NOTIFICATIONS)
         assertEquals(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS, channel.action)
         assertEquals(AlarmPlatform.CHANNEL, channel.getStringExtra(android.provider.Settings.EXTRA_CHANNEL_ID))
     }

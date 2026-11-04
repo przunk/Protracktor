@@ -185,11 +185,9 @@ fun ProtracktorApp(
     // The foreground service runs with or without this; only its notification is suppressed. Asked
     // once, at the top, rather than in the middle of the user pressing play.
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-        val notificationPermission = rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { }
+        val notificationPermission = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, _ -> }
         LaunchedEffect(Unit) {
-            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            notificationPermission.request(com.przunk.protracktor.permissions.AppAccess.NOTIFICATIONS)
         }
     }
 

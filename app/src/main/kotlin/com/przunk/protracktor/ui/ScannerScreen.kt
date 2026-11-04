@@ -3,11 +3,7 @@
 
 package com.przunk.protracktor.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -58,9 +54,8 @@ import com.przunk.protracktor.net.WebRemote
 /**
  * Reading a pairing code off a browser's screen.
  *
- * **The only screen in this app that asks for a permission**, and it asks at the moment it opens
- * rather than at start-up: a music player requesting the camera on first launch is a player that
- * looks like something else. Frames are decoded and dropped; nothing is stored and nothing leaves
+ * Camera access is requested when this screen opens. Frames are decoded and dropped;
+ * nothing is stored and nothing leaves
  * the device (`docs/PLAN_HANDOFF.md` §3 H2).
  *
  * ZXing rather than ML Kit — `gradle/libs.versions.toml` says why. It reads a QR out of the
@@ -76,17 +71,16 @@ fun ScannerScreen(
     val context = LocalContext.current
     var granted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
+com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.CAMERA)
         )
     }
     var refused by remember { mutableStateOf(false) }
 
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        granted = ok
-        refused = !ok
+    val ask = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, result ->
+        granted = result == com.przunk.protracktor.permissions.AccessRequestResult.GRANTED
+        refused = !granted
     }
-    LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
+    LaunchedEffect(Unit) { if (!granted) ask.request(com.przunk.protracktor.permissions.AppAccess.CAMERA) }
 
     // The policy, one press from where the sending is decided (the owner, 2026-09-22). Drawn in place
     // of the scanner, as Settings draws it in place of its list; Back returns to the camera.

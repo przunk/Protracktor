@@ -16,18 +16,18 @@ internal class AlarmCoordinator private constructor(private val context: Context
     val repository = AlarmRepository.from(context)
     private val quizzes = AlarmQuizFactory(Platforms.all.map { it.id to it.name })
     private val rules = AlarmRules(quizzes, AlarmRepository::sourceAllowed)
-    private val armed = MutableStateFlow<Long?>(null)
-    val armedAt = armed.asStateFlow()
+    private val scheduled = MutableStateFlow<AlarmScheduleResult>(AlarmScheduleResult.Idle)
+    val scheduling = scheduled.asStateFlow()
     fun usable(song: AlarmSong) = AlarmRepository.sourceAllowed(song) &&
         repository.files.audioFile(song.id).length() > 0 && quizzes.canAsk(song, repository.book.songs)
 
     @Synchronized fun reconcile(resetTime: Boolean = false) {
-        if (repository.readFailure != null) { armed.value = AlarmPlatform.schedule(context, AlarmBook()); return }
+        if (repository.readFailure != null) { scheduled.value = AndroidAlarmScheduler.schedule(context, AlarmBook()); return }
         val now = AlarmPlatform.clock(context)
         val zone = ZoneId.systemDefault()
         repository.change {
             val next = rules.reconcile(it, now, zone, resetTime, ::usable).book
-            if (AlarmPlatform.notifications(context) || next.ringing == null) next else next.copy(ringing = null,
+            if (AlarmReadiness.notifications(context) || next.ringing == null) next else next.copy(ringing = null,
                 lastOutcome = AlarmOutcome(next.ringing.alarmIds, now.wallMillis, AlarmOutcomeKind.MISSED))
         }
         schedule()
@@ -69,13 +69,13 @@ internal class AlarmCoordinator private constructor(private val context: Context
         val now = AlarmPlatform.clock(context)
         repository.change { book ->
             val next = rules.delivery(book, revision, at, now, ZoneId.systemDefault(), UUID.randomUUID().toString()).book
-            if (AlarmPlatform.notifications(context) && AlarmPlatform.fullScreen(context)) next else next.copy(ringing = null,
+            if (AlarmReadiness.notifications(context) && com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.FULL_SCREEN_ALARMS)) next else next.copy(ringing = null,
                 lastOutcome = next.ringing?.let { AlarmOutcome(it.alarmIds, now.wallMillis, AlarmOutcomeKind.MISSED) } ?: next.lastOutcome)
         }
         schedule()
     }
     @Synchronized fun preview(id: String, songIds: Set<String>) {
-        check(AlarmPlatform.notifications(context))
+        check(AlarmReadiness.notifications(context))
         repository.change { rules.preview(it, id, songIds, AlarmPlatform.clock(context), UUID.randomUUID().toString()).book }
         schedule()
     }
@@ -93,7 +93,7 @@ internal class AlarmCoordinator private constructor(private val context: Context
     @Synchronized fun failed(token: String) {
         repository.change { rules.failed(it, token, AlarmPlatform.clock(context)).book }; schedule()
     }
-    private fun schedule() { armed.value = AlarmPlatform.schedule(context, repository.book) }
+    private fun schedule() { scheduled.value = AndroidAlarmScheduler.schedule(context, repository.book) }
     companion object {
         private val instances = ConcurrentHashMap<String, AlarmCoordinator>()
         fun from(context: Context): AlarmCoordinator {
