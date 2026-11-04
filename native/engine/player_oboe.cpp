@@ -4,9 +4,9 @@
 // Android's half of the engine: the Oboe callback, and the JNI surface above it.
 //
 // Everything Android-specific in the native code is here. `engine.cpp` decodes and knows nothing
-// about phones; this drives it from an audio callback and exposes sixteen functions to Kotlin.
-// PCM never crosses the boundary (`docs/ARCHITECTURE.md` §4); whether it should be a separate
-// process instead is `docs/OPEN_QUESTIONS.md` Q9.
+// about phones; this drives the audio callback and exposes controls and metadata to Kotlin.
+// Playback PCM stays native; offline exports request bounded PCM chunks through JNI. Whether
+// playback should be a separate process is `docs/OPEN_QUESTIONS.md` Q9.
 
 #include <cmath>
 #include <bit>
@@ -710,6 +710,13 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderSelect(JNIEnv *, jcl
     return guarded<jboolean>("renderSelect", [&] {
         return reinterpret_cast<Backend *>(handle)->selectSubsong(index) ? JNI_TRUE : JNI_FALSE;
     }, JNI_FALSE);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderDescribe(JNIEnv *env, jclass, jlong handle) {
+    return guarded<jstring>("renderDescribe", [&] {
+        return env->NewStringUTF(reinterpret_cast<Backend *>(handle)->describe().c_str());
+    }, env->NewStringUTF(""));
 }
 
 JNIEXPORT jint JNICALL
