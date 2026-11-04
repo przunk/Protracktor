@@ -291,6 +291,8 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("app/notices/components.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("app/notices/sources.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("native/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("app/src/main/AndroidManifest.xml")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("app/src/main/res/xml/data_extraction_rules.xml")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("store/privacy-policy.md")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
 

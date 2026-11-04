@@ -18,6 +18,8 @@ import com.przunk.protracktor.ui.DatabaseGate
 import com.przunk.protracktor.data.DatabaseAccess
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import com.przunk.protracktor.ui.theme.enableAppEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -112,4 +114,22 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                val control = com.przunk.protracktor.alarms.AlarmCoordinator.from(this@MainActivity)
+                control.reconcile()
+                if (control.repository.book.ringing != null && !com.przunk.protracktor.alarms.AlarmService.running) {
+                    withContext(Dispatchers.Main) {
+                        if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                            startForegroundService(Intent(this@MainActivity, com.przunk.protracktor.alarms.AlarmService::class.java))
+                            startActivity(Intent(this@MainActivity, com.przunk.protracktor.alarms.AlarmRingingActivity::class.java))
+                        }
+                    }
+                }
+            }.onFailure { android.util.Log.w("Protracktor", "Alarm reconciliation failed", it) }
+        }
+    }
+
 }

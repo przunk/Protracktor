@@ -131,6 +131,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
 
     fun shareFile(track: TrackRef) = controller.shareFile(track)
+    fun useForAlarms(track: TrackRef) = controller.useForAlarms(track)
     fun shareAsAudio(track: TrackRef) = controller.shareAsAudio(track)
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)

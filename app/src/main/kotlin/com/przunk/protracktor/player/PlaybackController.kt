@@ -70,8 +70,13 @@ import kotlinx.coroutines.withContext
 
 class PlaybackController private constructor(private val context: Context) {
 
+    private val nativeReady = kotlinx.coroutines.CompletableDeferred<Unit>()
+
     companion object {
         @Volatile private var instance: PlaybackController? = null
+
+        /** Alarm delivery must not initialize the ordinary player or its database. */
+        internal fun pauseExistingForAlarm() { instance?.pause() }
 
         /** A stale scan notification must not start playback or open a database. */
         internal fun stopExistingScan() { instance?.stopScan() }
@@ -743,7 +748,7 @@ class PlaybackController private constructor(private val context: Context) {
                     com.przunk.protracktor.engine.NativeData.ensureUnpacked(context, version).absolutePath
                 )
                 configureUade(version)
-            }
+            }.also { nativeReady.complete(Unit) }
         }
 
         // **A scan's notification left behind by a process that died** (the owner, 2026-09-29: the
@@ -1119,6 +1124,32 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+
+    /** Capture the selected tune before asynchronous source reads. */
+    fun useForAlarms(ref: TrackRef) {
+        val snapshot = _state.value
+        val selected = com.przunk.protracktor.alarms.AlarmMusicSelection.capture(ref, snapshot)
+        scope.launch {
+            say(Message(context.getString(R.string.alarm_preparing, ref.title)))
+            try {
+                com.przunk.protracktor.alarms.AlarmMusicPreparer.add(context, selected.ref, selected.subsong) {
+                    nativeReady.await()
+                    val bytes = trackFiles.read(ref) ?: error("Track cannot be read")
+                    com.przunk.protracktor.alarms.AlarmMusicInput(bytes, trackFiles.companions(ref), catalogueFormatOf(ref).orEmpty(),
+                        trackMetadata.forMd5(Md5.of(bytes)), trackMetadata.sampleCredits())
+                }
+                withContext(Dispatchers.IO) { com.przunk.protracktor.alarms.AlarmCoordinator.from(context).reconcile() }
+                say(Message(context.getString(R.string.alarm_music_ready)))
+            } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                say(Message(context.getString(R.string.alarm_prepare_failed)))
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (failure: Exception) {
+                android.util.Log.w("Protracktor", "Alarm preparation failed", failure)
+                say(Message(context.getString(R.string.alarm_prepare_failed)))
+            }
+        }
+    }
+
     /** The one tune being turned into audio; a second press while it runs says so instead. */
     private var sharingAudio: Job? = null
 
@@ -1197,40 +1228,7 @@ class PlaybackController private constructor(private val context: Context) {
             val total = (plan.seconds * rate).toLong()
             val fadeFrames = if (plan.fade) (AudioExport.FADE_SECONDS * rate).toLong() else 0L
             val file = remoteFiles.shareFile(AudioExport.fileName(ref.title, ref.author))
-            val pcm = ShortArray(4096 * 2)
-            var done = 0L
-            // A half-written file is deleted rather than left for the next share's sweep: nothing
-            // will ever send it, and it is megabytes.
-            try { M4aWriter(file, rate).use { writer ->
-                while (done < total) {
-                    currentCoroutineContext().ensureActive()
-                    val want = minOf(4096L, total - done).toInt()
-                    // The native side renders as many frames as the array holds, so the last,
-                    // shorter piece gets an array of its own size.
-                    val chunk = if (want == pcm.size / 2) pcm else ShortArray(want * 2)
-                    val got = r.render(rate, chunk)
-                    if (got < 0) error("decoder failed at frame $done")
-                    if (got == 0) break
-                    if (fadeFrames > 0 && done + got > total - fadeFrames) {
-                        for (i in 0 until got) {
-                            val g = AudioExport.gainAt(done + i, total, fadeFrames)
-                            chunk[2 * i] = (chunk[2 * i] * g).toInt().toShort()
-                            chunk[2 * i + 1] = (chunk[2 * i + 1] * g).toInt().toShort()
-                        }
-                    }
-                    writer.write(chunk, got)
-                    done += got
-                    if (got < want) break
-                }
-                writer.finish()
-            } } catch (failure: Throwable) {
-                file.delete()
-                throw failure
-            }
-            if (done == 0L) {
-                file.delete()
-                return null
-            }
+            PcmExport.write(file, rate, total, fadeFrames) { r.render(rate, it) }
             return remoteFiles.shareUri(file)
         }
     }
@@ -1798,6 +1796,7 @@ class PlaybackController private constructor(private val context: Context) {
      * this app where retrying is genuinely not the same operation.
      */
     fun playExternal(uri: Uri, suppliedName: String? = null) {
+        if (alarmBlocksPlayback()) return
         scope.launch {
             val name = suppliedName?.takeIf { it.isNotBlank() }
                 ?: withContext(Dispatchers.IO) { displayNameOf(uri) }
@@ -1907,6 +1906,7 @@ class PlaybackController private constructor(private val context: Context) {
      * picks past it are speculation nobody has been shown.
      */
     fun playRandomAt(index: Int) {
+        if (alarmBlocksPlayback()) return
         val pick = randomHistory.select(index) ?: return
         playTransient(pick)
         publishRandomPicks()
@@ -1940,6 +1940,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Explicit double-tap reset: new Random record, same filter, global History untouched. */
     fun playRandom() {
+        if (alarmBlocksPlayback()) return
         val epoch = ++playbackEpoch
         stopPlayback()
         randomHistory.clear()
@@ -2088,6 +2089,7 @@ class PlaybackController private constructor(private val context: Context) {
      * walk what you found and the playlist is untouched.
      */
     fun playFromResults(results: List<TrackRef>, index: Int) {
+        if (alarmBlocksPlayback()) return
         if (index !in results.indices) return
         sessionBrowse = _browse.value
         val origin = SessionSource.of(_browse.value) ?: SessionSource.Search(_browse.value.query)
@@ -2556,7 +2558,14 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- transport ----------------------------------------------------------------------------
 
+    private fun alarmBlocksPlayback(): Boolean {
+        if (!com.przunk.protracktor.alarms.AlarmCoordinator.isRinging(context)) return false
+        say(Message(context.getString(R.string.alarm_finish_first)))
+        return true
+    }
+
     fun playAt(index: Int) {
+        if (alarmBlocksPlayback()) return
         val state = _state.value
         if (index !in state.queue.tracks.indices) return
         openAndPlay(state.queue.withRepeat(state.transportQueue.repeat)
@@ -2564,6 +2573,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun next() {
+        if (alarmBlocksPlayback()) return
         val now = _state.value
         // A tune inside the file first, but **only in "play all"**. Making next mean something
         // different depending on the *file* would be the transport behaving differently for
@@ -2585,9 +2595,10 @@ class PlaybackController private constructor(private val context: Context) {
      * Deliberately **not** on the notification or a headset button. Those have no long press, and
      * inventing a double-tap for them would be a second vocabulary for one idea.
      */
-    fun nextFile() = applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback))
+    fun nextFile() { if (!alarmBlocksPlayback()) applyScheduledStep(_state.value.schedule.next(_state.value.activePlayback)) }
 
     fun previous() {
+        if (alarmBlocksPlayback()) return
         val now = _state.value
         if (now.playAllSubsongs && now.subsong > 0) {
             selectSubsong(now.subsong - 1)
@@ -2597,7 +2608,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
-    fun previousFile() = applyScheduledStep(_state.value.schedule.previous(_state.value.activePlayback))
+    fun previousFile() { if (!alarmBlocksPlayback()) applyScheduledStep(_state.value.schedule.previous(_state.value.activePlayback)) }
 
     /**
      * Moves the playing position.
@@ -2645,6 +2656,7 @@ class PlaybackController private constructor(private val context: Context) {
      * runs into the next, not whether the user may choose one by hand.
      */
     fun selectSubsong(index: Int) {
+        if (alarmBlocksPlayback()) return
         val open = track ?: return
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
@@ -2745,6 +2757,7 @@ class PlaybackController private constructor(private val context: Context) {
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
+        if (!_state.value.playing && alarmBlocksPlayback()) return
         val current = _state.value.current
         if (current?.id?.startsWith("amp://") == true && !Amp.access.enabled) {
             say(Message(context.getString(R.string.notice_amp_disabled)))
@@ -2986,6 +2999,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun startActualPlayback(ref: TrackRef) {
+        if (alarmBlocksPlayback()) return
         ++playbackEpoch
         installPendingRetry(ref)
         _state.update { it.copy(playing = false, positionSeconds = 0.0, durationSeconds = 0.0,
@@ -3067,6 +3081,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun playPendingRequest(id: Long) {
+        if (alarmBlocksPlayback()) return
         val now = _state.value
         now.schedule.current?.request?.takeIf { it.id == id && !now.schedule.consumed }?.let {
             startActualPlayback(it.track)
@@ -3101,6 +3116,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun playContextEntry(id: Long, generation: Long) {
+        if (alarmBlocksPlayback()) return
         if (_state.value.schedule.generation != generation) return
         val active = _state.value.activePlayback
         val index = active.entryIds.indexOf(id)
@@ -3353,22 +3369,7 @@ class PlaybackController private constructor(private val context: Context) {
         described: Map<String, String>,
         found: com.przunk.protracktor.data.SongDbMetadata.Entry?,
     ): Map<String, String> {
-        if (found == null) return described
-        val out = described.toMutableMap()
-        fun fill(key: String, value: String) {
-            if (value.isNotBlank() && out[key].isNullOrBlank()) out[key] = value
-        }
-        fill("artist", found.author)
-        fill("album", found.album)
-        fill("publisher", found.publisher)
-        // The year needs a different test for "the file said nothing". sc68 emits `year` for every
-        // tune and writes `0` or `unknown` when it does not know, which is not blank -- so a blank
-        // check let those files block a year the database had. `ReleaseYear` already knows what
-        // counts as a year; asking it is the only way the two stay in step.
-        if (found.year.isNotBlank() && ReleaseYear.of(out["year"].orEmpty()).isBlank()) {
-            out["year"] = found.year
-        }
-        return out
+        return PlaybackMetadata.merge(described, found)
     }
 
     /**

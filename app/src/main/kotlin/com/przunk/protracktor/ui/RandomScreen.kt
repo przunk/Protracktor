@@ -67,6 +67,7 @@ fun RandomScreen(
     modifier: Modifier = Modifier,
     onReroll: () -> Unit = {},
     onEnqueue: ((TrackRef) -> Unit)? = null,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding, onReroll = onReroll,
@@ -105,6 +106,7 @@ fun RandomScreen(
             currentIndex = state.sourcePlaybackIndex.takeIf { state.randomMode },
             contextIndex = state.randomIndex.takeIf { it >= 0 && state.randomMode && state.manualCurrent },
             onEnqueue = onEnqueue,
+            onUseForAlarms = onUseForAlarms,
             onPlayAt = onPlayAt,
             onRemoveAt = onRemoveAt,
             // Nothing to reorder: the order is the dice's, and a handle that answers nothing is

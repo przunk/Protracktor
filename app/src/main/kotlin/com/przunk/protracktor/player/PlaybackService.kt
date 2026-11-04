@@ -34,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -121,7 +122,9 @@ class PlaybackService : Service() {
         // Position moves without the track changing, so the session needs its own subscription --
         // the notification's would rebuild the whole thing five times a second for nothing.
         scope.launch {
-            controller.state.collect { publishSession(it) }
+            controller.state.combine(com.przunk.protracktor.alarms.AlarmRepository.from(this@PlaybackService).state) { state, alarms ->
+                state to (alarms.ringing != null)
+            }.collect { (state, ringing) -> publishSession(state, ringing) }
         }
         scope.launch {
             FloatingControls.visible.collectLatest { visible ->
@@ -160,9 +163,9 @@ class PlaybackService : Service() {
         session = created
     }
 
-    private fun publishSession(state: PlayerUiState) {
+    private fun publishSession(state: PlayerUiState, alarmRinging: Boolean = false) {
         session.setMetadata(PlaybackPresentation.metadata(this, state))
-        session.setPlaybackState(PlaybackPresentation.playbackState(this, state))
+        session.setPlaybackState(PlaybackPresentation.playbackState(this, state, alarmRinging))
     }
 
     private fun contentOf(state: PlayerUiState) = PlaybackPresentation.contentOf(this, state)

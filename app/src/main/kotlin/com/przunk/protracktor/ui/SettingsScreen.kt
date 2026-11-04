@@ -145,6 +145,14 @@ fun SettingsScreen(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
+        item {
+            ListItem(headlineContent = { Text(stringResource(R.string.alarm_title)) },
+                supportingContent = { Text(stringResource(R.string.alarm_intro)) },
+                leadingContent = { Icon(PlayerIcons.Alarm, null) },
+                modifier = Modifier.clickable {
+                    context.startActivity(android.content.Intent(context, com.przunk.protracktor.alarms.AlarmsActivity::class.java))
+                })
+        }
         item { Section(R.string.settings_playback) }
 
         item { StereoMixSetting(selected = stereoMix, onSelect = onStereoMixSelected) }

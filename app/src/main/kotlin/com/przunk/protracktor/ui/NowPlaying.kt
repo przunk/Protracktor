@@ -44,6 +44,7 @@ import com.przunk.protracktor.player.PlayerUiState
  * message, which is where the scene put its greetings and is half the reason anyone keeps these
  * files. A visualiser returns later as something the user switches on (`docs/WISHLIST.md`).
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun NowPlaying(
     state: PlayerUiState,
@@ -53,6 +54,7 @@ fun NowPlaying(
     onShareFile: (() -> Unit)?,
     onShareAudio: (() -> Unit)?,
     onShareLink: (() -> Unit)?,
+    onUseForAlarms: (() -> Unit)? = null,
     onSendToWeb: (() -> Unit)? = null,
     onAddToOtherPlaylist: (() -> Unit)? = null,
     onSelectSubsong: (Int) -> Unit = {},
@@ -125,7 +127,9 @@ fun NowPlaying(
         // second row. `weight` makes them a grid however many there are -- and the number does
         // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
         // and a local file has neither an author folder nor an address anyone else could open.
-        Row(
+        androidx.compose.foundation.layout.FlowRow(
+            maxItemsInEachRow = 3,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -137,6 +141,9 @@ fun NowPlaying(
             }
             onAddToOtherPlaylist?.let {
                 LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
+            }
+            onUseForAlarms?.let {
+                LabelledAction(PlayerIcons.Alarm, stringResource(R.string.alarm_use_music), it, Modifier.weight(1f))
             }
             // **One Share, with the ways to share behind it** (the owner, 2026-09-24): six buttons
             // left each about 60 dp, too narrow for any label. Behind it the same four ways a row's
