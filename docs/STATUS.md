@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-03 — GitHub 1.5.0 APK prepared from the release tag; final signing/publication pending; full tag gate and lint passed. Release refs verified publicly.
+Updated: 2026-11-05 — B57 architecture hardened on its feature branch; host checks complete, phone verification pending. Release refs unchanged.
 
 Previous integration summary, 2026-11-02 — AMP build-gate correction verified at 2794a1db; accepted and merged as 3519f05b; APK 1.4.0 (1434) retains source 2794a1db. The earlier 1432 candidate remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
@@ -8,6 +8,22 @@ GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B57 music alarms — architecture trial
+
+The tester-requested experiment remains unmerged on `feature/music-alarm-clock`, outside tagged
+1.5.0. A single application API, shared access handling, coordinated persistence, acknowledged
+screen commands, cancellable preparation and session lifetime guards are implemented. One build
+property removes alarm-only manifest declarations and safely suspends retained schedules.
+
+**Checked on host:** 1,467 Android tests in 213 suites (134 alarm tests), without failures or
+skips; all 85 full-gate checks completed, with lint resumed after an interruption. Lint reports
+no errors and 81 warnings. The earlier OFF architecture checkpoint passed its full Android suite,
+lint and minified compatibility-package inspection. EN/PL native renders were inspected as
+**partial** layout evidence. Alarms remain enabled and visible in the default build and phone APK.
+Existing phone feedback applies to earlier candidates; behaviour of this architecture on a device
+is **unchecked**. [Phone checklist](TESTING.md#music-alarm-phone-trial).
+Detailed analysis, old candidates and run receipts are retained locally rather than published.
 
 ## GitHub 1.5.0 — APK prepared, signing and publication pending, 2026-11-03
 

@@ -40,6 +40,12 @@ Android [floating controls](docs/FLOATING_CONTROLS.md) are available through a d
 choice. After enabling it, hold Play/Pause to request a movable panel above other apps. Android's
 overlay permission is required; enabling availability does not show a panel automatically.
 
+Android [music alarms](docs/ARCHITECTURE.md#music-alarms) are an **unmerged experiment awaiting a
+new phone trial**: independent one-shot/weekly times, prepared offline excerpts and a three-answer
+recognition challenge. Scheduled alarms need exact, notification and full-screen access; a visible
+Test needs notifications/music. Alarms are enabled in the default Android build.
+This experiment is outside tagged 1.5.0.
+
 Optional [volume normalization](docs/VOLUME_NORMALIZATION.md) reduces track-to-track loudness
 differences during Android and browser playback; it does not process exported audio.
 

@@ -10,6 +10,17 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B57. Music alarm clock — implemented experiment, phone trial pending
+
+Requested by a real tester on 2026-11-03: multiple music alarms, prepared track selections and
+an animated three-choice recognition challenge. Selected for Android; subsequent feedback adds
+artist/year questions and refines editing, delivery and dismissal. Architecture hardening selected
+on 2026-11-04 keeps the feature reversible through one build policy, with no new database schema.
+
+The implementation remains on `feature/music-alarm-clock` until its new phone trial is accepted.
+See [architecture](ARCHITECTURE.md#music-alarms), [build policy](BUILD.md#music-alarm-build-policy),
+[testing](TESTING.md#music-alarm-phone-trial) and [current status](STATUS.md). It is outside tagged 1.5.0.
+
 ## B56. Consider searching while typing — discussion, recorded 2026-10-31
 
 Request recorded 2026-10-31: consider updating music search results as the query is entered,
