@@ -10,6 +10,13 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B58. Reorganize the application UI and playlist view — discussion
+
+User feedback recorded on 2026-11-05: reconsider the overall interface, playlist view and
+organization of application views. Discuss the design before implementation; no replacement
+layout is selected by this request. Keep the broader redesign separate from the small pre-release
+Browse ordering and Settings navigation adjustment.
+
 ## B57. Music alarm clock — integrated experiment
 
 Requested by a real tester on 2026-11-03: multiple music alarms, prepared track selections and
