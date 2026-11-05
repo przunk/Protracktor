@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-05 — B57 music alarms approved for develop integration; host checks complete, physical checks recorded separately. Release refs unchanged.
+Updated: 2026-11-05 — Browse/Settings navigation refinement accepted and integrated into develop. Release refs unchanged.
 
 Previous integration summary, 2026-11-02 — AMP build-gate correction verified at 2794a1db; accepted and merged as 3519f05b; APK 1.4.0 (1434) retains source 2794a1db. The earlier 1432 candidate remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
@@ -8,6 +8,20 @@ GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Browse navigation refinement — accepted and integrated, 2026-11-05
+
+The accepted `fix/browse-alarm-navigation` change is integrated into develop from **03d5e8b0**.
+It removes the Alarms entry from Settings while keeping the feature enabled in Browse. Its source choices are Local filesystem, Saved places, Online catalogues,
+Random, Search, Alarms and History. The existing lazy list retains touch scrolling on short screens.
+Host regressions cover EN/PL ordering, the Alarms launch route, Settings absence and touch scrolling
+in a 300 dp viewport; negative controls reject the previous layout and disabled scrolling. All
+1,471 Android tests in 213 suites and all 85 gate stages pass; lint reports 0 errors / 81 warnings.
+Five native renders were inspected as partial layout evidence. Positive appearance feedback and
+integration approval were received on 2026-11-05; detailed device-checklist outcomes were not
+separately reported. The checked APK remains **1.5.0 (1462)**, source **03d5e8b0**, with unchanged
+application/check inputs at integration. This merge does not prepare a new APK or store release.
+The broader user request to reconsider UI/playlist/view organization is tracked separately as B58.
 
 ## B57 music alarms — integrated experiment, 2026-11-05
 

@@ -145,14 +145,6 @@ fun SettingsScreen(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
-        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
-            ListItem(headlineContent = { Text(stringResource(R.string.alarm_title)) },
-                supportingContent = { Text(stringResource(R.string.alarm_intro)) },
-                leadingContent = { Icon(PlayerIcons.Alarm, null) },
-                modifier = Modifier.clickable {
-                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
-                })
-        }
         item { Section(R.string.settings_playback) }
 
         item { StereoMixSetting(selected = stereoMix, onSelect = onStereoMixSelected) }

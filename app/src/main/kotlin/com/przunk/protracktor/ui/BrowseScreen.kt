@@ -334,11 +334,13 @@ private fun DomainChooser(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
-            DomainRow(PlayerIcons.Alarm, stringResource(R.string.alarm_title),
-                stringResource(R.string.alarm_intro), onClick = {
-                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
-                })
+        item {
+            DomainRow(
+                icon = PlayerIcons.Folder,
+                title = stringResource(R.string.domain_local_title),
+                subtitle = stringResource(R.string.domain_local_body),
+                onClick = { onOpenDomain(BrowseDomain.LOCAL) },
+            )
         }
         item {
             DomainRow(
@@ -346,14 +348,6 @@ private fun DomainChooser(
                 title = stringResource(R.string.saved_places_title),
                 subtitle = stringResource(R.string.saved_places_body),
                 onClick = { onOpenDomain(BrowseDomain.SAVED) },
-            )
-        }
-        item {
-            DomainRow(
-                icon = PlayerIcons.Folder,
-                title = stringResource(R.string.domain_local_title),
-                subtitle = stringResource(R.string.domain_local_body),
-                onClick = { onOpenDomain(BrowseDomain.LOCAL) },
             )
         }
         item {
@@ -389,18 +383,24 @@ private fun DomainChooser(
         }
         item {
             DomainRow(
-                icon = PlayerIcons.History,
-                title = stringResource(R.string.domain_history_title),
-                subtitle = stringResource(R.string.domain_history_body),
-                onClick = { onOpenDomain(BrowseDomain.HISTORY) },
-            )
-        }
-        item {
-            DomainRow(
                 icon = PlayerIcons.Search,
                 title = stringResource(R.string.domain_search_title),
                 subtitle = stringResource(R.string.domain_search_body),
                 onClick = { onOpenDomain(BrowseDomain.SEARCH) },
+            )
+        }
+        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
+            DomainRow(PlayerIcons.Alarm, stringResource(R.string.alarm_title),
+                stringResource(R.string.alarm_intro), onClick = {
+                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
+                })
+        }
+        item {
+            DomainRow(
+                icon = PlayerIcons.History,
+                title = stringResource(R.string.domain_history_title),
+                subtitle = stringResource(R.string.domain_history_body),
+                onClick = { onOpenDomain(BrowseDomain.HISTORY) },
             )
         }
     }

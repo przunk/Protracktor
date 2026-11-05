@@ -11,6 +11,7 @@ on both platforms without replacing playback ownership.
 B57 is an Android experiment requested by a tester on 2026-11-03; architecture hardening was
 selected on 2026-11-04. Integration into develop was approved on 2026-11-05. It is not part of
 tagged 1.5.0; remaining device checks are in the [phone trial](TESTING.md#music-alarm-phone-trial).
+The management entry is in Browse, between Search and History; it is not a Settings destination.
 
 `alarms/api/MusicAlarms` is the application boundary. Ordinary playback and UI cannot reference
 its implementation; a source-boundary test enforces that rule. This is an internal feature package
