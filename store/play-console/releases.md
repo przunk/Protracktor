@@ -6,6 +6,17 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.6.0 — artifact preparation verified, 2026-11-05
+
+The release procedure completed for `dist/protracktor-1.6.0-1467.aab`. Agent-run checks confirm
+the size and SHA-256 recorded below, ZIP integrity, JAR signature and the existing upload signer.
+Tag `v1.6.0` and master point to `ca854cb1305989c6e7567d0be5ea2816cb81b4d0`; the source commit
+count is 1467. The current PL/EN release notes match the tag and fit the Play limits.
+
+The confirmed state is **artifact prepared** for closed testing. Upload to Play Console,
+availability to testers, publication and the GitHub push have not been confirmed. The generated
+artifact section below identifies the intended testing track and prepared release-note paths.
+
 ## 1.6.0 — versionCode 1467
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.6.0`.

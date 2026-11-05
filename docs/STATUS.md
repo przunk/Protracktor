@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-11-05 — queue animation test synchronization accepted and integrated into develop. Release refs unchanged.
+Updated: 2026-11-05 — 1.6.0 (1467) AAB prepared; master and v1.6.0 point to ca854cb1. Play upload, publication and GitHub push await confirmation.
 
 Previous integration summary, 2026-11-02 — AMP build-gate correction verified at 2794a1db; accepted and merged as 3519f05b; APK 1.4.0 (1434) retains source 2794a1db. The earlier 1432 candidate remains historical. B55 playlist search accepted for develop integration after positive phone feedback; checked application source c884b4c, release APK 1.4.0 (1417). Earlier integration records:  C130 accepted and merged as 97bf93b, checked source fc86ef8; local gh-pages 553b8b4 verified, push/public verification pending; C126–C129 accepted and merged as 0e8d660; local gh-pages fbd75a7 prepared and checked, push/public deployment pending; full gate/lint and Chromium matrix passed at source 30112cf; C125 WEB navigation published from 1779419 and HTTP-verified; browser trial and Bluetooth routing pending; B52 -18 LUFS target accepted and merged as 641b875, test APK 1.4.0 (1330), source fbf2958; C122 startup crash under observation; C123/C124 appearance changes and clock follow-up integrated; test APK 1.4.0 (1341), source c5f0ccb; device verification pending; prepared AAB 1.4.0 (1304), tag v1.4.0/master 5b6936e; C121 WEB decoder filename correction merged as 188db10; B54 experimental integration merged as afab610 with FloatingControls.ENABLED false; retained enabled trial APK 1.4.0 (1313), source 2497632, and disabled verification APK 1.4.0 (1315), source 0e9d361; B52 volume normalization accepted and merged as 4aab46e; Queue return-to-source accepted and merged as 70e1a61; C119 accepted and merged as 0a7bcc0; C112 accepted and merged as e90c817; C109/C111 merged as 122368f/03dfc1d; C118 accepted and merged as 204e7f7, checked source 5a0b4a6, APK 1.4.0 (1403), overall phone trial reported working; C120 closed as a false alarm after identifying similar subsongs in Forbiddencolours2.1; schema 23.
 Version 1.4.0 is available in Google Play closed testing, reported 2026-10-26; Google declined production access again on 2026-10-27.
@@ -8,6 +8,16 @@ GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## 1.6.0 — artifact prepared, 2026-11-05
+
+The release procedure completed successfully. The AAB is `dist/protracktor-1.6.0-1467.aab`,
+22,728,548 bytes, built from **ca854cb1** / **v1.6.0**; master remains at that release source.
+Agent-run verification confirms SHA-256
+`2a16a80e726e098be6c394170713cde8926c88afe123f68980b51fbb4ce4fe01`, ZIP integrity, JAR signature
+and the existing upload signer. The tag has 1,467 commits and versionName 1.6.0; the PL/EN
+release notes match the tagged texts. Preparation evidence is in `store/play-console/releases.md`.
+Play upload, availability to testers, publication and GitHub push are not yet confirmed.
 
 ## 1.6.0 release gate — test synchronization integrated, 2026-11-05
 
@@ -23,8 +33,8 @@ no-actionable-ghost requirements remain intact. Runtime application code is unch
 tests in 213 suites**, without failures or skips; lint reports **0 errors / 81 warnings**. An earlier
 full-unit attempt was interrupted by a JVM SIGSEGV in the C2 compiler and was not counted as a
 passing run; the complete retry used the same Java and test configuration. Integration was
-approved on 2026-11-05 from **a6970eb3**. The release script's other gate stages have not been
-rerun for this change; integration does not prepare a release artifact or create a release tag.
+approved on 2026-11-05 from **a6970eb3**. At integration, the release script's other gate stages
+had not yet been rerun; the subsequent completed release procedure is recorded above.
 
 ## Browse navigation refinement — accepted and integrated, 2026-11-05
 
