@@ -6,6 +6,14 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.6.0 — release references verified on GitHub, 2026-11-05
+
+Agent-run public origin reads confirm master and the peeled tag `v1.6.0` at
+`ca854cb1305989c6e7567d0be5ea2816cb81b4d0`, and develop at `54ed2e6d`.
+The release push is verified; later documentation commits have a separate push state.
+This confirms neither Play upload/availability nor a published GitHub Release with signed APK
+assets. The original preparation and artifact evidence below remains unchanged.
+
 ## 1.6.0 — artifact preparation verified, 2026-11-05
 
 The release procedure completed for `dist/protracktor-1.6.0-1467.aab`. Agent-run checks confirm

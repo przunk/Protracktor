@@ -8,7 +8,8 @@ installed system-wide, and no build here writes to another project's state.
 The default Android build and phone handoff keep alarms enabled and visible. OFF is a technical
 compatibility check, not the test package handed over for use.
 
-B57 retains versionName **1.5.0**, commit-derived versionCode, SQLite schema **23** and alarm JSON
+Music alarms follow normal project versioning: versionName changes only through the release
+procedure, and versionCode remains commit-derived. SQLite schema stays **23** and alarm JSON
 **v1**. The integrated experiment uses the ordinary minified, test-signed APK script:
 
 ```sh
