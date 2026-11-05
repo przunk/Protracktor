@@ -4,10 +4,12 @@
 package com.przunk.protracktor.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -27,6 +29,8 @@ import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.CacheAhead
 import com.przunk.protracktor.player.StereoMix
+import com.przunk.protracktor.screenshot.saveAs
+import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -62,28 +66,30 @@ class SettingsStereoMixTest {
     private fun show() {
         selected.value = Appearance.stereoMix(activity.get())
         activity.get().setContent {
-            MaterialTheme {
-                SettingsScreen(
-                    playAllSubsongs = false, stereoMix = selected.value,
-                    volumeNormalization = false, onVolumeNormalizationChanged = {},
-                    floatingControlsEnabled = false, onFloatingControlsEnabledChanged = {},
-                    onStereoMixSelected = { mode ->
-                        requests += mode
-                        Appearance.selectStereoMix(activity.get(), mode)
-                        selected.value = mode
-                    },
-                    selectedLanguage = AppLanguage.ENGLISH,
-                    cacheBytes = 0, archiveBytes = emptyMap(), databaseBytes = 0,
-                    replayCount = 0, playerCount = 0, replayBytes = 0, catalogues = emptyList(),
-                    webPlayer = "http://localhost", onWebPlayerChanged = {}, songLengthCount = 0,
-                    trackMetadataCount = 0, songDbLengthCount = 0, contentPadding = PaddingValues(),
-                    selectedTheme = AppTheme.SYSTEM, dynamicColour = false,
-                    onThemeSelected = {}, onDynamicColourChanged = {}, onToggleAllSubsongs = {},
-                    fallbackLengthSeconds = 300, onFallbackLengthChanged = {},
-                    cacheAhead = CacheAhead.DEFAULT, onCacheAheadSelected = {},
-                    shareAudioMinutes = 3, onShareAudioMinutesSelected = {}, onLanguageSelected = {},
-                    onClearCache = {}, onDeleteIndex = {}, onDeleteSongMetadata = {}, onDeleteReplayRoutines = {},
-                )
+            ProtracktorTheme(AppTheme.DARK, false) {
+                Surface {
+                    SettingsScreen(
+                        playAllSubsongs = false, stereoMix = selected.value,
+                        volumeNormalization = false, onVolumeNormalizationChanged = {},
+                        floatingControlsEnabled = false, onFloatingControlsEnabledChanged = {},
+                        onStereoMixSelected = { mode ->
+                            requests += mode
+                            Appearance.selectStereoMix(activity.get(), mode)
+                            selected.value = mode
+                        },
+                        selectedLanguage = AppLanguage.ENGLISH,
+                        cacheBytes = 0, archiveBytes = emptyMap(), databaseBytes = 0,
+                        replayCount = 0, playerCount = 0, replayBytes = 0, catalogues = emptyList(),
+                        webPlayer = "http://localhost", onWebPlayerChanged = {}, songLengthCount = 0,
+                        trackMetadataCount = 0, songDbLengthCount = 0, contentPadding = PaddingValues(),
+                        selectedTheme = AppTheme.SYSTEM, dynamicColour = false,
+                        onThemeSelected = {}, onDynamicColourChanged = {}, onToggleAllSubsongs = {},
+                        fallbackLengthSeconds = 300, onFallbackLengthChanged = {},
+                        cacheAhead = CacheAhead.DEFAULT, onCacheAheadSelected = {},
+                        shareAudioMinutes = 3, onShareAudioMinutesSelected = {}, onLanguageSelected = {},
+                        onClearCache = {}, onDeleteIndex = {}, onDeleteSongMetadata = {}, onDeleteReplayRoutines = {},
+                    )
+                }
             }
         }
     }
@@ -100,6 +106,19 @@ class SettingsStereoMixTest {
         compose.onNodeWithText("Original").performClick().assertIsSelected()
         assertEquals(listOf(StereoMix.NARROW, StereoMix.MONO, StereoMix.ORIGINAL), requests)
         assertEquals(StereoMix.ORIGINAL, Appearance.stereoMix(activity.get()))
+    }
+
+    @Test fun `Alarms is not a Settings destination`() {
+        show()
+        compose.onNodeWithText(activity.get().getString(R.string.alarm_title)).assertDoesNotExist()
+        compose.onNodeWithText(activity.get().getString(R.string.settings_playback)).assertExists()
+        if (System.getProperty("protracktor.screenshots") != null) {
+            val view = activity.get().window.decorView
+            Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888).also {
+                view.draw(Canvas(it))
+                it.saveAs("settings-without-alarm-destination")
+            }
+        }
     }
 
     // A short viewport keeps the unrelated native About footer outside this host check.

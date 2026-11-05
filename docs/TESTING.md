@@ -14,7 +14,7 @@ Earlier phone feedback informed the current GUI; architecture changes require a 
 Host tests/native renders do not prove exact delivery, audio, lock-screen display, boot or OEM policy.
 
 1. Start ordinary music, note context/position, then **Use for alarms** from a track or expanded
-   Now Playing. Test the current subsong. Open Browse/Settings → **Alarms** → **Music** and wait
+   Now Playing. Test the current subsong. Open Browse → **Alarms** → **Music** and wait
    for **Ready offline**. Re-adding refreshes artist/year facts without replacing selections.
 2. **Test alarm** pauses music without replacing its context. Wrong answers choose another
    eligible platform/artist/year/title category with new answer identities; one-category music
