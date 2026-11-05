@@ -1,9 +1,11 @@
 # Protracktor 1.6.0 — release notes
 
-Prepared 2026-11-05. Scope: `v1.5.0..v1.6.0`. Release source is **ca854cb1**, tagged **v1.6.0**,
+Prepared 2026-11-05; publication verified 2026-11-06. Scope: `v1.5.0..v1.6.0`.
+Release source is **ca854cb1**, tagged **v1.6.0**,
 version **1.6.0 (1467)**. The AAB is prepared; Play upload and availability are not yet confirmed.
-The GitHub APK is prepared for final signing with the existing release certificate. GitHub
-Release publication remains pending; public Git references have been verified separately.
+The [GitHub Release](https://github.com/przunk/Protracktor/releases/tag/v1.6.0) was published on
+2026-11-05 with a signed APK and SHA-256 file. Public downloads and the existing release
+certificate have been verified separately from the Git references.
 
 ## Music alarms — requested and refined through tester feedback
 
@@ -42,10 +44,12 @@ shrinking, alarm permissions, three native ABIs and ZIP integrity. ZIP alignment
 load-segment alignment were checked against the [Android 16 KB guidance](https://developer.android.com/guide/practices/page-sizes).
 This is host/package evidence; no phone test of this APK is recorded.
 
-The unsigned intermediate is **12,369,427 bytes** and is not an installable release asset.
-Final signing must retain the certificate used for previous GitHub APKs; the signed APK and its
-SHA-256 file are the two upload assets. Preparation evidence is summarized in
-[Status](STATUS.md); the unchanged AAB record is in the [release ledger](../store/play-console/releases.md).
+The published APK is **12,410,702 bytes**, signed with the certificate used for previous GitHub
+APKs. SHA-256: `73dee47b2587892f35c1cd3886b8fe4be08096f2b88d7d69b0f6352aaf075eef`.
+Agent-run downloads match the published checksum and local signed output. Every original ZIP
+payload entry matches the checked unsigned intermediate, which remains **12,369,427 bytes**.
+Preparation and publication evidence is summarized in [Status](STATUS.md); the unchanged AAB
+record is in the [release ledger](../store/play-console/releases.md).
 
 Tagged Play notes: [English](https://github.com/przunk/Protracktor/blob/v1.6.0/store/listing/en-US/release-notes/default.txt)
 and [Polish](https://github.com/przunk/Protracktor/blob/v1.6.0/store/listing/pl-PL/release-notes/default.txt).

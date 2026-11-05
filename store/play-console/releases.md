@@ -6,6 +6,16 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.6.0 — GitHub publication verified, 2026-11-06
+
+[Protracktor 1.6.0](https://github.com/przunk/Protracktor/releases/tag/v1.6.0) was published on
+2026-11-05 at 22:57:35 UTC. Agent-run downloads verify the signed APK and its checksum file,
+version **1.6.0 (1467)**, source **ca854cb1**, size **12,410,702 bytes** and SHA-256
+`73dee47b2587892f35c1cd3886b8fe4be08096f2b88d7d69b0f6352aaf075eef`.
+The signature matches the existing GitHub certificate, and the payload matches the checked
+unsigned build. This records GitHub publication; Play upload, tester availability and Play
+publication remain unconfirmed. Earlier artifact and preparation records remain unchanged.
+
 ## 1.6.0 — release references verified on GitHub, 2026-11-05
 
 Agent-run public origin reads confirm master and the peeled tag `v1.6.0` at
