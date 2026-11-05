@@ -17,7 +17,6 @@ import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
 import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import android.view.Display
 import android.view.Gravity
@@ -83,7 +82,7 @@ internal class FloatingControlsWindow(
     }
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (!Settings.canDrawOverlays(context)) close()
+            if (!com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.OVERLAY)) close()
             else {
                 val hidden = intent.action == Intent.ACTION_SCREEN_OFF || locked()
                 if (hidden) {
@@ -101,13 +100,13 @@ internal class FloatingControlsWindow(
 
     fun update(state: FloatingControlsState) {
         model = state
-        if (view != null && (!Settings.canDrawOverlays(context) || (!state.hasTrack && !state.loading && !state.playing))) close()
+        if (view != null && (!com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.OVERLAY) || (!state.hasTrack && !state.loading && !state.playing))) close()
     }
 
     fun show() {
         if (view != null) return
         position = storedPosition()
-        if (!Settings.canDrawOverlays(context) || (!model.hasTrack && !model.loading)) {
+        if (!com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.OVERLAY) || (!model.hasTrack && !model.loading)) {
             FloatingControls.unavailable(context)
             return
         }
@@ -181,7 +180,7 @@ internal class FloatingControlsWindow(
 
     fun refreshConfiguration() {
         if (view == null) return
-        if (!Settings.canDrawOverlays(context)) { close(); return }
+        if (!com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.protracktor.permissions.AppAccess.OVERLAY)) { close(); return }
         view?.cancelGesture()
         cancelSnap()
         hideDismissTarget()

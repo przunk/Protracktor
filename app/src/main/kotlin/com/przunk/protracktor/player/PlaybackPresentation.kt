@@ -63,7 +63,10 @@ internal object PlaybackPresentation {
             .build()
     }
 
-    fun playbackState(context: Context, state: PlayerUiState): PlaybackState {
+    fun playbackState(context: Context, state: PlayerUiState, alarmRinging: Boolean = false): PlaybackState {
+        if (alarmRinging) return PlaybackState.Builder().setActions(PlaybackState.ACTION_STOP)
+            .setState(PlaybackState.STATE_PAUSED, (state.positionSeconds * 1000).toLong(), 0f)
+            .setErrorMessage(AppLocale.wrap(context).getString(R.string.alarm_finish_first)).build()
         var actions = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP
         // These include Random/results transport, unlike the selected playlist's cursor.

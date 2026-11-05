@@ -143,6 +143,7 @@ object NativeEngine {
     class Rendering internal constructor(private var handle: Long) : AutoCloseable {
         fun selectSubsong(index: Int): Boolean = nativeRenderSelect(live(), index)
         fun currentSubsong(): Int = nativeRenderSubsong(live())
+        fun describe(): Map<String, String> = DescribeBlock.parse(nativeRenderDescribe(live()))
         fun durationSeconds(): Double = nativeRenderDuration(live())
         /** 0 when the decoder has no preference. */
         fun preferredSampleRate(): Int = nativeRenderRate(live())
@@ -276,6 +277,7 @@ object NativeEngine {
     ): Long
     @JvmStatic private external fun nativeRenderClose(handle: Long)
     @JvmStatic private external fun nativeRenderSelect(handle: Long, index: Int): Boolean
+    @JvmStatic private external fun nativeRenderDescribe(handle: Long): String
     @JvmStatic private external fun nativeRenderSubsong(handle: Long): Int
     @JvmStatic private external fun nativeRenderDuration(handle: Long): Double
     @JvmStatic private external fun nativeRenderRate(handle: Long): Int

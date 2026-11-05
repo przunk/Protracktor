@@ -6,6 +6,51 @@ boxes are not implied passes from host checks. Current source/artifact and autom
 in [STATUS](STATUS.md#web-feature-implementation). The complete gate also
 runs the actual WEB packaging scripts against disposable reproducibility/identity fixtures.
 
+## Music alarm phone trial
+
+B57 is integrated into develop as an Android experiment. Record the APK source/version, device
+and Android version.
+Earlier phone feedback informed the current GUI; architecture changes require a fresh trial.
+Host tests/native renders do not prove exact delivery, audio, lock-screen display, boot or OEM policy.
+
+1. Start ordinary music, note context/position, then **Use for alarms** from a track or expanded
+   Now Playing. Test the current subsong. Open Browse/Settings → **Alarms** → **Music** and wait
+   for **Ready offline**. Re-adding refreshes artist/year facts without replacing selections.
+2. **Test alarm** pauses music without replacing its context. Wrong answers choose another
+   eligible platform/artist/year/title category with new answer identities; one-category music
+   retains its question. Correct answers show the check/acknowledgement for one second, then close.
+   No automatic music resume or ordinary History entry follows.
+3. An ordinary tap on the emergency hold must not stop. Hold three seconds while moving the
+   finger; the timer must continue. TalkBack uses confirmation. Test backup audio and its Stop.
+4. Create/edit several alarms with time, name, weekdays and songs. Empty weekdays mean one next
+   occurrence. Save enables a disabled alarm; its switch can disable it. The name is emphasized;
+   Back remains aligned between views, including with the keyboard. Delete offers Undo.
+   General guidance belongs under Info. Today/Tomorrow/short weekday labels update after midnight.
+5. Deny/revoke **Exact alarms**, **Notifications** or **Full-screen alerts**; configuration remains
+   stored with an honest unarmed state and actionable remedy. Return after granting access and
+   check arming. A visible Test needs notifications/music but not exact/full-screen access.
+6. Schedule one/two minutes ahead, leave the app and lock the screen. Check sound, screen wake,
+   full-screen challenge, secret lock-screen notification content and alarm-stream volume. While
+   unlocked, Android may use a heads-up alert. Notification swipes must not stop the alarm.
+7. Test overlap, a Test overlapping a real occurrence, calls/notification tones, Bluetooth,
+   ten-minute timeout, airplane mode and clearing the ordinary cache/index. Reboot before a future
+   occurrence and do not unlock: prepared music must not need the main database or network.
+8. Test real process death/restart separately from Home/rotation. Restore only the remaining
+   challenge lifetime. Force stop blocks delivery until Android permits the app to run again.
+   Check EN/PL, light/dark, large text, reduced motion and narrow/landscape windows.
+
+For the build policy, install ON, prepare music/alarms, then install OFF with the same test
+certificate. Stale delivery/notifications must retire, ordinary playback must remain usable and
+alarm files must survive. Reinstall ON: schedules remain disabled until rearmed. A newer/corrupt
+ledger or failed write must preserve data; Save retains its draft and failed answers never show
+success. An old preparation Cancel must not affect a new request. Test Play/Next followed by Pause
+while loading; a late open or callback must not restart ordinary music during a ringing session.
+
+Host regressions enter real Activity/Service paths and use actual manifests/AtomicFile writes.
+Controlled guard removals verify the new tests fail. The supported host SDK matrix is 29/30/31/
+33/34; SDK 36 Robolectric needs a newer Java than the project's pinned Java 17 and was not run.
+Android 16 therefore remains a physical-device check, alongside all sound/OEM scenarios.
+
 ## B54 Settings availability — trial pending, 2026-11-01
 
 Use combined source **2794a1db**, minified test-signed **APK 1.4.0 (1434)**. Complete host

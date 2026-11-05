@@ -14,6 +14,11 @@ std::string describeOf(const Backend &backend) { return backend.describe(); }
 
 namespace {
 void require(bool value, const char *why) { if (!value) throw std::runtime_error(why); }
+thread_local std::vector<std::unique_ptr<std::string>> javaStrings;
+jstring JNICALL captureJavaString(JNIEnv *, const char *text) {
+    javaStrings.push_back(std::make_unique<std::string>(text));
+    return reinterpret_cast<jstring>(javaStrings.back().get());
+}
 struct Decoder : Backend {
     double position = 12.0;
     int renders = 0, rewinds = 0, started = 0, subsong = 2, lastRate = 0;
@@ -60,6 +65,23 @@ int main() {
         try { run(); std::cout << "✓ " << name << '\n'; }
         catch (const std::exception &e) { ++failed; std::cerr << "✗ " << name << ": " << e.what() << '\n'; }
     };
+    check("rendering JNI metadata follows selection without opening audible playback", [] {
+        struct Tunes : Decoder {
+            std::string describe() const override { return "title\tTune " + std::to_string(subsong); }
+        } decoder;
+        JNINativeInterface_ functions{};
+        functions.NewStringUTF = captureJavaString;
+        JNIEnv environment{&functions};
+        const auto handle = reinterpret_cast<jlong>(static_cast<Backend *>(&decoder));
+        const auto first = Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderDescribe(&environment, nullptr, handle);
+        require(*reinterpret_cast<std::string *>(first) == "title\tTune 2", "initial rendering metadata lost");
+        require(Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderSelect(&environment, nullptr, handle, 1) == JNI_TRUE,
+                "rendering selection rejected");
+        const auto selected = Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderDescribe(&environment, nullptr, handle);
+        require(*reinterpret_cast<std::string *>(selected) == "title\tTune 1", "rendering metadata still describes another tune");
+        require(oboe::TestDevice::streams.empty(), "metadata lookup opened audible output");
+        javaStrings.clear();
+    });
     check("normal start and render use the production Player", [] {
         Fixture f;
         require(f.player.start(), "initial start failed");

@@ -40,6 +40,17 @@ private fun icon(name: String, pathData: String, hollow: Boolean = false): Image
     }.build()
 
 object PlayerIcons {
+    val Person: ImageVector by lazy { icon("Person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-3c0-3 3.6-5 8-5s8 2 8 5v3z") }
+    val Calendar: ImageVector by lazy { icon("Calendar", "M6 2h2v3h8V2h2v3h3v17H3V5h3zM5 10v10h14V10zM7 12h3v3H7zM12 12h3v3h-3z") }
+    val Label: ImageVector by lazy { icon("Label", "M2 3h9l11 11-8 8L2 10zM7 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z") }
+    val Check: ImageVector by lazy { icon("Check", "M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z") }
+    val Answer: ImageVector by lazy {
+        icon("Answer", "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z", hollow = true)
+    }
+    val Alarm: ImageVector by lazy {
+        icon("Alarm", "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm-1 1h2v5l3 2-1 1.6-4-2.6V7zM5 1 1 5l1.4 1.4 4-4L5 1zm14 0-1.4 1.4 4 4L23 5l-4-4zM5 19l-2 3h2.4l1.2-2L5 19zm14 0-1.6 1 1.2 2H21l-2-3z")
+    }
+
     val FloatingControls: ImageVector by lazy {
         icon("FloatingControls", "M3 3H21V21H3ZM5 5V19H19V5ZM10 10H17V17H10Z", hollow = true)
     }

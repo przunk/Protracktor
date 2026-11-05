@@ -45,6 +45,8 @@ package com.przunk.protracktor.data
  */
 object SongDbMetadata {
 
+    data class Credit(val author: String, val year: String)
+
     /** How many hex characters of the MD5 the published database keys on. */
     const val KEY_LENGTH = 12
 

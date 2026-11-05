@@ -18,6 +18,8 @@ import com.przunk.protracktor.ui.DatabaseGate
 import com.przunk.protracktor.data.DatabaseAccess
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import com.przunk.protracktor.ui.theme.enableAppEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -112,4 +114,20 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                if (com.przunk.protracktor.alarms.api.MusicAlarms.reconcile(this@MainActivity)) {
+                    withContext(Dispatchers.Main) {
+                        if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                            com.przunk.protracktor.alarms.api.MusicAlarms.openRinging(this@MainActivity)
+                        }
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (failure: Exception) { android.util.Log.w("Protracktor", "Alarm reconciliation failed", failure) }
+        }
+    }
+
 }

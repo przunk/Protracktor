@@ -108,6 +108,7 @@ fun PlaylistScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onEnqueue: ((TrackRef) -> Unit)? = null,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
     searchQuery: String = "",
 ) {
     if (state.queue.tracks.isEmpty()) {
@@ -155,6 +156,7 @@ fun PlaylistScreen(
             currentIndex = state.sourcePlaybackIndex.takeIf { !state.awayFromPlaylist }?.let { sourceIndices.indexOf(it).takeIf { i -> i >= 0 } },
             contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) }?.let { sourceIndices.indexOf(it).takeIf { i -> i >= 0 } },
             onEnqueue = onEnqueue,
+            onUseForAlarms = onUseForAlarms,
             onPlayAt = { onPlayAt(sourceIndices[it]) },
             onRemoveAt = { onRemoveAt(sourceIndices[it]) },
             onMove = onMove,
@@ -234,6 +236,7 @@ internal fun PlaylistBody(
      */
     followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
     onEnqueue: ((TrackRef) -> Unit)? = null,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
     contextIndex: Int? = null,
     sourceIndices: List<Int>? = null,
 ) {
@@ -300,6 +303,7 @@ internal fun PlaylistBody(
                 onInfo = { showingInfo = track },
                 onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
                 onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
+                onUseForAlarms = onUseForAlarms?.let { add -> { add(track) } },
                 // Absent for a local file, which has no catalogue folder to open, and for a
                 // live-search catalogue, which publishes no index and no author to open one by.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
@@ -512,6 +516,7 @@ private fun TrackRow(
     onInfo: () -> Unit,
     onAddToOtherPlaylist: () -> Unit,
     onEnqueue: (() -> Unit)?,
+    onUseForAlarms: (() -> Unit)? = null,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareAudio: () -> Unit,
@@ -609,6 +614,7 @@ private fun TrackRow(
                                 onClick = { menuOpen = false; onAddToOtherPlaylist() },
                             )
                             EnqueueMenuItem(onEnqueue) { menuOpen = false }
+                            AlarmMenuItem(onUseForAlarms) { menuOpen = false }
                             onShowNeighbours?.let { show ->
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_show_neighbours)) },

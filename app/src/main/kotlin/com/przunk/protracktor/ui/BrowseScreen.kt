@@ -145,6 +145,7 @@ fun BrowseScreen(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
     onEnqueue: ((TrackRef) -> Unit)? = null,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
     savedPlaces: SavedPlacesState = SavedPlacesState(),
     onSavePlace: () -> Unit = {},
     onRemovePlace: (SavedPlaceKey) -> Unit = {},
@@ -246,6 +247,7 @@ fun BrowseScreen(
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onEnqueue = onEnqueue,
+                onUseForAlarms = onUseForAlarms,
             )
             BrowseDomain.ONLINE -> Column {
                 browse.saveablePlace()?.let { key ->
@@ -271,6 +273,7 @@ fun BrowseScreen(
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
                     onEnqueue = onEnqueue,
+                    onUseForAlarms = onUseForAlarms,
                 )
             }
             BrowseDomain.HISTORY -> key(browse.historyVisit) {
@@ -291,6 +294,7 @@ fun BrowseScreen(
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
                     onEnqueue = onEnqueue,
+                    onUseForAlarms = onUseForAlarms,
                 )
             }
             BrowseDomain.SEARCH -> SearchDomain(
@@ -315,6 +319,7 @@ fun BrowseScreen(
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onEnqueue = onEnqueue,
+                onUseForAlarms = onUseForAlarms,
             )
         }
     }
@@ -327,7 +332,14 @@ private fun DomainChooser(
     onRandom: () -> Unit,
     onChooseRandomScope: () -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        if (com.przunk.protracktor.alarms.api.MusicAlarms.enabled) item {
+            DomainRow(PlayerIcons.Alarm, stringResource(R.string.alarm_title),
+                stringResource(R.string.alarm_intro), onClick = {
+                    com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context)
+                })
+        }
         item {
             DomainRow(
                 icon = PlayerIcons.BookmarkFilled,
@@ -608,6 +620,7 @@ private fun LocalDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onEnqueue: ((TrackRef) -> Unit)?,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
     val folder = browse.openFolder
     if (folder != null) {
@@ -662,6 +675,7 @@ private fun LocalDomain(
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onEnqueue = onEnqueue,
+                onUseForAlarms = onUseForAlarms,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareAudio = onShareAudio,
@@ -741,6 +755,7 @@ private fun OnlineDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onEnqueue: ((TrackRef) -> Unit)?,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
     when {
@@ -754,6 +769,7 @@ private fun OnlineDomain(
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onEnqueue = onEnqueue,
+            onUseForAlarms = onUseForAlarms,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareAudio = onShareAudio,
@@ -1003,6 +1019,7 @@ private fun SearchDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onEnqueue: ((TrackRef) -> Unit)?,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         SearchQueryField(
@@ -1031,6 +1048,7 @@ private fun SearchDomain(
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onEnqueue = onEnqueue,
+                onUseForAlarms = onUseForAlarms,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareAudio = onShareAudio,
@@ -1098,6 +1116,7 @@ private fun HistoryDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onEnqueue: ((TrackRef) -> Unit)?,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         HistoryQueryField(browse.historyQuery, onHistoryQueryChange)
@@ -1160,6 +1179,7 @@ private fun HistoryDomain(
                         onAdd = onAdd,
                         onAddToOtherPlaylist = onAddToOtherPlaylist,
                         onEnqueue = onEnqueue,
+                        onUseForAlarms = onUseForAlarms,
                         onShowNeighbours = onShowNeighbours,
                         onShareFile = onShareFile,
                         onShareAudio = onShareAudio,
@@ -1222,6 +1242,7 @@ private fun Selectable(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onEnqueue: ((TrackRef) -> Unit)?,
+    onUseForAlarms: ((TrackRef) -> Unit)? = null,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
@@ -1371,6 +1392,7 @@ private fun Selectable(
                         onStartSelecting = { selected = selected + track.id },
                         onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
                         onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
+                        onUseForAlarms = onUseForAlarms?.let { add -> { add(track) } },
                         onInfo = { showingInfo = track },
                         // Not for a live-search catalogue: it publishes no index, and its result
                         // rows carry no author, so there is nowhere for this to go.
@@ -1497,6 +1519,7 @@ private fun BrowseTrackRow(
     onStartSelecting: () -> Unit,
     onAddToOtherPlaylist: () -> Unit,
     onEnqueue: (() -> Unit)?,
+    onUseForAlarms: (() -> Unit)? = null,
     onInfo: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
@@ -1569,6 +1592,7 @@ private fun BrowseTrackRow(
                             onClick = { menuOpen = false; onAddToOtherPlaylist() },
                         )
                         EnqueueMenuItem(onEnqueue) { menuOpen = false }
+                        AlarmMenuItem(onUseForAlarms) { menuOpen = false }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_info)) },
                             leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },

@@ -3,6 +3,36 @@
 Everything comes from the shared toolchain in `/mnt/workspace/.tooling`. Nothing needs to be
 installed system-wide, and no build here writes to another project's state.
 
+## Music alarm build policy
+
+The default Android build and phone handoff keep alarms enabled and visible. OFF is a technical
+compatibility check, not the test package handed over for use.
+
+B57 retains versionName **1.5.0**, commit-derived versionCode, SQLite schema **23** and alarm JSON
+**v1**. The integrated experiment uses the ordinary minified, test-signed APK script:
+
+```sh
+./scripts/build-release.sh                                  # alarms ON (default)
+./scripts/build-release.sh -PprotracktorMusicAlarms=false     # alarms OFF
+```
+
+The property accepts only `true` or `false`. One provider generates the code flag and transforms
+the merged manifest through AGP's artifact API. OFF omits SCHEDULE_EXACT_ALARM,
+USE_FULL_SCREEN_INTENT, RECEIVE_BOOT_COMPLETED, WAKE_LOCK and the management/ringing/service
+components. Shared notification/media-playback permissions remain. The original receiver handles
+MY_PACKAGE_REPLACED cleanup; legacy explicit delivery cannot start sound.
+
+Exercise both configurations with actual data before accepting an ON → OFF → ON update. OFF
+preserves excerpts/configuration; returning to ON leaves schedules disabled until explicitly
+rearmed. Do not clear data or change the signing certificate between builds in this trial.
+Run the full gate/lint before handoff and inspect both minified packages, including the legacy
+component identity: JVM tests do not apply R8. Current verification is in [Status](STATUS.md); physical
+checks are in [Testing](TESTING.md#music-alarm-phone-trial). SDK 36 compilation does not establish
+phone behaviour: the Java 17 host's Robolectric matrix covers SDK 29–34.
+
+A future store release also needs the applicable FGS/full-screen Console declarations and the
+updated privacy policy. Building an APK does not establish Play eligibility or publication.
+
 ## Integrated 1.5.0 preparation — 2026-11-02
 
 Use the normal minified `scripts/build-release.sh` for the combined AMP/floating-controls phone

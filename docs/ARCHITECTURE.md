@@ -6,6 +6,65 @@ verification and remaining physical checks are in [Status](STATUS.md) and
 [the implementation ledger](WEB_IMPLEMENTATION.md). B55 adds local filtering of the open editor
 on both platforms without replacing playback ownership.
 
+## Music alarms
+
+B57 is an Android experiment requested by a tester on 2026-11-03; architecture hardening was
+selected on 2026-11-04. Integration into develop was approved on 2026-11-05. It is not part of
+tagged 1.5.0; remaining device checks are in the [phone trial](TESTING.md#music-alarm-phone-trial).
+
+`alarms/api/MusicAlarms` is the application boundary. Ordinary playback and UI cannot reference
+its implementation; a source-boundary test enforces that rule. This is an internal feature package
+in the existing app module, with constructor composition and no additional dependency framework.
+
+| Responsibility | Owner |
+| --- | --- |
+| Local-time/DST planning, overlap, expiry, recognition | Pure models, planner, rules and quiz factory |
+| Atomic storage, immutable publication, committed revision | `AlarmRepository` / `AlarmFileStore` |
+| Domain commands and prepared-music commits | `AlarmCoordinator`, with injected catalogue policy |
+| OS access inspection and screen-owned requests | Shared `permissions/` package |
+| Channel, volume and prepared-music readiness | `AlarmReadiness` |
+| Earliest exact Android occurrence and actual arm result | `AndroidAlarmScheduler` |
+| Screen commands, IO projections and acknowledged results | Management/ringing ViewModels |
+| Player, focus, wake lock, notification and hard deadline | `AlarmService` / `AlarmSound` |
+
+The JSON v1 ledger and owned M4A excerpts live in device-protected no-backup storage, independently
+of SQLite schema 23 and the ordinary music cache. Newer/corrupt data is refused and retained.
+Rules return proposals; only persistence advances the revision. A failed Save keeps its editor
+draft. A saved configuration can remain unarmed, with an explicit access/readiness explanation.
+The challenge receives a presentation without the correct answer ID; success follows persistence,
+and old question/session callbacks cannot acknowledge a replacement session.
+
+Explicit **Use for alarms** captures the selected subsong, then silently renders a validated
+excerpt of up to 60 seconds, trimming at most ten seconds of leading silence. The collection is
+bounded to 64 excerpts / 128 MB and 32 alarms. Preparation has a request ID: an old Cancel cannot
+cancel a later job. Re-adding refreshes real artist/year facts without changing selections/audio
+identity. Metadata uses the ordinary playback policy; format names are not treated as artists.
+Wake-up needs no decoder, network, SAF source or music database. Before first unlock the ringing
+screen uses system locale/theme; credential preferences wait for unlocking and recreation.
+
+One-shot/weekly occurrences are claimed by stored revision/time. Overlap retains music and the
+elapsed deadline; missed one-shots do not silently move to tomorrow. Sound uses the alarm stream,
+a three-second ramp and a ten-minute elapsed limit independent of storage success. Notification
+ducking is ignored; genuine focus loss still interrupts sound. A fresh full-screen alarm alert
+replaces the startup foreground entry. Swiping the notification has no stop route. Backup audio
+and a deliberate emergency escape remain available.
+
+Normal playback consults an IO-bootstrapped cache, with one interruption rule shared by transport
+and MediaSession. Initial commands wait asynchronously and remain cancellable. A selected source
+and its return route survive navigation during that wait. Editing that playlist retires the stale
+selection without restoring old rows or losing Undo; pending starts adopt the latest transport
+settings. Delivery retires pending opens/retries
+and pauses loaded music while retaining context/position; it never resumes music automatically.
+Service closure and session/audio-phase identities fence late callbacks and release resources.
+
+`protracktorMusicAlarms` controls code and the actual merged manifest together. OFF removes
+alarm-only permissions/components and retains the original receiver for compatibility cleanup.
+Compatibility uses the original service component name explicitly: its class may be renamed once
+removed from the manifest. An update cancels the old capability and only the alarm's resources, preserving configuration and
+audio. A suspension marker requires durable schedule disablement before explicit rearming on
+re-enable. Failed/newer storage remains preserved and cannot be armed. The [build instructions](BUILD.md#music-alarm-build-policy)
+cover both configurations; host checks do not establish Android/OEM delivery behaviour.
+
 ## Floating-controls availability — integrated, 2026-11-02
 
 Integrated with AMP as **3519f05b** after approval; checked application source remains 2794a1db.
