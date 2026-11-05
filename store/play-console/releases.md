@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.6.0 — versionCode 1467
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.6.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-1.6.0-1467.aab` |
+| Size | 22728548 bytes |
+| SHA-256 | `2a16a80e726e098be6c394170713cde8926c88afe123f68980b51fbb4ce4fe01` |
+| versionCode | 1467 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 1.6.0 |
+| Commit | `ca854cb1` |
+| Tag | `v1.6.0` |
+| Built | 2026-11-05 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v1.5.0**: `git log --oneline v1.5.0..v1.6.0`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 1.5.0 — release refs verified on GitHub, 2026-11-03
 
 Agent-run public GitHub API reads verify master and tag v1.5.0 at
