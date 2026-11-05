@@ -9,6 +9,22 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## 1.6.0 release gate — test synchronization candidate, 2026-11-05
+
+A release attempt stopped on the queue fade pixel assertion before changing the version, master
+or tag. The original assertion failure did not reproduce in isolated runs, including a forced
+rebuild; its exact trigger remains unconfirmed. The test-only `fix/queue-exit-frame-test` candidate
+synchronizes EOF updates and native snapshots with the UI queue. A deterministic queued-draw
+probe rejects the old stale capture, and a negative control confirms that removing fade-out
+still fails the original intermediate-colour assertion. The two-intermediate-frame and
+no-actionable-ghost requirements remain intact. Runtime application code is unchanged.
+
+**Checked on host:** three fresh runs of the eight-test presentation class, then **1,472 Android
+tests in 213 suites**, without failures or skips; lint reports **0 errors / 81 warnings**. An earlier
+full-unit attempt was interrupted by a JVM SIGSEGV in the C2 compiler and was not counted as a
+passing run; the complete retry used the same Java and test configuration. This candidate awaits
+integration, and the release script's other gate stages have not been rerun for it.
+
 ## Browse navigation refinement — accepted and integrated, 2026-11-05
 
 The accepted `fix/browse-alarm-navigation` change is integrated into develop from **03d5e8b0**.

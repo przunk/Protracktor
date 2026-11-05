@@ -132,8 +132,10 @@ class QueuePresentationTest : PlaybackShellTest() {
         val bounds = row(id).fetchSemanticsNode().boundsInRoot
         val point = Offset(bounds.center.x, bounds.top + 12f)
         val before = pixel(point)
-        ReflectionHelpers.callInstanceMethod<Unit>(controller, "handleTrackEnded",
-            ReflectionHelpers.ClassParameter.from(Boolean::class.javaPrimitiveType!!, true))
+        compose.runOnIdle {
+            ReflectionHelpers.callInstanceMethod<Unit>(controller, "handleTrackEnded",
+                ReflectionHelpers.ClassParameter.from(Boolean::class.javaPrimitiveType!!, true))
+        }
         // Sample draw passes throughout the exit rather than guessing one intermediate frame.
         val frames = (1..12).map {
             frame(16)
@@ -154,6 +156,24 @@ class QueuePresentationTest : PlaybackShellTest() {
         compose.runOnIdle { assertEquals(stopped, player.value.schedule) }
     }
 
+    @Test fun `native pixel sampling observes queued Android draw changes`() {
+        open(pendingCount = 0, withTail = false)
+        frame(400)
+        val bounds = row(player.value.schedule.current!!.id).fetchSemanticsNode().boundsInRoot
+        val point = Offset(bounds.center.x, bounds.top + 12f)
+        val view = activity.get().window.decorView
+        val marker = android.graphics.drawable.ColorDrawable(Color.CYAN).apply {
+            setBounds(point.x.toInt() - 2, point.y.toInt() - 2,
+                point.x.toInt() + 2, point.y.toInt() + 2)
+        }
+        try {
+            assertTrue(view.post { view.overlay.add(marker) })
+            assertEquals("A native snapshot must include queued UI drawing changes", Color.CYAN, pixel(point))
+        } finally {
+            compose.runOnIdle { view.overlay.remove(marker) }
+        }
+    }
+
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
     fun `Polish Help remains discoverable and all gesture sections can be read`() {
         open()
@@ -166,7 +186,10 @@ class QueuePresentationTest : PlaybackShellTest() {
         }
     }
 
-    private fun pixel(point: Offset): Int = activity.get().window.decorView.renderedPixel(point)
+    // Finish pending UI work before sampling native layers; the animation clock remains paused.
+    private fun pixel(point: Offset): Int = compose.runOnIdle {
+        activity.get().window.decorView.renderedPixel(point)
+    }
 
     private fun distance(a: Int, b: Int): Int =
         abs(Color.red(a) - Color.red(b)) + abs(Color.green(a) - Color.green(b)) + abs(Color.blue(a) - Color.blue(b))
