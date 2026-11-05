@@ -1,8 +1,6 @@
 Based on user feedback:
 
-- Search the current playlist as you type without changing playback.
-- History updates while open.
-- AMP catalogue: browse, search and cache selected tracks.
-- Optional floating controls: enable in Settings, then hold Play/Pause.
-- Clearer Light theme, aligned controls and readable system bars.
-- Improved volume normalization.
+- Music alarms: prepare offline excerpts and set multiple one-off or repeating alarms.
+- Stop the alarm by recognizing the artist, platform, year or title in a three-choice quiz.
+- Prepare music from a track menu or Now Playing; manage alarms in Browse.
+- Reordered Browse destinations, with scrolling on smaller screens.

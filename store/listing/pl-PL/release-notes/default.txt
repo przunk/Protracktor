@@ -1,8 +1,6 @@
-Zmiany na podstawie uwag użytkowników:
+Na podstawie uwag użytkowników:
 
-- Szukanie na bieżącej playliście podczas pisania, bez zmiany odtwarzania.
-- Historia aktualizuje się bez wychodzenia z widoku.
-- Katalog AMP: przeglądanie, wyszukiwanie i cache wybranych utworów.
-- Opcjonalne pływające przyciski: włącz w ustawieniach, potem przytrzymaj Odtwórz/Pauza.
-- Czytelniejszy jasny motyw, wyrównane przyciski i widoczne paski systemowe.
-- Poprawiona normalizacja głośności.
+- Budzik z muzyką: przygotowane fragmenty offline oraz wiele alarmów jednorazowych lub powtarzanych.
+- Wyłączanie alarmu przez rozpoznanie autora, platformy, roku lub tytułu w quizie z trzema odpowiedziami.
+- Przygotowanie muzyki z menu utworu lub ekranu odtwarzania; budziki dostępne w widoku przeglądania.
+- Uporządkowana lista źródeł, przewijana na mniejszych ekranach.
