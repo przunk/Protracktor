@@ -146,6 +146,8 @@ Earlier checkpoint records below retain their original pre-acceptance and unmerg
   be confused. No automatic scan of every subsong or catalogue and no downloaded PCM cache.
 - Keep stereo mixing, normalization and transient focus ducking separate. Pause/seek/BT output
   recovery must not reset the active correction. Another subsong must not inherit it.
+  Another subsong is measured before it plays, like a newly opened file: from the cache when it
+  has been heard, otherwise by the same prefix analysis, silent in between (C131, 2026-11-07).
 - A stereo-linked emergency sample-peak guard catches transients outside a measured prefix;
   reserve -2 dBFS headroom. This is not an oversampled true-peak limiter or a guarantee after
   hardware/resampler processing. It may alter an unexpected transient; document that limitation.
