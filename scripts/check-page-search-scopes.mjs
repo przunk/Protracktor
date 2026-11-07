@@ -60,7 +60,7 @@ export default async function checkSearchScopes({ window, check }) {
     check(await until(() => !scope('platform:atari-8bit').disabled), 'By platform can be chosen and ASMA contributes Atari 8-bit availability');
     scope('platform:atari-8bit').click();
     check(await submit('') && api.searchNow().result.tracks.length === 1
-      && api.searchNow().result.tracks[0].url.startsWith('https://asma.atari.org/'), 'platform input narrows both saved and catalogue results');
+      && api.searchNow().result.tracks[0].url.startsWith('https://asma.atari.org/'), 'platform input narrows the online catalogues, without saved playlists');
     const old = api.searchNow().result, calls = searches;
     scope('platform:amiga').click();
     check(api.searchNow().result === old && searches === calls, 'adding another platform keeps the shown answer at first');

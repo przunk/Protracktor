@@ -72,11 +72,12 @@ await test('native Online: explicit archive IDs and empty-means-all are passed w
     assert.deepEqual(f.calls, [{ query: 'song', ids, platforms: [], limit: 2000 }]);
   }
 });
-await test('native platform scope narrows saved filenames and catalogue inputs, with empty meaning all', async () => {
+await test('native platform scope reads only the catalogues, narrowed by platform, with empty meaning all', async () => {
   const f = fixture(); f.saved = [{ id: 'a', tracks: [track('amiga', 'song'), track('atari', 'song', 'tune.sap')] }];
-  assert.deepEqual((await f.run(searchScope('platform', ['amiga']))).tracks.map((t) => t.url), ['amiga']);
-  assert.deepEqual(f.calls[1], { query: 'song', ids: [], platforms: ['amiga'], limit: 2000 });
-  assert.deepEqual((await f.run(searchScope('platform'))).tracks.map((t) => t.url), ['amiga', 'atari']);
+  assert.deepEqual((await f.run(searchScope('platform', ['amiga']))).tracks.map((t) => t.url), []);
+  assert.deepEqual(f.calls, [{ query: 'song', ids: [], platforms: ['amiga'], limit: 2000 }], 'saved playlists are not read');
+  await f.run(searchScope('platform'));
+  assert.deepEqual(f.calls[1], { query: 'song', ids: [], platforms: [], limit: 2000 });
 });
 await test('native blank query includes all saved tracks up to 2000 after canonicalization', async () => {
   const f = fixture(); const tracks = Array.from({ length: 2100 }, (_, i) => track(`track-${String(i).padStart(4, '0')}`));

@@ -118,25 +118,27 @@ class LibrarySearchTest {
     }
 
     @Test
-    fun `platform scope narrows SQL inputs and filters both playlist and live rows`() = runBlocking {
+    fun `platform scope reads the catalogues only, narrowing SQL and filtering live rows`() = runBlocking {
+        // Online only since 2026-11-07: the user's folders and playlists belong to Everywhere and Local.
         val sources = Sources().apply {
+            local = listOf(track("folder-amiga"))
             playlists = listOf(track("local-amiga"), track("local-atari", "tune.sap"))
             live = ModArchive.Outcome.Found(listOf(track("live-amiga"), track("live-atari", "tune.sap")))
         }
         val result = sources.search(SearchScope.ByPlatform(setOf("amiga")))
-        assertEquals(listOf("local-amiga", "live-amiga"), result.tracks.map { it.id })
-        assertEquals(setOf("amiga"), sources.localQueries.single().platforms)
+        assertEquals(listOf("live-amiga"), result.tracks.map { it.id })
+        assertTrue(sources.localQueries.isEmpty())
+        assertFalse(sources.calls.toString(), sources.calls.any { it == "playlists" })
         assertEquals(setOf("amiga"), sources.onlineQueries.single().platforms)
     }
 
     @Test
     fun `no selected platforms means all platforms rather than an empty result`() = runBlocking {
         val sources = Sources().apply {
-            playlists = listOf(track("amiga"), track("atari", "tune.sap"))
+            online = listOf(track("amiga"), track("atari", "tune.sap"))
         }
         val result = sources.search(SearchScope.ByPlatform())
         assertEquals(listOf("amiga", "atari"), result.tracks.map { it.id })
-        assertTrue(sources.localQueries.single().platforms.isEmpty())
         assertTrue(sources.onlineQueries.single().platforms.isEmpty())
     }
 
@@ -161,9 +163,22 @@ class LibrarySearchTest {
             localCount = 3_000
             onlineCount = 8_000
         }
-        val result = sources.search(SearchScope.ByPlatform(setOf("amiga")))
+        val result = sources.search(SearchScope.Everywhere)
         assertEquals(11_000, result.matches)
         assertEquals(listOf("live-result", "count-local:song", "count-catalogues:song"), sources.calls.takeLast(3))
+        assertEquals(Query("song", setOf("modland", "asma"), 0, emptySet()), sources.countedOnline.single())
+    }
+
+    @Test
+    fun `a platform cap counts only the catalogues, never local storage`() = runBlocking {
+        val sources = Sources().apply {
+            online = (0 until SearchResults.PER_SOURCE_LIMIT).map { track("online$it") }
+            localCount = 3_000
+            onlineCount = 8_000
+        }
+        val result = sources.search(SearchScope.ByPlatform(setOf("amiga")))
+        assertEquals(8_000, result.matches)
+        assertFalse(sources.calls.toString(), sources.calls.any { it.startsWith("count-local") })
         assertEquals(Query("song", setOf("modland", "asma"), 0, setOf("amiga")), sources.countedOnline.single())
     }
 

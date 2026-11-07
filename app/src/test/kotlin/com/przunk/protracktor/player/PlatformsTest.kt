@@ -121,8 +121,8 @@ class SearchScopeTest {
         assertTrue(SearchScope.Everywhere.searchesLocal && SearchScope.Everywhere.searchesOnline)
         assertTrue(SearchScope.Local.searchesLocal && !SearchScope.Local.searchesOnline)
         assertTrue(!SearchScope.Online().searchesLocal && SearchScope.Online().searchesOnline)
-        // A platform is a statement about the music, so it reaches both sides.
-        assertTrue(SearchScope.ByPlatform().searchesLocal && SearchScope.ByPlatform().searchesOnline)
+        // Online catalogues only, since 2026-11-07: not a second Everywhere.
+        assertTrue(!SearchScope.ByPlatform().searchesLocal && SearchScope.ByPlatform().searchesOnline)
     }
 
     @Test

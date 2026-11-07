@@ -26,17 +26,18 @@ sealed interface SearchScope {
     data class Online(val catalogueIds: Set<String> = emptySet()) : SearchScope
 
     /**
-     * Everything, narrowed to machines. An empty set means every platform, so it searches as widely
-     * as [Everywhere] while leaving the platform row on screen to choose from.
+     * The online catalogues, narrowed to machines. An empty set means every platform.
      *
-     * Local files included, not only catalogues: "Amiga music" is a statement about the music, and a
-     * filter that quietly meant "Amiga music somebody else is hosting" would be the same kind of lie
-     * the service-name chips were.
+     * **Online only, since 2026-11-07.** It used to reach local folders and playlists too, on the
+     * argument that "Amiga music" is a statement about the music. In use it read as a second
+     * Everywhere beside a row of three sources: "przunk" found 7 tunes under Online and 27 under By
+     * platform, the 20 more being the user's own files. Searching one's own music by platform is
+     * the cost of this; Local has no platform filter.
      */
     data class ByPlatform(val platformIds: Set<String> = emptySet()) : SearchScope
 
     val searchesLocal: Boolean
-        get() = this is Everywhere || this is Local || this is ByPlatform
+        get() = this is Everywhere || this is Local
 
     val searchesOnline: Boolean
         get() = this is Everywhere || this is Online || this is ByPlatform
