@@ -9,6 +9,33 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C132 An RSID that needs the C64's KERNAL plays silence without saying so — open, deferred 2026-11-07
+
+**Report, 2026-11-07:** `Modland/HVSC/MUSICIANS/0-9/4-Mat/Glitchshifter.sid` plays nothing in the
+WEB player. Android was not tried; it uses the same libsidplayfp code and is expected to match.
+
+**Mechanism (agent-run, on the page's WASM engine at develop `a4b2ea5c`).** The file is a 160-byte
+RSID (2012, Ate Bit), one tune, init `$1000`. Its code points the IRQ vector at `$EA31`, the KERNAL
+ROM's interrupt routine, and builds its sound from what that routine updates. Protracktor carries no
+C64 ROMs, so the routine is absent and the engine renders a constant 0.0048 for ten seconds: silence.
+Unlike C80 (BASIC), the header has no flag for this, so the file opens and plays silence with no
+message, against the rule that a pressed button must not do nothing silently. Unrelated to C131 or
+to normalization: the engine alone produces the same output.
+
+**Decision, 2026-11-07: leave it for now.** Options recorded for later:
+
+1. **Detect a dead start (recommended at the time):** if the output is exactly constant for the
+   first ~3 s, say that the tune does not play here because it needs the C64's ROM, and let Random
+   move on as it does past a file that cannot open. Format-independent; must test for a constant
+   value, not for quiet, so a real silent intro is not refused.
+2. **Recognise SID code that calls into ROM:** more precise for SID only, but a heuristic that can
+   be wrong both ways.
+3. **An open replacement KERNAL:** none known that libsidplayfp would accept; research, no promise.
+4. **Leave it** — the current choice.
+
+Not measured: how many HVSC RSIDs behave this way. Running every RSID through the engine and
+counting the constant outputs would give that number before choosing.
+
 ## C131 A subsong starts quiet and gets louder after three seconds — merged, 2026-11-07
 
 **Merged into develop as `a4b2ea5c`** after approval on 2026-11-07, following positive phone feedback on APK 1.6.0 (1473), source `d48a8f94`. Local `gh-pages` `50385bcb` is prepared from `a4b2ea5c`; push and the browser check are pending.
