@@ -9,6 +9,19 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C133 The page checks fail intermittently — open, found 2026-11-07
+
+Running `node scripts/check-page.mjs` repeatedly on an otherwise idle machine, a run now and then
+fails in a section unrelated to anything changed, and the next run passes. On develop (`a5e3a1ea`'s
+web code) one run in five failed ("recent suggestions remain the same literal query nodes…"); with
+the Q17 branch, three in seven failed, in the manual queue, Random ("Browse → remembered Random…",
+"Clear in the AudioContext start gap…"), played-before (`row(stalled)` undefined) and History
+sections — all of which run before the search sections the branch changes. The failing checks wait
+on real timers and settle loops; the cause has not been investigated.
+
+It matters because the full gate, and therefore `release.sh --check`, can fail on a commit that is
+fine; a rerun then passes. Not fixed; no check was weakened or skipped.
+
 ## Feedback in Settings — merged, 2026-11-07
 
 **Merged into develop** after approval on 2026-11-07, following a positive phone check of APK 1.6.0 (1478), source `970689b4`. WEB deployment pending.
