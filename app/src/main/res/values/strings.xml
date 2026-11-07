@@ -535,6 +535,13 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_sources">Music sources</string>
     <string name="settings_sources_detail">Where the music and what is known about it come from, with thanks</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_feedback_detail">Tell me what works and what does not, or join the testers\' group</string>
+    <string name="action_feedback_email">Email</string>
+    <string name="action_feedback_group">Group</string>
+    <string name="feedback_subject">Protracktor %1$s — feedback</string>
+    <string name="feedback_body">\n\n—\nProtracktor %1$s\nAndroid %2$s (API %3$s)\n%4$s</string>
+    <string name="notice_no_email">No email app on this phone. Write to %1$s.</string>
     <string name="action_website">Website</string>
     <string name="notice_no_browser">No app on this phone can open %1$s.</string>
     <string name="settings_privacy">Privacy policy</string>

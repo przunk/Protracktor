@@ -252,6 +252,24 @@ object PlayerIcons {
     }
 
     /** A window with an arrow into it: "open this in the browser", for Share with Protracktor. */
+    /** An envelope: email feedback. */
+    val Mail: ImageVector by lazy {
+        icon(
+            "Mail",
+            "M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z" +
+                "m0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z",
+        )
+    }
+
+    /** Two speech bubbles: the testers' group. */
+    val Forum: ImageVector by lazy {
+        icon(
+            "Forum",
+            "M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1z" +
+                "m-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z",
+        )
+    }
+
     val Web: ImageVector by lazy {
         icon(
             "Web",
