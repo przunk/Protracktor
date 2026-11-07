@@ -116,7 +116,18 @@ promise perfect first-play matching or certified true-peak limiting. The origina
 identify a pair; the follow-up comparison above supports keeping the feature without a target
 slider. It does not establish catalogue-wide matching or measured device power cost.
 
-## B51. Save an individual subsong in a playlist — TODO, recorded 2026-10-21
+## B51. Save an individual subsong in a playlist — SHELVED until production access, 2026-11-07
+
+**Shelved on 2026-11-07, not abandoned.** An implementation exists on the unmerged branch
+`feature/subsong-playlist-entries` (head `01a8bde0`, based on develop `eb568c3c`): Android and WEB,
+schema 24 with a tested migration, M3U/JSON/handoff support, host checks passing; never tried on a
+phone. It is held back because it changes playlist entry identity across queue, heart, History,
+search, export, handoff and alarms, and its schema migration is one-way, while the closed test needs
+testers using the app daily without regressions in its core. Resume after production access is
+granted: rebase onto develop (conflicts expected in the controller, worklet and `app.js` after
+C131), rerun the full gate, then a phone trial with playlists exported beforehand. Schema 24
+remains reserved for it. The requester was not recorded.
+
 
 Request recorded 2026-10-21: allow adding a selected subsong to a playlist rather than only the
 whole music file, which may contain hundreds of subsongs, including files reporting 256.
