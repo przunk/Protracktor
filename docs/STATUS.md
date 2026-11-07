@@ -9,7 +9,9 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Feedback in Settings — on a branch, 2026-11-07
+## Feedback in Settings — merged, 2026-11-07
+
+**Merged into develop** after approval on 2026-11-07, following a positive phone check of APK 1.6.0 (1478), source `970689b4`. WEB deployment pending.
 
 Built on `feature/send-feedback` for the closed test: testers need an obvious way to report, and
 production access depends on gathering and acting on their feedback. **Settings → About →
