@@ -192,6 +192,38 @@ sys.exit(1 if pathlib.Path(f"/proc/{pid}").exists() else 0)
 PY
 [ "$?" = 0 ] && ok "interrupted unit worker terminated" || bad "interrupted unit worker survived"
 
+# The stub suite leaves a mark each time it runs, so a scenario can count the runs.
+counting_suite() {
+  printf '#!/usr/bin/env bash\necho run >> "%s/suite-runs"\n[ -n "${FAIL_SUITE:-}" ] && exit 7\necho "   (stub suite)"\n' "$S" > scripts/test-protracktor.sh
+  git add scripts/test-protracktor.sh; git commit -q -m "counting suite"; rm -f "$S/suite-runs"
+}
+runs() { [ -f "$S/suite-runs" ] && wc -l < "$S/suite-runs" || echo 0; }
+
+echo "L. a release of the commit --check passed does not run the suite again"; fresh; counting_suite
+echo | ./scripts/release.sh 0.12.0 --check > "$S/rt-L1.log" 2>&1
+echo 0.12.0 | ./scripts/release.sh 0.12.0 > "$S/rt-L2.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && ok "released" || { bad "exit $rc"; tail -5 "$S/rt-L2.log"; }
+[ "$(runs)" = 1 ] && ok "the suite ran once, in --check" || bad "suite ran $(runs) times"
+grep -q "passed in --check for this commit" "$S/rt-L2.log" && ok "says why it was skipped" || bad "silent skip"
+[ "$(git rev-parse master)" = "$(git rev-parse v0.12.0^{commit})" ] && ok "master is the tag" || bad "master is not the tag"
+
+echo "M. a commit after --check runs the suite in full"; fresh; counting_suite
+echo | ./scripts/release.sh 0.12.0 --check > /dev/null 2>&1
+echo more >> docs/WISHLIST.md; git commit -qam "after the check"
+echo 0.12.0 | ./scripts/release.sh 0.12.0 > "$S/rt-M.log" 2>&1
+[ "$(runs)" = 2 ] && ok "the suite ran again" || bad "suite ran $(runs) times"
+grep -q "No --check has passed" "$S/rt-M.log" && ok "says why" || bad "no reason given"
+
+echo "N. a failed --check records nothing"; fresh; counting_suite
+echo | FAIL_SUITE=1 ./scripts/release.sh 0.12.0 --check > /dev/null 2>&1
+echo 0.12.0 | ./scripts/release.sh 0.12.0 > "$S/rt-N.log" 2>&1
+[ "$(runs)" = 2 ] && ok "the release ran the suite itself" || bad "suite ran $(runs) times"
+[ "$(git ls-files --others --exclude-standard | wc -l)" = 0 ] && ok "the record is not a file in the tree" || bad "untracked files"
+
+echo "O. a release without --check runs the suite"; fresh; counting_suite
+echo 0.12.0 | ./scripts/release.sh 0.12.0 > /dev/null 2>&1
+[ "$(runs)" = 1 ] && ok "the suite ran" || bad "suite ran $(runs) times"
+
 echo "K. unknown options are not interpreted as permission to release"; fresh
 before=$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)
 ./scripts/release.sh 0.12.0 --chek > "$S/rt-K.log" 2>&1; rc=$?

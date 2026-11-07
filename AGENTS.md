@@ -101,6 +101,15 @@ finding them at a release.
 **The one thing to remember:** when something *crashes* and a stack trace matters, a debug build is
 the readable one. Diagnose on debug, judge on release.
 
+## The suite before a release runs once per commit
+
+Decided 2026-11-07: the full suite and lint run in `./scripts/release.sh X.Y.Z --check`, and the
+release itself does not repeat them **for the exact commit that check passed on, with a clean
+tree**. Any other state runs the full suite again. This is how the workspace rule that the full
+suite and lint precede every release (`/mnt/workspace/AGENTS.md` §6) is met here: they have passed
+on the code being released, once. The reason is time: a forced suite is about fifteen minutes, and
+running it twice on the same commit only doubled the wait.
+
 ## Versions
 
 `docs/BUILD.md` has the scheme. The short of it:

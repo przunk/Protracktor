@@ -18,7 +18,10 @@
 #      newer than the last, and `master` an ancestor of this branch -- so it can fast-forward;
 #   2. release notes present in both languages and within Play's limits;
 #   3. the web engine rebuilt and the whole suite run -- the web build is an artifact that does not
-#      follow a branch switch, and a stale one has failed a run twice already;
+#      follow a branch switch, and a stale one has failed a run twice already. **Once per commit**
+#      (2026-11-07): `--check` records the commit it passed on, and a release of exactly that
+#      commit, with a clean tree, does not run the suite a second time. Any other commit, or no
+#      record, runs it in full as before;
 #   4. `versionName` set and committed on this branch; `master` fast-forwarded to that commit and
 #      the commit tagged `v<version>`. **Fast-forward, never a merge commit**: `versionCode` is the
 #      commit count, and a merge commit only `master` has would let the two branches' counts drift;
@@ -80,15 +83,30 @@ echo "   Have they been rewritten for $version? They are pasted into Play as the
 for locale in en-US pl-PL; do echo; echo "   [$locale]"; sed 's/^/   | /' "store/listing/$locale/release-notes/default.txt"; done
 
 # --- 3. checks -----------------------------------------------------------------------------------
-step "3. Web engine and the full suite"
-python3 scripts/internal/run-check.py --label "Build web engine" \
-    --log "/tmp/protracktor-$(basename "$ROOT")-web-build.log" \
-    --timeout "${PROTRACKTOR_WEB_BUILD_TIMEOUT_SECONDS:-1200}" -- ./scripts/build-web-engine.sh
-./scripts/test-protracktor.sh --really
+# The record lives in this checkout's own .git, never in the tree: it says which commit passed here.
+checked_record="$(git rev-parse --git-dir)/protracktor-release-check"
+head_commit="$(git rev-parse HEAD)"
+checked_commit="$( [ -f "$checked_record" ] && cut -d' ' -f1 "$checked_record" || true)"
+if [ "$mode" != "--check" ] && [ "$checked_commit" = "$head_commit" ]; then
+    step "3. Web engine and the full suite -- passed in --check for this commit, not run again"
+    echo "   $(cut -d' ' -f2- "$checked_record") -- $head_commit, the commit being released, tree clean"
+else
+    step "3. Web engine and the full suite"
+    [ "$mode" = "--check" ] || echo "   No --check has passed for $head_commit here; running everything."
+    python3 scripts/internal/run-check.py --label "Build web engine" \
+        --log "/tmp/protracktor-$(basename "$ROOT")-web-build.log" \
+        --timeout "${PROTRACKTOR_WEB_BUILD_TIMEOUT_SECONDS:-1200}" -- ./scripts/build-web-engine.sh
+    ./scripts/test-protracktor.sh --really
+    # Recorded only if what passed is still what is checked out: a commit made during a fifteen-
+    # minute run would otherwise be released on the strength of the run before it.
+    if [ "$mode" = "--check" ] && [ "$(git rev-parse HEAD)" = "$head_commit" ] && [ -z "$(git status --porcelain)" ]; then
+        echo "$head_commit full suite passed $(date '+%F %T')" > "$checked_record"
+    fi
+fi
 
 if [ "$mode" = "--check" ]; then
     step "Checked. Nothing was changed."
-    echo "   Run without --check to make the release."
+    echo "   Run without --check to make the release; for this commit it will not run the suite again."
     exit 0
 fi
 

@@ -287,6 +287,17 @@ instead of fast-forward: four checks failed. **First real run: 1.0.0, 2026-10-02
 `master` fast-forwarded onto `v1.0.0` with no merge commit, `develop` one evidence commit ahead,
 the bundle's SHA-256 matching the one recorded.
 
+
+**The suite runs once per commit** (decided 2026-11-07). `--check` runs the web engine build and
+the full forced suite and, when it passes with the same commit still checked out and a clean tree,
+records that commit in this checkout's `.git/protracktor-release-check`. A release of **exactly
+that commit**, with a clean tree, says so at step 3 and goes straight on to the version, tag and
+bundle. Any other commit — one more commit after the check, a check that failed, or no check at
+all — runs everything in full, as before. So the usual order is `--check`, read it, then the
+release, and the release takes as long as building the bundle. `scripts/check-release.sh` holds
+both sides: a release after a passing check runs the suite zero times, and a commit after the check,
+a failed check or no check runs it.
+
 ### Bounded release validation — 2026-10-15
 
 `release.sh` and `--check` use the same gate. The terminal shows stage start/result and an elapsed-time
