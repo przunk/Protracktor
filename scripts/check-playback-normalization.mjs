@@ -157,4 +157,47 @@ await test('Stop also retires preparation already sent but never acknowledged as
   await h.player.measured({ requestId: 1, subsong: 0, width: 100, values, reason: 'close' });
   assert.equal(h.writes.length, writes);
 });
+await test('another tune of the playing file is measured on its retained bytes before it is selected', async () => {
+  const h = harness({ measure: async (request) => {
+    assert.deepEqual([...new Uint8Array(request.bytes)], [1, 2, 3]);
+    return [...values.slice(0, 4), request.subsong];
+  } }), data = source();
+  h.player.register(1, data, 'a.mod'); structuredClone(data, { transfer: [data] });
+  await h.player.decoded({ requestId: 1, current: 0 }); await until(() => h.calls.length === 1);
+  assert.deepEqual(await h.player.subsongProfile(3), { profile, width: 100 });
+  assert.equal(h.calls.at(-1).subsong, 3);
+  const key = await loudnessVariantKey(await base(), 3, 100, webcrypto);
+  assert(h.writes.some((row) => row.key === key));
+});
+await test('a tune measured before is read from the cache rather than measured again', async () => {
+  const h = harness({ measure: async (request) => [...values.slice(0, 4), request.subsong] });
+  h.player.register(1, source(), 'a.mod'); await h.player.decoded({ requestId: 1, current: 0 });
+  await h.player.subsongProfile(2); const calls = h.calls.length;
+  assert.deepEqual(await h.player.subsongProfile(2), { profile, width: 100 }); assert.equal(h.calls.length, calls);
+});
+await test('Off measures no subsong', async () => {
+  const h = harness({ enabled: false }); h.player.register(1, source(), 'a.mod');
+  await h.player.decoded({ requestId: 1, current: 0 });
+  assert.equal(await h.player.subsongProfile(1), null); assert.equal(h.calls.length, 0);
+});
+await test('a newer subsong choice abandons the older measurement', async () => {
+  const barrier = deferred();
+  const h = harness({ measure: async (request) => request.subsong === 1 ? barrier.promise : [...values.slice(0, 4), request.subsong] });
+  h.player.register(1, source(), 'a.mod'); await h.player.decoded({ requestId: 1, current: 0 });
+  const older = h.player.subsongProfile(1); await until(() => h.calls.at(-1)?.subsong === 1);
+  const newer = h.player.subsongProfile(2); barrier.resolve([...values.slice(0, 4), 1]);
+  assert.equal(await older, null); assert.deepEqual(await newer, { profile, width: 100 });
+});
+await test('a mix changed during a subsong measurement yields no profile for the old mix', async () => {
+  const barrier = deferred();
+  const h = harness({ measure: async (request) => request.subsong === 1 ? barrier.promise : values });
+  h.player.register(1, source(), 'a.mod'); await h.player.decoded({ requestId: 1, current: 0 });
+  const pending = h.player.subsongProfile(1); await until(() => h.calls.at(-1)?.subsong === 1);
+  h.player.setWidth(50); barrier.resolve([...values.slice(0, 4), 1]);
+  assert.equal(await pending, null);
+});
+await test('a closed file has no bytes left to measure', async () => {
+  const h = harness(); h.player.register(1, source(), 'a.mod'); await h.player.decoded({ requestId: 1, current: 0 });
+  h.player.closed(1); assert.equal(await h.player.subsongProfile(1), null);
+});
 assert(checks > 0); console.log(`${checks} playback normalization identity/race/preparation cases passed`);

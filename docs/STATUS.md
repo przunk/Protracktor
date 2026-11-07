@@ -9,6 +9,35 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C131 A subsong starts quiet and gets louder after three seconds — fixed on a branch, 2026-11-07
+
+**Report, 2026-11-07:** with volume normalization On, the WEB player raises the level about three
+seconds into a tune; Android behaved the same way earlier. The exact scenario (new file or
+subsong change, browser, file) was not supplied.
+
+**Mechanism found in the code, on both platforms.** A newly opened file is measured before it
+plays. A **subsong change** was not: the decoder switched at once, the new tune started at the
+fallback gain for unknown material (-6 dB), and the live meter raised it after three seconds,
+unless that tune's profile was already cached. This covers manual changes and Play all subsongs.
+The normalization record had described this fresh start as intended; it is now replaced.
+
+**Fix, `fix/subsong-normalization`:** another tune of the open file is measured first — from the
+cache when heard before, otherwise by the same prefix analysis on a separate decoder — and the
+decoder switches with the profile in hand, silent in between. Play/pause pressed meanwhile is
+applied when the tune starts; a newer choice, a mix change or a closed file abandons the
+measurement. Android: `SubsongNormalization`, with position polling and seeking suspended while it
+waits. WEB: `PlaybackNormalization.subsongProfile`, and the worklet's `hold` plus a profile carried
+by the `subsong` message. The open file's bytes are kept for this while it plays.
+
+**Checked:** the full gate, **1,479 Android tests**, **1,396 page checks**, lint without errors;
+7 new JVM cases, 6 new page-ownership cases and 3 new real-worklet/WASM PCM cases, including the
+first PCM of a measured subsong at its own gain. Breaking the order (switch before measuring),
+the worklet's use of the profile, `hold`, byte retention or abandonment each fails its check. The
+real-Chromium normalization check still passes its six cases. **Not checked:** the phone and a
+browser by ear, and whether this is the scenario reported — a new-file start that misses its
+measurement (for example the five-second analysis limit on a slow device) is a separate path
+this does not change. Cost: a subsong change now waits for its measurement when it is not cached.
+
 ## GitHub 1.6.0 — published 2026-11-05, verified 2026-11-06
 
 [Protracktor 1.6.0](https://github.com/przunk/Protracktor/releases/tag/v1.6.0) was published at

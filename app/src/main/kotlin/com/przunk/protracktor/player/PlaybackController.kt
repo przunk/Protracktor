@@ -281,6 +281,8 @@ class PlaybackController private constructor(private val context: Context) {
     private val loudnessPreparation = LoudnessPreparation(loudnessProfiles,
         { NativeEngine.backendsFingerprint() }, { b,n,c,s,w -> NativeEngine.measureLoudness(b,n,c,s,w) })
     private var loudnessBase: String? = null
+    /** The open file's bytes, kept so another of its tunes can be measured before it plays. */
+    private var loudnessSource: Triple<ByteArray, String, List<Pair<String, ByteArray>>>? = null
     private var loudnessSubsong = 0
     private var loudnessWidth = 100
     private var loudnessJob: Job? = null
@@ -303,9 +305,32 @@ class PlaybackController private constructor(private val context: Context) {
 
     private fun closeCurrentTrack() {
         loudnessJob?.cancel(); loudnessJob=null
+        subsongNormalization.cancel()
         rememberLoudness()
-        track?.close(); track=null; loudnessBase=null
+        track?.close(); track=null; loudnessBase=null; loudnessSource=null
     }
+
+    private val subsongNormalization = SubsongNormalization(
+        scope = scope,
+        worker = Dispatchers.IO,
+        silence = { track?.stop() },
+        prepare = { index, width ->
+            val (bytes, name, companions) = loudnessSource ?: return@SubsongNormalization null
+            try { loudnessPreparation.prepare(bytes, name, companions, index, width).profile }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+        },
+        width = { loudnessWidth },
+        switch = { index, profile ->
+            track?.let { open ->
+                // Configured while the stream is stopped, so the first callback of the new tune
+                // applies it from its first sample instead of ramping up from the fallback.
+                open.setNormalization(_state.value.volumeNormalization, profile)
+                open.selectSubsong(index)
+                loudnessSubsong = index
+            }
+        },
+    )
 
     private fun refreshNormalization() {
         loudnessJob?.cancel()
@@ -773,6 +798,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // braces**, not because it fixed anything. The real cause was in the gesture, not
                 // in the player: see `PlayerDock.TransportButton`.
                 if (openJob?.isActive == true) continue
+                // The decoder still holds the previous tune while the next one is measured: its
+                // position and its end belong to a tune that is no longer playing.
+                if (subsongNormalization.pending) continue
 
                 when (open.recoverOutput()) {
                     OutputRecovery.UNCHANGED -> Unit
@@ -2690,6 +2718,8 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun seekTo(seconds: Double) {
         val open = track ?: return
+        // The tune being measured has not started; it starts at its beginning.
+        if (subsongNormalization.pending) return
         sampleListening()
         listening.seeking(open.positionSeconds())
         val generation = ++seekGeneration
@@ -2728,9 +2758,15 @@ class PlaybackController private constructor(private val context: Context) {
         rememberLoudness()
         sampleListening()
         listening.baseline(0.0, playing = false)
-        open.selectSubsong(index)
-        loudnessSubsong=index
-        refreshNormalization()
+        if (_state.value.volumeNormalization && loudnessSource != null) {
+            // Measured first, then switched: no quiet start rising after three seconds.
+            subsongNormalization.request(index)
+        } else {
+            subsongNormalization.cancel()
+            open.selectSubsong(index)
+            loudnessSubsong=index
+            refreshNormalization()
+        }
         // **Re-read once the switch has landed**, which is the audio thread's business and takes a
         // buffer. A GBS names each of its tunes and a SNDH often does; the phone went on showing the
         // first one's name whatever was playing (`docs/review-round-8.md` R4). The web player was
@@ -2838,6 +2874,18 @@ class PlaybackController private constructor(private val context: Context) {
             cancelPendingPlayback()
             return
         }
+        // A subsong being measured: the press decides what happens when it is ready.
+        if (subsongNormalization.pending) {
+            val play = !_state.value.playing
+            if (play && !audioFocus.acquire()) {
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+                return
+            }
+            if (!play) audioFocus.release()
+            subsongNormalization.intend(play)
+            _state.update { it.copy(playing = play) }
+            return
+        }
         val scheduled = _state.value
         if (scheduled.activePlayback.source == QueueSource.None && scheduled.schedule.consumed &&
             scheduled.schedule.pending.isNotEmpty()) {
@@ -2931,6 +2979,12 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
         val open = track ?: return
+        if (subsongNormalization.pending) {
+            subsongNormalization.intend(false)
+            audioFocus.release()
+            _state.update { it.copy(playing = false) }
+            return
+        }
         sampleListening()
         listening.baseline(open.positionSeconds(), playing = false)
         open.stop()
@@ -3347,6 +3401,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             track = opened
             loudnessBase=prepared.base; loudnessSubsong=openedSubsong
+            loudnessSource=Triple(bytes,ref.fileNameOrTitle,companions)
             loudnessWidth=_state.value.stereoMix.widthPercent
             opened.setStereoMix(_state.value.stereoMix)
             opened.setNormalization(_state.value.volumeNormalization,prepared.profile.takeIf { loudnessWidth==measuredWidth })

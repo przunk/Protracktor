@@ -17,6 +17,7 @@ export class PlaybackNormalization {
   #revisionReady = Promise.resolve();
   #preparation = null;
   #analyser = null;
+  #subsong = null;
   constructor({ send, cache = new LoudnessProfiles(), crypto = globalThis.crypto,
     enabled = false, width = 100, createAnalyser = (wasmBinary) => new LoudnessAnalyser({ wasmBinary }) }) {
     Object.assign(this, { send, cache, crypto, enabled, width, createAnalyser });
@@ -92,11 +93,40 @@ export class PlaybackNormalization {
         this.send({ type: 'prepared', requestId, current, width, profile: null });
       }
     } finally {
-      source.bytes = null; source.release(); source.controller.signal.removeEventListener('abort', stop);
+      // The playing file keeps its bytes so another of its tunes can be measured before it plays.
+      if (!this.#currentSource(source)) { source.bytes = null; source.release(); }
+      source.controller.signal.removeEventListener('abort', stop);
+    }
+  }
+  /**
+   * The profile for another tune of the playing file, measured before it is selected -- as the
+   * file's first tune is -- so a subsong switch does not start at the fallback gain and rise after
+   * three seconds of live measurement. Null when off, stale or unmeasurable; a newer request
+   * abandons an older one.
+   */
+  async subsongProfile(subsong) {
+    this.#subsong?.abort();
+    const source = this.#current === null ? null : this.#sources.get(this.#current);
+    if (!this.enabled || !this.#preparation || !source?.bytes || source.pending || !this.#currentSource(source)) return null;
+    const request = new AbortController(), stop = () => request.abort();
+    this.#subsong = request;
+    source.controller.signal.addEventListener('abort', stop, { once: true });
+    const configuration = this.#configuration, width = this.width;
+    try {
+      const prepared = await this.#preparation.prepare({ bytes: source.bytes, name: source.name, subsong, width },
+        { signal: request.signal });
+      if (request.signal.aborted || configuration !== this.#configuration || width !== this.width
+        || !this.enabled || !this.#currentSource(source) || !prepared?.profile) return null;
+      return { profile: prepared.profile, width };
+    } catch { return null; }
+    finally {
+      source.controller.signal.removeEventListener('abort', stop);
+      if (this.#subsong === request) this.#subsong = null;
     }
   }
   #changed() {
     this.#configuration++;
+    this.#subsong?.abort();
     for (const source of this.#sources.values()) if (source.pending) source.analysis?.abort();
     for (const controller of this.#warming) controller.abort();
   }

@@ -96,6 +96,35 @@ await test('a successful worklet subsong transition drops the old trim before it
     assert(p.replies.some((row) => row.type === 'normalization-context' && row.subsong === 0 && row.width === 100));
   } finally { e._pt_close(raw); p.send({ type: 'close' }); }
 });
+await test('a subsong measured before selection starts at its own level from its first PCM', async () => {
+  const p = await create(), e = p.value.engine, raw = openFixture(e, bytes);
+  try {
+    p.prepared(); p.callback();
+    // Silent while the page measures it: the old tune does not run on, and nothing ramps later.
+    p.send({ type: 'hold' }); const position = e._pt_position(p.value.handle);
+    assert(p.callback().every((n) => n === 0)); assert.equal(e._pt_position(p.value.handle), position);
+    p.send({ type: 'subsong', index: 0, play: true, profile: known, width: 100 });
+    scaled(p.callback(), renderPcm(e, raw, 44100, 2048), Math.fround(10 ** (-12 / 20)));
+  } finally { e._pt_close(raw); p.send({ type: 'close' }); }
+});
+await test('play pressed while a subsong is measured waits for it; pause is kept through the selection', async () => {
+  const p = await create(), e = p.value.engine;
+  try {
+    p.prepared(); p.callback(); p.send({ type: 'hold' }); p.send({ type: 'play' });
+    assert(p.callback().every((n) => n === 0));
+    p.send({ type: 'pause' }); p.send({ type: 'subsong', index: 0, play: false, profile: known, width: 100 });
+    assert.equal(p.replies.findLast((row) => row.type === 'subsong').playing, false);
+    assert(p.callback().every((n) => n === 0)); assert.equal(e._pt_position(p.value.handle), 0);
+  } finally { p.send({ type: 'close' }); }
+});
+await test('a subsong profile measured for another mix is not applied', async () => {
+  const p = await create(), e = p.value.engine, raw = openFixture(e, bytes);
+  try {
+    p.prepared(); p.callback(); p.send({ type: 'hold' });
+    p.send({ type: 'subsong', index: 0, play: true, profile: known, width: 50 });
+    scaled(p.callback(), renderPcm(e, raw, 44100, 2048), .5);
+  } finally { e._pt_close(raw); p.send({ type: 'close' }); }
+});
 await test('closing emits the old profile and old acknowledgement before adopting a new request', async () => {
   const p = await create();
   try {

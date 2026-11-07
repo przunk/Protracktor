@@ -4900,17 +4900,29 @@ const selectedSubsong = () => subsongPending?.index ?? currentSubsong;
 const hasNextSubsong = () => selectedSubsong() + 1 < subsongCount;
 const hasPreviousSubsong = () => selectedSubsong() > 0;
 
-function goToSubsong(index) {
+async function goToSubsong(index) {
   if (!node || loading || $('seek').dataset.opened !== '1' || !Number.isInteger(index)
     || index < 0 || index >= subsongCount || subsongPending?.index === index && playWanted) return;
   sampleListening();
   seekLanded(); seeking = false;
   const previousWanted = playWanted;
-  subsongPending = { index, previousWanted, intent: wantPlayback(true) };
+  const pending = { index, previousWanted, intent: wantPlayback(true) };
+  subsongPending = pending;
   systemStopped = false;
   allowSeeking(); setPlaying(playing);
-  node.port.postMessage({ type: 'subsong', index, selectionId: subsongPending.intent });
   status(uiMessageText('Tune {n} of {count}', { n: index + 1, count: subsongCount }));
+  // With normalization on, the tune is measured first and selected with its profile, silent in
+  // between -- the phone's order. Selecting first played it at the fallback gain and raised it
+  // after three seconds. Play or pause pressed meanwhile is what the selection carries.
+  let measured = null;
+  if (playbackNormalization.enabled) {
+    const asked = playAsked;
+    node.port.postMessage({ type: 'hold' });
+    measured = await playbackNormalization.subsongProfile(index);
+    if (subsongPending !== pending || asked !== playAsked || !node) return;
+  }
+  node.port.postMessage({ type: 'subsong', index, selectionId: pending.intent, play: playWanted,
+    profile: measured?.profile ?? null, width: measured?.width });
 }
 
 /** The next file, past whatever is left inside this one. What a long press means. */
