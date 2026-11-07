@@ -9,7 +9,9 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C131 A subsong starts quiet and gets louder after three seconds — fixed on a branch, 2026-11-07
+## C131 A subsong starts quiet and gets louder after three seconds — merged, 2026-11-07
+
+**Merged into develop as `a4b2ea5c`** after approval on 2026-11-07, following positive phone feedback on APK 1.6.0 (1473), source `d48a8f94`. Local `gh-pages` `50385bcb` is prepared from `a4b2ea5c`; push and the browser check are pending.
 
 **Report, 2026-11-07:** with volume normalization On, the WEB player raises the level about three
 seconds into a tune; Android behaved the same way earlier. The exact scenario (new file or
