@@ -79,6 +79,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     this.stereoWidth = options.processorOptions.stereoWidth ?? 100;
     this.normalizationEnabled = options.processorOptions.normalizationEnabled === true;
     this.awaitingPreparation = false;
+    this.holding = false;
     this.playRequested = false;
     this.profileBuffer = 0;
 
@@ -157,6 +158,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         this.ended = false;
         this.playing = false;
         this.playRequested = true;
+        this.holding = false;
         this.awaitingPreparation = true;
         this.reply({ type: 'decoded', current: e._pt_current_subsong(this.handle) });
         break;
@@ -203,7 +205,9 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           && message.requestId === this.requestId && message.width === this.stereoWidth
           && message.subsong === e._pt_current_subsong(this.handle)) this.configureNormalization(message.profile);
         break;
-      case 'play': this.playRequested = true; this.playing = !this.awaitingPreparation; break;
+      case 'play': this.playRequested = true; this.playing = !this.awaitingPreparation && !this.holding; break;
+      // Another tune of this file is being measured: silent, without forgetting play or pause.
+      case 'hold': if (this.handle) { this.holding = true; this.playing = false; } break;
       case 'pause': this.playRequested = false; this.playing = false; break;
       case 'seek':
         if (this.handle) {
@@ -218,12 +222,16 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           const previousSeconds = e._pt_position(this.handle);
           this.measurement('subsong');
           const selected = e._pt_select_subsong(this.handle, message.index);
+          this.holding = false;
+          if (message.play !== undefined) this.playRequested = message.play !== false;
           if (selected) {
-            this.configureNormalization();
+            // Measured by the page before it asked, when normalization is on: the new tune's first
+            // sample is at its level, not at the fallback until live measurement catches up.
+            this.configureNormalization(message.profile && message.width === this.stereoWidth ? message.profile : null);
             this.ended = false;
-            this.playRequested = true;
-            this.playing = !this.awaitingPreparation;
+            if (message.play === undefined) this.playRequested = true;
           }
+          this.playing = this.playRequested && !this.awaitingPreparation;
           // **Answered, because a subsong is a different tune.** Its length is its own -- a GBS
           // gives each track one -- and so is its title. Without this the page kept showing the
           // first tune's duration against the third one's audio, which is the same defect
@@ -249,7 +257,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           e._pt_rewind(this.handle);
           this.ended = false;
           this.playRequested = true;
-          this.playing = !this.awaitingPreparation;
+          this.playing = !this.awaitingPreparation && !this.holding;
           this.reported = -1;
           this.reply({ type: 'position', seconds: 0 });
         }

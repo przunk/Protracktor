@@ -1,7 +1,7 @@
 # Protracktor privacy policy
 
 Effective date: 2026-10-25
-Updated: 2026-10-29
+Updated: 2026-11-03
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -50,13 +50,15 @@ connect over HTTPS to:
 - `modland.com` to download its catalogue index, the tracks you play, and those in a folder you
   open when **Cache folders ahead** is on (Settings; on Wi-Fi only unless you choose otherwise);
 - `asma.atari.org` to download the ASMA collection;
+- `amp.dascene.net` to download a selected AMP track and any format-required companion, cached
+  on the device. No speculative music prefetch is used;
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
 - `deepsid.chordian.net` to download the SID song-length database of the High Voltage SID
   Collection, from DeepSID's copy of it;
 - `raw.githubusercontent.com` to download song metadata and song lengths published by the
-  audacious-uade-tools project, Modland's favourites list, and a song database used by the Amiga
+  audacious-uade-tools project, the AMP path index, Modland's favourites list, and a song database used by the Amiga
   decoder;
 - `svn.code.sf.net` to download the Atari ST replay routines published by the sc68 project;
 - `gitlab.com` to download the Amiga replay routines published by the UADE project.
@@ -85,6 +87,22 @@ Floating controls optionally use Android's permission to display over other apps
 is requested only when this feature is enabled. The panel controls Protracktor playback and
 saves its position locally; it does not read the content of other apps or capture the screen.
 Hiding the panel does not stop playback. The permission can be revoked in Android settings.
+
+### Music alarms
+
+Alarm schedules, selected titles/credits, recognition questions and prepared audio excerpts are
+kept locally in private device-protected storage. This makes a configured alarm available after a
+restart before the first unlock. An excerpt is up to 60 seconds, stored separately from the normal
+music cache; deleting that cache does not remove alarm music. Remove it in Alarms → Music, or
+uninstall the app. If an update disables the alarm feature, configuration and excerpts are retained;
+schedules require explicit re-enabling when the feature returns. Alarm playback and answers are not sent to a server or added to music history.
+Preparing music may read the selected local file or fetch it from its archive using the network
+rules above; a scheduled alarm does not fetch music.
+
+Android exact-alarm access allows waking at a selected time. Notification access shows the ringing
+alert, full-screen access displays its challenge over the lock screen, and a bounded wake
+lock keeps alarm playback running. Boot and time-change receivers restore future schedules. These
+permissions do not give Protracktor access to other apps, screen contents or personal accounts.
 
 ### Sending to a web player
 
@@ -197,12 +215,15 @@ może łączyć się przez HTTPS z:
 - `modland.com`, aby pobrać indeks, odtwarzane utwory oraz utwory z otwartego folderu, gdy
   włączone jest **Pobieraj foldery z wyprzedzeniem** (Ustawienia; domyślnie tylko przez Wi-Fi);
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
+- `amp.dascene.net`, aby pobrać wybrany utwór AMP i pliki towarzyszące wymagane przez format,
+  zapisywane w pamięci podręcznej urządzenia. Muzyka nie jest pobierana z wyprzedzeniem;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
 - `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,
   z kopii tej kolekcji w serwisie DeepSID;
 - `raw.githubusercontent.com`, aby pobrać metadane i długości utworów publikowane przez projekt
-  audacious-uade-tools, listę ulubionych Modlandu oraz bazę utworów używaną przez dekoder Amigi;
+  audacious-uade-tools, indeks ścieżek AMP, listę ulubionych Modlandu oraz bazę utworów używaną
+  przez dekoder Amigi;
 - `svn.code.sf.net`, aby pobrać procedury odtwarzające Atari ST publikowane przez projekt sc68;
 - `gitlab.com`, aby pobrać procedury odtwarzające Amigi publikowane przez projekt UADE.
 
@@ -231,6 +252,23 @@ aplikacjami. Prośba o zgodę pojawia się tylko przy włączaniu tej funkcji. P
 odtwarzaniem Protracktora i zapamiętuje swoją pozycję na urządzeniu; nie odczytuje zawartości
 innych aplikacji ani nie przechwytuje ekranu. Ukrycie panelu nie zatrzymuje muzyki. Uprawnienie
 można cofnąć w ustawieniach Androida.
+
+### Muzyczny budzik
+
+Godziny alarmów, wybrane tytuły i autorzy, pytania oraz przygotowane fragmenty dźwięku pozostają
+lokalnie w prywatnej pamięci dostępnej przed pierwszym odblokowaniem telefonu po restarcie.
+Fragment trwa do 60 sekund i jest przechowywany osobno od zwykłej pamięci podręcznej muzyki;
+wyczyszczenie cache go nie usuwa. Można go usunąć w Budzik → Muzyka lub odinstalować aplikację.
+Jeśli aktualizacja wyłączy funkcję budzika, konfiguracja i fragmenty pozostają zapisane;
+po przywróceniu funkcji alarmy wymagają ponownego włączenia.
+Odtwarzanie alarmu i odpowiedzi nie są wysyłane na serwer ani dodawane do historii muzyki.
+Przygotowanie utworu może odczytać wybrany plik lokalny lub pobrać go z archiwum zgodnie z zasadami
+sieciowymi powyżej; zaplanowany alarm nie pobiera muzyki.
+
+Dostęp do dokładnych alarmów pozwala obudzić aplikację o wybranej godzinie. Powiadomienia pokazują
+alert budzika, dostęp pełnoekranowy pokazuje zagadkę nad blokadą ekranu, a ograniczona
+czasowo blokada uśpienia podtrzymuje odtwarzanie. Odbiorniki restartu i zmiany czasu przywracają
+przyszłe alarmy. Te uprawnienia nie dają dostępu do innych aplikacji, zawartości ekranu ani kont.
 
 ### Wysyłanie do odtwarzacza w przeglądarce
 
