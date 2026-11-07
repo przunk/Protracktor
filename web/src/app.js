@@ -2936,12 +2936,28 @@ function legalMissing(what) {
  * Points Source code at the exact version this page was built from (the GPL's offer of source), when
  * the staging recorded one; the repository's front page otherwise.
  */
+/** The commit this page was built from, once `build.json` has said; feedback names it. */
+let pageCommit = '';
 async function pointSourceAtBuild() {
   try {
     const build = await fetch('../vendor/legal/build.json').then((r) => (r.ok ? r.json() : null));
     if (build?.commit) $('open-source').href = `https://github.com/przunk/protracktor/tree/${build.commit}`;
+    pageCommit = build?.commit ?? '';
   } catch { /* the front page is still the source */ }
 }
+
+/**
+ * Feedback by email, prefilled as the phone's is: which page and which browser, so a report arrives
+ * with what it needs. Built when pressed, so it is in the language in use; the email app shows all
+ * of it before anything is sent.
+ */
+function feedbackMailto(commit = pageCommit, agent = navigator.userAgent) {
+  const subject = t('Protracktor web player — feedback');
+  const page = [t('Protracktor web player'), commit.slice(0, 8)].filter(Boolean).join(' ');
+  const body = ['', '', '—', page, agent].join('\n');
+  return `mailto:przunk@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+$('feedback-email').onclick = () => { $('feedback-email').href = feedbackMailto(); };
 
 /**
  * Where the music comes from, with thanks (docs/WISHLIST.md B41): the phone's Music sources, from

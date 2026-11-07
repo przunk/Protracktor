@@ -394,6 +394,9 @@ fun SettingsScreen(
 
         item { HorizontalDivider(); Section(R.string.settings_about) }
 
+        // Testers' reports first in About: they are what the closed test is for.
+        item { FeedbackRow(version) }
+
         // What is actually inside this build, said by the build rather than by a person. The
         // version name and the commit count come from Gradle; the decoder list comes from the
         // engine's own fingerprint, which is the same string an index records to know it is stale.

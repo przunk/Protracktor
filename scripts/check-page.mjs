@@ -2499,6 +2499,17 @@ if (window.__api) {
   check(notices?.querySelector('svg') && notices.textContent.trim() === 'Open-source licences'
         && privacy?.querySelector('svg') && privacy.textContent.trim() === 'Privacy policy',
     'they offer the open-source licences and the privacy policy, each with its icon and its name');
+  // Feedback, as on the phone: an email prefilled with the page and browser, and the testers' group.
+  const mail = $('feedback-email'), group = $('feedback-group');
+  mail.onclick();
+  const mailUrl = new URL(mail.href);
+  check(mail.querySelector('svg') && mail.textContent.trim() === 'Email'
+        && mailUrl.protocol === 'mailto:' && mailUrl.pathname === 'przunk@gmail.com'
+        && mailUrl.searchParams.get('subject') === 'Protracktor web player — feedback'
+        && mailUrl.searchParams.get('body').includes('Protracktor web player')
+        && group?.querySelector('svg') && group.textContent.trim() === 'Group'
+        && group.href === 'https://groups.google.com/g/protracktor' && group.target === '_blank',
+    'feedback goes by a prefilled email or to the testers\' group, each with its icon and its name');
   // B41: who the music comes from, from the table the phone reads, each website a labelled link.
   const sourcesButton = $('open-sources');
   check(sourcesButton?.querySelector('svg') && sourcesButton.textContent.trim() === 'Music sources',

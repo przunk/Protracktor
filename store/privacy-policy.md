@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-10-25
+Effective date: 2026-11-07
 Updated: 2026-11-03
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
@@ -80,6 +80,15 @@ Protracktor* link points at the public web player and carries the tune's archive
 This transfer happens only after that explicit action. The receiving application or service applies its own privacy policy. Temporary
 share copies are removed after their retention window when Protracktor next performs cleanup; the
 receiving application may keep its own copy.
+
+### Feedback
+
+**Settings → Feedback → Email** opens the user's email application with a message addressed to the
+developer, prefilled with the app version, the Android version and the phone model (on the web
+player: the page's build and the browser's user-agent string). Nothing is sent unless the user sends
+it from that application, which shows the whole message first; the user can change or remove any of
+it. **Group** opens the public Protracktor testers' group on Google Groups in a browser, under
+Google's own privacy policy. Protracktor itself transmits nothing for either action.
 
 ### Floating playback controls
 
@@ -244,6 +253,16 @@ utworu albo odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania An
 utworu w archiwum oraz jego tytuł. Transfer następuje tylko po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
 prywatności. Tymczasowe kopie są usuwane po okresie retencji podczas kolejnego sprzątania przez
 Protracktor; odbiorca może zachować własną kopię.
+
+### Opinie i zgłoszenia
+
+**Ustawienia → Opinie i zgłoszenia → E-mail** otwiera aplikację pocztową użytkownika z wiadomością do
+twórcy, wstępnie uzupełnioną o wersję aplikacji, wersję Androida i model telefonu (w odtwarzaczu w
+przeglądarce: wersję strony i identyfikator przeglądarki). Nic nie zostaje wysłane, dopóki
+użytkownik sam nie wyśle wiadomości z tej aplikacji, która najpierw pokazuje jej całą treść; każdą
+część można zmienić lub usunąć. **Grupa** otwiera w przeglądarce publiczną grupę testerów
+Protracktora w Google Groups, na zasadach polityki prywatności Google. Sam Protracktor w żadnym z
+tych przypadków niczego nie przesyła.
 
 ### Pływające przyciski odtwarzania
 

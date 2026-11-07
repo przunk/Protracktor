@@ -9,6 +9,26 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Feedback in Settings — on a branch, 2026-11-07
+
+Built on `feature/send-feedback` for the closed test: testers need an obvious way to report, and
+production access depends on gathering and acting on their feedback. **Settings → About →
+Feedback** on Android, and the same two actions in the WEB player's settings, each an icon with its
+name:
+
+- **Email** opens the user's email app with a message to przunk@gmail.com, its subject naming the
+  version and its body ending with the app version, Android version and API level, and the phone
+  (on the page: its build commit and the browser's user agent). Nothing is sent by the app.
+- **Group** opens the testers' group, https://groups.google.com/g/protracktor.
+
+A phone without an email app or browser says so instead of doing nothing. The privacy policy
+describes both actions in both languages, effective 2026-11-07.
+
+**Checked:** full gate, **1,481 Android tests**, page checks and lint without errors; a Robolectric
+test of the intents each action starts and a page check of the prefilled link fail when the
+subject or the prefilling is removed. **Not checked:** the phone and a browser — the email app's
+handling of the prefilled fields, and the group page.
+
 ## C132 An RSID that needs the C64's KERNAL plays silence without saying so — open, deferred 2026-11-07
 
 **Report, 2026-11-07:** `Modland/HVSC/MUSICIANS/0-9/4-Mat/Glitchshifter.sid` plays nothing in the
