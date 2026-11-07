@@ -594,6 +594,29 @@ to have been served from the cache in one second.
 **`--really`** forces execution (`--rerun-tasks`). Worth it before claiming a suite is green on code
 nobody has actually run it against.
 
+## How long the suite takes, and why — 2026-11-07
+
+Measured on this machine (Ryzen 5 5600X, 12 threads, 23 GB to WSL). The full gate went from
+**1,323 s to 919 s** with tests forced to run (`--really`); the two changes below account for it.
+
+- **Android unit tests: 569 s → 173-183 s for the test run itself** (297 s for the stage under
+  `--really`, which also recompiles). Every test class still runs in a JVM of its own
+  (`forkEvery = 1`), because classes sharing JVMs break each other: three shared runs each failed a
+  different Robolectric test. What changed is that **six** of those JVMs run at once instead of one
+  (`maxParallelForks`, `-PtestForks=N`), and that they use **only the C1 compiler**
+  (`-XX:TieredStopAtLevel=1`, `-PtestC2` to undo). A JVM that lives for one class never earns back
+  C2's work, and C2 is where this machine's JVMs crash: a four-JVM run with C2 died in
+  `Node::uncast` with SIGSEGV, as earlier runs recorded in STATUS did. Two C1 runs with six JVMs
+  passed in full.
+- **Fresh-page startup cases: 264 s → 32-40 s.** The 25 cases are separate processes sharing
+  nothing; they run six at a time (`PROTRACKTOR_STARTUP_JOBS=N`, 1 for the old order) and are
+  reported in their own order. A case that fails still fails the check (tested with a missing
+  script).
+
+Left as they are: lint (about 130 s) and the page checks (about 115 s), each one process; and about
+80 small stages, roughly 290 s together, still run one after another. Running independent stages
+at once is the next step if the gate needs to be shorter.
+
 ## Flat notification icon
 
 The notification glyph shares `GenerateLauncherIcons.java`'s P geometry with the launcher, but
