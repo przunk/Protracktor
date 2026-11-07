@@ -5,7 +5,16 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ---
 
-## Q17 — Search results after changing the filter
+## Q17 — Search results after changing the filter — DECIDED 2026-11-07, built on `feature/search-filter-rerun`
+
+**Decision, 2026-11-07:** the recommended option. A filter change while a search is shown asks the
+same words again after 300 ms; a widened or narrowed catalogue/platform set keeps the shown rows,
+marked as loading, until the answer replaces them; another kind of search clears them first.
+Several chips in a row are one search; typing, Search, Back or leaving cancels a waiting re-run;
+Back's widening does not re-run; a re-run is not a new recent search. Android and WEB alike. The
+words used are those in the field, as pressing Search would use them. Search-as-you-type (B56)
+stays as it is.
+
 
 Reported for discussion on **2026-10-31**: changing the search filter clears the visible results.
 The desired replacement behaviour has not been selected. The report does not identify a build,

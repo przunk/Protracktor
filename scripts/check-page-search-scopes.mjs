@@ -63,7 +63,10 @@ export default async function checkSearchScopes({ window, check }) {
       && api.searchNow().result.tracks[0].url.startsWith('https://asma.atari.org/'), 'platform input narrows both saved and catalogue results');
     const old = api.searchNow().result, calls = searches;
     scope('platform:amiga').click();
-    check(api.searchNow().result === old && searches === calls, 'adding another platform retains the producing answer until explicit Search');
+    check(api.searchNow().result === old && searches === calls, 'adding another platform keeps the shown answer at first');
+    check(await until(() => searches > calls && !api.searchNow().loading && api.searchNow().result !== old
+      && api.searchNow().result.scope.ids.includes('amiga') && api.searchNow().result.scope.ids.includes('atari-8bit')),
+      'after a short pause the same words are searched again with the added platform (Q17)');
     $('browseback').click(); await settle();
     check(api.searchNow().scope.kind === 'everywhere' && $('browsetitle').textContent === 'Search'
       && api.searchNow().result === null, 'first Back widens a narrowed search without leaving it');

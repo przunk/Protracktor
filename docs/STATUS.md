@@ -9,6 +9,20 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Q17 Search asks again after a filter change — on a branch, 2026-11-07
+
+Reported: changing a search filter (for example the platform) reset the results. It was the
+2026-09-06 design: another kind of search cleared the rows, and ticking a catalogue or platform
+left the old answer until Search was pressed again. Decided 2026-11-07 (Q17): a filter change while
+a search is shown asks the same words again after 300 ms. Built on `feature/search-filter-rerun`
+for Android (`BrowseWorkflow`) and WEB (`SearchBrowser`); details in OPEN_QUESTIONS Q17.
+
+**Checked:** full gate, **1,487 Android tests**, **1,398 page checks**, lint without errors; six new
+JVM cases and four new WEB unit cases plus one real-page check. Removing the re-run for catalogues,
+platforms or a kind change, blanking the rows while asking, letting typing leave a re-run waiting,
+or recording a re-run as a recent search each fails a check. **Not checked:** the phone and a
+browser by hand.
+
 ## Feedback in Settings — merged, 2026-11-07
 
 **Merged into develop** after approval on 2026-11-07, following a positive phone check of APK 1.6.0 (1478), source `970689b4`. WEB deployment pending.

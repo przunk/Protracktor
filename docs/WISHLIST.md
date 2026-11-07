@@ -31,6 +31,9 @@ See [architecture](ARCHITECTURE.md#music-alarms), [build policy](BUILD.md#music-
 
 ## B56. Consider searching while typing — discussion, recorded 2026-10-31
 
+**Decision, 2026-11-07: not now.** The WEB catalogue search does not search while typing either; History,
+playlist search and suggestions do, on both. Revisit after measuring index search speed on a phone.
+
 Request recorded 2026-10-31: consider updating music search results as the query is entered,
 instead of requiring explicit submission. This concerns result retrieval, not the existing
 recent-query dropdown (B46/W09); live filtering in History (B49/W10) already exists.

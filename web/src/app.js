@@ -4682,7 +4682,7 @@ $('browseback').onclick = async () => {
   }
   if (browsePath[0] === 'search') {
     if (searchBrowser.state.scope.kind !== 'everywhere') {
-      sourceBrowseRoute = null; searchBrowser.setScope(searchScope()); return;
+      sourceBrowseRoute = null; searchBrowser.setScope(searchScope(), { rerun: false }); return;
     }
     // Native BrowseWorkflow leaves an Everywhere search without destroying its query/results.
     clearTimeout(searchTimer);
