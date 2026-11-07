@@ -6,6 +6,12 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.6.0 — published on Google Play, 2026-11-07
+
+1.6.0 (1467) is published on Google Play for closed testing; production access has still not been
+granted (refused 2026-10-27). Publication was confirmed in Play Console on 2026-11-07; the agent did
+not inspect Play Console. Earlier artifact and GitHub records remain unchanged.
+
 ## 1.6.0 — GitHub publication verified, 2026-11-06
 
 [Protracktor 1.6.0](https://github.com/przunk/Protracktor/releases/tag/v1.6.0) was published on
