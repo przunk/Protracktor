@@ -317,8 +317,19 @@ tasks.withType<Test>().configureEach {
     // Compose/native Robolectric classes have hit idle timeouts in a shared worker. Process
     // isolation contains cross-class state; it does not diagnose the underlying idle failure.
     forkEvery = 1
-    maxParallelForks = 1
+    // **Isolated, but not one at a time** (2026-11-07). Each class still gets a JVM of its own, so
+    // no class sees another's state; running several of those JVMs at once changes nothing about
+    // what each one sees. One at a time made the unit tests about nine and a half minutes, most of
+    // it Robolectric starting up per class on one core of twelve. Six, measured with C1 below:
+    // 173-183 s for the whole set against 569 s (about 1.5 GB each); `-PtestForks=N` overrides it,
+    // 1 restores the old run. Classes sharing a JVM is not an option: three runs that way each broke
+    // a different Robolectric test.
+    maxParallelForks = providers.gradleProperty("testForks").orNull?.toIntOrNull()?.coerceIn(1, 12) ?: 6
     maxHeapSize = "1024m"
+    // **C1 only, for the test JVMs** (2026-11-07). Each lives for one class, seconds long, and C2's
+    // optimisation never pays back in that time; C2 is also where this machine's JVMs have crashed
+    // (SIGSEGV in `Node::uncast`, and earlier ones recorded in STATUS). `-PtestC2` restores it.
+    if (!providers.gradleProperty("testC2").isPresent) jvmArgs("-XX:TieredStopAtLevel=1")
     failFast = true
     testLogging {
         events("started", "passed", "failed", "skipped")
