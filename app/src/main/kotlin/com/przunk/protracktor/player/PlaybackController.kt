@@ -1154,6 +1154,64 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
 
+    /**
+     * Several tunes' files in one share (B59). Each is read the way playing reads it -- a catalogue
+     * file not yet cached is fetched now -- and copied under a name unique within this share. Files
+     * that cannot be read are counted and said, not dropped silently.
+     */
+    fun shareFiles(tracks: List<TrackRef>) {
+        tracks.singleOrNull()?.let { shareFile(it); return }
+        if (tracks.isEmpty()) return
+        scope.launch {
+            val names = SelectionShare.uniqueNames(tracks.map { it.fileNameOrTitle })
+            val uris = ArrayList<Uri>()
+            var unreadable = 0
+            tracks.zip(names).forEach { (ref, name) ->
+                val bytes = trackFiles.read(ref)
+                val uri = bytes?.let { remoteFiles.shareableCopy(name, it) }
+                if (uri == null) unreadable++ else uris += uri
+            }
+            if (uris.isEmpty()) {
+                say(Message(context.getString(R.string.notice_share_none_readable)))
+                return@launch
+            }
+            _share.tryEmit(
+                Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                    type = "application/octet-stream"
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                    putExtra(Intent.EXTRA_SUBJECT, context.resources.getQuantityString(R.plurals.share_subject_tunes, uris.size, uris.size))
+                    // The read grant travels with ClipData for a multiple send; the flag alone covers one.
+                    clipData = android.content.ClipData.newRawUri(null, uris.first()).also { clip ->
+                        uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+                    }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+            if (unreadable > 0) say(Message(context.resources.getQuantityString(
+                R.plurals.notice_share_some_unreadable, unreadable, unreadable)))
+        }
+    }
+
+    /** Several tunes' links, one per line (B59); files on the phone have none and are counted. */
+    fun shareLinks(tracks: List<TrackRef>) {
+        tracks.singleOrNull()?.let { shareLink(it); return }
+        if (tracks.isEmpty()) return
+        val links = SelectionShare.links(tracks)
+        if (links.shared == 0) {
+            say(Message(context.getString(R.string.notice_link_online_only)))
+            return
+        }
+        _share.tryEmit(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, links.text)
+                putExtra(Intent.EXTRA_SUBJECT, context.resources.getQuantityString(R.plurals.share_subject_tunes, links.shared, links.shared))
+            }
+        )
+        if (links.without > 0) say(Message(context.resources.getQuantityString(
+            R.plurals.notice_share_links_without, links.without, links.without)))
+    }
+
     /** Capture the selected tune before asynchronous source reads. */
     fun useForAlarms(ref: TrackRef) {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) {
@@ -1275,16 +1333,13 @@ class PlaybackController private constructor(private val context: Context) {
      * worked.
      */
     fun shareLink(ref: TrackRef) {
-        val catalogue = Catalogue.owning(ref.id)
-        val path = catalogue?.pathFrom(ref.id)
-        if (catalogue == null || path == null) {
+        val text = SelectionShare.linkFor(ref)
+        if (text == null) {
             _state.update {
                 it.copy(message = Message(context.getString(R.string.notice_link_online_only)))
             }
             return
         }
-        val text = catalogue.webUrlFor(path)
-            ?: "${ref.title} — ${catalogue.displayName}, at $path — ${catalogue.homeUrl}"
         _share.tryEmit(
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"

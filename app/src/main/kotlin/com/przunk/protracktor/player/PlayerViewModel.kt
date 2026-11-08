@@ -135,6 +135,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun shareAsAudio(track: TrackRef) = controller.shareAsAudio(track)
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
+    fun shareFiles(tracks: List<TrackRef>) = controller.shareFiles(tracks)
+    fun shareLinks(tracks: List<TrackRef>) = controller.shareLinks(tracks)
     fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
     fun resumeSearch() {
         // The same reason: a results tune left waiting paused is still what the notification plays.

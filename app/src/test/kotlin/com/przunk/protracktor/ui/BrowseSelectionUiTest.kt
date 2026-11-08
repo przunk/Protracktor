@@ -106,7 +106,9 @@ class BrowseSelectionUiTest {
         hold(0); compose.onNodeWithText(tracks[2].title).performClick()
         compose.runOnIdle { state.update { it.copy(tracks = tracks.take(2), historyTotal = 2) } }
         compose.waitForIdle(); compose.onNodeWithText(selected(1)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(activity.get().getString(R.string.action_send_to_web)).performClick()
+        // Share for the selection (B59), then its Share with Protracktor.
+        compose.onNodeWithText(activity.get().getString(R.string.action_share)).performClick()
+        compose.onNodeWithText(activity.get().getString(R.string.action_send_to_web)).performClick()
         compose.waitForIdle(); assertEquals(listOf(tracks[0]), shared); assertEquals(0, count())
         hold(0)
         compose.runOnIdle { state.update { it.copy(query = "another producing query") } }

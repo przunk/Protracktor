@@ -86,9 +86,9 @@ fun PlaylistScreen(
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
@@ -190,9 +190,9 @@ internal fun PlaylistBody(
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
@@ -308,11 +308,11 @@ internal fun PlaylistBody(
                 // live-search catalogue, which publishes no index and no author to open one by.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                     ?.let { { onShowNeighbours(it) } },
-                onShareFile = { onShareFile(track) },
+                onShareFile = { onShareFile(listOf(track)) },
                 onShareAudio = { onShareAudio(track) },
                 // Absent for a local file, which has no address anyone else could open.
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
-                    ?.let { { onShareLink(it) } },
+                    ?.let { { onShareLink(listOf(it)) } },
                 // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
                 onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                 dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
@@ -349,44 +349,58 @@ internal fun PlaylistBody(
                     // sitting above it.
                     .padding(bottom = contentPadding.calculateBottomPadding()),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-                ) {
+                // The count on a line of its own above four equal columns (B59): with Select all
+                // and Share added, a count squeezed beside them broke into one letter per line in
+                // Polish, and the last action was clipped.
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
                     Text(
                         text = pluralStringResource(
                             R.plurals.browse_selected, selected.size, selected.size
                         ),
                         style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
                     )
-                    // Icon with its name underneath, like every other action in the app.
-                    LabelledAction(
-                        icon = PlayerIcons.PlaylistAdd,
-                        label = stringResource(R.string.action_add_to_playlist),
-                        onClick = {
-                            onAddSelectedToPlaylist(tracks.filter { it.id in selected })
-                            selected = emptySet()
-                        },
-                    )
-                    LabelledAction(
-                        icon = PlayerIcons.Web,
-                        label = stringResource(R.string.action_send_to_web),
-                        onClick = {
-                            onSendToWeb(tracks.filter { it.id in selected })
-                            selected = emptySet()
-                        },
-                    )
-                    LabelledAction(
-                        icon = PlayerIcons.Remove,
-                        label = stringResource(R.string.action_delete),
-                        onClick = {
-                            onRemoveMany(
-                                tracks.indices.filter { tracks[it].id in selected }
-                            )
-                            selected = emptySet()
-                        },
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        // Icon with its name underneath, like every other action in the app.
+                        LabelledAction(
+                            icon = PlayerIcons.PlaylistAdd,
+                            label = stringResource(R.string.action_add_to_playlist),
+                            onClick = {
+                                onAddSelectedToPlaylist(tracks.filter { it.id in selected })
+                                selected = emptySet()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Select all, or none once all are ticked (B59): the playlist bar had no way to it.
+                        val allSelected = selected.size == tracks.size
+                        LabelledAction(
+                            icon = PlayerIcons.SelectAll,
+                            label = stringResource(if (allSelected) R.string.browse_select_none else R.string.browse_select_all),
+                            onClick = { selected = if (allSelected) emptySet() else tracks.map { it.id }.toSet() },
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Share for the whole selection: files, links, or a Share with Protracktor list.
+                        SelectionShareAction(
+                            tracks = tracks.filter { it.id in selected },
+                            onShareFiles = onShareFile,
+                            onShareAudio = onShareAudio,
+                            onShareLinks = onShareLink,
+                            onSendToWeb = onSendToWeb,
+                            onShared = { selected = emptySet() },
+                            modifier = Modifier.weight(1f),
+                        )
+                        LabelledAction(
+                            icon = PlayerIcons.Remove,
+                            label = stringResource(R.string.action_delete),
+                            onClick = {
+                                onRemoveMany(
+                                    tracks.indices.filter { tracks[it].id in selected }
+                                )
+                                selected = emptySet()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }

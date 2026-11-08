@@ -10,6 +10,7 @@ import { RemoteMusic } from './remote-music.js';
 import { OfflineAsma } from './offline-asma.js';
 import { AsmaView } from './asma-view.js';
 import { MusicCacheView } from './music-cache-view.js';
+import { selectionLinks, uniqueNames } from './selection-share.js';
 import { PlaybackReadAhead, readAheadCandidates, READ_AHEAD_COUNT } from './playback-read-ahead.js';
 import { FolderPrefetch, CacheAheadPreferences } from './folder-prefetch.js';
 import { LibraryDownloads } from './library-downloads.js';
@@ -2791,6 +2792,10 @@ function updateSelectBar() {
   // Delete only where rows can go: one of the user's own playlists, not the phone's, not a
   // session's list.
   $('sel-delete').hidden = browsing || !editorShown || workspace.editor.id === PHONE;
+  // Browse has its own Select all above its list; this one is the playlist's.
+  $('sel-all').hidden = browsing;
+  if (!browsing) setUiText($('sel-all').querySelector('span'),
+    uiMessageText(selected.size && selected.size === visibleTracks().length ? 'Select none' : 'Select all'));
 }
 
 /**
@@ -4965,11 +4970,21 @@ $('sel-add-current').onclick = () => {
   if ($('browse').hidden || workspace.editor.id === PHONE) return;
   addToShowing(browseSelection.take());
 };
+// Share for the whole selection (B59): the phone's menu -- the files, the links, or a Share with
+// Protracktor list; one ticked tune keeps the one-tune menu, audio included. The selection is let go
+// once something is chosen, not when the menu opens, so closing the menu loses nothing.
 $('sel-share').onclick = () => {
   const browsing = !$('browse').hidden;
-  const tracks = browsing ? browseSelection.take() : visibleTracks().filter((entry) => selected.has(entry));
-  if (!browsing) clearSelection();
-  sendToWeb(tracks.map(plain));
+  const tracks = browsing ? browseSelection.capture() : visibleTracks().filter((entry) => selected.has(entry));
+  const done = () => (browsing ? browseSelection.clear() : clearSelection());
+  showMenu(selectionShareItems(tracks).map(([label, act, ...rest]) => [label, () => { done(); return act(); }, ...rest]),
+    $('sel-share'));
+};
+// Select all, or none once all are ticked -- the playlist's bar had no way to it (B59).
+$('sel-all').onclick = () => {
+  const rows = visibleTracks();
+  selected = selected.size === rows.length ? new Set() : new Set(rows);
+  render();
 };
 $('sel-delete').onclick = () => {
   const ats = visibleTracks().map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
@@ -5591,6 +5606,54 @@ function shareItems(entry, back = null) {
     [uiMessageText('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
     [uiMessageText('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
     [uiMessageText('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+  ];
+}
+
+/** Several tunes' files, saved one after another under names unique in the batch (B59). */
+async function saveFiles(entries) {
+  const names = uniqueNames(entries.map((entry) => entry.file || entry.name || 'tune'));
+  let saved = 0;
+  for (const [i, entry] of entries.entries()) {
+    try {
+      const bytes = await bytesOf(entry);
+      if (!bytes) continue;
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = names[i]; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      saved++;
+    } catch { /* counted below */ }
+  }
+  const missed = entries.length - saved;
+  status(missed ? uiMessageText('Saved {saved} of {all}; {missed} could not be read', { saved, all: entries.length, missed })
+    : uiPluralText(saved, 'Saved {n} file', 'Saved {n} files'));
+}
+
+/** Several tunes' addresses, one per line; a row from the phone has none and is counted (B59). */
+async function copyLinks(entries) {
+  const { text, shared, without } = selectionLinks(entries);
+  if (!shared) { status(uiMessageText('that one stayed on the phone — it has no address')); return; }
+  const said = without ? uiMessageText('{n} links copied; {without} from the phone have none', { n: shared, without })
+    : uiPluralText(shared, '{n} link copied', '{n} links copied');
+  try {
+    await navigator.clipboard.writeText(text);
+    showNote(said);
+  } catch {
+    showNote(uiMessageText('The browser would not copy it — the address is in Now Playing'));
+    status(text);
+  }
+}
+
+/**
+ * Share for a selection: one ticked tune keeps [shareItems]; several get the same list in the
+ * plural, without Share as audio, which renders each tune and would take a while per tune.
+ */
+function selectionShareItems(entries) {
+  if (entries.length === 1) return shareItems(entries[0]);
+  return [
+    [uiMessageText('Save the files'), () => saveFiles(entries), entries.some((entry) => !entry.local), ICON.save],
+    [uiMessageText('Copy the links'), () => copyLinks(entries), entries.some((entry) => !!entry.url), ICON.link],
+    [uiMessageText('Share with Protracktor'), () => sendToWeb(entries.map(plain)), entries.some(canSendToWeb), ICON.web],
   ];
 }
 

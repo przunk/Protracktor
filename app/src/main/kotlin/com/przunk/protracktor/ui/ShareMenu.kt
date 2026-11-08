@@ -3,13 +3,24 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.przunk.protracktor.R
+import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.player.QueueLink
+import com.przunk.protracktor.player.TrackRef
 
 /**
  * The ways to share one tune. Null is a way this tune has not got -- a file on the phone has no
@@ -34,7 +45,7 @@ internal class ShareActions(
  * closes the menu before the action runs.
  */
 @Composable
-internal fun ShareMenuItems(actions: ShareActions, onBack: (() -> Unit)?, onDone: () -> Unit) {
+internal fun ShareMenuItems(actions: ShareActions, onBack: (() -> Unit)?, onDone: () -> Unit, many: Boolean = false) {
     onBack?.let { back ->
         DropdownMenuItem(
             text = { Text(stringResource(R.string.action_back)) },
@@ -44,9 +55,9 @@ internal fun ShareMenuItems(actions: ShareActions, onBack: (() -> Unit)?, onDone
         HorizontalDivider()
     }
     listOfNotNull(
-        actions.file?.let { Triple(PlayerIcons.Share, R.string.action_share_file, it) },
+        actions.file?.let { Triple(PlayerIcons.Share, if (many) R.string.action_share_files else R.string.action_share_file, it) },
         actions.audio?.let { Triple(PlayerIcons.AudioFile, R.string.action_share_audio, it) },
-        actions.link?.let { Triple(PlayerIcons.Link, R.string.action_share_link, it) },
+        actions.link?.let { Triple(PlayerIcons.Link, if (many) R.string.action_share_links else R.string.action_share_link, it) },
         actions.protracktor?.let { Triple(PlayerIcons.Web, R.string.action_send_to_web, it) },
     ).forEach { (icon, label, action) ->
         DropdownMenuItem(
@@ -66,4 +77,44 @@ internal fun ShareMenuEntry(actions: ShareActions, onOpen: () -> Unit) {
         leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
         onClick = onOpen,
     )
+}
+
+/**
+ * **Share for a selection** (B59, 2026-11-09): the same list as one tune's, for all the ticked ones
+ * -- the files in one share, the links one per line, or a Share with Protracktor link carrying the
+ * list. *Share as audio* only for a single tune: rendering many takes a while each. An option none
+ * of the selection can use is absent, as in the one-tune menu.
+ */
+@Composable
+internal fun SelectionShareAction(
+    tracks: List<TrackRef>,
+    onShareFiles: (List<TrackRef>) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
+    onShareLinks: (List<TrackRef>) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
+    onShared: () -> Unit,
+    slim: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    val actions = ShareActions(
+        file = { onShareFiles(tracks) },
+        audio = tracks.singleOrNull()?.let { one -> { onShareAudio(one) } },
+        link = if (tracks.any { Catalogue.owning(it.id) != null }) ({ onShareLinks(tracks) }) else null,
+        protracktor = if (tracks.any(QueueLink::canSend)) ({ onSendToWeb(tracks) }) else null,
+    )
+    Box(modifier) {
+        LabelledAction(
+            icon = PlayerIcons.Share,
+            label = stringResource(R.string.action_share),
+            slim = slim,
+            onClick = { open = true },
+            // Filling only a share it was given (a weighted column); a slim pill keeps its own width,
+            // or it would take the whole row from its neighbours.
+            modifier = if (slim) Modifier else Modifier.fillMaxWidth(),
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ShareMenuItems(actions, onBack = null, onDone = { open = false; onShared() }, many = tracks.size > 1)
+        }
+    }
 }

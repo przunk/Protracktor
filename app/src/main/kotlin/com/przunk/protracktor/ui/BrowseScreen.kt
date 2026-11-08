@@ -137,9 +137,9 @@ fun BrowseScreen(
      */
     digressionAuthor: String? = null,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -605,9 +605,9 @@ private fun LocalDomain(
     playingId: String?,
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
@@ -742,9 +742,9 @@ private fun OnlineDomain(
     playingId: String?,
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongMetadata: () -> Unit,
@@ -1004,9 +1004,9 @@ private fun SearchDomain(
     playingId: String?,
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onQueryChange: (String) -> Unit,
     onScope: (SearchScope) -> Unit,
@@ -1105,9 +1105,9 @@ private fun HistoryDomain(
     playingId: String?,
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
     onHistoryPage: (Int) -> Unit,
@@ -1244,9 +1244,9 @@ private fun Selectable(
     onEnqueue: ((TrackRef) -> Unit)?,
     onUseForAlarms: ((TrackRef) -> Unit)? = null,
     onShowNeighbours: (TrackRef) -> Unit,
-    onShareFile: (TrackRef) -> Unit,
+    onShareFile: (List<TrackRef>) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
-    onShareLink: (TrackRef) -> Unit,
+    onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onOpenSubfolder: (String) -> Unit = {},
 ) {
@@ -1398,10 +1398,10 @@ private fun Selectable(
                         // rows carry no author, so there is nowhere for this to go.
                         onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                             ?.let { { onShowNeighbours(it) } },
-                        onShareFile = { onShareFile(track) },
+                        onShareFile = { onShareFile(listOf(track)) },
                         onShareAudio = { onShareAudio(track) },
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
-                            ?.let { { onShareLink(it) } },
+                            ?.let { { onShareLink(listOf(it)) } },
                         // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
                         onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                     )
@@ -1468,18 +1468,17 @@ private fun Selectable(
                         contentDescription = stringResource(R.string.action_add_to_playlist),
                     )
                 }
-                IconButton(
-                    onClick = {
-                        val toSend = browse.tracks.filter { it.id in selected }
-                        selected = emptySet()
-                        onSendToWeb(toSend)
-                    },
-                ) {
-                    Icon(
-                        imageVector = PlayerIcons.Web,
-                        contentDescription = stringResource(R.string.action_send_to_web),
-                    )
-                }
+                // Share for the whole selection (B59): files, links, or a Share with Protracktor list,
+                // where this bar used to offer only the last.
+                SelectionShareAction(
+                    tracks = browse.tracks.filter { it.id in selected },
+                    onShareFiles = onShareFile,
+                    onShareAudio = onShareAudio,
+                    onShareLinks = onShareLink,
+                    onSendToWeb = onSendToWeb,
+                    onShared = { selected = emptySet() },
+                    slim = true,
+                )
             }
         }
     }
