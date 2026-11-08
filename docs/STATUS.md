@@ -48,6 +48,16 @@ songdb asking for an id column. With numbers, the fix is the address `/module/<i
 **Mail sent on 2026-11-08** to Monty (who wrote the cutover announcement) and Crown, with the
 earlier unanswered messages forwarded; the songdb issue is drafted in `docs/letters/`.
 
+**AMP answered the same evening (Monty).** A song database or module-id map is possible, but AMP
+updates daily (additions, renames, replacements); their alternative is the token-based REST API
+(`https://amp.dascene.net/api`: module details, search, modules by author, browsing, latest
+additions), with the key added at build time, a dedicated User-Agent and a new key per app update.
+**Replied 2026-11-08, preferring a map file regenerated daily at a fixed URL** (module id, composer
+handle, file name, size, MD5): no key in GPL source or in the browser player, releases independent
+of key rotation; the API with a build-time key offered as the Android-only fallback. He was also
+invited to the closed test (Google account to be added to the existing testers' email list).
+Waiting for his answer; with a map, the fix is a new index and `/module/<id>`.
+
 **Built on `fix/amp-new-site`:** `Amp.ENABLED = false`, and the 1.7.0 notes say AMP is unavailable
 for now. Thirteen tests exercise AMP itself and cannot run with it off; each now begins with
 `assumeTrue(Amp.ENABLED)`, they are listed in `app/src/test/amp-enabled-only.txt`, and
