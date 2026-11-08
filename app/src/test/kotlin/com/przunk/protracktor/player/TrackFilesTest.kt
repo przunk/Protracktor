@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.player
 
+import org.junit.Assume.assumeTrue
 import com.przunk.protracktor.net.UnExoticA
 import com.przunk.protracktor.net.Amp
 import java.util.concurrent.Executors
@@ -31,6 +32,7 @@ class TrackFilesTest {
     }
 
     @Test fun `AMP gzip uses its module URL and decoder receives unpacked bytes`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val original = byteArrayOf(1, 2, 3)
         val packed = java.io.ByteArrayOutputStream().also { output ->
             java.util.zip.GZIPOutputStream(output).use { it.write(original) }

@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.net
 
+import org.junit.Assume.assumeTrue
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
 import org.junit.Assert.*
@@ -61,6 +62,7 @@ class AmpTest {
     }
 
     @Test fun `off cancels only registered work and old epochs remain invalid after reenable`() {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val access = AmpAccess()
         val ticket = access.capture()!!
         var cancelled = 0

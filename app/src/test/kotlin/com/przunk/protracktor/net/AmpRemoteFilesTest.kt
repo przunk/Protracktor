@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.net
 
+import org.junit.Assume.assumeTrue
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import java.net.HttpURLConnection
@@ -57,6 +58,7 @@ class AmpRemoteFilesTest {
     }
 
     @Test fun `off blocks cached bytes and indexes but not an unrelated source`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         var calls = 0
         val files = RemoteFiles(context) { calls++; Reply(it, payload) }
         assertArrayEquals(payload, files.fetch(url))
@@ -73,6 +75,7 @@ class AmpRemoteFilesTest {
     }
 
     @Test fun `AMP protection HTML is not retried with a cookie or stored as music`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         var calls = 0
         val files = RemoteFiles(context) { address ->
             calls++
@@ -84,6 +87,7 @@ class AmpRemoteFilesTest {
     }
 
     @Test fun `turning off disconnects a pending transfer and off-on cannot adopt its late bytes`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         var disconnected = false
@@ -106,6 +110,7 @@ class AmpRemoteFilesTest {
     }
 
     @Test fun `AMP request uses the stable User-Agent and no Referer`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         lateinit var connection: Reply
         val files = RemoteFiles(context) { Reply(it, payload).also { reply -> connection = reply } }
         assertArrayEquals(payload, files.fetch(url))
@@ -115,6 +120,7 @@ class AmpRemoteFilesTest {
     }
 
     @Test fun `AMP refusal is not retried and HTML with a misleading MIME type is not cached`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         for (status in listOf(403, 200)) {
             var calls = 0
             val files = RemoteFiles(context) { address ->
