@@ -9,7 +9,9 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## By platform searches the online catalogues only — on a branch, 2026-11-08
+## By platform searches the online catalogues only — merged, 2026-11-08
+
+**Merged into develop** on 2026-11-08 with explicit approval; phone and browser checks not reported.
 
 Reported: "przunk" found 7 tunes under Online and 27 under By platform; the 20 more were local
 folders and playlists, which By platform reached by the 2026-09 design. Decided 2026-11-07: By
@@ -18,7 +20,9 @@ by platform. Built on `feature/platform-search-online`, stacked on `feature/sear
 **Checked:** full gate, 1,488 tests, 1,398 page checks, lint clean; restoring the old reach fails
 `SearchScopeTest` and `LibrarySearchTest`. **Not checked:** phone and browser.
 
-## Q17 Search asks again after a filter change — on a branch, 2026-11-07
+## Q17 Search asks again after a filter change — merged, 2026-11-08
+
+**Merged into develop** on 2026-11-08 with explicit approval; phone and browser checks not reported.
 
 Reported: changing a search filter (for example the platform) reset the results. It was the
 2026-09-06 design: another kind of search cleared the rows, and ticking a catalogue or platform

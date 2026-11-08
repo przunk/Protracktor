@@ -1,6 +1,6 @@
 Based on user feedback:
 
-- Music alarms: prepare offline excerpts and set multiple one-off or repeating alarms.
-- Stop the alarm by recognizing the artist, platform, year or title in a three-choice quiz.
-- Prepare music from a track menu or Now Playing; manage alarms in Browse.
-- Reordered Browse destinations, with scrolling on smaller screens.
+- Feedback in Settings: email the developer or join the testers' group.
+- Volume normalization: switching to another tune in a file no longer starts quiet and jumps after three seconds.
+- Search: changing a filter searches again instead of clearing the results.
+- By platform now searches the online catalogues only.

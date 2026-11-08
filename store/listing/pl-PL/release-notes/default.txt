@@ -1,6 +1,6 @@
 Na podstawie uwag użytkowników:
 
-- Budzik z muzyką: przygotowane fragmenty offline oraz wiele alarmów jednorazowych lub powtarzanych.
-- Wyłączanie alarmu przez rozpoznanie autora, platformy, roku lub tytułu w quizie z trzema odpowiedziami.
-- Przygotowanie muzyki z menu utworu lub ekranu odtwarzania; budziki dostępne w widoku przeglądania.
-- Uporządkowana lista źródeł, przewijana na mniejszych ekranach.
+- Opinie i zgłoszenia w Ustawieniach: e-mail do twórcy albo grupa testerów.
+- Normalizacja głośności: przełączenie na inny utwór w pliku nie zaczyna się już cicho z nagłym skokiem po trzech sekundach.
+- Wyszukiwanie: zmiana filtra wyszukuje ponownie zamiast czyścić wyniki.
+- Wg platformy przeszukuje teraz tylko katalogi online.
