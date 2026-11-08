@@ -54,6 +54,31 @@ looks like. Upload the `-store.png` files; the originals stay as what the phone 
 Source:
 [Google Play preview-asset requirements](https://support.google.com/googleplay/android-developer/answer/9866151?hl=en).
 
+## Next set — to be captured for 1.7.0 (recorded 2026-11-09)
+
+The current screenshots date from **2026-09-24** (around 0.9). Since then the app gained the
+playback Queue, Random with its dice, Saved places, played-before marks, music alarms, playlist
+search, Feedback and Music sources, and the appearance changed. New screenshots are needed.
+
+**Who:** captured by me on the phone — the store requires the real application on a real device,
+and there is no emulator here. **English only:** no Polish screenshots for the store. After
+capture, `node scripts/fit-store-screenshots.mjs store/graphics/<new files>` makes the `-store`
+versions; check them against the rules above before uploading.
+
+Proposed set (six, in this order; dark theme, one coherent library, nothing from AMP while it is
+switched off — C134):
+
+1. a playlist playing, with the dock and a highlighted playing row;
+2. expanded Now Playing with the subsong strip and actions;
+3. Browse root with its destinations (Local, Saved places, Online catalogues, Random, Search,
+   Alarms, History);
+4. Random with the dice and a few heard rows, played-before marks visible;
+5. the Queue with a manual request ahead of its source;
+6. Alarms: the list, or the three-answer recognition screen.
+
+Keep from the capture plan below: no notification banners, personal folder names, provider names
+or music that cannot be shown publicly.
+
 ## Capture plan
 
 Capture the same coherent library and theme in Polish and English:

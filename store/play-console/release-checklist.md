@@ -36,6 +36,8 @@ signing and rollout remain the owner's actions.
 - [x] In **Grow users → Store presence → Main store listing**, paste both locale packages from
       `store/listing/`. *(Done — the owner, 2026-09-30.)*
 - [x] Upload the real screenshots and feature graphic described in `store/graphics/README.md`. *(Done — the owner, 2026-09-30.)*
+- [ ] **New phone screenshots for 1.7.0** — the 2026-09-24 set no longer shows the app; plan in
+      `store/graphics/README.md` ("Next set"), English only, captured on the phone. *(Recorded 2026-11-09.)*
 - [x] Complete **Policy and programs → App content** from `app-content.md`. *(Done — the owner, 2026-09-30.)*
 - [x] Complete **Data safety** from `data-safety.md` and provide the hosted privacy URL. *(Done — the owner, 2026-09-30.)*
 - [x] Complete **Foreground service permissions → mediaPlayback**, including its video. *(Done — the owner, 2026-09-30.)*
