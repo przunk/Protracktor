@@ -113,7 +113,7 @@ test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd
 This is an installable release-variant test APK, not a Play upload artifact. APK SHA-256:
 `6fb98c1bfbcaa1df0de966b2299e45a11970b2d388e2068ef7e27f04a97e2606`.
 
-Ignored `dist/clear-queue-verification/1aec1aa/` retains all JUnit/lint reports, full/companion/
+Ignored `dist/evidence/clear-queue-verification/1aec1aa/` retains all JUnit/lint reports, full/companion/
 build logs, focused/negative probes, R8 mapping, manifest/badging, signature and ZIP contents.
 The pre-hardening interrupted runs remain under the earlier `7912871` and `5c509b0` evidence
 directories; neither identifies the final APK. The initial manual signature-verification command

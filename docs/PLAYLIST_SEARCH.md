@@ -60,7 +60,7 @@ Agent verification:
   sheets and four critical original captures. Header height, overflow, editing/playing/empty
   states and closing restoration were exercised. Capture source `0bdca78` has byte-identical
   WEB inputs to candidate `0ddb961`; the local hash changed during Android/test-fixture
-  cleanup. [Capture gallery](../dist/web-visual-0bdca78-2026-11-01T18-55-38-573Z/index.html).
+  cleanup. [Capture gallery](../dist/evidence/web-visual-0bdca78-2026-11-01T18-55-38-573Z/index.html).
 - **Partially checked:** release packaging, R8 minification, non-debuggable manifest, verified
   test certificate, version and 16 KB ZIP alignment. These establish the installable artifact,
   not phone behaviour. All application inputs match the complete Android/browser checks.
@@ -99,7 +99,7 @@ Agent verification at clean application source **c884b4c**:
 - **Checked:** five clean-source Chromium profiles, **55/55 guards**, no page errors. Full-row PNG
   comparisons reject dimmed results while also proving chrome still dims. The agent inspected
   all five editing originals and the native after-correction bitmap.
-  [Updated capture gallery](../dist/web-visual-c884b4c-2026-11-01T20-26-29-083Z/index.html).
+  [Updated capture gallery](../dist/evidence/web-visual-c884b4c-2026-11-01T20-26-29-083Z/index.html).
 - **Partially checked:** release packaging, R8, non-debuggable manifest, verified test certificate,
   version and 16 KB ZIP alignment. The reported phone result and remaining physical checks are
   separated in [the trial record](TESTING.md#b55-playlist-search-trial--2026-11-01).

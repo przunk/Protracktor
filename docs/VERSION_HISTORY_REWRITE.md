@@ -39,12 +39,12 @@ the completed audit/rewrite uses Python subprocesses instead. No JDK, SDK or sha
 ## Original provenance and recovery
 
 Before object rewriting, the original graph and scoped references were saved to the verified,
-self-contained `dist/version-cleanup/pre-rewrite.bundle` (13,518,139 bytes, 12 refs), and original
+self-contained `dist/evidence/version-cleanup/pre-rewrite.bundle` (13,518,139 bytes, 12 refs), and original
 develop was anchored at `refs/archive/version-cleanup-20261015/develop`.
 The archive is deliberately outside heads/tags and must not be moved along with rewritten branches.
 The bundle is ignored build/maintenance evidence, not a release artifact. Keep it until the owner
 explicitly chooses to remove it. Original reference/worktree snapshots, the one-off tool, full
-JSON mapping, remote snapshots and checksums are in ignored `dist/version-cleanup/`.
+JSON mapping, remote snapshots and checksums are in ignored `dist/evidence/version-cleanup/`.
 
 Preflight directly read GitHub heads/tags: remote develop was `d5dbe4a`, master `2aaeeeb`,
 latest remote version tag `v1.0.0`; no scoped commit is public there. No tag, remote-tracking ref,
@@ -95,7 +95,7 @@ unchanged from the accepted original source. PL/EN resources/store metadata, 581
 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native audio checks,
 140 icon paths, PWA and 11 local server checks passed. Existing JDK and temporary per-class
 isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
-Evidence: ignored `dist/version-cleanup/full-gate*` and `tested-source.txt`.
+Evidence: ignored `dist/evidence/version-cleanup/full-gate*` and `tested-source.txt`.
 
 Recovery was actually tested: import the bundle into a separate ignored bare repository, run
 `git fsck --full`, verify original develop `16bd60d`, total 1193 and unchanged annotated v1.1.0.
@@ -113,7 +113,7 @@ protected checked-out worktrees, required unchanged application/build source sin
 `912122c`, rechecked artifact hashes and matched a fresh GitHub snapshot. It atomically moved
 develop and eight completed task refs; the pre-bump playlist-safety ref remained identical.
 Master, every tag, remote-tracking ref, unrelated head and the archive ref were verified unchanged.
-Evidence: ignored `dist/version-cleanup/promotion.json`, `promote.py` and remote/ref snapshots.
+Evidence: ignored `dist/evidence/version-cleanup/promotion.json`, `promote.py` and remote/ref snapshots.
 
 The final closeout is the third ordinary audit/documentation commit, bringing develop to **1196**.
 This is not a reduction or manual reassignment of versionCode: object rewriting retained 1193,

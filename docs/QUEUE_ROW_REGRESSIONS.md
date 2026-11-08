@@ -91,7 +91,7 @@ public test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a
 This is a release-variant test APK, not a Play upload artifact. APK SHA-256:
 `f7d0396c6080b908900a536b081a9d5d13b34dd48b2e444bf4fab5ed2777904f`.
 
-Ignored `dist/row-regression-verification/aca3cd6/` retains JUnit/lint reports, full/companion/
+Ignored `dist/evidence/row-regression-verification/aca3cd6/` retains JUnit/lint reports, full/companion/
 build logs, focused/negative probes, mapping, badging/manifest, signature and ZIP contents.
 The earlier `fffbafc` layout checkpoint is not the final artifact source.
 

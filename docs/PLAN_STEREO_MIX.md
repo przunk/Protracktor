@@ -41,7 +41,7 @@ remain discussion-only. No dependency, database migration or store release is ne
 At this checkpoint the native control boundary stored the requested width, but rendering had not
 been changed. The production Player/JNI host harness executed 29 checks; 8 failed on Narrow/Mono,
 live changes, paused resume, EOF and recovery expectations. The existing 18 recovery checks remain
-green. Evidence: ignored `dist/stereo-mix-verification/native-red.log`. No phone acceptance,
+green. Evidence: ignored `dist/evidence/stereo-mix-verification/native-red.log`. No phone acceptance,
 full test/lint result or APK is established at this checkpoint.
 
 ## Implementation verification
@@ -64,7 +64,7 @@ server checks also passed. Earlier lint rejected literal percent formatting in t
 both resources now set `formatted="false"`. A subsequent host test worker ran out of memory and
 that run was interrupted. The successful full rerun used a local temporary Gradle init script
 setting the test worker heap to 1 GiB; the existing JDK, app/build configuration and full test
-selection stayed unchanged. Evidence is retained under ignored `dist/stereo-mix-verification/`.
+selection stayed unchanged. Evidence is retained under ignored `dist/evidence/stereo-mix-verification/`.
 
 ## Release APK handoff — 2026-10-13
 

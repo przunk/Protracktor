@@ -89,7 +89,7 @@ This is not the certificate with which Google signs delivered APKs.
 missing timestamp, ZIP attributes and differing JarFile/JarInputStream signature interpretation.
 The retained 1.2.0 verification log contains the same warning categories. This comparison does
 not resolve the warnings or establish Play acceptance. Verification logs, JUnit XML and the reused
-lint report are retained locally in ignored `dist/release-1.3.0-verification/`.
+lint report are retained locally in ignored `dist/evidence/release-1.3.0-verification/`.
 No private key or keystore contents were read by the agent.
 
 Tagged app/native/web/script sources equal the accepted Queue APK source `1a1503f`; the Gradle

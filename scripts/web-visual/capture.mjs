@@ -386,7 +386,8 @@ const selected = options(process.argv.slice(2));
 if (selected.list) { console.log(profiles.map(profile => `${profile.name}: ${profile.width}x${profile.height}`).join('\n')); process.exit(0); }
 const source = git('rev-parse', 'HEAD'), dirty = git('status', '--porcelain').length > 0;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-const output = path.join(root, 'dist', `web-visual-${source.slice(0, 7)}${dirty ? '-dirty' : ''}-${stamp}`);
+// Evidence folders live under dist/evidence/; dist/ itself holds what can be installed or uploaded.
+const output = path.join(root, 'dist', 'evidence', `web-visual-${source.slice(0, 7)}${dirty ? '-dirty' : ''}-${stamp}`);
 await fs.mkdir(output, { recursive: true });
 const report = { at: new Date().toISOString(), source, dirty, inputHashes: await inputs(),
   fixture: 'Generated NSF with five silent subsongs and ProTracker tones, synthetic catalogue/History/bookmarks',

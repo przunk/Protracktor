@@ -110,6 +110,22 @@ suite and lint precede every release (`/mnt/workspace/AGENTS.md` §6) is met her
 on the code being released, once. The reason is time: a forced suite is about fifteen minutes, and
 running it twice on the same commit only doubled the wait.
 
+## Evidence goes in `dist/evidence/`
+
+Decided 2026-11-08. **`dist/` itself holds only what can be installed or uploaded**: APKs, AABs,
+the web package and their checksums — what the workspace rule (`/mnt/workspace/AGENTS.md` §11) puts
+there. **Everything kept as evidence goes in a folder under `dist/evidence/<name>/`**: test logs and
+XML, mutation runs, screenshots, inspected builds, release-preparation work. Name the folder after
+the task and, where several runs are kept, the run (`c131-full-gate-results`,
+`web-visual-<sha>-<time>`). `scripts/web-visual/capture.mjs` writes there already.
+
+Loose logs and reports go in `dist/evidence/logs/`. A `.build.json` describing an artifact stays
+beside it in `dist/`.
+
+On 2026-11-08, 95 such folders were moved from `dist/` to `dist/evidence/` and 123 loose logs,
+lint/test XML and similar files to `dist/evidence/logs/`; every path to them in the repository was
+rewritten to match. Like the rest of `dist/`, none of it is in git.
+
 ## Versions
 
 `docs/BUILD.md` has the scheme. The short of it:

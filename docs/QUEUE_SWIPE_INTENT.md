@@ -86,7 +86,7 @@ test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd
 absence of debuggable flag, executed R8/nonempty mapping, minSdk **29**/targetSdk **36**, and actual
 engine libraries for **arm64-v8a / armeabi-v7a / x86_64**. No AAB or publication-key operation.
 
-Ignored `dist/swipe-intent-verification/f6a5ee4/` retains JUnit/lint reports, full gate/build and
+Ignored `dist/evidence/swipe-intent-verification/f6a5ee4/` retains JUnit/lint reports, full gate/build and
 companion logs, focused/negative probes, mapping, manifest/badging, signature and APK contents.
 [Phone scenarios](TESTING.md#scroll-first-row-gestures--phone-checks-pending).
 

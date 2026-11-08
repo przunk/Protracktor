@@ -90,7 +90,7 @@ gates/lint and the new APK were pending. APK 1248 records the previous handoff.
 The first unfiltered forced run stopped after **1002 cases** (1 failed, 1 skipped) in **301.7 s**:
 the single sampled fade pixel was already at its final value. This is an incomplete gate, not a
 passing application result; lint and companion stages did not run. Evidence is preserved in
-`dist/queue-polish-verification/a526132/failed-gate/`.
+`dist/evidence/queue-polish-verification/a526132/failed-gate/`.
 
 The presentation test now records 12 consecutive 16 ms draw passes and requires multiple
 partially faded frames. It still checks that transport has advanced and the old semantics have
@@ -123,7 +123,7 @@ Checked package `com.przunk.protracktor`, version/code, APK v2 signature and cer
 executed R8/nonempty mapping, minSdk **29**/targetSdk **36**, and actual engine libraries for
 **arm64-v8a / armeabi-v7a / x86_64**. No AAB or publication-key operation.
 
-Ignored `dist/queue-polish-verification/6043902/` retains JUnit/lint reports, full gate/build and
+Ignored `dist/evidence/queue-polish-verification/6043902/` retains JUnit/lint reports, full gate/build and
 companion logs, negative/focused probes, R8 mapping, manifest/badging, signature and APK contents.
 The earlier failed-gate evidence remains under the directory identified above.
 [Phone scenarios](TESTING.md#queue-presentation-polish--phone-checks-pending).
