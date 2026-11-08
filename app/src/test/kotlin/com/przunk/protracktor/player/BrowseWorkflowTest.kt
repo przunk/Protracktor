@@ -314,7 +314,7 @@ class BrowseWorkflowTest {
         // Asking: marked as loading, the previous answer still on screen rather than a blank list.
         assertTrue(f.browse.value.loading); assertEquals(shown, f.browse.value.tracks)
         gate.complete(Unit); drain()
-        assertTrue(f.events.toString(), f.events.any { it.startsWith("local:typed:") && it.endsWith("[c64]") })
+        assertTrue(f.events.toString(), f.events.any { it.startsWith("indexed:typed:") && it.endsWith("[c64]") })
         assertTrue(f.browse.value.searched); assertFalse(f.browse.value.loading)
         assertEquals("a re-run is not a new recent search", listOf("typed"), f.submitted)
     }
@@ -340,7 +340,8 @@ class BrowseWorkflowTest {
         f.workflow.toggleSearchPlatform("c64")
         f.workflow.toggleSearchPlatform("amiga")
         f.filterPause.complete(Unit); drain()
-        val reads = f.events.filter { it.startsWith("local:") }
+        // By platform reads the catalogues only (2026-11-07).
+        val reads = f.events.filter { it.startsWith("indexed:") }
         assertEquals(reads.toString(), 1, reads.size)
         assertTrue(reads.single(), reads.single().endsWith("[amiga, c64]"))
     }
@@ -379,7 +380,7 @@ class BrowseWorkflowTest {
         f.workflow.toggleSearchPlatform("c64")
         f.workflow.setQuery("other")
         f.filterPause.complete(Unit); drain()
-        assertFalse(f.events.toString(), f.events.any { it.startsWith("local:") })
+        assertFalse(f.events.toString(), f.events.any { it.startsWith("local:") || it.startsWith("indexed:") })
     }
 
     @Test fun `ordinary explicit search records its captured query once`() = runBlocking {

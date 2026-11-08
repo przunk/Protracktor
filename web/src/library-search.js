@@ -15,8 +15,9 @@ export function searchScope(kind = 'everywhere', ids = []) {
 export const searchScopeKey = (scope) => JSON.stringify(searchScope(scope.kind, scope.ids));
 export function searchesPlaylists(scope) {
   switch (scope.kind) {
-    case 'everywhere': case 'playlists': case 'platform': return true;
-    case 'online': return false;
+    // By platform is online catalogues only, as on the phone (2026-11-07).
+    case 'everywhere': case 'playlists': return true;
+    case 'online': case 'platform': return false;
     default: throw new TypeError(`Unknown search scope: ${scope.kind}`);
   }
 }
