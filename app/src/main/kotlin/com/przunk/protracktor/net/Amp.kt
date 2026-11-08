@@ -15,7 +15,11 @@ object Amp : Catalogue(
         "ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f/songdb/sources/site/amp.tsv",
 ) {
     // Withdrawal requires a new build; existing installations keep their compiled availability.
-    const val ENABLED: Boolean = true
+    // **Off since 2026-11-08 (C134).** AMP's new site (live 2026-11-03) serves a file only by its
+    // module number, `/module/<id>`; the `/modules/<path>` addresses this index gives answer 404.
+    // The pinned songdb index has paths and MD5s but no module numbers, so no file can be reached
+    // until a number-to-file list exists. Retained references stay; nothing is deleted.
+    const val ENABLED: Boolean = false
     internal val access = AmpAccess()
     override val homeUrl = "https://amp.dascene.net/"
     private const val FILE_BASE = "https://amp.dascene.net/modules/"

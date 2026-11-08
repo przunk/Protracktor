@@ -4,3 +4,5 @@ Na podstawie uwag użytkowników:
 - Normalizacja głośności: przełączenie na inny utwór w pliku nie zaczyna się już cicho z nagłym skokiem po trzech sekundach.
 - Wyszukiwanie: zmiana filtra wyszukuje ponownie zamiast czyścić wyniki.
 - Wg platformy przeszukuje teraz tylko katalogi online.
+
+AMP jest chwilowo niedostępne: archiwum przeniosło się na nową stronę. Wróci w aktualizacji, gdy znów da się pobierać jego pliki.

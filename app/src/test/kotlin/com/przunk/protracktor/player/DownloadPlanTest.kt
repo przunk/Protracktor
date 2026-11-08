@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.player
 
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.Asma
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.Modland
@@ -87,7 +88,9 @@ class DownloadPlanTest {
         rows.drop(1).forEach { line ->
             val fields = line.split('\t')
             assertEquals(4, fields.size)
-            assertEquals(fields[0], ids(fields[2]), DownloadPlan.stepsFor(ids(fields[1]).toSet()))
+            // A build with AMP off plans no AMP step (C134); the shared table describes the AMP-on build.
+            val android = ids(fields[2]).filter { it != Amp.id || Amp.ENABLED }
+            assertEquals(fields[0], android, DownloadPlan.stepsFor(ids(fields[1]).toSet()))
         }
         // WEB excludes AMP and songdb lengths; platform expectations are explicit, never filtered out of results.
     }

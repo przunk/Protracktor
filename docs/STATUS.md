@@ -20,6 +20,41 @@ by platform. Built on `feature/platform-search-online`, stacked on `feature/sear
 **Checked:** full gate, 1,488 tests, 1,398 page checks, lint clean; restoring the old reach fails
 `SearchScopeTest` and `LibrarySearchTest`. **Not checked:** phone and browser.
 
+## C134 AMP downloads fail: the archive moved to a new site — AMP switched off on a branch, 2026-11-08
+
+**Report, 2026-11-08:** `MOD.Nk-SaveTheFunky` from AMP does not play. Every AMP download fails,
+in the published 1.6.0 as well.
+
+**Mechanism (agent-run requests, sent as the app sends them).** AMP replaced its site around
+2026-11-03 and retired the legacy one; its announcement maps downloads from
+`downmod.php?index=[module_id]` to `/module/[module_id]`. The app builds
+`https://amp.dascene.net/modules/<path>` from the songdb index, and those now answer **404** —
+including `M/Major Tom/MOD.human race gold.gz`, which downloaded on 2026-11-01.
+`https://amp.dascene.net/module/49993` returns the reported module directly (200,
+`application/octet-stream`, 284,182 bytes, MD5 `334ba7bc81403ac806836c3d788803fe`, matching the
+index). The index — pinned or songdb's latest — carries paths, sizes and MD5s but **no module
+numbers**; songdb's own builder reads them and drops them. ZXTune still plays AMP because it
+fetches through its author's own CDN and proxy, not from AMP. The 2013 ULTIMOD list from AMP's
+download page has no module numbers either. No browser emulation, protection bypass or crawl was
+used; one plain `curl` request met Cloudflare's block page and was not pursued.
+
+**Decision, 2026-11-08:** switch AMP off for 1.7.0 (`Amp.ENABLED = false`, the existing build
+gate: catalogue hidden, references kept and blocked with the existing notice, nothing deleted) and
+ask for module numbers — a reply in AMP's forum thread, which invites contact, and an issue to
+songdb asking for an id column. With numbers, the fix is the address `/module/<id>`.
+
+**Mail sent on 2026-11-08** to Monty (who wrote the cutover announcement) and Crown, with the
+earlier unanswered messages forwarded; the songdb issue is drafted in `docs/letters/`.
+
+**Built on `fix/amp-new-site`:** `Amp.ENABLED = false`, and the 1.7.0 notes say AMP is unavailable
+for now. Thirteen tests exercise AMP itself and cannot run with it off; each now begins with
+`assumeTrue(Amp.ENABLED)`, they are listed in `app/src/test/amp-enabled-only.txt`, and
+`scripts/test-protracktor.sh` accepts skips only when AMP is off and the skipped tests are exactly
+that list — dropping one line from it fails the run. The shared download-plan case expects the AMP
+step only in an AMP build. **Checked:** full gate, 1,475 tests run and the 13 listed skipped, 1,398
+page checks, lint clean. **Not checked:** the phone (AMP absent from Browse, search and the
+download picker; AMP rows in playlists showing the unavailable notice).
+
 ## Q17 Search asks again after a filter change — merged, 2026-11-08
 
 **Merged into develop** on 2026-11-08 with explicit approval; phone and browser checks not reported.

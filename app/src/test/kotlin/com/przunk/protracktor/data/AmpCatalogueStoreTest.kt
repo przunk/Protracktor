@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.data
 
+import org.junit.Assume.assumeTrue
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.net.Amp
@@ -33,6 +34,7 @@ class AmpCatalogueStoreTest {
     @After fun restore() { Amp.access.setEnabled(true) }
 
     @Test fun `a retired AMP write cannot replace an existing index after an off-on cycle`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val store = CatalogueStore(context)
         store.replaceIndex(Amp, listOf(entry), "test")
         val ticket = Amp.access.capture()!!
@@ -46,6 +48,7 @@ class AmpCatalogueStoreTest {
     }
 
     @Test fun `turning off and pruning preserves playlists History and bookmarks`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val catalogues = CatalogueStore(context)
         catalogues.replaceIndex(Amp, listOf(entry), "test")
         val ref = com.przunk.protracktor.player.TrackRef(
@@ -71,6 +74,7 @@ class AmpCatalogueStoreTest {
     }
 
     @Test fun `off excludes retained AMP rows from every query and on restores them without reindexing`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val store = CatalogueStore(context)
         store.replaceIndex(Amp, listOf(entry), "test")
         store.replaceIndex(Modland, listOf(entry.copy(path = "Protracker/Artist/MOD.other", title = "MOD.other")), "test")

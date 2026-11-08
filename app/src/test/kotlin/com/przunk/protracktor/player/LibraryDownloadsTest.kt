@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.player
 
+import org.junit.Assume.assumeTrue
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Asma
 import com.przunk.protracktor.net.Catalogue
@@ -46,6 +47,7 @@ class LibraryDownloadsTest {
         } finally { Amp.access.setEnabled(true) }
     }
     @Test fun `disabling AMP during index fetch retires progress and does not publish or store late data`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val f = Fixture(this)
         val entered = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()

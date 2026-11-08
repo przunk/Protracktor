@@ -628,6 +628,14 @@ Left as they are: lint (about 130 s) and the page checks (about 115 s), each one
 80 small stages, roughly 290 s together, still run one after another. Running independent stages
 at once is the next step if the gate needs to be shorter.
 
+## Skipped tests: one allowance, while AMP is off — 2026-11-08
+
+The suite refuses any skipped test, because a test that quietly did not run looks like a pass. While
+AMP is switched off (C134), thirteen tests that exercise AMP itself skip themselves with
+`assumeTrue(Amp.ENABLED)`. They are accepted only if `Amp.ENABLED` is false **and** the skipped
+tests are exactly those in `app/src/test/amp-enabled-only.txt`; anything else still fails. When AMP
+returns, they run again and the allowance stops applying.
+
 ## Flat notification icon
 
 The notification glyph shares `GenerateLauncherIcons.java`'s P geometry with the launcher, but

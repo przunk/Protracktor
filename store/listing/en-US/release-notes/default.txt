@@ -4,3 +4,5 @@ Based on user feedback:
 - Volume normalization: switching to another tune in a file no longer starts quiet and jumps after three seconds.
 - Search: changing a filter searches again instead of clearing the results.
 - By platform now searches the online catalogues only.
+
+AMP is unavailable for now: the archive moved to a new website. It will return in an update once its files can be reached again.

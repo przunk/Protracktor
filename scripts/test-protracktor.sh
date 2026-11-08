@@ -68,6 +68,7 @@ if [ -d "$RESULTS_DIR" ]; then
         | awk -F'"' '{a[$1]+=$2} END {printf "%d %d %d %d", a["tests="], a["failures="], a["errors="], a["skipped="]}')"
 fi
 read -r total failures errors skipped <<< "${totals:-0 0 0 0}"
+allowed_skips=0
 
 # Two ways Gradle reports a green suite it did not run, and only one of them was noticed here
 # before: UP-TO-DATE means nothing changed, FROM-CACHE means the answer came out of the build cache.
@@ -110,6 +111,39 @@ if [ "$total" -eq 0 ]; then
     echo "   Looked in: $RESULTS_DIR"
     echo "Full log: $LOG_FILE"
     exit 1
+fi
+
+# **Skips are refused, with one named exception** (C134, 2026-11-08). With AMP off in this build,
+# the tests that exercise AMP itself skip themselves; they are accepted only when AMP is off and the
+# skipped tests are exactly those in app/src/test/amp-enabled-only.txt -- one more, one fewer or any
+# other skip still fails, because a test that quietly did not run is the thing this check exists for.
+if [ "$skipped" -ne 0 ]; then
+    if amp_skips="$(python3 - "$RESULTS_DIR" app/src/test/amp-enabled-only.txt \
+            app/src/main/kotlin/com/przunk/protracktor/net/Amp.kt <<'PY'
+import glob, re, sys, xml.etree.ElementTree as ET
+results, listed, amp = sys.argv[1:4]
+if not re.search(r"const val ENABLED: Boolean = false", open(amp, encoding="utf-8").read()):
+    sys.exit("AMP is on in this build, so nothing may be skipped")
+expected = {l.strip() for l in open(listed, encoding="utf-8") if l.strip() and not l.startswith("#")}
+skipped = set()
+for f in glob.glob(f"{results}/TEST-*.xml"):
+    for case in ET.parse(f).getroot().iter("testcase"):
+        if case.find("skipped") is not None:
+            skipped.add(f"{case.get('classname').rsplit('.', 1)[-1]} > {case.get('name')}")
+if skipped != expected:
+    for name in sorted(skipped - expected): print(f"unexpected skip: {name}")
+    for name in sorted(expected - skipped): print(f"listed but not skipped: {name}")
+    sys.exit(1)
+print(len(skipped))
+PY
+    )"; then
+        echo "⏸  $amp_skips AMP-enabled-only tests skipped: AMP is off in this build (app/src/test/amp-enabled-only.txt)"
+        allowed_skips=$amp_skips
+        skipped=0
+    else
+        echo "❌ Skipped tests outside the AMP-off allowance:"
+        echo "$amp_skips" | sed 's/^/   /'
+    fi
 fi
 
 if [ "$failures" -ne 0 ] || [ "$errors" -ne 0 ] || [ "$skipped" -ne 0 ]; then
@@ -304,4 +338,4 @@ if [ $lint_status -ne 0 ]; then
 fi
 echo "🧹 Lint: $(grep -oE '[0-9]+ errors? and [0-9]+ warnings?|No issues found' "$PROTRACKTOR_LOG_PREFIX-lint.log" | head -1 || echo 'no errors')"
 
-echo "✅ $total tests passed in $(($(date +%s) - started_at))s$cached"
+echo "✅ $((total - allowed_skips)) tests passed in $(($(date +%s) - started_at))s$cached$( [ "$allowed_skips" -gt 0 ] && echo ", $allowed_skips skipped with AMP off" )"

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.player
 
+import org.junit.Assume.assumeTrue
 import android.app.Application
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
@@ -92,6 +93,7 @@ class ManualQueueControllerTest {
     }
 
     @Test fun `AMP admission ignores the old preference and preserves the context`() {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         val amp = TrackRef("amp://A/Artist/MOD.song.gz", "AMP song", fileName = "MOD.song")
         val before = state.value
         try {

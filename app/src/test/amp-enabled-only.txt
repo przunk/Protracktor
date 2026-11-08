@@ -1,0 +1,21 @@
+# Tests that exercise AMP itself and so need a build with `Amp.ENABLED = true`.
+#
+# Each begins with `assumeTrue(..., Amp.ENABLED)`. In a build with AMP off (C134, 2026-11-08) they are
+# skipped, and `scripts/test-protracktor.sh` accepts skips **only** when AMP is off and the skipped
+# tests are exactly these -- any other skip, or one more or one fewer, still fails the run. When AMP
+# is switched back on they run as before.
+#
+# One line per test, as Gradle names it: `Class > test name`.
+AmpCatalogueStoreTest > a retired AMP write cannot replace an existing index after an off-on cycle
+AmpCatalogueStoreTest > off excludes retained AMP rows from every query and on restores them without reindexing
+AmpCatalogueStoreTest > turning off and pruning preserves playlists History and bookmarks
+AmpRemoteFilesTest > AMP protection HTML is not retried with a cookie or stored as music
+AmpRemoteFilesTest > AMP refusal is not retried and HTML with a misleading MIME type is not cached
+AmpRemoteFilesTest > AMP request uses the stable User-Agent and no Referer
+AmpRemoteFilesTest > off blocks cached bytes and indexes but not an unrelated source
+AmpRemoteFilesTest > turning off disconnects a pending transfer and off-on cannot adopt its late bytes
+AmpTest > off cancels only registered work and old epochs remain invalid after reenable
+LibraryDownloadsTest > disabling AMP during index fetch retires progress and does not publish or store late data
+ManualQueueControllerTest > AMP admission ignores the old preference and preserves the context
+QueueCatalogueCompatibilityTest > enabled AMP remains playable and discoverable with queue retention guards
+TrackFilesTest > AMP gzip uses its module URL and decoder receives unpacked bytes

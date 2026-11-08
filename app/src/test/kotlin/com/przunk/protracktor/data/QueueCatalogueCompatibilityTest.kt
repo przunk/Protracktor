@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.data
 
+import org.junit.Assume.assumeTrue
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.net.Amp
@@ -61,6 +62,7 @@ class QueueCatalogueCompatibilityTest {
     }
 
     @Test fun `enabled AMP remains playable and discoverable with queue retention guards`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
         Amp.access.setEnabled(true)
         val store = CatalogueStore(context)
         assertFalse(CatalogueRetention.blocksReference("amp://A/Artist/MOD.retained.gz"))
