@@ -20,7 +20,9 @@ by platform. Built on `feature/platform-search-online`, stacked on `feature/sear
 **Checked:** full gate, 1,488 tests, 1,398 page checks, lint clean; restoring the old reach fails
 `SearchScopeTest` and `LibrarySearchTest`. **Not checked:** phone and browser.
 
-## C134 AMP downloads fail: the archive moved to a new site — AMP switched off on a branch, 2026-11-08
+## C134 AMP downloads fail: the archive moved to a new site — AMP switched off, merged 2026-11-08
+
+**Merged into develop** on 2026-11-08 after the owner reported APK 1.6.0 (1491), source `e5507693`, working on the phone. AMP returns when module numbers are available.
 
 **Report, 2026-11-08:** `MOD.Nk-SaveTheFunky` from AMP does not play. Every AMP download fails,
 in the published 1.6.0 as well.
