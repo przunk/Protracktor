@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.7.0 — versionCode 1496
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.7.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-1.7.0-1496.aab` |
+| Size | 22742179 bytes |
+| SHA-256 | `217214b5e90d3fdaa556324d771e674a718cde384ec3ef9330cda0de0350784e` |
+| versionCode | 1496 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 1.7.0 |
+| Commit | `3692557d` |
+| Tag | `v1.7.0` |
+| Built | 2026-11-08 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v1.6.0**: `git log --oneline v1.6.0..v1.7.0`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 1.6.0 — published on Google Play, 2026-11-07
 
 1.6.0 (1467) is published on Google Play for closed testing; production access has still not been
