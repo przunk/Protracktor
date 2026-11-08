@@ -24,7 +24,7 @@ Build: 118.7 s. Package/name/code, APK v2 test signature, absent debuggable flag
 nonempty mapping, minSdk 29/targetSdk 36 and arm64-v8a/armeabi-v7a/x86_64 engine libraries checked.
 Public test certificate SHA-256:
 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
-Retained reports: `dist/manual-queue-verification/783d8fa/` (ignored artifacts, not source files).
+Retained reports: `dist/evidence/manual-queue-verification/783d8fa/` (ignored artifacts, not source files).
 
 ## Every implementation commit reviewed
 
@@ -131,7 +131,7 @@ Package `com.przunk.protracktor`, versionName **1.2.0**, code **1239**, APK v2 s
 same public test certificate as the first build. Absent debuggable flag, actual R8 task/nonempty
 mapping, minSdk 29/targetSdk 36 and all three engine ABIs checked again. Not an AAB/store release.
 
-Retained evidence: `dist/manual-queue-verification/3d27868/` contains fresh JUnit/lint reports,
+Retained evidence: `dist/evidence/manual-queue-verification/3d27868/` contains fresh JUnit/lint reports,
 all gate/build logs, mapping, manifest/badging, public signature output and earlier focused/
 negative probes under `probes/`. The first iteration remains separately under `783d8fa/`.
 

@@ -358,7 +358,7 @@ Clean source **`da75839789726ce42aed9c383f9c196bf87f2261`** passed
 - All companion stages passed: store metadata, runner/release fixtures, 581 page checks,
   49 engine checks, eight SAP checks, database upgrade, native audio, icons, PWA and 11 server checks.
 - Local documentation link check: 118 targets, none missing.
-- Unit XML and logs are retained in ignored `dist/queue-verification/`.
+- Unit XML and logs are retained in ignored `dist/evidence/queue-verification/`.
 
 `./scripts/build-release.sh --no-daemon -Pkotlin.compiler.execution.strategy=in-process`
 built the clean source in **143 s**. R8 executed, its mapping is nonempty, and the APK is not
@@ -447,7 +447,7 @@ signature and all three engine ABI entries:
 | SDK / engine ABIs | min 29, target 36; arm64-v8a, armeabi-v7a, x86_64 |
 
 Logs, full JUnit XML, lint XML and mapping are retained in ignored
-`dist/queue-verification/feedback-bc32bea/`. The previous artifact remains an immutable checkpoint.
+`dist/evidence/queue-verification/feedback-bc32bea/`. The previous artifact remains an immutable checkpoint.
 Device confirmation of these refinements and actual AMP interchange are **unchecked**; general
 positive feedback does not certify every scenario. No merge, push, tag movement or store release
 occurred. Develop remains `9ca86ea`, AMP `8e92002`, master `794d8f9`. Documentation-only closeout
@@ -493,7 +493,7 @@ built the minified, test-signed APK in **98 s**:
 | SDK / engine ABIs | min 29, target 36; arm64-v8a, armeabi-v7a, x86_64 |
 
 JUnit XML, unit/lint logs, lint XML, the normal debug manifest, merge-build log and mapping are
-retained in ignored `dist/queue-verification/integration-069b238/`. Later documentation-only
+retained in ignored `dist/evidence/queue-verification/integration-069b238/`. Later documentation-only
 commits do not relabel this APK or its source. The original experiment branch is integrated;
 further queue work must start on a new task branch from develop, not continue that branch.
 

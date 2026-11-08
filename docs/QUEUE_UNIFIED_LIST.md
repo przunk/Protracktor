@@ -222,7 +222,7 @@ executed R8/nonempty mapping, minSdk **29**, targetSdk **36** and actual engine 
 **arm64-v8a / armeabi-v7a / x86_64**. APK contents were listed using the JDK jar tool because
 unzip is unavailable on this host. No publication key/AAB/store operation was used.
 
-Retained evidence under ignored `dist/unified-queue-verification/613b154/`: JUnit XML, lint HTML/XML,
+Retained evidence under ignored `dist/evidence/unified-queue-verification/613b154/`: JUnit XML, lint HTML/XML,
 full gate/build/companion logs, R8 mapping, manifest/badging, public signature and APK contents;
 `probes/` retains focused positive/negative runs and the pre-final-highlight gate separately.
 Final documentation destinations were checked: **161 existing local links, none missing**.

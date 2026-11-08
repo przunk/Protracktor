@@ -109,7 +109,7 @@ matches the tagged source. The public upload-certificate fingerprint matches the
 this is not evidence of the certificate Google uses to sign delivered APKs. `jarsigner` reports
 `jar verified.` with warnings about trust/self-signing, missing timestamp, ZIP attributes and
 JarFile/JarInputStream manifest/signature interpretation. Complete output is retained locally in
-`dist/release-1.2.0-signature-verification.log`; local signature verification does not establish
+`dist/evidence/logs/release-1.2.0-signature-verification.log`; local signature verification does not establish
 Play acceptance. The same warning categories are present when verifying the retained 1.1.0 AAB
 with the same JDK; this comparison does not resolve them or establish Play acceptance. No private
 key or keystore content was read.

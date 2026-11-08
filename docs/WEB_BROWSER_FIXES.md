@@ -98,7 +98,7 @@ no merge, push, release tag or APK; the later integration is recorded below.
 
 ### Artifacts
 
-- [Updated gallery](../dist/web-visual-30112cf-2026-10-31T18-43-29-407Z/index.html) and [visual assessment](../dist/web-visual-30112cf-2026-10-31T18-43-29-407Z/REVIEW.md).
+- [Updated gallery](../dist/evidence/web-visual-30112cf-2026-10-31T18-43-29-407Z/index.html) and [visual assessment](../dist/evidence/web-visual-30112cf-2026-10-31T18-43-29-407Z/REVIEW.md).
 - [Portable visual report](../dist/protracktor-web-visual-fixes-30112cf-20261031.tar.gz): **8957315 bytes**,
   SHA-256 `51bda2678aa205040e87f6387cd5f10d3f2173a4d9ebf967bf0d42fec6eadf02`.
 - [Installable WEB distribution](../dist/protracktor-web-30112cf-20261031-200521-791608657.tar.gz): **1610349 bytes**,

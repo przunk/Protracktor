@@ -82,7 +82,7 @@ contents were read by the agent.
 missing timestamp, ignored POSIX attributes and differing JarFile/JarInputStream interpretation.
 The retained 1.3.0 verification log has the same warning categories. This comparison does not
 resolve them or establish Play acceptance. Logs, JUnit XML, the reused lint report and artifact/
-signature inspection are retained locally in ignored `dist/release-1.4.0-verification/`.
+signature inspection are retained locally in ignored `dist/evidence/release-1.4.0-verification/`.
 
 Application/native/web/script sources match smoke-test APK source **296de93**; the Gradle change
 is only versionName 1.3.0 to 1.4.0. Schema remains **23**. That earlier APK **1.3.0 (1301)** is not

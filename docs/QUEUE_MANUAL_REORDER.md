@@ -106,7 +106,7 @@ Checked package `com.przunk.protracktor`, version/code, APK v2 signature with ce
 executed R8/nonempty mapping, minSdk **29**/targetSdk **36** and actual engine libraries for
 **arm64-v8a / armeabi-v7a / x86_64**. No AAB, publication-key or store operation.
 
-Retained evidence under ignored `dist/manual-reorder-verification/0082064/`: JUnit/lint reports,
+Retained evidence under ignored `dist/evidence/manual-reorder-verification/0082064/`: JUnit/lint reports,
 full gate/build/companion logs, R8 mapping, manifest/badging, public signature, APK contents and
 focused/negative probes. [Phone scenarios](TESTING.md#manual-block-reorder-and-long-press-info--phone-checks-pending).
 Final documentation check: 168 local destinations exist; application/native/web/script sources

@@ -74,7 +74,7 @@ the final focused rerun again passed 63 with zero failures/errors/skips.
 
 No actual PlaybackService lifecycle, real MediaController/SystemUI delivery, lock-screen layout or
 phone persistence result is established by those host checks. Full gate and combined APK were prepared on
-B46's explicitly approved stacked branch. Evidence: ignored `dist/notification-search-verification/`.
+B46's explicitly approved stacked branch. Evidence: ignored `dist/evidence/notification-search-verification/`.
 
 ## Combined host verification — 2026-10-13
 
@@ -175,7 +175,7 @@ focused results. Full combined tests/lint and a replacement release APK still fo
 failures/errors/skips; lint 0 errors/72 warnings, all existing web/native/resource/store/loopback
 checks passed. Forced run took 364 s with the same temporary worker isolation and existing JDK,
 without exclusions or repository settings changed. Evidence:
-`dist/notification-search-verification/full-gate-stable-heart*`. B46/search sources are unchanged
+`dist/evidence/notification-search-verification/full-gate-stable-heart*`. B46/search sources are unchanged
 from the owner-tested field build. A replacement minified APK and corrected phone retest follow.
 
 **Stable-heart release handoff, 2026-10-14:** minified **1.3.0 (1162)**, clean source `ea04525`,

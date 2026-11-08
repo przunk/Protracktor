@@ -165,8 +165,8 @@ and PWA lifecycle acceptance remain unchecked.
 
 ### Artifacts
 
-- [Gallery](../dist/web-visual-f1bf550-2026-10-31T18-27-21-332Z/index.html)
-- [Capture/assessment metadata](../dist/web-visual-f1bf550-2026-10-31T18-27-21-332Z/report.json)
+- [Gallery](../dist/evidence/web-visual-f1bf550-2026-10-31T18-27-21-332Z/index.html)
+- [Capture/assessment metadata](../dist/evidence/web-visual-f1bf550-2026-10-31T18-27-21-332Z/report.json)
 - [Portable report archive](../dist/protracktor-web-visual-f1bf550-20261031.tar.gz): **9,411,735 bytes**,
   SHA-256 `7449623ca06db98d23de92d26b95cde89470f5ad34a053938c5337f486114631`.
 

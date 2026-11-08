@@ -2369,7 +2369,7 @@ zero failures/errors/skips; lint zero errors/72 warnings (unchanged). PL/EN reso
 140 icon paths, PWA and 11 local server checks passed. No exclusions or toolchain changes.
 Backup recovery/import/fsck also passed with original count/tag/develop; all saved artifact hashes
 match, and a second direct GitHub read confirms the unchanged publication boundary.
-Evidence: ignored `dist/version-cleanup/`. No new APK or release is prepared here.
+Evidence: ignored `dist/evidence/version-cleanup/`. No new APK or release is prepared here.
 The original graph is retained in an archive ref and a verified Git bundle. Guarded ref promotion
 succeeded at `f0ca1a9`: nine local refs moved, one affected identity ref remained unchanged.
 Develop and completed scoped task branches now use the rewritten graph. Master, tags, remote refs
@@ -2615,7 +2615,7 @@ device regressions. No fixes or new APK were made. Sources still match the accep
 **Recorded:** 2026-10-14. **Source:** code review and controlled host diagnostic, not user feedback.
 Suspend activation 2's track read, finish activation 3, then finish 2. Actual result: persistence
 target 3, visible playlist 2 with its rows. A temporary correctness test executed once and failed
-its latest-selection assertion; source/XML/log retained in ignored `dist/daily-review-20261014/`.
+its latest-selection assertion; source/XML/log retained in ignored `dist/evidence/daily-review-20261014/`.
 The switch method is unchanged from baseline `79244e0`, so this is not a new C103/B48 regression.
 
 Each activation publishes independently without a latest-request guard. C103 prevents the mismatched
@@ -2667,7 +2667,7 @@ failures/errors/skips; lint 0 errors/72 warnings (unchanged). All existing PL/EN
 581 page, 49 WASM engine, 8 SAP, browser database upgrade, 30 native audio, 140 icon-path, PWA and
 11 loopback server checks passed. Same temporary per-class worker isolation, one worker/1 GiB
 heap and existing JDK, without exclusions or repository build-setting changes. Evidence:
-ignored `dist/notification-search-verification/full-gate-stable-heart*`.
+ignored `dist/evidence/notification-search-verification/full-gate-stable-heart*`.
 The replacement minified APK is ready below. Develop/master, tags and store are unchanged.
 
 **Checked artifact:** **1.3.0 (1162)**, clean source `ea04525`, built in 51 s:
@@ -2699,7 +2699,7 @@ presentation change. The forced combined gate passed in 346 s: 835 unit tests in
 zero failures/errors/skips, lint 0 errors/72 warnings, plus all existing web/native/resource/store
 and loopback checks listed below. It used the same temporary per-class worker isolation and JDK,
 without exclusions or repository build-setting changes. Evidence is in ignored
-`dist/notification-search-verification/full-gate-presentation*`. A replacement minified APK is
+`dist/evidence/notification-search-verification/full-gate-presentation*`. A replacement minified APK is
 ready below. Nothing has been merged into develop/master or pushed. Phone acceptance remains pending.
 
 **Checked replacement artifact:** **1.3.0 (1158)**, clean source `f289863`, built in 56 s:
@@ -2730,7 +2730,7 @@ Two earlier shared-worker attempts were stopped after Compose idle timeouts (Set
 Search teardown); Settings passed separately without source changes. The successful gate used
 temporary per-class worker isolation and a 1 GiB heap on the existing JDK, without exclusions or
 repository build-setting changes. The timeout mechanism is not established. Evidence is in ignored
-`dist/notification-search-verification/`; [details](PLAN_RECENT_SEARCHES.md).
+`dist/evidence/notification-search-verification/`; [details](PLAN_RECENT_SEARCHES.md).
 Both features remain unmerged. A clean-source combined release APK is ready; phone behaviour is
 **not checked**. Master, tags, schema and store publication are unchanged.
 
@@ -2932,7 +2932,7 @@ of those 38 tests; both production sources were restored and their SHA-256 value
 failures/errors/skips; lint completed with 0 errors and 68 warnings. Also passed: PL/EN strings,
 store metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database
 upgrade, 137 icon paths, PWA checks and 11 loopback server checks. Duration: 310 s.
-Logs/XML and lint report: ignored `dist/playlist-write-safety/`.
+Logs/XML and lint report: ignored `dist/evidence/playlist-write-safety/`.
 **Not checked:** real phone/SQLite timing or long-term behaviour.
 No standalone APK was built: C103 is included in the minified combined trial recorded above.
 Merged at `f4c9bf1` with the owner's approval of the combined work. The Bluetooth checklist results
@@ -3092,7 +3092,7 @@ verify this follow-up. Phone behaviour remains unverified.
 **1.0.0 (1120)**, clean source `3c7ae8e`, built in 118 s; 11,742,546 bytes.
 SHA-256: `1c587ca3013d7c29e8105e127c2627db05427c291f91fafed052c0bff24d2383`.
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; verified v2 test signature matches
-1118. Evidence: `dist/b42-undo-verification/`. The handoff commit changes documentation only.
+1118. Evidence: `dist/evidence/b42-undo-verification/`. The handoff commit changes documentation only.
 No merge or publication.
 
 **Presentation refinement, host verified:** the owner requested outlined/filled Bookmark controls
@@ -3108,7 +3108,7 @@ The revised UI is not yet verified on the phone.
 **1.0.0 (1118)**, clean source `84fa8a8`, built in 98 s; 11,740,154 bytes.
 SHA-256: `5f9e373fbe4e282eee41ba9b0d99262fee49e37fb227905683f0a88ce3fd968f`.
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; v2 test signature matches 1116.
-Evidence: `dist/b42-bookmark-verification/`. No merge or publication. The 1116 artifact below is
+Evidence: `dist/evidence/b42-bookmark-verification/`. No merge or publication. The 1116 artifact below is
 the preceding presentation candidate, retained for traceability.
 
 The owner approved `feature/saved-places` from B43's `54a933a` to test both features in one APK.
@@ -3131,7 +3131,7 @@ requires a forward-compatible build preserving the installed schema and user dat
 **1.0.0 (1116)**, built from clean `3f8df94` in 118 s, 11,739,334 bytes. SHA-256:
 `d43b15266783814cf7202918687fc60f34faee9b78b7645b23971c587c23222a`.
 Minified/non-debuggable release, three ABIs, APK Signature Scheme v2 verified with the same test
-certificate as B43. Logs and previews: `dist/b42-verification/`. The following handoff commit
+certificate as B43. Logs and previews: `dist/evidence/b42-verification/`. The following handoff commit
 changes documentation only. No merge, push, tag, master change, AAB or publication.
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
@@ -3144,7 +3144,7 @@ failures/errors/skips, lint without errors and the same companion checks listed 
 new layout tests failed on the old placement and passed after the change; seven UI tests include
 actual long-press selection. Four native-render tests generated eight previews; EN-light and
 PL-dark Browse/Random previews were inspected. Logs/previews are in
-`dist/b43-status-column-verification/`. The 1111 artifact below is the first visual trial.
+`dist/evidence/b43-status-column-verification/`. The 1111 artifact below is the first visual trial.
 Playback, History qualification and schema 22 are unchanged.
 Phone appearance and usefulness remain unverified; no acceptance or merge is inferred.
 
@@ -3190,7 +3190,7 @@ Two additional native-render tests passed; four EN/PL light/dark previews were i
 updates, PL accessibility and the Info action. **Not checked:** actual phone playback/UI,
 background behaviour, upgrade on the owner's data and usefulness. See
 [the local PR/handoff](https://github.com/przunk/protracktor/blob/2c35319cfa8b665398a36141248b45544bd68ebe/docs/PR_B43_PLAYED_BEFORE.md) for evidence and the trial checklist.
-Verification logs/previews are retained in `dist/b43-verification/`. No merge, push, master/tag
+Verification logs/previews are retained in `dist/evidence/b43-verification/`. No merge, push, master/tag
 change, AAB or publication occurred. Version name remains 1.0.0 under the owner's publication freeze.
 
 **Release artifact checked:** built in 132 s from clean `7ea74d3` using
@@ -3224,7 +3224,7 @@ upgrade, 135 icon paths, 8 server checks and store metadata validation. No WASM 
 Logs: `/tmp/protracktor-user-agent-{red,green,mutation}.log`,
 `/tmp/protracktor-Protracktor-{test,lint}.log`; output root
 `/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
-Copies of these logs and the build log are retained in `dist/unexotica-user-agent-verification/`.
+Copies of these logs and the build log are retained in `dist/evidence/unexotica-user-agent-verification/`.
 
 **Release artifact checked:** `scripts/build-release.sh --no-daemon --max-workers=2
 -Pkotlin.compiler.execution.strategy=in-process` passed in 611 s from clean `dfcc825`:

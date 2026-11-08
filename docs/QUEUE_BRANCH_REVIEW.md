@@ -106,7 +106,7 @@ test-certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd
 This is an installable release-variant test APK, not a Play upload artifact. APK SHA-256:
 `0317cccb20526608a6c8f0cec324254a335ace4a0ad151b34ae1c99d7b5d6e5b`.
 
-Ignored `dist/queue-follow-verification/1a1503f/` retains JUnit/lint reports, full/companion/build
+Ignored `dist/evidence/queue-follow-verification/1a1503f/` retains JUnit/lint reports, full/companion/build
 logs, restored focused/negative probes, R8 mapping, badging/manifest, signature and ZIP contents.
 Earlier checkpoints are under the adjacent `checkpoint`, `audit-first-run` and `audit-restored`
 directories; they do not identify the final APK. The incomplete first focused run is not a pass.

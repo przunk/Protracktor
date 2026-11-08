@@ -56,7 +56,7 @@ implemented on this branch. Version 1.3.0 identifies the combined feature trial;
 **Checked:** 42 focused host tests passed: 8 pure rules, 4 preference tests, 26 workflow tests and
 4 actual Browse/Compose tests. Deliberately changing prefix matching/limit, recorded query,
 suggestion submission and preference persistence failed 11/42 tests. All four sources were
-restored and SHA-256 compared. Evidence is in ignored `dist/notification-search-verification/`.
+restored and SHA-256 compared. Evidence is in ignored `dist/evidence/notification-search-verification/`.
 The final restored full gate/lint passed as recorded below; the combined release APK is ready.
 Real phone keyboard, focus/layout, restart and notification behaviour remain **not checked**.
 
@@ -119,7 +119,7 @@ real keyboard, touch layout and notification placement remain phone checks.
 zero failures/errors/skips; lint 0 errors/72 warnings (unchanged count). All existing PL/EN,
 store, web, native audio, icon, PWA and loopback checks also passed. The same temporary per-class
 worker isolation/1 GiB heap and existing JDK were used, without exclusions or repository settings
-changed. Evidence: ignored `dist/notification-search-verification/full-gate-presentation*`.
+changed. Evidence: ignored `dist/evidence/notification-search-verification/full-gate-presentation*`.
 The replacement release APK is recorded below; phone acceptance is still pending and
 develop/master are unchanged.
 
