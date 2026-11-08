@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -231,6 +232,7 @@ class BrowseWorkflowTest {
         } }
         f.workflow.runSearch()
         entered.await()
+        f.filterPause = CompletableDeferred()
         when (change) {
             "query" -> f.workflow.setQuery("other words")
             "scope" -> f.workflow.setSearchScope(SearchScope.Everywhere)
@@ -240,10 +242,13 @@ class BrowseWorkflowTest {
         }
         val expected = f.browse.value
         gate.complete(Unit)
-        drain()
+        // The retired read finishes first; a filter change's own re-run is held until afterwards.
+        repeat(50) { yield() }
         assertSame(change, expected, f.browse.value)
         assertFalse(change, f.browse.value.loading)
         assertTrue(change, f.liveResults.isEmpty())
+        f.filterPause.complete(Unit)
+        drain()
     }
 
     @Test(timeout = 5_000) fun `editing words retires the pending search`() = runBlocking { pendingSearchIsRetired("query") }
@@ -292,6 +297,91 @@ class BrowseWorkflowTest {
         assertFalse(f.events.any { it.startsWith("local:prefix:") })
     }
 
+    @Test(timeout = 5_000)
+    fun `ticking a platform after a search asks it again, keeping the rows until the answer`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searchScope = SearchScope.ByPlatform()) }
+        f.workflow.runSearch(); drain()
+        val shown = f.browse.value.tracks
+        f.filterPause = CompletableDeferred()
+        f.workflow.toggleSearchPlatform("c64")
+        // Before the pause ends: still the old rows, nothing asked yet.
+        assertEquals(shown, f.browse.value.tracks)
+        assertFalse(f.events.any { it.contains("[c64]") })
+        val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+        f.onRead = { if (it.endsWith("[c64]")) { entered.complete(Unit); gate.await() } }
+        f.filterPause.complete(Unit); entered.await()
+        // Asking: marked as loading, the previous answer still on screen rather than a blank list.
+        assertTrue(f.browse.value.loading); assertEquals(shown, f.browse.value.tracks)
+        gate.complete(Unit); drain()
+        assertTrue(f.events.toString(), f.events.any { it.startsWith("local:typed:") && it.endsWith("[c64]") })
+        assertTrue(f.browse.value.searched); assertFalse(f.browse.value.loading)
+        assertEquals("a re-run is not a new recent search", listOf("typed"), f.submitted)
+    }
+
+    @Test(timeout = 5_000)
+    fun `ticking a catalogue after a search asks it again in the new catalogues`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searchScope = SearchScope.Online(setOf("indexed"))) }
+        f.workflow.runSearch(); drain()
+        f.events.clear()
+        f.workflow.toggleSearchCatalogue(ModArchive.id)
+        drain()
+        assertTrue(f.events.toString(), f.events.any { it.startsWith("live:typed") })
+    }
+
+    @Test(timeout = 5_000)
+    fun `several chips ticked in a row are one search, for the last state`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searchScope = SearchScope.ByPlatform()) }
+        f.workflow.runSearch(); drain()
+        f.events.clear()
+        f.filterPause = CompletableDeferred()
+        f.workflow.toggleSearchPlatform("c64")
+        f.workflow.toggleSearchPlatform("amiga")
+        f.filterPause.complete(Unit); drain()
+        val reads = f.events.filter { it.startsWith("local:") }
+        assertEquals(reads.toString(), 1, reads.size)
+        assertTrue(reads.single(), reads.single().endsWith("[amiga, c64]"))
+    }
+
+    @Test(timeout = 5_000)
+    fun `another kind of search clears the rows and asks again in the new scope`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH) }
+        f.localSearch(); f.workflow.runSearch(); drain()
+        f.events.clear()
+        f.filterPause = CompletableDeferred()
+        f.workflow.setSearchScope(SearchScope.Online())
+        assertTrue(f.browse.value.tracks.isEmpty())
+        f.filterPause.complete(Unit); drain()
+        assertTrue(f.events.toString(), f.events.any { it.startsWith("indexed:typed:") })
+        assertFalse(f.browse.value.tracks.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `a filter changed before any search was asked does not search`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searched = false, searchScope = SearchScope.ByPlatform()) }
+        f.workflow.toggleSearchPlatform("c64")
+        f.workflow.setSearchScope(SearchScope.Local)
+        drain()
+        assertFalse(f.events.toString(), f.events.any { it.startsWith("local:") || it.startsWith("indexed:") })
+    }
+
+    @Test(timeout = 5_000)
+    fun `typing while a re-run waits cancels it`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searchScope = SearchScope.ByPlatform()) }
+        f.workflow.runSearch(); drain()
+        f.events.clear()
+        f.filterPause = CompletableDeferred()
+        f.workflow.toggleSearchPlatform("c64")
+        f.workflow.setQuery("other")
+        f.filterPause.complete(Unit); drain()
+        assertFalse(f.events.toString(), f.events.any { it.startsWith("local:") })
+    }
+
     @Test fun `ordinary explicit search records its captured query once`() = runBlocking {
         val f = Fixture(this)
         f.localSearch()
@@ -329,12 +419,17 @@ class BrowseWorkflowTest {
         var renderLevel: (BrowseState, String) -> BrowseState = { state, _ -> state.copy(query = "level result") }
         var rows: (String) -> List<TrackRef> = { listOf(TrackRef("result:$it", "Result", fileName = "result.mod")) }
         var live: ModArchive.Outcome = ModArchive.Outcome.Found(emptyList())
+        /** Released by default; a test replaces it to hold a filter re-run back. */
+        var filterPause = CompletableDeferred(Unit)
         val workflow = BrowseWorkflow(scope, browse, LibrarySearch(this), this,
-            onSubmitted = { submitted += it }, onSearchFailed = { searchFailures += it }) {
-            events += "notice"
-            liveResults += it
-            onLive(it)
-        }
+            onSubmitted = { submitted += it }, onSearchFailed = { searchFailures += it },
+            onLiveResult = {
+                events += "notice"
+                liveResults += it
+                onLive(it)
+            },
+            filterPause = { filterPause.await() },
+        )
 
         private fun action(name: String) { events += name; threads += Thread.currentThread(); onAction(name) }
         private suspend fun read(name: String) { events += name; threads += Thread.currentThread(); onRead(name) }

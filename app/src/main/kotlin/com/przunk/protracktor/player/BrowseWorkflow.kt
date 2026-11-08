@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,6 +23,8 @@ internal class BrowseWorkflow(
     private val onSubmitted: (String) -> Unit = {},
     private val onSearchFailed: (Throwable) -> Unit,
     private val onLiveResult: (ModArchive.Outcome) -> Unit,
+    /** The pause before a filter change asks again; a test holds it to observe what comes before. */
+    private val filterPause: suspend () -> Unit = { delay(FILTER_RERUN_DELAY_MS) },
 ) {
     private class SearchOwner(
         val generation: Long,
@@ -36,6 +39,8 @@ internal class BrowseWorkflow(
     private var searchGeneration = 0L
     private var searchOwner: SearchOwner? = null
     private var searchJob: Job? = null
+    /** A search asked again after a filter change, waiting out [FILTER_RERUN_DELAY_MS]. */
+    private var filterRerun: Job? = null
 
     /** Input changes/resubmissions retire intents even when the same words and scope return. */
     val searchRevision: Long get() = searchGeneration
@@ -45,6 +50,8 @@ internal class BrowseWorkflow(
 
     /** Retire ownership before cancellation: a read may ignore cancellation or finish inline. */
     private fun retireSearch(): Long {
+        // Typing, leaving or a newer filter change all supersede a re-run still waiting to start.
+        filterRerun?.cancel(); filterRerun = null
         val generation = ++searchGeneration
         val previous = searchOwner
         val job = searchJob
@@ -178,26 +185,51 @@ internal class BrowseWorkflow(
         runSearch()
     }
 
+    /**
+     * A filter changed while a search was on screen asks it again (Q17, 2026-11-07). Clearing the
+     * results and waiting for Search read as the app losing them; leaving them read as an answer to
+     * a question no longer asked. The words in the field, as pressing Search would use them, after
+     * a short pause so several platforms ticked in a row are one search, not one per tap.
+     */
+    private fun searchWasShown(): Boolean {
+        val now = browse.value
+        return now.domain == BrowseDomain.SEARCH && (now.searched || searchOwner != null)
+    }
+
+    private fun rerunAfterFilter(wasShown: Boolean, keepShown: Boolean) {
+        if (!wasShown) return
+        filterRerun = scope.launch {
+            filterPause()
+            filterRerun = null
+            runSearch(record = false, keepShown = keepShown)
+        }
+    }
+
     /** Ticks one catalogue inside an online scope. Only meaningful while that is the scope. */
     fun toggleSearchCatalogue(id: String) {
         if (browse.value.searchScope !is SearchScope.Online) return
+        val wasShown = searchWasShown()
         cancelSearch()
         browse.update {
             val scope = it.searchScope as? SearchScope.Online ?: return@update it
             val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
             it.copy(searchScope = SearchScope.Online(ids))
         }
+        // The same kind of question, wider or narrower: the rows stay until the new answer.
+        rerunAfterFilter(wasShown, keepShown = true)
     }
 
     /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
     fun toggleSearchPlatform(id: String) {
         if (browse.value.searchScope !is SearchScope.ByPlatform) return
+        val wasShown = searchWasShown()
         cancelSearch()
         browse.update {
             val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
             val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
             it.copy(searchScope = SearchScope.ByPlatform(ids))
         }
+        rerunAfterFilter(wasShown, keepShown = true)
     }
 
     /**
@@ -228,11 +260,18 @@ internal class BrowseWorkflow(
      * return silently. The per-source cap and the count beside it are built for exactly this shape
      * of answer.
      */
-    fun runSearch() {
+    fun runSearch() = runSearch(record = true, keepShown = false)
+
+    /**
+     * [record] adds the words to recent searches, which a re-run after a filter change must not do
+     * twice; [keepShown] leaves the current rows on screen, marked as loading, until the answer
+     * replaces them in one step.
+     */
+    private fun runSearch(record: Boolean, keepShown: Boolean) {
         val current = browse.value
         val generation = retireSearch()
         if (generation != searchGeneration) return
-        onSubmitted(current.query)
+        if (record) onSubmitted(current.query)
         val request = LibrarySearch.Request(
             current.query, current.searchScope, current.catalogues.filter { it.indexed }.map { it.id }.toSet(),
         )
@@ -245,8 +284,10 @@ internal class BrowseWorkflow(
                 if (!owns(owner, browse.value)) return@launch
                 owner.loadingPublished = true
                 browse.update {
-                    if (owns(owner, it)) it.copy(loading = true, tracks = emptyList(), searched = false,
-                        searchMatches = 0, liveSearchNeededQuery = false) else it
+                    if (!owns(owner, it)) it
+                    else if (keepShown) it.copy(loading = true)
+                    else it.copy(loading = true, tracks = emptyList(), searched = false,
+                        searchMatches = 0, liveSearchNeededQuery = false)
                 }
                 if (!owns(owner, browse.value)) return@launch
                 val result = search.run(request) { if (owns(owner, browse.value)) onLiveResult(it) }
@@ -279,12 +320,18 @@ internal class BrowseWorkflow(
     /**
      * Changes what the search covers.
      *
-     * Does not re-run the search. Choosing a scope is setting up a question, not asking it -- and
-     * re-running on every tick of a platform chip would fire a query per tap while somebody picks
-     * three of them.
+     * Another kind of search clears what is shown -- rows of one kind under another kind's label
+     * are a lie -- and, when a search was on screen, asks it again in the new scope (Q17).
      */
     fun setSearchScope(scope: SearchScope) {
+        val wasShown = searchWasShown()
         cancelSearch()
         browse.update { it.copy(searchScope = scope).withoutStaleResults() }
+        rerunAfterFilter(wasShown, keepShown = false)
+    }
+
+    companion object {
+        /** Long enough for a second chip, short enough not to feel like waiting. */
+        const val FILTER_RERUN_DELAY_MS = 300L
     }
 }

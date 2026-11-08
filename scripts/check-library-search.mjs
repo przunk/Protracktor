@@ -96,12 +96,41 @@ await test('scope IDs are canonical; unknown scopes fail explicitly', () => {
 });
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const answer = ({ query, scope }) => Object.freeze({ query, scope, tracks: Object.freeze([track(query)]), catalogueMatches: 0, playlistCapped: false, held: [] });
-await test('native scope and query edits never submit, scope-kind changes clear rows, chips retain them', async () => {
-  let calls = 0; const b = new SearchBrowser({ run: async (request) => { calls++; return answer(request); } });
+// The pause before a filter change asks again, held open by the test until it says otherwise.
+const held = () => { const gates = []; return { gates, pause: () => { const gate = deferred(); gates.push(gate); return gate.promise; },
+  release: async () => { gates.splice(0).forEach((gate) => gate.resolve()); for (let i = 0; i < 20; i++) await Promise.resolve(); } }; };
+await test('query edits never submit; a filter change after a search asks it again (Q17)', async () => {
+  let calls = 0; const h = held(); const b = new SearchBrowser({ run: async (request) => { calls++; return answer(request); }, pause: h.pause });
   b.open(); b.setQuery('typed'); assert.equal(calls, 0); await b.submit(); const produced = b.state.result;
-  b.setQuery('pending'); assert.equal(b.state.result, produced); assert.equal(b.staleAnswer, true);
+  b.setQuery('pending'); assert.equal(b.state.result, produced); assert.equal(b.staleAnswer, true); assert.equal(calls, 1);
+  // Another kind: rows cleared at once, the same words asked again after the pause.
   b.setScope(searchScope('online')); assert.equal(b.state.result, null); assert.equal(calls, 1);
-  await b.submit(); const old = b.state.result; b.toggleId('asma'); assert.equal(b.state.result, old); assert.equal(b.staleAnswer, true); assert.equal(calls, 2);
+  await h.release(); assert.equal(calls, 2); assert.equal(b.state.result.query, 'pending');
+  assert.equal(b.state.result.scope.kind, 'online'); assert.equal(b.staleAnswer, false);
+});
+await test('a ticked chip keeps the rows while the same words are asked again, then replaces them', async () => {
+  const gates = [], h = held();
+  const b = new SearchBrowser({ run: (request) => { const gate = deferred(); gates.push({ ...gate, request }); return gate.promise; }, pause: h.pause });
+  b.open(); b.setScope(searchScope('online')); const first = b.submit('typed');
+  gates[0].resolve(answer(gates[0].request)); await first; const old = b.state.result;
+  b.toggleId('asma'); assert.equal(b.state.result, old); assert.equal(b.staleAnswer, false, 'no "press Search" while it is being asked');
+  await h.release(); assert.equal(gates.length, 2); assert.deepEqual(gates[1].request.scope.ids, ['asma']);
+  assert.equal(b.state.loading, true); assert.equal(b.state.result, old, 'the rows stay while it is asked');
+  gates[1].resolve(answer(gates[1].request)); await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual(b.state.result.scope.ids, ['asma']); assert.equal(b.state.loading, false);
+});
+await test('several chips in a row are one search, for the last state', async () => {
+  let calls = 0, last = null; const h = held();
+  const b = new SearchBrowser({ run: async (request) => { calls++; last = request; return answer(request); }, pause: h.pause });
+  b.open(); b.setScope(searchScope('platform')); await b.submit('typed');
+  b.toggleId('c64'); b.toggleId('amiga'); await h.release();
+  assert.equal(calls, 2); assert.deepEqual([...last.scope.ids].sort(), ['amiga', 'c64']);
+});
+await test('no search shown, typing while waiting, or Back: no automatic search', async () => {
+  let calls = 0; const h = held(); const b = new SearchBrowser({ run: async (request) => { calls++; return answer(request); }, pause: h.pause });
+  b.open(); b.setScope(searchScope('platform')); b.toggleId('c64'); await h.release(); assert.equal(calls, 0);
+  await b.submit('typed'); b.toggleId('amiga'); b.setQuery('other'); await h.release(); assert.equal(calls, 1);
+  b.setScope(searchScope(), { rerun: false }); await h.release(); assert.equal(calls, 1);
 });
 await test('native latest owner suppresses uncooperative identical-query results and obsolete errors', async () => {
   const gates = [], errors = []; const b = new SearchBrowser({ run: (request) => { const gate = deferred(); gates.push({ ...gate, request }); return gate.promise; }, failed: (e) => errors.push(e) });
