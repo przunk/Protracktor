@@ -10,6 +10,16 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B59. Select all, and Share for a selection — requested 2026-11-09
+
+With tracks selected:
+
+- **Select all** somewhere in selection mode.
+- The bottom action **Share with Protracktor** becomes **Share**, offering for the whole selection:
+  the links one per line, a *Share with Protracktor* link carrying the list, and the files
+  themselves. *Share as audio* for many tracks probably not: it renders each file and takes a while
+  per track. Same options as the one-track share menu otherwise (`ShareMenuItems`).
+
 ## B58. Reorganize the application UI and playlist view — discussion
 
 User feedback recorded on 2026-11-05: reconsider the overall interface, playlist view and

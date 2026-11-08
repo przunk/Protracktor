@@ -20,6 +20,23 @@ by platform. Built on `feature/platform-search-online`, stacked on `feature/sear
 **Checked:** full gate, 1,488 tests, 1,398 page checks, lint clean; restoring the old reach fails
 `SearchScopeTest` and `LibrarySearchTest`. **Not checked:** phone and browser.
 
+## C135 A photo (JPG) ended up in a playlist — open, reported 2026-11-09
+
+**Report, 2026-11-09:** a tester has a JPG camera photo (Pixel, from the gallery) in a playlist,
+and neither the tester nor I know how it got there. A phone photo of the playlist exists and was not
+supplied.
+
+**Most likely path, from the code (not reproduced).** Browse → Local → *Add files* opens Android's
+document picker with `*/*`, and `MediaScanner.fromDocuments` turns **every** picked document into a
+playlist entry without asking whether it can be played. Folder scans do ask
+(`worthReading` → `SupportedFormats.looksPlayable`), so this is the one door without the check. The
+picker opens on *Recent*, which on a phone is mostly photos, so one tap adds one. Other doors were
+read and look closed: the share sheet accepts only `audio/*` and `application/octet-stream`, and
+*Open with* only those types and tracker names.
+
+**Fix to make:** refuse picked files the app cannot play, and say so naming them, as folder scans
+already effectively do.
+
 ## C134 AMP downloads fail: the archive moved to a new site — AMP switched off, merged 2026-11-08
 
 **Merged into develop** on 2026-11-08 after the owner reported APK 1.6.0 (1491), source `e5507693`, working on the phone. AMP returns when module numbers are available.
