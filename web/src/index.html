@@ -718,6 +718,14 @@
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .browseview { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 16px 6px; }
+  .browsefilter-form { flex: 1; min-width: 0; display: flex; align-items: center; border-radius: var(--shape-m);
+    background: var(--surface-container); }
+  .browsefilter-form[hidden] { display: none; }
+  .browsefilter-form:focus-within { outline: 2px solid var(--primary); outline-offset: -2px; }
+  #browsefilter-input { min-width: 0; width: 100%; border: 0; background: transparent; color: var(--on-surface);
+    font: inherit; padding: 12px 0 12px 14px; outline: none; }
+  #browsefilter-input::-webkit-search-cancel-button { display: none; }
+  #browselist > li[hidden] { display: none; }
   .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
     padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
   #browselist { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
@@ -1081,6 +1089,12 @@
     <div class="browsehead">
       <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
       <h2 id="browsetitle" tabindex="-1">Browse</h2>
+      <!-- Browse's Search (2026-11-09): narrows the list on screen; the title gives it its place. -->
+      <form id="browsefilter-form" class="browsefilter-form" hidden>
+        <input id="browsefilter-input" type="search" placeholder="Search this list…" aria-label="Search this list" aria-controls="browselist" autocomplete="off" enterkeyhint="done">
+        <button type="button" id="browsefilter-clear" class="search-inline" aria-label="Clear search" title="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18.3 5.7-1.4-1.4L12 9.2 7.1 4.3 5.7 5.7l4.9 4.9-4.9 4.9 1.4 1.4 4.9-4.9 4.9 4.9 1.4-1.4-4.9-4.9z"/></svg></button>
+      </form>
+      <button class="action" id="browsefilter-open" aria-controls="browsefilter-form" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 14 5 5-1.5 1.5-5-5V15l-.4-.4a6.5 6.5 0 1 1 1.5-1.5l.4.4h.5zM10 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>Search</button>
       <button class="action" id="browseclose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z"/></svg>Playlist</button>
     </div>
     <!-- Whose folder this is, while the dice waits under it: the session heading, in this screen. -->
@@ -1095,6 +1109,7 @@
       <input type="search" id="historysearch" placeholder="Search History" aria-label="Search History" aria-controls="browselist" autocomplete="off">
     </div>
     <p class="note" id="browsenote" aria-live="polite"></p>
+    <p class="note" id="browsefilter-empty" role="status" hidden>Nothing here matches this phrase. Clear search to show the whole list.</p>
     <p class="note" id="folder-prefetch-note" role="status" hidden></p>
     <div class="sheetbuttons" id="download-data-offer" hidden>
       <button class="outlined" id="choose-downloads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Downloads</button>

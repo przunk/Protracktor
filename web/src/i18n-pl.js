@@ -12,6 +12,9 @@ export const PL = {
   'Close playlist search': 'Zamknij wyszukiwanie na playliście',
   'Clear search': 'Wyczyść wyszukiwanie',
   'No playlist tracks match this phrase. Clear search to show the full list.': 'Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.',
+  'Search this list': 'Szukaj na tej liście',
+  'Search this list…': 'Szukaj na tej liście…',
+  'Nothing here matches this phrase. Clear search to show the whole list.': 'Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.',
 
   'Volume normalization': 'Normalizacja głośności',
   'Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.': 'Zmniejsza różnice głośności między utworami. Przy pierwszym odsłuchu wyrównanie może być mniej dokładne. Nie wpływa na eksportowane audio.',

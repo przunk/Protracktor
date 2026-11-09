@@ -280,6 +280,12 @@ fun ProtracktorApp(
     // playlist was left, in a list of a different length.
     val randomState = rememberLazyListState()
     val playlistSearchState = rememberLazyListState()
+    // Browse's Search, per level, for one visit to Browse: leaving it starts the next visit clean,
+    // as its scroll positions do.
+    val browseFilters = remember { BrowseFilters() }
+    LaunchedEffect(showBrowse) { if (!showBrowse) browseFilters.clear() }
+    val browseLevel = browse.levelKey()
+    val browseQuery = browseFilters.queryAt(browseLevel)
     LaunchedEffect(showQueue, showSettings, showBrowse, showRandom, scanning, showNowPlaying) {
         if (showQueue || showSettings || showBrowse || showRandom || scanning || showNowPlaying) closePlaylistSearch()
     }
@@ -346,7 +352,10 @@ fun ProtracktorApp(
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
                                 } else if (showBrowse) {
-                                    IconButton(onClick = leaveBrowse) {
+                                    // The same step Back takes: Search first, then the level.
+                                    IconButton(onClick = {
+                                        if (browseQuery != null) browseFilters.close(browseLevel) else leaveBrowse()
+                                    }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
                                 } else if (showRandom) {
@@ -360,6 +369,12 @@ fun ProtracktorApp(
                                 if (showQueue) Text(stringResource(R.string.queue_title))
                                 else if (showSettings) {
                                     Text(stringResource(R.string.settings_title))
+                                } else if (showBrowse && browseQuery != null) {
+                                    BrowseFilterField(
+                                        query = browseQuery,
+                                        onQueryChange = { browseFilters.change(browseLevel, it) },
+                                        onFocus = { browseFilters.focused = it },
+                                    )
                                 } else if (showBrowse) {
                                     // The screen names itself; whose folder a digression is in is said by the
                                     // header under the bar, in the shape the dice's own heading has.
@@ -376,6 +391,14 @@ fun ProtracktorApp(
                                 // selection, then up a level, then out -- and from four levels deep that is
                                 // four presses even when it is behaving correctly. This is one, from anywhere.
                                 // Labelled as well as drawn, because an icon alone does not say where it goes.
+                                // Search this level (2026-11-09), as the playlist searches itself. Only
+                                // where there is a list to narrow, and gone while its field is open.
+                                if (showBrowse && !showQueue && browseQuery == null &&
+                                    com.przunk.protracktor.player.BrowseFilter.filterable(browse)) {
+                                    val label = stringResource(R.string.playlist_search_action)
+                                    LabelledAction(PlayerIcons.Search, label, { browseFilters.open(browseLevel) },
+                                        slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("browse-search-action"))
+                                }
                                 if (showBrowse && !showQueue) {
                                     PlaylistReturnAction(
                                         // **Out, not back.** During a digression both screens count
@@ -496,6 +519,7 @@ fun ProtracktorApp(
                 } else if (showBrowse) {
                     BrowseScreen(
                         browse = browse,
+                        filters = browseFilters,
                         onUseForAlarms = (viewModel::useForAlarms).takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
                         savedPlaces = savedPlaces,
                         onSavePlace = viewModel::saveCurrentPlace,

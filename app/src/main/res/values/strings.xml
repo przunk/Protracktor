@@ -590,6 +590,8 @@
     <string name="playlist_search_close">Close playlist search</string>
     <string name="playlist_search_clear">Clear search</string>
     <string name="playlist_search_no_matches">No playlist tracks match this phrase. Clear search to show the full list.</string>
+    <string name="browse_filter_hint">Search this list…</string>
+    <string name="browse_filter_no_matches">Nothing here matches this phrase. Clear search to show the whole list.</string>
     <string name="alarm_preparing">Preparing alarm music: %1$s</string>
     <string name="alarm_music_ready">Music is ready offline. Open Alarms to set a time.</string>
     <string name="alarm_prepare_failed">Could not prepare alarm music. Check the source, free space and whether the tune has an audible start.</string>

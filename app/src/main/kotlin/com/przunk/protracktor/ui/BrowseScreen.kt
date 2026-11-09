@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.BrowseFilter
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
@@ -151,7 +152,17 @@ fun BrowseScreen(
     onRemovePlace: (SavedPlaceKey) -> Unit = {},
     onOpenPlace: (SavedPlaceKey) -> Unit = {},
     onRefreshPlaces: () -> Unit = {},
+    /** Search on this level (2026-11-09); the bar above owns the field, this screen the list. */
+    filters: BrowseFilters = remember { BrowseFilters() },
 ) {
+    val filterLevel = browse.levelKey()
+    val filter = filters.queryAt(filterLevel).orEmpty()
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    // Registered before the lists' own selection handler, so Back leaves a selection first, then
+    // the keyboard, then Search, and only then the level -- one step each, as the playlist does.
+    BackHandler(enabled = filters.queryAt(filterLevel) != null) {
+        if (filters.focused) focusManager.clearFocus() else filters.close(filterLevel)
+    }
     // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
     // at the top (`docs/STATUS.md` C6) while a descent and return does not.
     val scroll = rememberBrowseScroll()
@@ -241,6 +252,7 @@ fun BrowseScreen(
                 onOpenFolder = onOpenFolder,
                 onStopScan = onStopScan,
                 onOpenSubfolder = onOpenSubfolder,
+                filter = filter,
                 onForgetFolder = onForgetFolder,
                 onScanFolder = onScanFolder,
                 onPlay = onPlay,
@@ -269,6 +281,7 @@ fun BrowseScreen(
                     onDownloadReplayRoutines = onDownloadReplayRoutines,
                     onOpenCatalogue = onOpenCatalogue,
                     onOpenGroup = onOpenGroup,
+                    filter = filter,
                     onPlay = onPlay,
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -616,6 +629,7 @@ private fun LocalDomain(
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onStopScan: () -> Unit,
     onOpenSubfolder: (String) -> Unit,
+    filter: String,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -682,6 +696,7 @@ private fun LocalDomain(
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onOpenSubfolder = onOpenSubfolder,
+                filter = filter,
             )
         }
         return
@@ -751,6 +766,7 @@ private fun OnlineDomain(
     onDownloadReplayRoutines: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
+    filter: String,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -775,6 +791,7 @@ private fun OnlineDomain(
             onShareAudio = onShareAudio,
             onShareLink = onShareLink,
             onSendToWeb = onSendToWeb,
+            filter = filter,
         )
 
         browse.openCatalogue != null -> {
@@ -783,10 +800,13 @@ private fun OnlineDomain(
             } else {
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                RestorePosition(scroll, key, listState, browse.groups.map { it.name }, browse.loading)
+                val groups = remember(browse.groups, filter) { BrowseFilter.groups(browse.groups, filter) }
+                RestorePosition(scroll, key, listState, groups.map { it.name }, browse.loading)
+                TopOnNewFilter(listState, filter)
 
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                    items(browse.groups, key = { it.name }) { group ->
+                if (groups.isEmpty() && browse.groups.isNotEmpty()) NoFilterMatches()
+                else LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    items(groups, key = { it.name }) { group ->
                         ListItem(
                             headlineContent = {
                                 Text(
@@ -1249,13 +1269,25 @@ private fun Selectable(
     onShareLink: (List<TrackRef>) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onOpenSubfolder: (String) -> Unit = {},
+    /** Browse's Search on this level; blank shows the whole level. */
+    filter: String = "",
 ) {
     var selected by remember(browse.openFolder?.uri, browse.folderAt, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
-    LaunchedEffect(browse.tracks) {
-        selected = selected.intersect(browse.tracks.map { it.id }.toSet())
+    // Matched as shown: a tune whose real title has been learned is found by that title.
+    val shownIndices = remember(browse.tracks, browse.learnedTitles, filter) {
+        BrowseFilter.tracks(browse.tracks.map {
+            com.przunk.protracktor.player.LearnedTitles.display(it, browse.learnedTitles)
+        }, filter)
+    }
+    val shownTracks = remember(browse.tracks, shownIndices) { shownIndices.map(browse.tracks::get) }
+    val shownFolders = remember(browse.subfolders, filter) { BrowseFilter.folders(browse.subfolders, filter) }
+    // A tick hidden by Search is dropped rather than kept out of sight: Add and Share act on what
+    // the bar counts, and the bar counts what is on screen.
+    LaunchedEffect(shownTracks) {
+        selected = selected.intersect(shownTracks.map { it.id }.toSet())
     }
     val selecting = selected.isNotEmpty()
 
@@ -1269,7 +1301,7 @@ private fun Selectable(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (browse.tracks.isNotEmpty()) {
+        if (shownTracks.isNotEmpty()) {
             // A fixed height, because the select-all button only exists while selecting and a
             // header that grows when it appears shifts the whole list under the finger that just
             // long-pressed. Same reason as the row below.
@@ -1282,7 +1314,7 @@ private fun Selectable(
                         pluralStringResource(R.plurals.browse_selected, selected.size, selected.size)
                     } else {
                         pluralStringResource(
-                            R.plurals.track_count, browse.tracks.size, browse.tracks.size
+                            R.plurals.track_count, shownTracks.size, shownTracks.size
                         )
                     },
                     style = MaterialTheme.typography.labelMedium,
@@ -1293,16 +1325,16 @@ private fun Selectable(
                 if (selecting) {
                     TextButton(
                         onClick = {
-                            selected = if (selected.size == browse.tracks.size) {
+                            selected = if (selected.size == shownTracks.size) {
                                 emptySet()
                             } else {
-                                browse.tracks.map { it.id }.toSet()
+                                shownTracks.map { it.id }.toSet()
                             }
                         }
                     ) {
                         Text(
                             stringResource(
-                                if (selected.size == browse.tracks.size) R.string.browse_select_none
+                                if (selected.size == shownTracks.size) R.string.browse_select_none
                                 else R.string.browse_select_all
                             )
                         )
@@ -1318,6 +1350,8 @@ private fun Selectable(
             // stale-index warnings use, because it is the same kind of news.
             // A scan under way says so with its bar; "nothing playable" is not true yet.
             browse.tracks.isEmpty() && browse.subfolders.isEmpty() && browse.scanProgress != null -> Unit
+            shownTracks.isEmpty() && shownFolders.isEmpty() && filter.isNotBlank() &&
+                (browse.tracks.isNotEmpty() || browse.subfolders.isNotEmpty()) -> NoFilterMatches()
             browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(
@@ -1354,14 +1388,15 @@ private fun Selectable(
                 }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                val rowKeys = browse.tracks.map { it.id }
+                val rowKeys = shownTracks.map { it.id }
                 RestorePosition(scroll, key, listState, rowKeys, browse.loading)
+                TopOnNewFilter(listState, filter)
                 if (browse.domain == BrowseDomain.HISTORY) KeepHistoryAtTop(listState, rowKeys)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 // **A local folder's own folders first** (the owner, 2026-09-29): the tree is
                 // walked, not flattened. Hidden while ticking rows: a folder is not a tune to tick.
-                if (!selecting) items(browse.subfolders, key = { "folder:" + it.path }) { sub ->
+                if (!selecting) items(shownFolders, key = { "folder:" + it.path }) { sub ->
                     ListItem(
                         headlineContent = { Text(sub.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = { Text(pluralStringResource(R.plurals.track_count, sub.tunes, sub.tunes)) },
@@ -1369,7 +1404,7 @@ private fun Selectable(
                         modifier = Modifier.clickable { onOpenSubfolder(sub.path) },
                     )
                 }
-                itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, source ->
+                itemsIndexed(shownTracks, key = { _, track -> track.id }) { index, source ->
                     val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
                     QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting,
                         modifier = Modifier.testTag("enqueue-row-$index")) {
@@ -1384,7 +1419,8 @@ private fun Selectable(
                         fetchingAhead = track.id in browse.aheadFetching,
                         cachedHere = track.id in browse.cachedHere,
                         playedBefore = track.id in browse.listenedHere,
-                        onPlay = { onPlay(index) },
+                        // The whole level plays, from this tune, as a playlist match does.
+                        onPlay = { onPlay(shownIndices[index]) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
                             else selected + track.id
@@ -1424,13 +1460,13 @@ private fun Selectable(
                 // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
                 LaunchedEffect(browse.openAuthor, browse.tracks.size) {
                     if (!browse.arrivedByJump) return@LaunchedEffect
-                    val at = browse.tracks.indexOfFirst { it.id == playingId }
+                    val at = shownTracks.indexOfFirst { it.id == playingId }
                     if (at >= 0) listState.revealRow(at)
                 }
 
                 KeepRowInView(
                     listState = listState,
-                    index = browse.tracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
+                    index = shownTracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
                     key = playingId,
                     active = !selecting,
                 )
@@ -1446,7 +1482,7 @@ private fun Selectable(
             ) {
                 Button(
                     onClick = {
-                        onAdd(browse.tracks.filter { it.id in selected })
+                        onAdd(shownTracks.filter { it.id in selected })
                         selected = emptySet()
                     },
                     modifier = Modifier.weight(1f),
@@ -1458,7 +1494,7 @@ private fun Selectable(
                 }
                 IconButton(
                     onClick = {
-                        val toAdd = browse.tracks.filter { it.id in selected }
+                        val toAdd = shownTracks.filter { it.id in selected }
                         selected = emptySet()
                         onAddToOtherPlaylist(toAdd)
                     },
@@ -1471,7 +1507,7 @@ private fun Selectable(
                 // Share for the whole selection (B59): files, links, or a Share with Protracktor list,
                 // where this bar used to offer only the last.
                 SelectionShareAction(
-                    tracks = browse.tracks.filter { it.id in selected },
+                    tracks = shownTracks.filter { it.id in selected },
                     onShareFiles = onShareFile,
                     onShareAudio = onShareAudio,
                     onShareLinks = onShareLink,
@@ -1811,4 +1847,15 @@ internal fun ScanProgress(done: Int, total: Int, onStop: () -> Unit) {
             modifier = Modifier.padding(start = 12.dp),
         )
     }
+}
+
+/** Search narrowed a level to nothing: said, with the way back, rather than an empty list. */
+@Composable
+private fun NoFilterMatches() {
+    Text(
+        text = stringResource(R.string.browse_filter_no_matches),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(24.dp).testTag("browse-filter-no-matches"),
+    )
 }
