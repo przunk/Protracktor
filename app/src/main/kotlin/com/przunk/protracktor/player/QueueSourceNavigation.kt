@@ -18,7 +18,10 @@ object QueueSourceNavigation {
         is QueueSource.Playlist -> QueueSourceView.PLAYLIST.takeIf { source.id in playlistIds }
         is QueueSource.Random -> QueueSourceView.RANDOM.takeIf { source.session > 0 && source.session == randomSession }
         is QueueSource.Collection -> QueueSourceView.BROWSE.takeIf {
-            snapshot != null && SessionSource.of(snapshot) == source.origin
+            snapshot != null && when (val origin = source.origin) {
+                is SessionSource.Found -> SessionSource.placeOf(snapshot) == origin.place
+                else -> SessionSource.of(snapshot) == origin
+            }
         }
     }
 
@@ -29,7 +32,7 @@ object QueueSourceNavigation {
         folderAt = snapshot.folderAt, subfolders = snapshot.subfolders,
         folderUnscanned = snapshot.folderUnscanned, folderStale = snapshot.folderStale,
         openCatalogue = snapshot.openCatalogue, openFormat = snapshot.openFormat, openAuthor = snapshot.openAuthor,
-        groups = snapshot.groups, tracks = snapshot.tracks,
+        groups = snapshot.groups, tracks = snapshot.tracks, below = snapshot.below,
         query = snapshot.query, searchScope = snapshot.searchScope, searched = snapshot.searched,
         liveSearchNeededQuery = snapshot.liveSearchNeededQuery, searchMatches = snapshot.searchMatches,
         historyTotal = snapshot.historyTotal, historyPage = snapshot.historyPage, historyQuery = snapshot.historyQuery,

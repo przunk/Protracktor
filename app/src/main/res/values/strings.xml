@@ -31,6 +31,7 @@
     <string name="action_add_to_queue">Add to queue</string>
     <string name="queue_playlist">Playlist: %1$s</string>
     <string name="queue_search">Search: %1$s</string>
+    <string name="queue_found">%1$s: “%2$s”</string>
     <string name="queue_external">File opened from another app</string>
     <string name="random_reroll_list">Start a new Random list</string>
     <string name="random_double_tap_hint">Double-tap the dice to reroll the list</string>
@@ -592,6 +593,8 @@
     <string name="playlist_search_no_matches">No playlist tracks match this phrase. Clear search to show the full list.</string>
     <string name="browse_filter_hint">Search this list…</string>
     <string name="browse_filter_no_matches">Nothing here matches this phrase. Clear search to show the whole list.</string>
+    <string name="browse_filter_below">In folders below</string>
+    <string name="browse_filter_below_capped">In folders below: the first %1$,d</string>
     <string name="alarm_preparing">Preparing alarm music: %1$s</string>
     <string name="alarm_music_ready">Music is ready offline. Open Alarms to set a time.</string>
     <string name="alarm_prepare_failed">Could not prepare alarm music. Check the source, free space and whether the tune has an audible start.</string>

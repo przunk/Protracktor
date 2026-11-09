@@ -75,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.BrowseFilter
+import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
@@ -154,13 +155,28 @@ fun BrowseScreen(
     onRefreshPlaces: () -> Unit = {},
     /** Search on this level (2026-11-09); the bar above owns the field, this screen the list. */
     filters: BrowseFilters = remember { BrowseFilters() },
+    /** Finds the tunes below this level that match Search (`BrowseFilter.below`) into the state. */
+    onSearchBelow: suspend (level: String, query: String) -> Unit = { _, _ -> },
+    /** Plays the tunes found below from the index, under the words that found them. */
+    onPlayFound: (List<TrackRef>, Int, String) -> Unit = { _, _, _ -> },
+    /**
+     * Whether Browse is what Back reaches: false while the queue or Now Playing covers it, when its
+     * Search and selection must leave Back to what is in front.
+     */
+    inFront: Boolean = true,
 ) {
     val filterLevel = browse.levelKey()
     val filter = filters.queryAt(filterLevel).orEmpty()
+    val below = rememberTunesBelow(
+        level = filterLevel, query = filter, enabled = BrowseFilter.below(browse) != null,
+        contents = listOf(browse.loading, browse.groups.size, browse.folderAll.size),
+        found = browse.below, search = onSearchBelow,
+    )
+    val onPlayBelow: (Int) -> Unit = { index -> onPlayFound(below.tracks, index, filter) }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     // Registered before the lists' own selection handler, so Back leaves a selection first, then
     // the keyboard, then Search, and only then the level -- one step each, as the playlist does.
-    BackHandler(enabled = filters.queryAt(filterLevel) != null) {
+    BackHandler(enabled = inFront && filters.queryAt(filterLevel) != null) {
         if (filters.focused) focusManager.clearFocus() else filters.close(filterLevel)
     }
     // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
@@ -184,6 +200,7 @@ fun BrowseScreen(
         )
     ) { transition() }
 
+    androidx.compose.runtime.CompositionLocalProvider(LocalBrowseInFront provides inFront) {
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
         if (digressionAuthor != null) {
             Row(
@@ -253,6 +270,8 @@ fun BrowseScreen(
                 onStopScan = onStopScan,
                 onOpenSubfolder = onOpenSubfolder,
                 filter = filter,
+                below = below,
+                onPlayBelow = onPlayBelow,
                 onForgetFolder = onForgetFolder,
                 onScanFolder = onScanFolder,
                 onPlay = onPlay,
@@ -282,6 +301,8 @@ fun BrowseScreen(
                     onOpenCatalogue = onOpenCatalogue,
                     onOpenGroup = onOpenGroup,
                     filter = filter,
+                    below = below,
+                    onPlayBelow = onPlayBelow,
                     onPlay = onPlay,
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -335,6 +356,7 @@ fun BrowseScreen(
                 onUseForAlarms = onUseForAlarms,
             )
         }
+    }
     }
 }
 
@@ -630,6 +652,8 @@ private fun LocalDomain(
     onStopScan: () -> Unit,
     onOpenSubfolder: (String) -> Unit,
     filter: String,
+    below: TunesBelow,
+    onPlayBelow: (Int) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -697,6 +721,8 @@ private fun LocalDomain(
                 onSendToWeb = onSendToWeb,
                 onOpenSubfolder = onOpenSubfolder,
                 filter = filter,
+                below = below,
+                onPlayBelow = onPlayBelow,
             )
         }
         return
@@ -767,6 +793,8 @@ private fun OnlineDomain(
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     filter: String,
+    below: TunesBelow,
+    onPlayBelow: (Int) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -799,31 +827,43 @@ private fun OnlineDomain(
                 Loading()
             } else {
                 val key = browse.levelKey()
-                val listState = scroll.stateFor(key)
                 val groups = remember(browse.groups, filter) { BrowseFilter.groups(browse.groups, filter) }
+                // Narrowed, the list is the folders that match and the tunes below that do, which is
+                // the track list's own business -- ticking, Add, Share -- with the folders on top.
+                if (filter.isNotBlank()) Selectable(
+                    browse = browse,
+                    scroll = scroll,
+                    playlistName = playlistName,
+                    playingId = playingId,
+                    loadingId = loadingId,
+                    onPlay = onPlay,
+                    onAdd = onAdd,
+                    onAddToOtherPlaylist = onAddToOtherPlaylist,
+                    onEnqueue = onEnqueue,
+                    onUseForAlarms = onUseForAlarms,
+                    onShowNeighbours = onShowNeighbours,
+                    onShareFile = onShareFile,
+                    onShareAudio = onShareAudio,
+                    onShareLink = onShareLink,
+                    onSendToWeb = onSendToWeb,
+                    filter = filter,
+                    groups = groups,
+                    groupsListed = browse.groups.isNotEmpty(),
+                    onOpenGroup = onOpenGroup,
+                    below = below,
+                    onPlayBelow = onPlayBelow,
+                ) else {
+                val listState = scroll.stateFor(key)
                 RestorePosition(scroll, key, listState, groups.map { it.name }, browse.loading)
                 TopOnNewFilter(listState, filter)
-
-                if (groups.isEmpty() && browse.groups.isNotEmpty()) NoFilterMatches()
-                else LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(groups, key = { it.name }) { group ->
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    group.name.ifBlank { stringResource(R.string.browse_unknown) },
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            },
-                            trailingContent = {
-                                Text("${group.count}", style = MaterialTheme.typography.labelMedium)
-                            },
-                            modifier = Modifier.clickable {
-                                scroll.descendingFrom(key, group.name)
-                                onOpenGroup(group.name)
-                            },
-                        )
+                        GroupItem(group) {
+                            scroll.descendingFrom(key, group.name)
+                            onOpenGroup(group.name)
+                        }
                     }
+                }
                 }
             }
         }
@@ -1231,7 +1271,10 @@ private fun RestorePosition(
     LaunchedEffect(key, rowKeys, loading) {
         when (val what = scroll.restoreFor(key, rowKeys, loading)) {
             is Restore.ScrollTo -> {
-                listState.bringIntoView(what.index)
+                // The least that shows the row: nothing, when it is already where it was left. Put
+                // at the top every time, a short list of Search's results came back a row lower
+                // than it was left (2026-11-09) -- the folder tapped was its second row.
+                listState.revealRow(what.index)
                 scroll.returned(key)
             }
             Restore.Forget -> scroll.returned(key)
@@ -1271,6 +1314,14 @@ private fun Selectable(
     onOpenSubfolder: (String) -> Unit = {},
     /** Browse's Search on this level; blank shows the whole level. */
     filter: String = "",
+    /** An archive's formats or a format's authors, already narrowed, listed above any tunes. */
+    groups: List<CatalogueGroup> = emptyList(),
+    /** Whether the level lists folders at all, so none matching reads as no matches. */
+    groupsListed: Boolean = false,
+    onOpenGroup: (String) -> Unit = {},
+    /** The tunes further down that match [filter], in a section of their own after the level's. */
+    below: TunesBelow = TunesBelow.NONE,
+    onPlayBelow: (Int) -> Unit = {},
 ) {
     var selected by remember(browse.openFolder?.uri, browse.folderAt, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
@@ -1284,29 +1335,74 @@ private fun Selectable(
     }
     val shownTracks = remember(browse.tracks, shownIndices) { shownIndices.map(browse.tracks::get) }
     val shownFolders = remember(browse.subfolders, filter) { BrowseFilter.folders(browse.subfolders, filter) }
+    // Every tune on screen, the level's and those below, is what ticking, Add and Share act on.
+    val allTracks = remember(shownTracks, below.tracks) { shownTracks + below.tracks }
     // A tick hidden by Search is dropped rather than kept out of sight: Add and Share act on what
     // the bar counts, and the bar counts what is on screen.
-    LaunchedEffect(shownTracks) {
-        selected = selected.intersect(shownTracks.map { it.id }.toSet())
+    LaunchedEffect(allTracks) {
+        selected = selected.intersect(allTracks.map { it.id }.toSet())
     }
     val selecting = selected.isNotEmpty()
 
     // Takes back before the level-and-exit handler outside, because the innermost enabled handler
     // wins. That is the stack: leave the selection, then go up a level, then out to the playlist --
     // one step each.
-    BackHandler(enabled = selecting) { selected = emptySet() }
+    BackHandler(enabled = selecting && LocalBrowseInFront.current) { selected = emptySet() }
 
     showingInfo?.let { track ->
         TrackInfoDialog(track = track, onDismiss = { showingInfo = null }, playedBefore = track.id in browse.listenedHere)
     }
 
+    // One row for a tune wherever it is listed, the level's own or one below.
+    val TrackItem: @Composable (TrackRef, String, Int, () -> Unit) -> Unit = { source, tag, index, play ->
+        val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
+        QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting,
+            modifier = Modifier.testTag(tag)) {
+        BrowseTrackRow(
+            track = track,
+            showFileName = browse.learnedTitles[track.id]?.isNotBlank() == true,
+            index = index,
+            ticked = track.id in selected,
+            selecting = selecting,
+            playing = track.id == playingId,
+            loading = track.id == loadingId,
+            fetchingAhead = track.id in browse.aheadFetching,
+            cachedHere = track.id in browse.cachedHere,
+            playedBefore = track.id in browse.listenedHere,
+            onPlay = play,
+            onToggle = {
+                selected = if (track.id in selected) selected - track.id
+                else selected + track.id
+            },
+            onStartSelecting = { selected = selected + track.id },
+            onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
+            onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
+            onUseForAlarms = onUseForAlarms?.let { add -> { add(track) } },
+            onInfo = { showingInfo = track },
+            // Not for a live-search catalogue: it publishes no index, and its result
+            // rows carry no author, so there is nowhere for this to go.
+            onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
+                ?.let { { onShowNeighbours(it) } },
+            onShareFile = { onShareFile(listOf(track)) },
+            onShareAudio = { onShareAudio(track) },
+            onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
+                ?.let { { onShareLink(listOf(it)) } },
+            // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
+            onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
+        )
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
+        // **Only for the level's own tunes**, which are there when the list is. The tunes below arrive
+        // a moment later, and a header appearing for them pushed every row down under the reader
+        // (2026-11-09); their count, and while selecting their Select all, are in their own heading.
         if (shownTracks.isNotEmpty()) {
             // A fixed height, because the select-all button only exists while selecting and a
             // header that grows when it appears shifts the whole list under the finger that just
             // long-pressed. Same reason as the row below.
             Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp).testTag("browse-tracks-header"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -1322,23 +1418,8 @@ private fun Selectable(
                 )
                 // Only while selecting. Before that there is nothing to select all of, and the
                 // button was advertising a mode the user had not entered.
-                if (selecting) {
-                    TextButton(
-                        onClick = {
-                            selected = if (selected.size == shownTracks.size) {
-                                emptySet()
-                            } else {
-                                shownTracks.map { it.id }.toSet()
-                            }
-                        }
-                    ) {
-                        Text(
-                            stringResource(
-                                if (selected.size == shownTracks.size) R.string.browse_select_none
-                                else R.string.browse_select_all
-                            )
-                        )
-                    }
+                if (selecting) SelectAllButton(all = selected.size == allTracks.size) {
+                    selected = if (selected.size == allTracks.size) emptySet() else allTracks.map { it.id }.toSet()
                 }
             }
         }
@@ -1350,9 +1431,12 @@ private fun Selectable(
             // stale-index warnings use, because it is the same kind of news.
             // A scan under way says so with its bar; "nothing playable" is not true yet.
             browse.tracks.isEmpty() && browse.subfolders.isEmpty() && browse.scanProgress != null -> Unit
-            shownTracks.isEmpty() && shownFolders.isEmpty() && filter.isNotBlank() &&
-                (browse.tracks.isNotEmpty() || browse.subfolders.isNotEmpty()) -> NoFilterMatches()
-            browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
+            // Nothing on this level matches, and what is below has yet to answer: waiting, not "none".
+            allTracks.isEmpty() && shownFolders.isEmpty() && groups.isEmpty() && filter.isNotBlank() &&
+                below.pending -> Loading()
+            allTracks.isEmpty() && shownFolders.isEmpty() && groups.isEmpty() && filter.isNotBlank() &&
+                (browse.tracks.isNotEmpty() || browse.subfolders.isNotEmpty() || groupsListed) -> NoFilterMatches()
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() && !groupsListed -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(
                     text = stringResource(
@@ -1388,7 +1472,20 @@ private fun Selectable(
                 }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                val rowKeys = shownTracks.map { it.id }
+                // In the order the list draws its rows, so an index into this is an index into it.
+                val rowKeys = remember(selecting, shownFolders, groups, shownTracks, below.tracks) {
+                    buildList {
+                        if (!selecting) {
+                            shownFolders.forEach { add("folder:" + it.path) }
+                            groups.forEach { add(it.name) }
+                        }
+                        shownTracks.forEach { add(it.id) }
+                        if (below.tracks.isNotEmpty()) {
+                            add(BELOW_HEADING_KEY)
+                            below.tracks.forEach { add(it.id) }
+                        }
+                    }
+                }
                 RestorePosition(scroll, key, listState, rowKeys, browse.loading)
                 TopOnNewFilter(listState, filter)
                 if (browse.domain == BrowseDomain.HISTORY) KeepHistoryAtTop(listState, rowKeys)
@@ -1404,43 +1501,34 @@ private fun Selectable(
                         modifier = Modifier.clickable { onOpenSubfolder(sub.path) },
                     )
                 }
+                if (!selecting) items(groups, key = { "group:" + it.name }) { group ->
+                    GroupItem(group) {
+                        scroll.descendingFrom(key, group.name)
+                        onOpenGroup(group.name)
+                    }
+                }
                 itemsIndexed(shownTracks, key = { _, track -> track.id }) { index, source ->
-                    val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
-                    QueueSwipeRow(onAdd = onEnqueue?.let { enqueue -> { enqueue(track) } }, enabled = !selecting,
-                        modifier = Modifier.testTag("enqueue-row-$index")) {
-                    BrowseTrackRow(
-                        track = track,
-                        showFileName = browse.learnedTitles[track.id]?.isNotBlank() == true,
-                        index = index,
-                        ticked = track.id in selected,
-                        selecting = selecting,
-                        playing = track.id == playingId,
-                        loading = track.id == loadingId,
-                        fetchingAhead = track.id in browse.aheadFetching,
-                        cachedHere = track.id in browse.cachedHere,
-                        playedBefore = track.id in browse.listenedHere,
-                        // The whole level plays, from this tune, as a playlist match does.
-                        onPlay = { onPlay(shownIndices[index]) },
-                        onToggle = {
-                            selected = if (track.id in selected) selected - track.id
-                            else selected + track.id
-                        },
-                        onStartSelecting = { selected = selected + track.id },
-                        onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
-                        onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
-                        onUseForAlarms = onUseForAlarms?.let { add -> { add(track) } },
-                        onInfo = { showingInfo = track },
-                        // Not for a live-search catalogue: it publishes no index, and its result
-                        // rows carry no author, so there is nowhere for this to go.
-                        onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
-                            ?.let { { onShowNeighbours(it) } },
-                        onShareFile = { onShareFile(listOf(track)) },
-                        onShareAudio = { onShareAudio(track) },
-                        onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
-                            ?.let { { onShareLink(listOf(it)) } },
-                        // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
-                        onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
-                    )
+                    // The whole level plays, from this tune, as a playlist match does.
+                    TrackItem(source, "enqueue-row-$index", index) { onPlay(shownIndices[index]) }
+                }
+                if (below.tracks.isNotEmpty()) {
+                    item(key = BELOW_HEADING_KEY) {
+                        // With no tunes of the level's own there is no header above, so ticking
+                        // starts here: the count becomes the selection and Select all, in place.
+                        val selectingHere = selecting && shownTracks.isEmpty()
+                        BelowHeading(
+                            count = below.tracks.size,
+                            selected = if (selectingHere) selected.size else null,
+                        ) {
+                            SelectAllButton(all = selected.size == allTracks.size) {
+                                selected = if (selected.size == allTracks.size) emptySet()
+                                else allTracks.map { it.id }.toSet()
+                            }
+                        }
+                    }
+                    // What was found plays, from this tune: the folders it came from are many.
+                    itemsIndexed(below.tracks, key = { _, track -> "below:" + track.id }) { index, source ->
+                        TrackItem(source, "below-row-$index", index) { onPlayBelow(index) }
                     }
                 }
             }
@@ -1460,13 +1548,13 @@ private fun Selectable(
                 // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
                 LaunchedEffect(browse.openAuthor, browse.tracks.size) {
                     if (!browse.arrivedByJump) return@LaunchedEffect
-                    val at = shownTracks.indexOfFirst { it.id == playingId }
+                    val at = rowKeys.indexOf(playingId)
                     if (at >= 0) listState.revealRow(at)
                 }
 
                 KeepRowInView(
                     listState = listState,
-                    index = shownTracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
+                    index = rowKeys.indexOf(playingId).takeIf { it >= 0 },
                     key = playingId,
                     active = !selecting,
                 )
@@ -1482,7 +1570,7 @@ private fun Selectable(
             ) {
                 Button(
                     onClick = {
-                        onAdd(shownTracks.filter { it.id in selected })
+                        onAdd(allTracks.filter { it.id in selected })
                         selected = emptySet()
                     },
                     modifier = Modifier.weight(1f),
@@ -1494,7 +1582,7 @@ private fun Selectable(
                 }
                 IconButton(
                     onClick = {
-                        val toAdd = shownTracks.filter { it.id in selected }
+                        val toAdd = allTracks.filter { it.id in selected }
                         selected = emptySet()
                         onAddToOtherPlaylist(toAdd)
                     },
@@ -1507,7 +1595,7 @@ private fun Selectable(
                 // Share for the whole selection (B59): files, links, or a Share with Protracktor list,
                 // where this bar used to offer only the last.
                 SelectionShareAction(
-                    tracks = shownTracks.filter { it.id in selected },
+                    tracks = allTracks.filter { it.id in selected },
                     onShareFiles = onShareFile,
                     onShareAudio = onShareAudio,
                     onShareLinks = onShareLink,
@@ -1850,6 +1938,67 @@ internal fun ScanProgress(done: Int, total: Int, onStop: () -> Unit) {
 }
 
 /** Search narrowed a level to nothing: said, with the way back, rather than an empty list. */
+/** Whether Browse is in front, so its own Back steps (Search, a selection) are Back's to take. */
+private val LocalBrowseInFront = androidx.compose.runtime.compositionLocalOf { true }
+
+/** The row that leads into the tunes below; listed under this key wherever rows are keyed. */
+private const val BELOW_HEADING_KEY = "below-heading"
+
+/** One of an archive's formats or a format's authors: its name and how many tunes it holds. */
+@Composable
+private fun GroupItem(group: CatalogueGroup, onOpen: () -> Unit) {
+    ListItem(
+        headlineContent = {
+            Text(
+                group.name.ifBlank { stringResource(R.string.browse_unknown) },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        trailingContent = { Text("${group.count}", style = MaterialTheme.typography.labelMedium) },
+        modifier = Modifier.clickable(onClick = onOpen),
+    )
+}
+
+@Composable
+private fun SelectAllButton(all: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Text(stringResource(if (all) R.string.browse_select_none else R.string.browse_select_all))
+    }
+}
+
+/**
+ * Where the level's own rows end and the tunes from further down begin, with how many there are.
+ * Says when the list is cut at Search's cap, so a long answer is not taken for the whole one. While
+ * [selected] is given, the count is the selection's, and [selectAll] sits where it was.
+ */
+@Composable
+private fun BelowHeading(count: Int, selected: Int?, selectAll: @Composable () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().testTag("browse-filter-below")) {
+        HorizontalDivider()
+        Row(
+            modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (count >= BrowseFilter.BELOW_LIMIT) stringResource(R.string.browse_filter_below_capped, count)
+                else stringResource(R.string.browse_filter_below),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected != null) {
+                Text(pluralStringResource(R.plurals.browse_selected, selected, selected),
+                    style = MaterialTheme.typography.labelMedium)
+                selectAll()
+            } else {
+                Text(pluralStringResource(R.plurals.track_count, count, count),
+                    style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
 @Composable
 private fun NoFilterMatches() {
     Text(

@@ -125,5 +125,16 @@ class BrowseNavigationTest {
         // A folder already reached by a jump is not a search, whatever the domain field says.
         assertEquals(null, BrowseNavigation.searchToReturnTo(BrowseState(domain = BrowseDomain.SEARCH, arrivedByJump = true)))
     }
-}
 
+    @Test
+    fun `a jump from a level of Browse comes back to it, and one from elsewhere does not`() {
+        val modland = com.przunk.protracktor.data.CatalogueSummary(id = "modland", displayName = "Modland",
+            trackCount = 1, indexedAt = 1L)
+        val authors = BrowseState(domain = BrowseDomain.ONLINE, openCatalogue = modland, openFormat = "Protracker")
+        assertEquals(authors, BrowseNavigation.searchToReturnTo(authors, fromBrowse = true))
+        // From the playlist or Now Playing, the Browse left behind is not where the jump was made.
+        assertEquals(null, BrowseNavigation.searchToReturnTo(authors))
+        assertEquals(null, BrowseNavigation.searchToReturnTo(BrowseState(domain = BrowseDomain.ROOT), fromBrowse = true))
+        assertEquals(null, BrowseNavigation.searchToReturnTo(authors.copy(arrivedByJump = true), fromBrowse = true))
+    }
+}

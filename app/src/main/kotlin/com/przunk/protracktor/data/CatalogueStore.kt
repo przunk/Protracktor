@@ -383,6 +383,27 @@ class CatalogueStore(context: Context) {
             ).use { it.toTracks() }
         }
 
+    /**
+     * Tunes under one place in an archive that match [query] -- the whole archive, or one [format]
+     * of it -- for Browse's Search, which shows them below the folders it narrows (2026-11-09).
+     *
+     * **The search's own rule**: every word, in the title or the author, which is what Browse →
+     * Search answers, so the same words find the same tunes from either door. Nothing new is kept
+     * for it -- no column, no index -- because it asks the rows the archive's download already
+     * stored. A blank query asks nothing: the folders on screen are the whole answer then.
+     */
+    suspend fun searchWithin(catalogueId: String, format: String?, query: String, limit: Int): List<CatalogueTrack> =
+        withContext(Dispatchers.IO) {
+            if (Catalogue.byId(catalogueId) == null || SearchTerms.of(query).isEmpty()) return@withContext emptyList()
+            val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
+            val place = if (format == null) "" to emptyArray() else " AND format = ?" to arrayOf(format)
+            helper.readableDatabase.rawQuery(
+                "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
+                    "WHERE catalogue_id = ?${place.first} AND playable = 1 AND (${words.first}) ORDER BY title LIMIT ?",
+                arrayOf(catalogueId) + place.second + words.second + arrayOf(limit.toString()),
+            ).use { it.toTracks() }
+        }
+
     /** How many rows [search] would return without its limit. Same `WHERE`, no `ORDER BY`. */
     suspend fun countMatches(
         query: String,

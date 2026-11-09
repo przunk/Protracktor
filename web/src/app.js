@@ -22,7 +22,7 @@ import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { QueueView } from './queue-view.js';
 import { PlaylistSearchView, playlistMatches } from './playlist-search.js';
-import { BrowseFilters, browseRowMatches, filterablePath } from './browse-filter.js';
+import { BrowseFilters, belowPlace, browseRowMatches, filterablePath } from './browse-filter.js';
 import { RowReorder } from './row-reorder.js';
 import { moveItems, moveEditorTrack } from './list-reorder.js';
 import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
@@ -56,7 +56,7 @@ import { PlaybackNormalization } from './playback-normalization.js';
 import { LoudnessProfiles } from './loudness-cache.js';
 import { SystemMedia } from './system-media.js';
 import { TrackArtwork } from './track-artwork.js';
-import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
+import { LibrarySearch, SEARCH_SOURCE_LIMIT, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';
 import { SearchBrowser } from './search-browser.js';
 import * as librarySearchStore from './library-search-store.js';
 import { SearchScopesView, searchScopeLabel } from './search-scopes-view.js';
@@ -2771,12 +2771,106 @@ function applyBrowseFilter() {
   const filtering = open && !!trimQuery(query);
   let rows = 0, shown = 0;
   for (const node of $('browselist').children) {
+    // The tunes below are the answer to these words already; narrowing them again by another rule
+    // could only hide some of it.
+    if (node.dataset.below) continue;
     if (!node._selectionRow && !node.dataset.browseKey?.startsWith('folder:')) continue;
     rows++;
     node.hidden = filtering && !browseRowMatches(node, query);
     if (!node.hidden) shown++;
   }
-  $('browsefilter-empty').hidden = !filtering || !rows || shown > 0;
+  levelFilterCounts = { filtering, rows, shown };
+  refreshTunesBelow(level, filtering ? query : null);
+  paintFilterEmpty();
+}
+
+/** What the level's own rows came to, for the note that says nothing matches. */
+let levelFilterCounts = { filtering: false, rows: 0, shown: 0 };
+/** Nothing matching is said once what is below has answered too, and found nothing either. */
+function paintFilterEmpty() {
+  const { filtering, rows, shown } = levelFilterCounts;
+  const below = !!$('browselist').querySelector('[data-below="track"]');
+  $('browsefilter-empty').hidden = !filtering || !rows || shown > 0 || below || !!tunesBelow.waiting;
+}
+
+/** Long enough to be between words, short enough not to read as waiting -- the phone's pause. */
+const BELOW_PAUSE_MS = 250;
+/**
+ * The tunes below the level that match (`belowPlace`): `shown` is the answer on screen with the
+ * level and words it belongs to, `waiting` the newer words still being asked about.
+ */
+const tunesBelow = { shown: null, waiting: null, asked: 0, timer: 0, controller: null };
+
+/**
+ * Asks for the tunes below whenever the words change, a moment after typing stops. The older
+ * answer stays while newer words wait, so the section does not blink per letter, and never
+ * outlives its level: another list must not borrow the tunes of the one it was opened from.
+ */
+function refreshTunesBelow(level, query) {
+  const place = level == null ? null : belowPlace(browsePath);
+  const ask = place && query != null ? { level, query } : null;
+  const same = (a, b) => a && b && a.level === b.level && a.query === b.query;
+  if (same(ask, tunesBelow.waiting)) return;
+  if (same(ask, tunesBelow.shown)) {
+    retireTunesBelow();
+    if (!$('browselist').querySelector('[data-below]')) renderTunesBelow();
+    return;
+  }
+  retireTunesBelow();
+  if (tunesBelow.shown?.level !== level || !ask) { tunesBelow.shown = null; removeTunesBelow(); }
+  if (!ask) return;
+  const asked = ++tunesBelow.asked;
+  tunesBelow.waiting = ask;
+  tunesBelow.timer = setTimeout(async () => {
+    const controller = tunesBelow.controller = new AbortController();
+    try {
+      const rows = await librarySearchStore.searchCatalogueTracksWithin(query, place.source, place.format,
+        SEARCH_SOURCE_LIMIT, controller.signal);
+      if (asked !== tunesBelow.asked) return;
+      tunesBelow.waiting = null;
+      tunesBelow.shown = { ...ask, rows };
+      renderTunesBelow();
+      syncBrowseSelection();
+    } catch (error) {
+      if (asked !== tunesBelow.asked || error?.name === 'AbortError') return;
+      tunesBelow.waiting = null;
+      showNote(uiMessageText('could not search: {reason}', { reason: error.message }));
+    } finally {
+      if (asked === tunesBelow.asked) paintFilterEmpty();
+    }
+  }, BELOW_PAUSE_MS);
+}
+
+function retireTunesBelow() {
+  tunesBelow.asked++;
+  clearTimeout(tunesBelow.timer);
+  tunesBelow.controller?.abort();
+  tunesBelow.controller = null;
+  tunesBelow.waiting = null;
+}
+
+function removeTunesBelow() {
+  for (const node of [...$('browselist').querySelectorAll('[data-below]')]) node.remove();
+}
+
+/** The section: a heading, then each tune, which plays the tunes found rather than its folder. */
+function renderTunesBelow() {
+  removeTunesBelow();
+  const rows = tunesBelow.shown?.rows ?? [];
+  if (!rows.length) return;
+  const list = $('browselist');
+  const heading = document.createElement('li');
+  heading.className = 'bbelow'; heading.dataset.below = 'heading';
+  setUiText(heading, rows.length >= SEARCH_SOURCE_LIMIT
+    ? uiMessageText('In folders below: the first {n}', { n: rows.length.toLocaleString() })
+    : uiMessageText('In folders below'));
+  list.append(heading);
+  const route = captureBrowseRoute(rows);
+  rows.forEach((track, at) => {
+    trackRow(list, track, track.meta.replace('Modland/', ''), () => playFromBrowse(rows, at, 'browse', route));
+    list.lastElementChild.dataset.below = 'track';
+  });
+  markPlayingIn(list);
 }
 
 function closeBrowseFilter() {

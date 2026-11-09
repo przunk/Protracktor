@@ -229,8 +229,8 @@ const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js'
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { PlaylistSearchView, playlistMatches } from './playlist-search.js';",
     () => `const { PlaylistSearchView, playlistMatches } = (() => { ${fs.readFileSync('web/src/playlist-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { PlaylistSearchView, playlistMatches }; })();`)
-  .replace("import { BrowseFilters, browseRowMatches, filterablePath } from './browse-filter.js';",
-    () => `const { BrowseFilters, browseRowMatches, filterablePath } = (() => { ${fs.readFileSync('web/src/browse-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { BrowseFilters, browseRowMatches, filterablePath }; })();`)
+  .replace("import { BrowseFilters, belowPlace, browseRowMatches, filterablePath } from './browse-filter.js';",
+    () => `const { BrowseFilters, belowPlace, browseRowMatches, filterablePath } = (() => { ${fs.readFileSync('web/src/browse-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { BrowseFilters, belowPlace, browseRowMatches, filterablePath }; })();`)
   .replace("import { SystemMedia } from './system-media.js';", 'const { SystemMedia } = window.__systemMediaModules;')
   .replace("import { TrackArtwork } from './track-artwork.js';", 'const { TrackArtwork } = window.__systemMediaModules;')
   .replace("import { LibraryDownloads } from './library-downloads.js';",
@@ -268,12 +268,12 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { RowReorder } from './row-reorder.js';", '')
   .replace("import { moveItems, moveEditorTrack } from './list-reorder.js';",
     () => `const { moveItems, moveEditorTrack } = (() => { ${fs.readFileSync('web/src/list-reorder.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { moveItems, moveEditorTrack }; })();`)
-  .replace("import { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';",
-    () => `const { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection } = (() => { ${fs.readFileSync('web/src/library-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { LibrarySearch, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection }; })();`)
+  .replace("import { LibrarySearch, SEARCH_SOURCE_LIMIT, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists } from './library-search.js';",
+    () => `const { LibrarySearch, SEARCH_SOURCE_LIMIT, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection } = (() => { ${fs.readFileSync('web/src/library-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { LibrarySearch, SEARCH_SOURCE_LIMIT, savedSearchTracks, searchScope, searchScopeKey, searchesPlaylists, SearchSelection }; })();`)
   .replace("import { SearchBrowser } from './search-browser.js';",
     () => `const { SearchBrowser } = (() => { ${fs.readFileSync('web/src/search-browser.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchBrowser }; })();`)
   .replace("import * as librarySearchStore from './library-search-store.js';",
-    () => `const librarySearchStore = (() => { ${fs.readFileSync('web/src/library-search-store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { searchCatalogueTracks, searchScopeAvailability }; })();`)
+    () => `const librarySearchStore = (() => { ${fs.readFileSync('web/src/library-search-store.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { searchCatalogueTracks, searchCatalogueTracksWithin, searchScopeAvailability }; })();`)
   .replace("import { SearchScopesView, searchScopeLabel } from './search-scopes-view.js';",
     () => `const { SearchScopesView, searchScopeLabel } = (() => { ${fs.readFileSync('web/src/search-scopes-view.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { SearchScopesView, searchScopeLabel }; })();`)
 

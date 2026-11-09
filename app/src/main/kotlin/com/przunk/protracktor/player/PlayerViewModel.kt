@@ -129,6 +129,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun stopScan() = controller.stopScan()
 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
+    /** From a list in Browse, whose Back comes back to that list (`BrowseNavigation.searchToReturnTo`). */
+    fun showNeighboursFromBrowse(track: TrackRef) = controller.showNeighboursOf(track, fromBrowse = true)
 
     fun shareFile(track: TrackRef) = controller.shareFile(track)
     fun useForAlarms(track: TrackRef) = controller.useForAlarms(track)
@@ -144,6 +146,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         controller.resumeSearch()
     }
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
+    suspend fun searchBelow(level: String, query: String) = controller.searchBelow(level, query)
+    fun playFound(found: List<TrackRef>, index: Int, query: String) {
+        ensureServiceRunning()
+        controller.playFound(found, index, query)
+    }
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the
         // state already knows which one is showing.

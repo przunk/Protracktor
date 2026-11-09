@@ -108,3 +108,51 @@ internal fun TopOnNewFilter(listState: LazyListState, query: String) {
         }
     }
 }
+
+/**
+ * The tunes below this level that match Search, as they stand: [tracks] for the words last
+ * answered here, and [pending] while newer words wait for theirs.
+ */
+@androidx.compose.runtime.Immutable
+internal data class TunesBelow(val tracks: List<com.przunk.protracktor.player.TrackRef>, val pending: Boolean) {
+    companion object { val NONE = TunesBelow(emptyList(), pending = false) }
+}
+
+/**
+ * Asks [search] for the tunes below [level] whenever the words change there, a moment after the
+ * typing stops so one search answers a word rather than each letter of it; the answer arrives in
+ * [found] (`BrowseState.below`).
+ *
+ * The answer is kept with the level and the words it belongs to. While newer words wait, the older
+ * answer stays on screen rather than the section blinking out per letter; on another level it is
+ * never shown, so a list cannot borrow the tunes of the one it was opened from. [contents] asks
+ * again when what the level holds changes under it -- a list that finished loading, a folder scanned.
+ */
+@Composable
+internal fun rememberTunesBelow(
+    level: String,
+    query: String,
+    enabled: Boolean,
+    contents: Any?,
+    found: com.przunk.protracktor.player.TunesFound?,
+    search: suspend (level: String, query: String) -> Unit,
+): TunesBelow {
+    val asking = enabled && com.przunk.protracktor.data.SearchTerms.of(query).isNotEmpty()
+    // What the level held when it was last asked about here. Null on arriving, which is when an
+    // answer already in the state -- one a way back to the source restored -- is taken as it is.
+    var askedOf by remember { mutableStateOf<Any?>(null) }
+    LaunchedEffect(level, query, asking, contents) {
+        if (!asking) return@LaunchedEffect
+        val answered = found?.level == level && found.query == query
+        if (answered && (askedOf == null || askedOf == contents)) { askedOf = contents; return@LaunchedEffect }
+        kotlinx.coroutines.delay(BELOW_PAUSE_MS)
+        search(level, query)
+        askedOf = contents
+    }
+    if (!asking) return TunesBelow.NONE
+    val here = found?.takeIf { it.level == level }
+    return TunesBelow(here?.tracks.orEmpty(), pending = here?.query != query)
+}
+
+/** Long enough to be between words, short enough not to read as waiting. */
+internal const val BELOW_PAUSE_MS = 250L
