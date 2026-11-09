@@ -9,6 +9,19 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C136 Authors whose names start with a small letter sort after Z — open, found 2026-11-09
+
+Found while asking why Przunk was missing from ASMA. He is not missing: ASMA's archive of
+2026-10-10 holds his seven tunes in `Composers/przunk/`, the same seven its own database lists. The
+copy on my phone was older than that, which is why the author was not there. What the question did
+uncover is the order. The phone sorts a catalogue's authors (and its formats) with SQLite's plain
+`ORDER BY`, which compares character codes, so every capital comes before every small letter.
+ASMA's four lower-case composers (`djmaximum`, `gotoandplay`, `null1024`, `przunk`) come after `Z`;
+Przunk is 305th of 305. Folders on the phone already sort without regard to case
+(`LocalTree`), and the WEB player sorts authors with a collator, so only the Android catalogue
+lists are affected. **Checked:** the archive's entries and the resulting order, computed from the
+downloaded zip. **Not checked:** the phone. Not fixed.
+
 ## By platform searches the online catalogues only — merged, 2026-11-08
 
 **Merged into develop** on 2026-11-08 with explicit approval; phone and browser checks not reported.
