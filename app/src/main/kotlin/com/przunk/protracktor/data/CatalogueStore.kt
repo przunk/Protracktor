@@ -346,11 +346,15 @@ class CatalogueStore(context: Context) {
             .use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
+    // **Listed regardless of case** (C136): SQLite's own order compares character codes, which put
+    // every capital before every small letter, and ASMA's `przunk` 305th of 305, after `Zyx`. The
+    // plain name follows, so `Nork` and `nork` keep one order between them. As folders on the phone
+    // (`LocalTree`) and the page's collator already sort.
     suspend fun formats(catalogueId: String): List<CatalogueGroup> = withContext(Dispatchers.IO) {
         if (Catalogue.byId(catalogueId) == null) return@withContext emptyList()
         helper.readableDatabase.rawQuery(
             "SELECT format, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? AND playable = 1 " +
-                "GROUP BY format ORDER BY format",
+                "GROUP BY format ORDER BY format COLLATE NOCASE, format",
             arrayOf(catalogueId),
         ).use { it.toGroups() }
     }
@@ -360,7 +364,7 @@ class CatalogueStore(context: Context) {
             if (Catalogue.byId(catalogueId) == null) return@withContext emptyList()
             helper.readableDatabase.rawQuery(
                 "SELECT author, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? AND format = ? AND playable = 1 " +
-                    "GROUP BY author ORDER BY author",
+                    "GROUP BY author ORDER BY author COLLATE NOCASE, author",
                 arrayOf(catalogueId, format),
             ).use { it.toGroups() }
         }
