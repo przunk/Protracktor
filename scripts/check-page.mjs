@@ -229,6 +229,8 @@ const randomFiltersViewSource = fs.readFileSync('web/src/random-filters-view.js'
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace("import { PlaylistSearchView, playlistMatches } from './playlist-search.js';",
     () => `const { PlaylistSearchView, playlistMatches } = (() => { ${fs.readFileSync('web/src/playlist-search.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { PlaylistSearchView, playlistMatches }; })();`)
+  .replace("import { BrowseFilters, browseRowMatches, filterablePath } from './browse-filter.js';",
+    () => `const { BrowseFilters, browseRowMatches, filterablePath } = (() => { ${fs.readFileSync('web/src/browse-filter.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '')}; return { BrowseFilters, browseRowMatches, filterablePath }; })();`)
   .replace("import { SystemMedia } from './system-media.js';", 'const { SystemMedia } = window.__systemMediaModules;')
   .replace("import { TrackArtwork } from './track-artwork.js';", 'const { TrackArtwork } = window.__systemMediaModules;')
   .replace("import { LibraryDownloads } from './library-downloads.js';",
@@ -3853,6 +3855,8 @@ await (await import('./check-page-list-reorder.mjs')).default({ window, check })
 await (await import('./check-page-playlist-transfer.mjs')).default({ window, check });
 
 await (await import('./check-page-browse-selection.mjs')).default({ window, check });
+
+await (await import('./check-page-browse-filter.mjs')).default({ window, check });
 
 await (await import('./check-page-dock.mjs')).default({ window, check });
 

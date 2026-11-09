@@ -625,6 +625,8 @@
     <string name="playlist_search_close">Zamknij wyszukiwanie na playliście</string>
     <string name="playlist_search_clear">Wyczyść wyszukiwanie</string>
     <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
+    <string name="browse_filter_hint">Szukaj na tej liście…</string>
+    <string name="browse_filter_no_matches">Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.</string>
     <string name="alarm_preparing">Przygotowywanie muzyki budzika: %1$s</string>
     <string name="alarm_music_ready">Muzyka jest gotowa offline. Otwórz Budzik, aby ustawić godzinę.</string>
     <string name="alarm_prepare_failed">Nie udało się przygotować muzyki. Sprawdź źródło, wolne miejsce i czy utwór ma słyszalny początek.</string>

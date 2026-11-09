@@ -22,6 +22,7 @@ import { PlaybackSchedule, PlaybackPlan } from './playback-schedule.js';
 import { applyPlaybackStep, removeManualRequest, removeSourceOccurrence, undoQueueRemoval } from './playback-steps.js';
 import { QueueView } from './queue-view.js';
 import { PlaylistSearchView, playlistMatches } from './playlist-search.js';
+import { BrowseFilters, browseRowMatches, filterablePath } from './browse-filter.js';
 import { RowReorder } from './row-reorder.js';
 import { moveItems, moveEditorTrack } from './list-reorder.js';
 import { hasSourceView, sameSourceView, sourceDestination, captureSourceRoute, restoreSourceRoute } from './source-navigation.js';
@@ -68,6 +69,8 @@ const $ = (id) => document.getElementById(id);
 const status = (text) => { setUiText($('status'), text); };
 let searchSuggestions = null;
 let playlistSearch = null;
+// Browse's Search, per level, for one visit to Browse (2026-11-09).
+const browseFilters = new BrowseFilters();
 let remoteMusic = null, musicCacheView = null, offlineAsma = null, asmaView = null;
 let readAhead = null, folderPrefetch = null, browsedFolder = null;
 let libraryDownloads = null, downloadPicker = null;
@@ -2747,8 +2750,42 @@ function browseSelectionOwner() {
 }
 
 function syncBrowseSelection() {
+  // What Search hides is out of the selection: Add and Share act on what the header counts.
   browseSelectionView?.sync(browseSelectionOwner(), [...$('browselist').children]
-    .map((node) => node._selectionRow).filter(Boolean));
+    .filter((node) => !node.hidden).map((node) => node._selectionRow).filter(Boolean));
+}
+
+/** The level Browse's Search belongs to, or null where there is no list to narrow. */
+function browseFilterLevel() { return filterablePath(browsePath) ? JSON.stringify(browsePath) : null; }
+
+/** Shows the bar's button or field for this level and narrows its rows; the rows stay in place. */
+function applyBrowseFilter() {
+  const level = browseFilterLevel();
+  const query = level == null ? null : browseFilters.queryAt(level);
+  const open = query != null;
+  $('browsefilter-open').hidden = level == null || open;
+  $('browsefilter-open').setAttribute('aria-expanded', String(open));
+  $('browsefilter-form').hidden = !open;
+  $('browsetitle').hidden = open;
+  if (open && $('browsefilter-input').value !== query) $('browsefilter-input').value = query;
+  const filtering = open && !!trimQuery(query);
+  let rows = 0, shown = 0;
+  for (const node of $('browselist').children) {
+    if (!node._selectionRow && !node.dataset.browseKey?.startsWith('folder:')) continue;
+    rows++;
+    node.hidden = filtering && !browseRowMatches(node, query);
+    if (!node.hidden) shown++;
+  }
+  $('browsefilter-empty').hidden = !filtering || !rows || shown > 0;
+}
+
+function closeBrowseFilter() {
+  const level = browseFilterLevel();
+  if (level == null || browseFilters.queryAt(level) == null) return false;
+  browseFilters.close(level);
+  $('browsefilter-input').blur();
+  applyBrowseFilter(); syncBrowseSelection();
+  return true;
 }
 /** Hold/swipe suppression survives row replacement; fresh input resets it to avoid C36. */
 let swallowRowClick = false;
@@ -3465,7 +3502,7 @@ function showPanel(which, { preserveBrowse = false } = {}) {
   if (which !== 'browse') {
     if (!preserveBrowse) browseSelection.clear();
     searchSuggestions?.close(true);
-    if (!preserveBrowse) { historyBrowser.leave(); searchBrowser.leave(); retireSearchAvailability(); $('historysearch').blur(); }
+    if (!preserveBrowse) { historyBrowser.leave(); searchBrowser.leave(); retireSearchAvailability(); $('historysearch').blur(); browseFilters.clear(); }
   }
   if (which !== 'browse') savedPlaces?.cancelOpening();
   closePlaybackQueue();
@@ -4202,6 +4239,7 @@ async function renderBrowse(resolved = null) {
   markPlayingIn(list);
   } finally {
     if (visit === searchAsked) {
+      applyBrowseFilter();
       syncBrowseSelection();
       const loading = !sourceBrowseRoute && (browsePath[0] === 'history' ? historyBrowser.state.loading
         : browsePath[0] === 'search' ? searchBrowser.state.loading : false);
@@ -4675,6 +4713,8 @@ $('tab-browse').onclick = async () => {
 };
 $('browseback').onclick = async () => {
   if (browseSelection.active) { browseSelection.clear(); return; }
+  // Search before the level, as the phone's Back does.
+  if (closeBrowseFilter()) return;
   if (!browsePath.length) { returnToPlaylist(); return; }
   if (browsePath[0] === 'history') {
     sourceBrowseRoute = null; browsePath = [];
@@ -4715,6 +4755,35 @@ $('browseback').onclick = async () => {
   await renderBrowse();
 };
 $('browseclose').onclick = returnToPlaylist;
+$('browsefilter-open').onclick = () => {
+  const level = browseFilterLevel();
+  if (level == null) return;
+  browseFilters.open(level);
+  applyBrowseFilter(); syncBrowseSelection();
+  $('browsefilter-input').focus({ preventScroll: true });
+};
+$('browsefilter-input').addEventListener('input', () => {
+  const level = browseFilterLevel();
+  if (level == null) return;
+  browseFilters.change(level, $('browsefilter-input').value);
+  $('browselist').scrollTop = 0;
+  applyBrowseFilter(); syncBrowseSelection();
+});
+$('browsefilter-clear').onclick = () => {
+  $('browsefilter-input').value = '';
+  $('browsefilter-input').dispatchEvent(new Event('input'));
+  $('browsefilter-input').focus({ preventScroll: true });
+};
+$('browsefilter-form').addEventListener('submit', (event) => { event.preventDefault(); $('browsefilter-input').blur(); });
+// Escape: the keyboard first, then Search -- after the selection, whose handler runs before this one.
+addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || $('browse').hidden || browseSelection.active) return;
+  // Whatever is open over Browse answers Escape first: a row's menu, the queue, a question.
+  if (!$('menu').hidden || !$('playback-panel').hidden || !$('unsaved').hidden) return;
+  const input = $('browsefilter-input');
+  if (document.activeElement === input) { event.preventDefault(); event.stopImmediatePropagation(); input.blur(); return; }
+  if (closeBrowseFilter()) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
 
 playlistSearch = new PlaylistSearchView({
   root: document.querySelector('.app'), heading: $('playlist-heading'), input: $('playlist-search-input'),
