@@ -10,14 +10,14 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B60. Search in Browse, as in the playlist — built on a branch 2026-11-09
+## B60. Search in Browse, as in the playlist — done and merged 2026-11-09
 
 Raised 2026-11-09, before 1.8.0: AMP's formats hold thousands of authors, and scrolling for one is
 slow. Wanted: a Search button in Browse that works exactly like the playlist's, narrowing whatever
 the level lists -- folders when it lists folders, files when it lists files. Decided the same day:
 on the page too, and in 1.8.0.
 
-**Built on `feature/browse-filter`, 2026-11-09.** *Search* (icon and label) in Browse's bar on an
+**Built on `feature/browse-filter` 2026-11-09; phone check reported working and merged the same day as 7208d8b5.** *Search* (icon and label) in Browse's bar on an
 archive's formats, a format's authors, an author's tunes and a folder on the phone (its folders and
 files); not on Browse's own start, the list of archives, Search or History, which have nothing to
 narrow or their own field. The field takes the title's place. Matching is the playlist's rule (every
@@ -33,7 +33,8 @@ the playlist's dimming of the rest of the screen while typing.
 field, narrowing, per-level memory, Back order, where it is absent), the page check
 `check-page-browse-filter.mjs`; each test failed once its guard was broken. The bar rendered at
 360 dp in English and Polish, Search closed and open, fits (`dist/evidence/b60-browse-search/`).
-**Not checked:** the phone, and the page in a real browser.
+On the phone (1.7.0 build 1510, `e9685faa`) it was reported working. **Not checked:** the page in a
+real browser.
 
 ## B59. Select all, and Share for a selection — done and merged 2026-11-09
 
