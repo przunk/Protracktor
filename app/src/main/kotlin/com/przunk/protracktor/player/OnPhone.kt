@@ -33,9 +33,10 @@ object OnPhone {
         data object Never : Check
     }
 
-    fun checkFor(id: String): Check {
+    /** [ampModuleId] gives AMP's current number for a path: its files are cached under `/module/<id>` (C134). */
+    fun checkFor(id: String, ampModuleId: (String) -> Long? = { null }): Check {
         if (id.startsWith("amp://")) {
-            return Amp.pathFrom(id)?.let(Amp::downloadUrl)
+            return Amp.pathFrom(id)?.let(ampModuleId)?.let(Amp::downloadUrl)
                 ?.takeIf { Amp.access.enabled }?.let { Check.Cached(it) } ?: Check.Never
         }
         UnExoticA.pathFrom(id)?.let { path ->

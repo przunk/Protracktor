@@ -37,7 +37,7 @@ class DownloadSizesTest {
             DownloadSizes.MODLAND_MB to 5.49,
             DownloadSizes.ASMA_MB to 19.18,
             DownloadSizes.UNEXOTICA_MB to 1.68,
-            DownloadSizes.AMP_MB to 22.72,
+            DownloadSizes.AMP_MB to 9.57,  // AMP's daily map, 10,039,757 bytes as transferred, 2026-11-09
             DownloadSizes.SONG_LENGTHS_MB to 4.96,
             DownloadSizes.TRACK_METADATA_MB to 25.48,
             DownloadSizes.FAVOURITES_MB to 0.14,

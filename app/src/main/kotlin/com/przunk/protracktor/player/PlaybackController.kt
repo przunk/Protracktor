@@ -353,6 +353,7 @@ class PlaybackController private constructor(private val context: Context) {
             override fun hasArchive(catalogueId: String) =
                 remoteFiles.archiveFile(catalogueId).let { it.exists() && it.length() > 0 }
             override suspend fun fetch(url: String) = remoteFiles.fetch(url) != null
+            override fun ampModuleId(path: String) = remoteFiles.ampModuleIds.idFor(path)
         },
         networkIsMetered = ::networkIsMetered,
         progress = object : BrowseCache.Progress {
@@ -2322,6 +2323,13 @@ class PlaybackController private constructor(private val context: Context) {
         reason: String = "",
         missingCompanions: List<String> = emptyList(),
     ): String {
+        // AMP moved to numbered downloads (C134). A file without a number in the current map is
+        // either from an index downloaded before the change or no longer listed by AMP; the remedy
+        // for both is the same, so the message says it rather than "could not be downloaded".
+        if (!fetched) Amp.pathFrom(ref.id)?.let { path ->
+            if (withContext(Dispatchers.IO) { remoteFiles.ampModuleIds.idFor(path) } == null)
+                return context.getString(R.string.open_failed_amp_unmapped, ref.title)
+        }
         val name = ref.fileNameOrTitle
         val claimed = SupportedFormats.looksPlayable(name)
         val needsPlayers = SupportedFormats.needsUade(name) &&

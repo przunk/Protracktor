@@ -3,27 +3,29 @@
 
 package com.przunk.protracktor.net
 
-import java.net.URLEncoder
 import java.util.Locale
 import java.util.zip.GZIPInputStream
 
-/** Android catalogue backed by the pinned songdb path index; see docs/PLAN_AMP.md. */
+/**
+ * Android catalogue backed by AMP's own daily module map; see docs/PLAN_AMP.md and C134.
+ *
+ * **Since 2026-11-09** the index is `amp_modules.json`, which AMP regenerates every day at 14:00 UTC,
+ * and a file is downloaded as `/module/<id>`. AMP's new site (2026-11-03) retired the `/modules/<path>`
+ * addresses the earlier songdb index led to. A tune's identity stays its path (`amp://<path>`), so
+ * what users saved before still plays; the number is looked up from [AmpModuleIds] when it downloads.
+ */
 object Amp : Catalogue(
     id = "amp",
     displayName = "AMP (Amiga Music Preservation)",
-    indexUrl = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/" +
-        "ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f/songdb/sources/site/amp.tsv",
+    indexUrl = "https://amp.dascene.net/download/amp_modules.json",
 ) {
     // Withdrawal requires a new build; existing installations keep their compiled availability.
-    // **Off since 2026-11-08 (C134).** AMP's new site (live 2026-11-03) serves a file only by its
-    // module number, `/module/<id>`; the `/modules/<path>` addresses this index gives answer 404.
-    // The pinned songdb index has paths and MD5s but no module numbers, so no file can be reached
-    // until a number-to-file list exists. Retained references stay; nothing is deleted.
-    const val ENABLED: Boolean = false
+    // Off from 2026-11-08 to 2026-11-09 (C134) while AMP's new site had no way to a module number.
+    const val ENABLED: Boolean = true
     internal val access = AmpAccess()
     override val homeUrl = "https://amp.dascene.net/"
-    private const val FILE_BASE = "https://amp.dascene.net/modules/"
-    // Above the largest pinned entry (55,414,299 bytes), still bounded for malformed responses.
+    private const val MODULE_BASE = "https://amp.dascene.net/module/"
+    // Above the largest module (55,414,299 bytes) and the 45 MB map, still bounded for malformed responses.
     private const val MAX_MODULE_BYTES = 64 * 1024 * 1024
 
     override fun urlFor(path: String): String = "amp://$path"
@@ -34,11 +36,8 @@ object Amp : Catalogue(
     // Keep external sharing on the archive homepage; raw module transfer is Android-only.
     override fun fileUrlFor(path: String): String? = null
 
-    fun downloadUrl(path: String): String? = path.takeIf(::validPath)?.let {
-        FILE_BASE + it.split('/').joinToString("/") { segment ->
-            URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
-        }
-    }
+    /** Where one module downloads from: its number, as AMP's new site serves it. */
+    fun downloadUrl(moduleId: Long): String? = moduleId.takeIf { it > 0 }?.let { MODULE_BASE + it }
 
     internal fun controls(url: String): Boolean = url == indexUrl || runCatching {
         val uri = java.net.URI(url)
@@ -51,26 +50,56 @@ object Amp : Catalogue(
                 path.none { it == '\\' || it.isISOControl() }
         }
 
-    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> = buildList {
-        bytes.toString(Charsets.UTF_8).lineSequence().forEach { line ->
-            val cells = line.trimEnd('\r').split('\t')
-            // Four-column continuation rows describe subsongs, not additional files.
-            if (cells.size != 11) return@forEach
-            val path = cells[10]
-            if (!validPath(path)) return@forEach
-            val title = path.substringAfterLast('/').removeSuffix(".gz")
-            val size = cells[7].toLongOrNull()?.takeIf { it >= 0 } ?: return@forEach
-            if (title.isBlank()) return@forEach
-            add(CatalogueEntry(
-                path = path,
-                // FTM also means FamiTracker; retain the source's certain format for platform inference.
-                format = if (cells[5] == "FaceTheMusic") "Face The Music"
-                    else title.substringBefore('.').trim().uppercase(Locale.ROOT),
-                author = path.substringAfter('/').substringBefore('/'),
-                title = title,
-                size = size,
-            ))
+    /**
+     * The daily map, read as a stream: 45 MB of JSON is parsed field by field rather than built into
+     * objects. Browsing keeps the shape the old index had -- the folder as author, the stored file
+     * name without `.gz` as title, so the format prefix still decides the decoder -- and a path seen
+     * twice (AMP lists 112 files under two numbers) keeps its first number.
+     */
+    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> = runCatching {
+        val seen = HashSet<String>()
+        buildList {
+            android.util.JsonReader(java.io.InputStreamReader(bytes.inputStream(), Charsets.UTF_8)).use { reader ->
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    if (reader.nextName() != "modules") { reader.skipValue(); continue }
+                    reader.beginArray()
+                    while (reader.hasNext()) {
+                        moduleEntry(reader)?.takeIf { seen.add(it.path) }?.let(::add)
+                    }
+                    reader.endArray()
+                }
+                reader.endObject()
+            }
         }
+    }.getOrDefault(emptyList())
+
+    private fun moduleEntry(reader: android.util.JsonReader): CatalogueEntry? {
+        var id = 0L; var path = ""; var fileName = ""; var size = -1L
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "module_id" -> id = reader.nextLong()
+                "path" -> path = reader.nextString()
+                "file_name" -> fileName = reader.nextString()
+                "file_size" -> size = reader.nextLong()
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+        if (id <= 0 || size < 0 || !validPath(path)) return null
+        val title = (fileName.ifBlank { path.substringAfterLast('/') }).removeSuffix(".gz")
+        if (title.isBlank()) return null
+        val prefix = title.substringBefore('.').trim().uppercase(Locale.ROOT)
+        return CatalogueEntry(
+            path = path,
+            // FTM also means FamiTracker; on AMP, an Amiga archive, it is always Face The Music.
+            format = if (prefix == "FTM") "Face The Music" else prefix,
+            author = path.substringAfter('/').substringBefore('/'),
+            title = title,
+            size = size,
+            remoteId = id,
+        )
     }
 
     /** Two indexed files are uncompressed; reject HTML and cap expanded gzip data. */

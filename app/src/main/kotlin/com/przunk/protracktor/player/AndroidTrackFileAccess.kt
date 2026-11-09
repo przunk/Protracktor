@@ -15,6 +15,7 @@ internal class AndroidTrackFileAccess(
     private val remoteFiles: RemoteFiles,
 ) : TrackFiles.Access {
     override suspend fun fetch(url: String) = remoteFiles.fetch(url)
+    override fun ampModuleId(path: String) = remoteFiles.ampModuleIds.idFor(path)
 
     override suspend fun readArchive(catalogueId: String, entry: String) =
         remoteFiles.readFromArchive(catalogueId, entry)

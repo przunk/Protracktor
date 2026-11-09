@@ -44,7 +44,21 @@ door: its only file input imports playlists. A playlist file listing a JPG is a 
 changed here. **Checked:** `PickedFilesTest`, which fails when picked files are all accepted again.
 **Not checked:** the phone.
 
-## C134 AMP downloads fail: the archive moved to a new site — AMP switched off, merged 2026-11-08
+## C134 AMP downloads fail: the archive moved to a new site — AMP back on AMP's daily map, on a branch 2026-11-09
+
+**Built on `feature/amp-module-map`, 2026-11-09.** The AMP index is now AMP's own
+`amp_modules.json` (daily, 14:00 UTC), read as a stream; a file downloads from `/module/<id>`.
+A tune keeps its identity `amp://<path>`, so playlists, History and bookmarks from before still
+point at it; the number is looked up when it downloads, from `AmpModuleIds`, a table sorted by path
+written beside the index and searched in place (no schema change; 24 stays reserved). A path the map
+does not list — or any AMP tune before the catalogue is downloaded again after updating — says so and
+how to fix it. `Amp.ENABLED` is true again; the thirteen AMP-only tests run (plus one new), and the
+skip allowance no longer applies. **Checked:** parser and table tests, each failing when the table is
+left unsorted or duplicate paths are kept; on the real map, 177,705 modules parsed in 1.1 s on this
+machine and every path's number found, 96 µs per lookup. **Not checked:** the phone, and the parse
+time and lookups there.
+
+## C134 (earlier) AMP switched off, merged 2026-11-08
 
 **Merged into develop** on 2026-11-08 after the owner reported APK 1.6.0 (1491), source `e5507693`, working on the phone. AMP returns when module numbers are available.
 

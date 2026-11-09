@@ -37,9 +37,18 @@ class TrackFilesTest {
         val packed = java.io.ByteArrayOutputStream().also { output ->
             java.util.zip.GZIPOutputStream(output).use { it.write(original) }
         }.toByteArray()
-        val access = Access(packed)
+        val access = Access(packed).apply { ampIds = mapOf("A/Artist/MOD.song.gz" to 49993L) }
         org.junit.Assert.assertArrayEquals(original, files(access).read(track("amp://A/Artist/MOD.song.gz", "MOD.song")))
-        assertEquals(listOf("fetch:https://amp.dascene.net/modules/A/Artist/MOD.song.gz", "refreshed"), access.calls)
+        assertEquals(listOf("fetch:https://amp.dascene.net/module/49993", "refreshed"), access.calls)
+        // The new site serves the file already unpacked; that plays the same.
+        val plain = Access(original).apply { ampIds = mapOf("A/Artist/MOD.song.gz" to 49993L) }
+        org.junit.Assert.assertArrayEquals(original, files(plain).read(track("amp://A/Artist/MOD.song.gz", "MOD.song")))
+    }
+    @Test fun `an AMP path without a number in the map is not fetched at all`() = runBlocking {
+        assumeTrue("an AMP-enabled build; listed in app/src/test/amp-enabled-only.txt", Amp.ENABLED)
+        val access = Access(payload)
+        assertEquals(null, files(access).read(track("amp://A/Artist/MOD.gone.gz", "MOD.gone")))
+        assertEquals(emptyList<String>(), access.calls)
     }
     private val payload = byteArrayOf(1, 2, 3)
     private fun track(id: String, name: String = id.substringAfterLast('/')) =
@@ -53,6 +62,8 @@ class TrackFilesTest {
         var fetchFailure: CancellationException? = null
         var readThread: Thread? = null
         var extractThread: Thread? = null
+        var ampIds: Map<String, Long> = emptyMap()
+        override fun ampModuleId(path: String) = ampIds[path]
 
         override suspend fun fetch(url: String): ByteArray? {
             calls += "fetch:$url"

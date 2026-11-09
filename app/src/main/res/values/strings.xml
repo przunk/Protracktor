@@ -157,6 +157,7 @@
          the owner looking in the wrong place twice in a day: a download failure read as an
          unsupported format, and one bad file read as a whole platform being unsupported. -->
     <string name="open_failed_not_fetched">Could not download %1$s. It may be the connection — try again.</string>
+    <string name="open_failed_amp_unmapped">%1$s is not in AMP\'s current list. AMP moved to a new website: download the AMP catalogue again in Browse → Online catalogues. If it still is not there, AMP has renamed or removed it.</string>
     <string name="open_failed_format">%1$s is a format Protracktor cannot play yet.</string>
     <string name="open_failed_file">%1$s would not open. Other files of this format do play, so it is this one.</string>
     <string name="open_failed_file_because">%1$s would not open: %2$s</string>

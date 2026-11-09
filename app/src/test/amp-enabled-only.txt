@@ -19,3 +19,4 @@ LibraryDownloadsTest > disabling AMP during index fetch retires progress and doe
 ManualQueueControllerTest > AMP admission ignores the old preference and preserves the context
 QueueCatalogueCompatibilityTest > enabled AMP remains playable and discoverable with queue retention guards
 TrackFilesTest > AMP gzip uses its module URL and decoder receives unpacked bytes
+TrackFilesTest > an AMP path without a number in the map is not fetched at all

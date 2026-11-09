@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], application = Application::class)
 class AmpRemoteFilesTest {
-    private val url = Amp.downloadUrl("A/Artist/MOD.song.gz")!!
+    private val url = Amp.downloadUrl(49993)!!
     private val context get() = ApplicationProvider.getApplicationContext<Application>()
     private val payload = "Synthetic module".toByteArray()
 
