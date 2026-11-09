@@ -96,6 +96,9 @@ class RemoteFiles(
     /** Where a catalogue that ships as one archive keeps it. */
     fun archiveFile(catalogueId: String): File = File(archiveDir, "$catalogueId.zip")
 
+    /** AMP's module numbers by path, written with its index (C134). */
+    internal val ampModuleIds = AmpModuleIds(File(archiveDir, "amp-module-ids.tsv"))
+
     /** Stores a downloaded archive whole, so its contents can be read without the network again. */
     suspend fun storeArchive(catalogueId: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
         AtomicFileWrite.write(archiveFile(catalogueId), bytes)

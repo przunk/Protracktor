@@ -24,6 +24,8 @@ internal class TrackFiles(
         fun decodeFileName(name: String): String
         fun extractLha(archive: ByteArray, member: String): ByteArray?
         fun reportMissingMember(archiveUrl: String, member: String)
+        /** AMP's current number for a path, or null when it has none (C134). */
+        fun ampModuleId(path: String): Long? = null
     }
 
     /** Reads a track's bytes, from wherever it lives. */
@@ -106,7 +108,7 @@ internal class TrackFiles(
     private suspend fun loadFromAmp(id: String): ByteArray? {
         val ticket = Amp.access.capture() ?: return null
         val path = Amp.pathFrom(id) ?: return null
-        val url = Amp.downloadUrl(path) ?: return null
+        val url = access.ampModuleId(path)?.let(Amp::downloadUrl) ?: return null
         val packed = access.fetch(url) ?: return null
         if (!Amp.access.allows(ticket)) return null
         return withContext(archiveWork) { Amp.moduleBytes(packed) }

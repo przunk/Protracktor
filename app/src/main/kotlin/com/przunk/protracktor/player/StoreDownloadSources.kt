@@ -25,8 +25,12 @@ internal class StoreDownloadSources(
 ) : LibraryDownloads.Sources {
     override suspend fun fetchIndex(url: String) = remoteFiles.fetchIndex(url)
     override suspend fun storeArchive(id: String, bytes: ByteArray) = remoteFiles.storeArchive(id, bytes)
-    override suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>) =
-        catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
+    override suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>): Int {
+        // AMP's numbers first: an index whose files cannot be reached would only list failures.
+        if (catalogue == com.przunk.protracktor.net.Amp &&
+            !remoteFiles.ampModuleIds.write(entries.mapNotNull { e -> e.remoteId?.let { e.path to it } })) return 0
+        return catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
+    }
 
     override suspend fun replaceSongLengths(entries: List<SongLengths.Entry>) {
         songLengths.replaceAll(entries)

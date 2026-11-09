@@ -17,6 +17,8 @@ internal class BrowseCache(
         fun isCached(url: String): Boolean
         fun hasArchive(catalogueId: String): Boolean
         suspend fun fetch(url: String): Boolean
+        /** AMP's current number for a path (C134); none means not on the phone. */
+        fun ampModuleId(path: String): Long? = null
     }
 
     interface Progress {
@@ -46,7 +48,7 @@ internal class BrowseCache(
     suspend fun onPhoneOf(ids: List<String>): Set<String> = withContext(Dispatchers.IO) {
         val archives = mutableMapOf<String, Boolean>()
         ids.filterTo(HashSet()) { id ->
-            when (val check = OnPhone.checkFor(id)) {
+            when (val check = OnPhone.checkFor(id, files::ampModuleId)) {
                 is OnPhone.Check.Cached -> files.isCached(check.url)
                 is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
                     files.hasArchive(check.catalogueId)

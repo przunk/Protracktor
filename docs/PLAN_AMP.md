@@ -1,3 +1,4 @@
+<!-- Index source changed 2026-11-09: see the section at the end. -->
 # AMP catalogue
 
 Implementation selected 2026-10-18. Branch `feature/amp-catalogue`, originally from develop `a421afc`.
@@ -155,3 +156,13 @@ Restored `Amp.ENABLED = true` for the full gate and replacement APK. Old `amp_en
 is seeded before real controller startup in the admission tests, covering an upgrade from an
 opted-out trial. The current full gate and replacement APK pass; [Current artifact and verification](RELEASE_1.5.0_PREPARATION.md#replacement-apk-after-the-amp-build-gate-correction--2026-11-02). Earlier
 artifact/source identities are retained; no develop merge or release is performed here.
+
+
+## AMP's own module map — 2026-11-09
+
+AMP replaced its site on 2026-11-03 and retired `/modules/<path>`; at our request it now publishes
+`https://amp.dascene.net/download/amp_modules.json` daily at 14:00 UTC (module id, title, authors,
+stored and download file names, size, MD5, path). The app uses it instead of the pinned songdb index:
+`Amp.parseIndex` streams it, `AmpModuleIds` keeps id-by-path beside the catalogue files, and a module
+downloads from `/module/<id>`, already unpacked. Identity stays the path. AMP serves only single-file
+formats, so no companions are needed. The web player still has no AMP: the map is served without CORS.

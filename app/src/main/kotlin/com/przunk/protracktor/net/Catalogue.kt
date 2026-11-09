@@ -10,6 +10,8 @@ data class CatalogueEntry(
     val author: String,
     val title: String,
     val size: Long,
+    /** The archive's own number for the file, where downloads need one (AMP's `/module/<id>`); not stored as identity. */
+    val remoteId: Long? = null,
 )
 
 /**

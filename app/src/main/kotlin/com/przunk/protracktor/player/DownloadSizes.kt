@@ -32,8 +32,8 @@ object DownloadSizes {
     const val MODLAND_MB = 6
     const val ASMA_MB = 20
     const val UNEXOTICA_MB = 2
-    /** Pinned AMP songdb index: 23,820,617 bytes, measured 2026-10-18. */
-    const val AMP_MB = 23
+    /** AMP's daily module map: 10,039,757 bytes as transferred (gzip), measured 2026-11-09. */
+    const val AMP_MB = 10
     const val SONG_LENGTHS_MB = 5
     /** The metadata and the song lengths, one tick since A52 (`docs/PLAN_SONGDB_LENGTHS.md` D1). */
     const val TRACK_METADATA_MB = 26
