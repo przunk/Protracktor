@@ -93,7 +93,7 @@ at 14:00 UTC (served gzip, about 10 MB; 45 MB of JSON): `generated_at`, `module_
 `module_id`, `title`, `authors[]`, `file_name`, `file_size`, `download_file_name`, `md5`, `path`.
 Fetched once as the app would: 177,817 modules; 99.7% of the old index's paths are found in it, a
 little more by MD5; 112 paths carry two ids for the same file. No CORS header, so the web player
-still cannot use it. AMP serves only single-file formats (Ben's list of 65 types; correspondence in
+still cannot use it. AMP serves only single-file formats (Monty's list of 65 types — Monty signs as Ben; correspondence in
 `docs/letters/`). Re-enabling AMP on this map follows.
 
 **AMP answered the same evening (Monty).** A song database or module-id map is possible, but AMP
