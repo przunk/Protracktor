@@ -10,9 +10,9 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B59. Select all, and Share for a selection — requested 2026-11-09, built on `feature/selection-share`
+## B59. Select all, and Share for a selection — done and merged 2026-11-09
 
-**Built 2026-11-09 (Android and WEB), waiting for the phone.** The playlist and Random selection bar
+**Built 2026-11-09 (Android and WEB); phone check reported working and merged the same day.** The playlist and Random selection bar
 has *Select all* / *Select none*, and **Share** replaces *Share with Protracktor* there and in Browse.
 Share opens the one-tune share list in the plural: *Share the files* (one share with every file,
 fetched if not cached, names made unique in the batch, unreadable ones counted), *Share the links*

@@ -20,7 +20,9 @@ by platform. Built on `feature/platform-search-online`, stacked on `feature/sear
 **Checked:** full gate, 1,488 tests, 1,398 page checks, lint clean; restoring the old reach fails
 `SearchScopeTest` and `LibrarySearchTest`. **Not checked:** phone and browser.
 
-## C135 A photo (JPG) ended up in a playlist — open, reported 2026-11-09
+## C135 A photo (JPG) ended up in a playlist — fixed and merged 2026-11-09
+
+**Merged into develop** on 2026-11-09 after the phone check of APK 1.7.0 (1502), source `cafbd31f`.
 
 **Report, 2026-11-09:** a tester has a JPG camera photo (Pixel, from the gallery) in a playlist,
 and neither the tester nor I know how it got there. A phone photo of the playlist exists and was not
@@ -69,6 +71,14 @@ songdb asking for an id column. With numbers, the fix is the address `/module/<i
 
 **Mail sent on 2026-11-08** to Monty (who wrote the cutover announcement) and Crown, with the
 earlier unanswered messages forwarded; the songdb issue is drafted in `docs/letters/`.
+
+**2026-11-09: the map exists.** `https://amp.dascene.net/download/amp_modules.json`, regenerated daily
+at 14:00 UTC (served gzip, about 10 MB; 45 MB of JSON): `generated_at`, `module_count` and per module
+`module_id`, `title`, `authors[]`, `file_name`, `file_size`, `download_file_name`, `md5`, `path`.
+Fetched once as the app would: 177,817 modules; 99.7% of the old index's paths are found in it, a
+little more by MD5; 112 paths carry two ids for the same file. No CORS header, so the web player
+still cannot use it. AMP serves only single-file formats (Ben's list of 65 types; correspondence in
+`docs/letters/`). Re-enabling AMP on this map follows.
 
 **AMP answered the same evening (Monty).** A song database or module-id map is possible, but AMP
 updates daily (additions, renames, replacements); their alternative is the token-based REST API
