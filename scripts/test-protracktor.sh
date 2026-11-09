@@ -220,6 +220,7 @@ run_check "Volume normalization profiles" loudness-profiles node scripts/check-l
 run_check "Volume normalization preferences" normalization-preferences node scripts/check-normalization-preferences.mjs
 run_check "Volume normalization preparation" loudness-preparation node scripts/check-loudness-preparation.mjs
 run_check "Playback normalization ownership" playback-normalization node scripts/check-playback-normalization.mjs
+run_check "Selection share rules" selection-share node scripts/check-selection-share.mjs
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because

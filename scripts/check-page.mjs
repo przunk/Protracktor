@@ -2031,6 +2031,18 @@ if (window.__api) {
   check($('selectcount').textContent === '2 selected' && window.__api.indexNow() === 0,
     'a tap then ticks a row rather than playing it');
 
+  // B59: Select all in the playlist's bar, then Select none, and back to the two ticked rows.
+  const all = $('sel-all'), rows = $('queue').children.length;
+  check(!all.hidden && all.querySelector('svg') && all.textContent.trim() === 'Select all',
+    'the playlist bar offers Select all, with its icon (B59)');
+  all.click(); await settle();
+  check($('selectcount').textContent === `${rows} selected` && all.textContent.trim() === 'Select none',
+    'Select all ticks every row and becomes Select none');
+  all.click(); await settle();
+  check($('selectbar').hidden, 'Select none lets every row go');
+  menuItem($('queue').children[0], 'Select').click(); await settle();
+  $('queue').children[2].click(); await settle();
+
   check(!$('sel-delete').hidden, 'Delete is offered in a playlist of his own');
   $('sel-delete').click();
   await settle();
@@ -2214,8 +2226,8 @@ if (window.__api) {
   const second = { url: 'https://modland.com/pub/modules/AHX/Pink/frog.ahx', name: 'frog.ahx',
                    file: 'frog.ahx', meta: 'Modland/AHX/Pink' };
   check($('sel-share') && $('sel-share').querySelector('svg')
-        && $('sel-share').textContent.includes('Share with Protracktor'),
-    'the selection bar offers to share what is ticked, with its icon');
+        && $('sel-share').textContent.trim() === 'Share',
+    'the selection bar offers Share for what is ticked, with its icon (B59)');
   await api.sendToWeb([tune, second]);
   const many = api.lastSentLink();
   check(await api.inflateFragment(many.split('#play:')[1])

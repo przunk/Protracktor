@@ -10,7 +10,18 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B59. Select all, and Share for a selection — requested 2026-11-09
+## B59. Select all, and Share for a selection — requested 2026-11-09, built on `feature/selection-share`
+
+**Built 2026-11-09 (Android and WEB), waiting for the phone.** The playlist and Random selection bar
+has *Select all* / *Select none*, and **Share** replaces *Share with Protracktor* there and in Browse.
+Share opens the one-tune share list in the plural: *Share the files* (one share with every file,
+fetched if not cached, names made unique in the batch, unreadable ones counted), *Share the links*
+(one per line, files on the phone counted), *Share with Protracktor* (the list link). One ticked tune
+keeps the one-tune menu, *Share as audio* included; several do not get it. The playlist bar now
+puts the count on its own line over four equal actions, which the Polish labels needed. WEB: *Select
+all* in the playlist bar; Share offers *Save the files*, *Copy the links* and *Share with
+Protracktor*. Rules shared by name and tested on both sides (`SelectionShare`, `selection-share.js`).
+
 
 With tracks selected:
 

@@ -222,6 +222,21 @@
     <string name="action_share">Share</string>
     <string name="action_share_file">Share the file</string>
     <string name="action_share_link">Share a link</string>
+    <string name="action_share_files">Share the files</string>
+    <string name="action_share_links">Share the links</string>
+    <string name="notice_share_none_readable">None of the selected files could be read to share.</string>
+    <plurals name="share_subject_tunes">
+        <item quantity="one">%1$,d tune</item>
+        <item quantity="other">%1$,d tunes</item>
+    </plurals>
+    <plurals name="notice_share_some_unreadable">
+        <item quantity="one">%1$,d file could not be read and was left out.</item>
+        <item quantity="other">%1$,d files could not be read and were left out.</item>
+    </plurals>
+    <plurals name="notice_share_links_without">
+        <item quantity="one">%1$,d file on the phone has no link and was left out.</item>
+        <item quantity="other">%1$,d files on the phone have no link and were left out.</item>
+    </plurals>
     <string name="action_send_to_web">Share with Protracktor</string>
     <string name="share_chooser">Share</string>
     <string name="action_show_neighbours">More from this author</string>
@@ -460,8 +475,8 @@
     <string name="notice_search_failed">Could not complete the search. Please try again.</string>
     <string name="notice_modarchive_unreadable">The Mod Archive answered, but not with a page we can read.</string>
     <plurals name="notice_picked_unplayable">
-        <item quantity="one">Skipped %1$d file Protracktor cannot play: %2$s</item>
-        <item quantity="other">Skipped %1$d files Protracktor cannot play: %2$s</item>
+        <item quantity="one">Skipped %1$,d file Protracktor cannot play: %2$s</item>
+        <item quantity="other">Skipped %1$,d files Protracktor cannot play: %2$s</item>
     </plurals>
     <string name="notice_added_track">Added \"%1$s\" to the playlist.</string>
     <string name="notice_track_already_here">\"%1$s\" is already in this playlist.</string>

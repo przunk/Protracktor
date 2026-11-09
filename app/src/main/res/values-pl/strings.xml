@@ -265,6 +265,27 @@
     <string name="action_share">Udostępnij</string>
     <string name="action_share_file">Udostępnij plik</string>
     <string name="action_share_link">Udostępnij link</string>
+    <string name="action_share_files">Udostępnij pliki</string>
+    <string name="action_share_links">Udostępnij linki</string>
+    <string name="notice_share_none_readable">Nie udało się odczytać żadnego z zaznaczonych plików.</string>
+    <plurals name="share_subject_tunes">
+        <item quantity="one">%1$,d utwór</item>
+        <item quantity="few">%1$,d utwory</item>
+        <item quantity="many">%1$,d utworów</item>
+        <item quantity="other">%1$,d utworu</item>
+    </plurals>
+    <plurals name="notice_share_some_unreadable">
+        <item quantity="one">%1$,d pliku nie udało się odczytać, pominięto go.</item>
+        <item quantity="few">%1$,d plików nie udało się odczytać, pominięto je.</item>
+        <item quantity="many">%1$,d plików nie udało się odczytać, pominięto je.</item>
+        <item quantity="other">%1$,d pliku nie udało się odczytać, pominięto je.</item>
+    </plurals>
+    <plurals name="notice_share_links_without">
+        <item quantity="one">%1$,d plik z telefonu nie ma linku, pominięto go.</item>
+        <item quantity="few">%1$,d pliki z telefonu nie mają linku, pominięto je.</item>
+        <item quantity="many">%1$,d plików z telefonu nie ma linku, pominięto je.</item>
+        <item quantity="other">%1$,d pliku z telefonu nie ma linku, pominięto je.</item>
+    </plurals>
     <string name="action_send_to_web">Udostępnij przez Protracktor</string>
     <string name="share_chooser">Udostępnij</string>
 
@@ -471,10 +492,10 @@
     <string name="notice_search_failed">Nie udało się ukończyć wyszukiwania. Spróbuj ponownie.</string>
     <string name="notice_modarchive_unreadable">The Mod Archive odpowiedziało, ale stroną, której nie umiemy odczytać.</string>
     <plurals name="notice_picked_unplayable">
-        <item quantity="one">Pominięto %1$d plik, którego Protracktor nie odtworzy: %2$s</item>
-        <item quantity="few">Pominięto %1$d pliki, których Protracktor nie odtworzy: %2$s</item>
-        <item quantity="many">Pominięto %1$d plików, których Protracktor nie odtworzy: %2$s</item>
-        <item quantity="other">Pominięto %1$d pliku, których Protracktor nie odtworzy: %2$s</item>
+        <item quantity="one">Pominięto %1$,d plik, którego Protracktor nie odtworzy: %2$s</item>
+        <item quantity="few">Pominięto %1$,d pliki, których Protracktor nie odtworzy: %2$s</item>
+        <item quantity="many">Pominięto %1$,d plików, których Protracktor nie odtworzy: %2$s</item>
+        <item quantity="other">Pominięto %1$,d pliku, których Protracktor nie odtworzy: %2$s</item>
     </plurals>
     <string name="notice_added_track">Dodano „%1$s” do playlisty.</string>
     <string name="notice_track_already_here">„%1$s” jest już na tej playliście.</string>

@@ -139,6 +139,12 @@ export default async function checkBrowseSelection({ window, check }) {
   window.navigator.share = async (value) => shared.push(value);
   try {
     $('sel-share').click();
+    await until(() => !$('menu').hidden);
+    const items = [...$('menu').querySelectorAll('button')].map((button) => button.textContent.trim());
+    check(state().count === 2 && items.includes('Save the files') && items.includes('Copy the links')
+      && items.includes('Share with Protracktor') && !items.includes('Share as audio'),
+      'actual batch Share opens the plural menu without letting the selection go (B59)');
+    [...$('menu').querySelectorAll('button')].find((button) => button.textContent.trim() === 'Share with Protracktor').click();
     check(await until(() => shared.length === 1) && state().count === 0, 'actual batch Share captures then clears before opening the share adapter');
     const fragment = shared[0].url.split('#')[1];
     const content = await api.inflateFragment(fragment.slice('play:'.length));
