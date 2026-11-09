@@ -31,6 +31,7 @@
     <string name="action_add_to_queue">Dodaj do kolejki</string>
     <string name="queue_playlist">Playlista: %1$s</string>
     <string name="queue_search">Wyszukiwanie: %1$s</string>
+    <string name="queue_found">%1$s: „%2$s”</string>
     <string name="queue_external">Plik otwarty z innej aplikacji</string>
     <string name="random_reroll_list">Rozpocznij nową listę Random</string>
     <string name="random_double_tap_hint">Dotknij dwukrotnie kostki, aby wylosować nową listę</string>
@@ -627,6 +628,8 @@
     <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
     <string name="browse_filter_hint">Szukaj na tej liście…</string>
     <string name="browse_filter_no_matches">Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.</string>
+    <string name="browse_filter_below">W folderach niżej</string>
+    <string name="browse_filter_below_capped">W folderach niżej: pierwsze %1$,d</string>
     <string name="alarm_preparing">Przygotowywanie muzyki budzika: %1$s</string>
     <string name="alarm_music_ready">Muzyka jest gotowa offline. Otwórz Budzik, aby ustawić godzinę.</string>
     <string name="alarm_prepare_failed">Nie udało się przygotować muzyki. Sprawdź źródło, wolne miejsce i czy utwór ma słyszalny początek.</string>

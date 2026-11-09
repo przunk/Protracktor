@@ -85,6 +85,7 @@ import com.przunk.protracktor.player.PlayerViewModel
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.QueueSource
 import com.przunk.protracktor.player.QueueSourceView
+import com.przunk.protracktor.player.SessionSource
 import com.przunk.protracktor.player.SourcePlaylistEdits
 import kotlinx.coroutines.launch
 
@@ -520,6 +521,9 @@ fun ProtracktorApp(
                     BrowseScreen(
                         browse = browse,
                         filters = browseFilters,
+                        onSearchBelow = viewModel::searchBelow,
+                        onPlayFound = viewModel::playFound,
+                        inFront = !showQueue && !showNowPlaying,
                         onUseForAlarms = (viewModel::useForAlarms).takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
                         savedPlaces = savedPlaces,
                         onSavePlace = viewModel::saveCurrentPlace,
@@ -573,7 +577,7 @@ fun ProtracktorApp(
                         // not only once something here is playing.
                         digressionAuthor = browse.openAuthor
                             ?.takeIf { browse.arrivedByJump },
-                        onShowNeighbours = viewModel::showNeighboursOf,
+                        onShowNeighbours = viewModel::showNeighboursFromBrowse,
                         onShareFile = viewModel::shareFiles,
                         onShareAudio = viewModel::shareAsAudio,
                         onShareLink = viewModel::shareLinks,
@@ -661,7 +665,14 @@ fun ProtracktorApp(
                                 if (source is QueueSource.Playlist && source.id != state.activePlaylistId && state.dirty) {
                                     pendingQueueSource = source
                                     pendingSwitch = source.id
-                                } else viewModel.openQueueSource(source, onOpened = revealQueueSource)
+                                } else viewModel.openQueueSource(source, onOpened = { destination ->
+                                    revealQueueSource(destination)
+                                    // Tunes found below a place come back with the words that found
+                                    // them, in that level's Search (B61).
+                                    val found = (source as? QueueSource.Collection)?.origin as? SessionSource.Found
+                                    if (found != null && destination == QueueSourceView.BROWSE)
+                                        browseFilters.change(viewModel.browse.value.levelKey(), found.query)
+                                })
                             },
                             onRemoveContext = { viewModel.removeContextEntry(it, state.schedule.generation) })
                     }

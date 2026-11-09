@@ -6,12 +6,22 @@
 // per level while Browse is open, so narrowing the authors, opening one and coming back finds them
 // still narrowed; leaving Browse forgets them all. Browse → Search is still where a whole
 // catalogue is searched.
+//
+// Under the rows it narrows, the tunes further down that match (2026-11-09): in an archive or a
+// format, every author's -- so "mod" finds a folder called MOD and the tunes named with it, without
+// opening each folder. One section of the same list, so it costs the screen one heading.
 import { searchMatches } from './rules.js';
 import { playlistMatches } from './playlist-search.js';
 
 /** A Browse path with a list to narrow: an archive, a format or an author, not a destination. */
 export function filterablePath(path) {
   return path.length > 0 && !['catalogues', 'search', 'history', 'saved'].includes(path[0]);
+}
+
+/** Where the tunes below a Browse path are -- a catalogue, or one format of it -- or null. */
+export function belowPlace(path) {
+  if (!filterablePath(path) || path.length > 2) return null;
+  return Object.freeze({ source: path[0], format: path.length === 2 ? path[1] : null });
 }
 
 export class BrowseFilters {

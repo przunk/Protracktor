@@ -10,6 +10,64 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B61. Search in Browse finds the tunes below too — built on a branch 2026-11-09
+
+Raised 2026-11-09, right after B60 merged: Search in Browse should find a matching folder on the
+level ("mod" finds a folder called MOD) and, at the same time, every file further down with the
+words in its name. Agreed the same day, on the condition that it takes little room.
+
+**Built on `feature/browse-filter-below`, 2026-11-09.** No second mode and no switch: while Search
+is open with words in it, the matching rows of the level come first and, under one heading ("In
+folders below"), the tunes further down that match. Below an archive's formats that is the whole
+archive; below a format's authors, that format; below a folder on the phone, its subfolders. An
+author's own tunes have nothing below them. The rule is Browse → Search's (every word, in the title
+or the author, so an author's name also finds that author's tunes); for the phone's folders, the
+playlist's. File extensions are part of the name, as in both of those, so "mod" also finds `.mod`
+files. Nothing new is stored: no column, no index, no schema change; the rows the archive's download
+already put on the phone are asked. Asked a moment after typing stops, capped at Search's 2,000
+(the heading says when it is cut). A tune below plays the tunes found, from it; Select all, Add
+and Share take the level's tunes and those below. WEB: the same, from the catalogue this browser
+holds.
+
+**After the first phone check, 2026-11-09 (APK 1514, `80f6987c`)**, these were reported and
+changed on the branch:
+- *Back to source* from the queue said the source was gone after playing a tune found below. The
+  queue had been named as a search with no words, which no Browse state could match. It is now a
+  source of its own, the place and the words (`Modland / Protracker: "lotus"`), and the way back
+  reopens that level with its Search and what it found. The tunes found are kept in the Browse
+  state for that, not only on the screen.
+- Back while the queue covered Browse closed Browse's Search underneath instead of the queue (a
+  B60 defect: Browse's own Back steps were registered after the queue's). Search and a selection now
+  leave Back alone while the queue or Now Playing is in front.
+- *More from this author* from a narrowed level came back to the playlist; it now comes back to
+  the level, Search and all, as it already did from Browse → Search.
+- The count of tunes appeared above the folders a moment after them and pushed them down. It is
+  now in the "In folders below" heading, which arrives with the tunes; the header above is only
+  for a level's own tunes. With none of those, ticking starts in that heading too.
+- Asked the same day whether the on-phone and played-before marks belong on these rows: they do,
+  and the tunes below now get them, and learned titles, like the level's own rows.
+
+**After the second phone check (APK 1514, `3db6579e`):** the on-phone mark was still missing on
+the tunes below -- the set of marks is recomputed for the rows on screen and replaced whole, and
+it counted only the level's own rows, so it dropped theirs; it now counts both. And coming back
+from a folder found by Search left the list a row lower than it was: the way back always put the
+tapped row at the top, which in a short list moves it. It now moves only as far as needed to show
+the row, which is not at all when it is already in view.
+
+**Checked:** `BrowseFilterTest` (where "below" is; a folder's own files and a neighbour named alike
+are not below it), `CatalogueSearchWithinTest` (one archive or one format, title or author, nothing
+typed asks nothing), `BrowseFilterUiTest` (the real shell: the heading and rows in a format and in a
+folder, Select all, a tune below playing as found), the page check `check-page-browse-filter.mjs`
+(both levels, playing, Select all, the older answer staying while new words wait, nothing below an
+author); each failed once its guard was broken. After the phone check: `QueueSourceNavigationTest` (back to the
+place with its Search and tunes; Back with the queue in front closes the queue),
+`BrowseNavigationTest` (a jump from a level comes back to it, one from elsewhere does not),
+`BrowseFilterUiTest` (no header above the folders; History marks for the tunes below); each failed
+once its guard was broken; so did `BrowseFilterUiTest`'s way back from a folder leaving the
+list in place. The UI's wiring of the jump from Browse, the on-phone mark for the tunes below, and the page's way back to the source and jump from a narrowed level are not tested. Screenshots at 360 dp, English and Polish, in
+`dist/evidence/b61-browse-search-below/`. **Not checked:** the phone, a real archive's size (the
+time a search below takes on all of Modland), and the page in a real browser.
+
 ## B60. Search in Browse, as in the playlist — done and merged 2026-11-09
 
 Raised 2026-11-09, before 1.8.0: AMP's formats hold thousands of authors, and scrolling for one is

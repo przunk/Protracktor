@@ -9,7 +9,7 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C136 Authors whose names start with a small letter sort after Z — open, found 2026-11-09
+## C136 Authors whose names start with a small letter sort after Z — fixed on a branch 2026-11-09
 
 Found while asking why Przunk was missing from ASMA. He is not missing: ASMA's archive of
 2026-10-10 holds his seven tunes in `Composers/przunk/`, the same seven its own database lists. The
@@ -20,7 +20,13 @@ ASMA's four lower-case composers (`djmaximum`, `gotoandplay`, `null1024`, `przun
 Przunk is 305th of 305. Folders on the phone already sort without regard to case
 (`LocalTree`), and the WEB player sorts authors with a collator, so only the Android catalogue
 lists are affected. **Checked:** the archive's entries and the resulting order, computed from the
-downloaded zip. **Not checked:** the phone. Not fixed.
+downloaded zip.
+
+**Fixed on `feature/browse-filter-below`, 2026-11-09**, asked for the same evening to go with B61:
+a catalogue's formats and authors are ordered without regard to case (`COLLATE NOCASE`), the plain
+name breaking ties so `Nork` and `nork` keep one order. SQLite's `NOCASE` folds only A–Z, so a name
+starting with an accented capital still sorts by its code. **Checked:** `CatalogueOrderTest`, which
+fails with the old order. **Not checked:** the phone.
 
 ## By platform searches the online catalogues only — merged, 2026-11-08
 

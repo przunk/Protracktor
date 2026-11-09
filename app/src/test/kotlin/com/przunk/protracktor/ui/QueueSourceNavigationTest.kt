@@ -88,6 +88,7 @@ class QueueSourceNavigationTest : PlaybackShellTest() {
             SessionSource.History -> "History"
             is SessionSource.Search -> "Search: ${origin.query}"
             is SessionSource.Folder -> origin.path
+            is SessionSource.Found -> "${origin.place}: “${origin.query}”"
         }
         clickSource(label)
         compose.runOnIdle {
@@ -124,6 +125,50 @@ class QueueSourceNavigationTest : PlaybackShellTest() {
         collection(BrowseState(domain = BrowseDomain.LOCAL,
             openFolder = GrantedFolder("content://navigation.test/tree/root", "Local music"),
             folderRoot = "Music", folderAt = "Music/Author/Album", folderAll = listOf("Music/Author/Album" to tune)))
+    }
+
+    @Test fun `tunes found below a place go back to that place with its Search and what it found (B61)`() {
+        val modland = CatalogueSummary(id = "modland", displayName = "Modland", trackCount = 1, indexedAt = 1L)
+        val authors = BrowseState(domain = BrowseDomain.ONLINE, openCatalogue = modland, openFormat = "Protracker",
+            groups = listOf(com.przunk.protracktor.data.CatalogueGroup("Lotus Man", 1)), knowsWhatIsHeld = true)
+        val level = authors.levelKey()
+        val saved = authors.copy(below = TunesFound(level, "lotus", listOf(tune)))
+        seed(QueueSource.Collection(SessionSource.Found("Modland / Protracker", "lotus")), saved)
+        val before = player.value
+        clickSource("Modland / Protracker: “lotus”")
+        frame(400)
+        compose.runOnIdle {
+            assertEquals("Protracker", browse.value.openFormat)
+            assertEquals(null, browse.value.openAuthor)
+            unchanged(before)
+        }
+        compose.onNodeWithTag("browse-filter-field").assertTextContains("lotus")
+        compose.onNodeWithText("Lotus Man").assertExists()
+        compose.onNodeWithTag("below-row-0").assert(hasAnyDescendant(hasText(tune.title)))
+    }
+
+    @Test fun `Back from the queue closes the queue, not Browse's Search underneath it`() {
+        val modland = CatalogueSummary(id = "modland", displayName = "Modland", trackCount = 1, indexedAt = 1L)
+        compose.onNodeWithText(application.getString(R.string.action_browse)).performClick()
+        frame()
+        compose.runOnIdle {
+            browse.value = browse.value.copy(domain = BrowseDomain.ONLINE, openCatalogue = modland,
+                openFormat = "Protracker", groups = listOf(com.przunk.protracktor.data.CatalogueGroup("Lotus Man", 1)),
+                loading = false)
+        }
+        frame(300)
+        compose.onNodeWithTag("browse-search-action").performClick()
+        frame(300)
+        compose.onNodeWithTag("browse-filter-field").performTextInput("lotus")
+        frame(300)
+        compose.onNodeWithTag("queue-toggle").performClick()
+        frame(600)
+        compose.onNodeWithTag("playback-panel").assertExists()
+        compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
+        frame(600)
+        compose.onNodeWithTag("playback-panel").assertDoesNotExist()
+        compose.onNodeWithTag("browse-filter-field").assertTextContains("lotus")
+        compose.runOnIdle { assertEquals("Protracker", browse.value.openFormat) }
     }
 
     private fun otherPlaylist(dirty: Boolean): Long {

@@ -686,7 +686,9 @@ class PlaybackController private constructor(private val context: Context) {
         HistoryPresentationReads(
             scope = scope,
             ids = combine(
-                _browse.map { it.tracks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
+                // The tunes found below a level are rows on screen like the level's own (B61).
+                _browse.map { it.tracks + it.below?.tracks.orEmpty() }.distinctUntilChanged()
+                    .map { it.mapTo(mutableSetOf()) { row -> row.id } },
                 _state.map { it.randomPicks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
             ) { browseIds, randomIds -> browseIds + randomIds },
             revision = historyWrites.revision,
@@ -705,9 +707,11 @@ class PlaybackController private constructor(private val context: Context) {
         // the last run and starts the next, which is what makes "leaving stops the rest" true.
         // **What is on the phone, in whatever Browse lists** (the owner, 2026-09-24): a folder of any
         // catalogue, search results, History. Asked again whenever the rows change; a download that
-        // lands asks it again too (`refreshOnPhone`).
+        // lands asks it again too (`refreshOnPhone`). The tunes Browse's Search found below a level
+        // are rows like the level's own (B61): asked about with them, or this set, which it
+        // replaces, would drop their marks the moment the level's rows changed.
         scope.launch {
-            _browse.map { browse -> browse.tracks.map { it.id } }
+            _browse.map { browse -> browse.onScreenIds() }
                 .distinctUntilChanged()
                 .collectLatest { ids -> val here = browseCache.onPhoneOf(ids); _browse.update { it.copy(cachedHere = here) } }
         }
@@ -963,6 +967,42 @@ class PlaybackController private constructor(private val context: Context) {
     fun openFolder(folder: GrantedFolder) = localFolders.openFolder(folder)
 
     fun openSubfolder(path: String) = localFolders.openSubfolder(path)
+
+    /**
+     * Finds the tunes below the level on screen that match Browse's Search (`BrowseFilter.below`)
+     * and puts them in [BrowseState.below] under [level], the screen's name for it. Asked of the
+     * level as it is now, and kept only if Browse is still there when the answer comes.
+     */
+    suspend fun searchBelow(level: String, query: String) {
+        val state = _browse.value
+        val place = BrowseFilter.below(state) ?: return
+        val tracks = when (place) {
+            is BrowseFilter.Below.InCatalogue -> catalogues
+                .searchWithin(place.catalogueId, place.format, query, BrowseFilter.BELOW_LIMIT)
+                .map(CatalogueTracks::referenceOf)
+            is BrowseFilter.Below.InFolder -> withContext(Dispatchers.Default) {
+                BrowseFilter.inFoldersBelow(state.folderAll, place.at, query, BrowseFilter.BELOW_LIMIT) {
+                    LearnedTitles.display(it, state.learnedTitles)
+                }
+            }
+        }
+        val found = TunesFound(level, query, tracks)
+        // Marked as on the phone by the flow that marks every row on screen (`onScreenIds`).
+        _browse.update { if (BrowseFilter.below(it) == place) it.copy(below = found) else it }
+    }
+
+    /**
+     * Plays tunes Browse's Search found below a place, from [index]: a list of its own, named by the
+     * place and the words, so the way back reopens both (B61).
+     */
+    fun playFound(found: List<TrackRef>, index: Int, query: String) {
+        if (index !in found.indices) return
+        val browse = _browse.value
+        val origin = SessionSource.placeOf(browse)?.let { SessionSource.Found(it, query.trim()) }
+            ?: SessionSource.Search(query.trim())
+        playCapturedSelection(ActiveQueue(QueueSource.Collection(origin),
+            PlayQueue.results(found.toList(), index, _state.value.transportQueue)), browse)
+    }
 
     /**
      * Scans a folder by opening every file in it.
@@ -1630,7 +1670,7 @@ class PlaybackController private constructor(private val context: Context) {
     private var neighboursRequest = 0L
 
     /** Opens a catalogue author's folder only while the originating intent and visit are current. */
-    fun showNeighboursOf(ref: TrackRef) {
+    fun showNeighboursOf(ref: TrackRef, fromBrowse: Boolean = false) {
         val request = ++neighboursRequest
         val current = _browse.value
         val origin = BrowseReadOwner.capture(current)
@@ -1691,7 +1731,7 @@ class PlaybackController private constructor(private val context: Context) {
             if (!isCurrent()) return@launch
             // Read before Browse moves: the search this jump leaves, if it leaves one.
             browseWorkflow.cancelSearch()
-            val search = BrowseNavigation.searchToReturnTo(_browse.value)
+            val search = BrowseNavigation.searchToReturnTo(_browse.value, fromBrowse)
             val owner = BrowseReadOwner.begin(_browse) {
                 it.copy(
                     domain = BrowseDomain.ONLINE,
@@ -3667,9 +3707,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private fun refreshOnPhone() {
         scope.launch {
-            val ids = _browse.value.tracks.map { it.id }
+            val ids = _browse.value.onScreenIds()
             val here = browseCache.onPhoneOf(ids)
-            _browse.update { if (it.tracks.map { t -> t.id } == ids) it.copy(cachedHere = here) else it }
+            _browse.update { if (it.onScreenIds() == ids) it.copy(cachedHere = here) else it }
         }
     }
 

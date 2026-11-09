@@ -146,6 +146,7 @@ private fun queueSourceLabel(source: QueueSource): String = when (source) {
     is QueueSource.Collection -> when (val origin = source.origin) {
         is SessionSource.Search -> stringResource(R.string.queue_search, origin.query)
         is SessionSource.Folder -> origin.path
+        is SessionSource.Found -> stringResource(R.string.queue_found, origin.place, origin.query)
         SessionSource.History -> stringResource(R.string.domain_history_title)
     }
 }

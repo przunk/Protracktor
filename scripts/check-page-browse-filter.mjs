@@ -6,7 +6,11 @@ export default async function checkBrowseFilter({ window, check }) {
   const { document } = window, $ = (id) => document.getElementById(id), api = window.__api;
   const settle = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
   const until = async (condition) => { for (let i = 0; i < 250; i++) { if (await condition()) return true; await settle(); } return false; };
-  const shown = () => [...$('browselist').children].filter((li) => !li.hidden).map((li) => li.querySelector('.bname')?.textContent);
+  // The level's own rows; the tunes below are checked by name at the end.
+  const shown = () => [...$('browselist').children].filter((li) => !li.hidden && !li.dataset.below).map((li) => li.querySelector('.bname')?.textContent);
+  const below = () => [...$('browselist').querySelectorAll('[data-below="track"]')].filter((li) => !li.hidden)
+    .map((li) => li.querySelector('.bname')?.textContent);
+  const heading = () => $('browselist').querySelector('[data-below="heading"]');
   const type = async (text) => { $('browsefilter-input').value = text; $('browsefilter-input').dispatchEvent(new window.Event('input')); await settle(); };
   const escape = async () => { document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await settle(); };
   const open = () => !$('browsefilter-form').hidden;
@@ -76,5 +80,45 @@ export default async function checkBrowseFilter({ window, check }) {
   api.showPanel(null); await settle();
   api.showPanel('browse'); await api.browseTo(['modland', 'Protracker']);
   check(await until(() => shown().length === 3) && !open(), 'leaving Browse forgets every level\'s Search');
+
+  // Below the authors, the tunes further down that match (2026-11-09).
+  $('browsefilter-open').click(); await type('funky');
+  check(await until(() => below().length === 1) && below()[0] === 'savethefunky.mod' && shown().length === 0
+    && heading()?.textContent === window.__i18n.t('In folders below') && $('browsefilter-empty').hidden,
+    'no author is called funky, and below them the tune that is, under its heading');
+  await type('nor');
+  check(await until(() => below().length === 3), 'three tunes below for "nor"');
+  await type('nork');
+  check(below().length === 3, 'while newer words wait, the older answer stays rather than the section blinking out');
+  check(await until(() => below().length === 3) && shown().join() === 'Nork' && !below().includes('xm.xm'),
+    'an author\'s name finds the author and, below, the tunes in this format filed under it');
+  const tunesFound = [...$('browselist').querySelectorAll('[data-below="track"]')];
+  tunesFound[2].querySelector('.btext').click(); await settle(50);
+  check(api.queueNow().length === 3 && api.indexNow() === 2
+    && api.queueNow().join() === tunesFound.map((li) => li.dataset.url).join(),
+    'a tune below plays the tunes found, from it');
+  api.showPanel('browse'); await settle(50);
+  const first = $('browselist').querySelector('[data-below="track"] .btext');
+  pointer(first, 'pointerdown'); await settle(540); pointer(first, 'pointerup'); first.click(); await settle();
+  $('browse-select-all').click(); await settle();
+  check(api.browseSelectionNow().count === 3, 'Select all takes the tunes below too');
+  $('browseback').click(); await settle();
+  await type('zzz');
+  check(await until(() => !$('browsefilter-empty').hidden) && below().length === 0 && !heading(),
+    'nothing matching on the level or below says so, once below has answered');
+  await type('');
+  check(await until(() => shown().length === 3) && !heading(), 'cleared, the level is whole again with nothing below');
+
+  // The archive's formats: every format's tunes below.
+  await api.browseTo(['modland']);
+  check(await until(() => shown().length === 2), 'the formats');
+  $('browsefilter-open').click(); await type('nork');
+  check(await until(() => below().length === 4) && below().includes('xm.xm') && shown().length === 0,
+    'below the formats, the tunes of every format');
+  // An author's tunes are the bottom: nothing is below them.
+  await api.browseTo(['modland', 'Protracker', 'Nork']);
+  $('browsefilter-open').click(); await type('the');
+  await settle(400);
+  check(!heading() && below().length === 0 && shown().length === 2, 'an author\'s level has nothing below');
   api.showPanel(null);
 }

@@ -15,6 +15,8 @@ export const PL = {
   'Search this list': 'Szukaj na tej liście',
   'Search this list…': 'Szukaj na tej liście…',
   'Nothing here matches this phrase. Clear search to show the whole list.': 'Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.',
+  'In folders below': 'W folderach niżej',
+  'In folders below: the first {n}': 'W folderach niżej: pierwsze {n}',
 
   'Volume normalization': 'Normalizacja głośności',
   'Reduces volume differences between tracks. First-play matching may be less precise. Does not affect exported audio.': 'Zmniejsza różnice głośności między utworami. Przy pierwszym odsłuchu wyrównanie może być mniej dokładne. Nie wpływa na eksportowane audio.',

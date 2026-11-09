@@ -207,6 +207,14 @@ data class BrowseState(
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
 
+    /**
+     * The tunes below a level that matched Browse's Search there (B61), with the level and words
+     * they answer. Held here rather than on the screen so they are rows like the level's own: marked
+     * as on the phone and played before, shown by learned titles, and carried by the snapshot a way
+     * back to the source restores.
+     */
+    val below: TunesFound? = null,
+
     /** Rows of the open folder being fetched ahead right now: a spinner each (A55). */
     val aheadFetching: Set<String> = emptySet(),
     /** Rows of the open folder already on the phone: a mark each, whoever fetched them (A55, D5). */

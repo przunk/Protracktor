@@ -726,6 +726,10 @@
     font: inherit; padding: 12px 0 12px 14px; outline: none; }
   #browsefilter-input::-webkit-search-cancel-button { display: none; }
   #browselist > li[hidden] { display: none; }
+  /* Where the level's own rows end and the tunes from further down begin: a heading, not a row. */
+  #browselist > li.bbelow, #browselist > li.bbelow:hover { cursor: default; background: none; border-radius: 0;
+    border-top: 1px solid color-mix(in srgb, var(--outline) 40%, transparent);
+    color: var(--on-surface-variant); font-size: var(--body-small); margin-top: 4px; }
   .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
     padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
   #browselist { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }

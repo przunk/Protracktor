@@ -20,6 +20,13 @@ sealed interface SessionSource {
 
     data object History : SessionSource
 
+    /**
+     * Tunes Browse's Search found below a place (B61): `Modland / Protracker` and the words. The
+     * place alone would be a lie twice over -- the queue is not that folder, and the way back has to
+     * bring the words with it, or it lands on hundreds of authors with the tune nowhere in sight.
+     */
+    data class Found(val place: String, val query: String) : SessionSource
+
     companion object {
         /** The source a list on [browse] is, or null when Browse shows no list of tunes. */
         fun of(browse: BrowseState): SessionSource? = when (browse.domain) {
@@ -33,6 +40,18 @@ sealed interface SessionSource {
             }
             BrowseDomain.LOCAL -> browse.openFolder?.let { Folder(it.displayName) }
             BrowseDomain.ROOT, BrowseDomain.SAVED -> null
+        }
+
+        /** Where on [browse] a list is, by name: an archive's level or a folder of the phone's. */
+        fun placeOf(browse: BrowseState): String? = when (browse.domain) {
+            BrowseDomain.ONLINE -> browse.openCatalogue?.let { catalogue ->
+                listOfNotNull(catalogue.displayName, browse.openFormat, browse.openAuthor?.ifBlank { null })
+                    .joinToString(" / ")
+            }
+            BrowseDomain.LOCAL -> browse.openFolder?.let { folder ->
+                browse.folderAt.ifBlank { folder.displayName }.split('/').joinToString(" / ")
+            }
+            else -> null
         }
     }
 }

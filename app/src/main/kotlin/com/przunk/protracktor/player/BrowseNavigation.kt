@@ -59,11 +59,17 @@ object BrowseNavigation {
      * **A search is a place, like the dice** (the owner, 2026-09-24: "to ma działać identycznie").
      * "More from this author" from a list of results used to throw the results away: the folder
      * opened, and Back left Browse. Now the search -- its words, its scope and what it found -- is
-     * kept, and Back from the folder comes back to it. Only a search: a jump from a folder or from
-     * the playlist has nowhere of its own to go back to but where it was.
+     * kept, and Back from the folder comes back to it.
+     *
+     * **And a level of Browse, when the jump was made from it** (2026-11-09): Browse's Search turns
+     * any level into a list of results, so "more from this author" from tunes found below Modland's
+     * Protracker comes back to them, the words still in the field. A jump from the playlist or Now
+     * Playing has nowhere in Browse to go back to: Back leaves, as before.
      */
-    fun searchToReturnTo(current: BrowseState): BrowseState? =
-        current.takeIf { it.domain == BrowseDomain.SEARCH && !it.arrivedByJump }
+    fun searchToReturnTo(current: BrowseState, fromBrowse: Boolean = false): BrowseState? = current.takeIf {
+        !it.arrivedByJump && (it.domain == BrowseDomain.SEARCH ||
+            fromBrowse && it.domain in setOf(BrowseDomain.ONLINE, BrowseDomain.LOCAL) && SessionSource.placeOf(it) != null)
+    }
 
     /** The search a digression came from, as it is shown again: no longer a jump, and not loading. */
     fun returningTo(search: BrowseState, current: BrowseState = search): BrowseState = search.copy(
