@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 1.8.0 — versionCode 1518
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.8.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-1.8.0-1518.aab` |
+| Size | 22792918 bytes |
+| SHA-256 | `e90a6199d27dfd9c4b30ec0c3564da31d9fa94cd502287af2f18a97582efc368` |
+| versionCode | 1518 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 1.8.0 |
+| Commit | `82999218` |
+| Tag | `v1.8.0` |
+| Built | 2026-11-09 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v1.7.0**: `git log --oneline v1.7.0..v1.8.0`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 1.7.0 — versionCode 1496
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v1.7.0`.
