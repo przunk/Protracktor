@@ -1,8 +1,5 @@
-Na podstawie uwag użytkowników:
-
-- Opinie i zgłoszenia w Ustawieniach: e-mail do twórcy albo grupa testerów.
-- Normalizacja głośności: przełączenie na inny utwór w pliku nie zaczyna się już cicho z nagłym skokiem po trzech sekundach.
-- Wyszukiwanie: zmiana filtra wyszukuje ponownie zamiast czyścić wyniki.
-- Wg platformy przeszukuje teraz tylko katalogi online.
-
-AMP jest chwilowo niedostępne: archiwum przeniosło się na nową stronę. Wróci w aktualizacji, gdy znów da się pobierać jego pliki.
+- AMP wróciło. Jeśli było pobrane, pobierz jego katalog ponownie w Przeglądaj → Katalogi online.
+- Szukaj w Przeglądaj: zawęża poziom archiwum lub folder; pod spodem pasujące utwory z folderów niżej.
+- Zaznacz wszystko oraz Udostępnij dla całego zaznaczenia.
+- Dodaj pliki pomija pliki, których aplikacja nie odtworzy, i je wymienia.
+- Autorzy są sortowani bez względu na wielkość liter.

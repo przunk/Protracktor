@@ -1,8 +1,5 @@
-Based on user feedback:
-
-- Feedback in Settings: email the developer or join the testers' group.
-- Volume normalization: switching to another tune in a file no longer starts quiet and jumps after three seconds.
-- Search: changing a filter searches again instead of clearing the results.
-- By platform now searches the online catalogues only.
-
-AMP is unavailable for now: the archive moved to a new website. It will return in an update once its files can be reached again.
+- AMP is back. If you had it, download its catalogue again in Browse → Online catalogues.
+- Search in Browse: narrow any archive level or folder; tunes from folders below that match are listed under it.
+- Select all, and Share for a whole selection.
+- Add files skips files the app cannot play, and names them.
+- Authors are sorted regardless of upper and lower case.

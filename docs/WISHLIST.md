@@ -10,13 +10,15 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B61. Search in Browse finds the tunes below too — built on a branch 2026-11-09
+## B61. Search in Browse finds the tunes below too — done and merged 2026-11-09
 
 Raised 2026-11-09, right after B60 merged: Search in Browse should find a matching folder on the
 level ("mod" finds a folder called MOD) and, at the same time, every file further down with the
 words in its name. Agreed the same day, on the condition that it takes little room.
 
-**Built on `feature/browse-filter-below`, 2026-11-09.** No second mode and no switch: while Search
+**Built on `feature/browse-filter-below` 2026-11-09; after two rounds of changes below, the phone
+check of APK 1.7.0 (1515), `7de56daa`, was reported working and it merged the same day as
+`db3d8b01`.** No second mode and no switch: while Search
 is open with words in it, the matching rows of the level come first and, under one heading ("In
 folders below"), the tunes further down that match. Below an archive's formats that is the whole
 archive; below a format's authors, that format; below a folder on the phone, its subfolders. An
@@ -65,8 +67,9 @@ place with its Search and tunes; Back with the queue in front closes the queue),
 `BrowseFilterUiTest` (no header above the folders; History marks for the tunes below); each failed
 once its guard was broken; so did `BrowseFilterUiTest`'s way back from a folder leaving the
 list in place. The UI's wiring of the jump from Browse, the on-phone mark for the tunes below, and the page's way back to the source and jump from a narrowed level are not tested. Screenshots at 360 dp, English and Polish, in
-`dist/evidence/b61-browse-search-below/`. **Not checked:** the phone, a real archive's size (the
-time a search below takes on all of Modland), and the page in a real browser.
+`dist/evidence/b61-browse-search-below/`. On the phone (APK 1515, `7de56daa`) it was reported
+working. **Not checked:** the time a search below takes on all of Modland, measured rather than
+felt, and the page in a real browser.
 
 ## B60. Search in Browse, as in the playlist — done and merged 2026-11-09
 
