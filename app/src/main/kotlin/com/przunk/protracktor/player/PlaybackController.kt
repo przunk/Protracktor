@@ -2394,7 +2394,19 @@ class PlaybackController private constructor(private val context: Context) {
     fun addFiles(uris: List<Uri>) {
         scope.launch {
             val found = withContext(Dispatchers.IO) { MediaScanner.fromDocuments(context, uris) }
-            appendTracks(found, ::describeAdded)
+            // Only what can be played (C135); the rest is named rather than added or dropped silently.
+            val (accepted, refused) = PickedFiles.split(found)
+            if (refused.isEmpty()) {
+                appendTracks(accepted, ::describeAdded)
+                return@launch
+            }
+            val refusal = context.resources.getQuantityString(
+                R.plurals.notice_picked_unplayable, refused.size, refused.size, PickedFiles.named(refused),
+            )
+            if (accepted.isEmpty()) say(Message(refusal))
+            else appendTracks(accepted) { added, skipped ->
+                Message(listOfNotNull(describeAdded(added, skipped)?.text, refusal).joinToString(" "))
+            }
         }
     }
 

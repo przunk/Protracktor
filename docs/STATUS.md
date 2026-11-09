@@ -34,8 +34,13 @@ picker opens on *Recent*, which on a phone is mostly photos, so one tap adds one
 read and look closed: the share sheet accepts only `audio/*` and `application/octet-stream`, and
 *Open with* only those types and tracker names.
 
-**Fix to make:** refuse picked files the app cannot play, and say so naming them, as folder scans
-already effectively do.
+**Built on `fix/c135-picked-files`, 2026-11-09:** `PickedFiles.split` keeps only names
+`SupportedFormats.looksPlayable` accepts — the folder-scan rule — and *Add files* adds those and
+names the rest in one message, EN/PL ("Skipped 1 file Protracktor cannot play: PXL_….jpg"; three
+names, then "…"). Entries already in a playlist are left alone. The WEB player has no equivalent
+door: its only file input imports playlists. A playlist file listing a JPG is a separate door, not
+changed here. **Checked:** `PickedFilesTest`, which fails when picked files are all accepted again.
+**Not checked:** the phone.
 
 ## C134 AMP downloads fail: the archive moved to a new site — AMP switched off, merged 2026-11-08
 

@@ -459,6 +459,10 @@
     <string name="notice_modarchive_unreachable">The Mod Archive could not be reached.</string>
     <string name="notice_search_failed">Could not complete the search. Please try again.</string>
     <string name="notice_modarchive_unreadable">The Mod Archive answered, but not with a page we can read.</string>
+    <plurals name="notice_picked_unplayable">
+        <item quantity="one">Skipped %1$d file Protracktor cannot play: %2$s</item>
+        <item quantity="other">Skipped %1$d files Protracktor cannot play: %2$s</item>
+    </plurals>
     <string name="notice_added_track">Added \"%1$s\" to the playlist.</string>
     <string name="notice_track_already_here">\"%1$s\" is already in this playlist.</string>
     <string name="notice_nothing_playable">Nothing playable found there.</string>
