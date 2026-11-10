@@ -112,7 +112,7 @@ class AlarmScreenUiTest {
         val saved = mutableListOf<MusicAlarm>()
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
             usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
-        compose.onNodeWithText(text(R.string.alarm_new)).performClick()
+        compose.onNodeWithTag("alarm-new").performClick()
         frame()
         compose.onNodeWithText(text(R.string.alarm_save)).performClick()
         assertEquals(listOf(song.id), saved.single().songIds)

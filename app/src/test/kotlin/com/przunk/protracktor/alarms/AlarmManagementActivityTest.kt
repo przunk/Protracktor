@@ -45,8 +45,8 @@ class AlarmManagementActivityTest {
     @Test fun `failed durable Save keeps the actual editor draft and preserves newer data`() {
         val context = host.activity.get()
         compose.waitUntil(5000) { shadowOf(Looper.getMainLooper()).idle()
-            compose.onAllNodesWithText(context.getString(R.string.alarm_edit)).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText(context.getString(R.string.alarm_edit)).performScrollTo().performClick()
+            compose.onAllNodesWithTag("alarm-card").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("alarm-card").performScrollTo().performClick()
         compose.onNodeWithText(context.getString(R.string.alarm_name)).performTextReplacement("Keep this draft")
         val ledger = File(host.coordinator.repository.files.directory, "alarms-v1.json")
         val future = "{\"version\":99,\"keep\":\"future data\"}".toByteArray()
@@ -71,12 +71,12 @@ class AlarmManagementActivityTest {
     @Test @Config(sdk = [31]) fun `Save acknowledges stored settings while exact access leaves the alarm unarmed`() {
         val context = host.activity.get()
         compose.waitUntil(5000) { shadowOf(Looper.getMainLooper()).idle()
-            compose.onAllNodesWithText(context.getString(R.string.alarm_edit)).fetchSemanticsNodes().isNotEmpty() }
+            compose.onAllNodesWithTag("alarm-card").fetchSemanticsNodes().isNotEmpty() }
         org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(false)
         val model = androidx.lifecycle.ViewModelProvider(context)[AlarmManagementViewModel::class.java]
         model.refresh()
         compose.waitUntil(5000) { shadowOf(Looper.getMainLooper()).idle(); model.state.value?.readiness?.exact == false }
-        compose.onNodeWithText(context.getString(R.string.alarm_edit)).performScrollTo().performClick()
+        compose.onNodeWithTag("alarm-card").performScrollTo().performClick()
         compose.onNodeWithText(context.getString(R.string.alarm_name)).performTextReplacement("Stored but unarmed")
         compose.onNodeWithText(context.getString(R.string.alarm_save)).performClick()
         compose.waitUntil(5000) { shadowOf(Looper.getMainLooper()).idle()

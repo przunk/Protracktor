@@ -10,12 +10,49 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B62. Alarms: add music from the editor, a floating New, better screens — planned 2026-11-10
+## B62. Alarms: add music from the editor, a floating New, better screens — built on a branch 2026-11-10
 
 Raised 2026-11-10: add tunes to an alarm from the alarm's own editor; a floating button at the
 bottom right for a new alarm; the alarm screens made better to use in general. Analysis and the
-selected shape: [ALARM_UX.md](ALARM_UX.md). To be built on `feature/alarm-ux`, unattended, and
-handed over unmerged for the phone.
+selected shape: [ALARM_UX.md](ALARM_UX.md).
+
+**Built on `feature/alarm-ux`, 2026-11-10, unattended; not merged.**
+- **Add music** (icon and label) in the editor's Music section, and as the Music tab's floating
+  button, opens a picker inside Alarms: a search field, Playlists (each opened to its tunes) and
+  History; typing searches the saved playlists and the catalogues on the phone (every word, title,
+  file name or author). Each tune has **Add**; picks are prepared one at a time
+  (`AlarmMusicQueue`) and each row says *Waiting*, *Preparing…*, *Added*, or why it failed with
+  *Try again*. A bar at the bottom counts them and has *Done*. Tunes added from the editor are
+  ticked in the alarm being edited, which still needs *Save*. The library's 64-tune limit is said.
+  Preparation uses the player's own loader and `MusicAlarms.prepare`, which now hands back the
+  prepared tune's id; the wake-up path is unchanged. Opening Alarms on its own and adding music
+  starts the player's controller, which loads its state and plays nothing.
+- **Floating button**, bottom right: *New alarm* on Alarms, *Add music* on Music; *New alarm* left
+  the header. At 32 alarms it says why instead of opening an editor. The list keeps room at its end.
+- **List:** the next alarm first, with how long until it (within a day). Cards say values: the
+  name as a title, the days as *Weekdays*, *Weekends*, *Every day*, *Once* or the days, the music
+  by its first tune and *+n*, the status as *Rings …* or why not. The whole card opens the editor;
+  its actions are *Test alarm* and *Delete*, in the smaller row. An alarm that is off is faded.
+- **Editor:** *New alarm* or *Edit alarm*; *Rings …* under the time, as time and days change;
+  why *Save* cannot be pressed while no ready tune is ticked; Back with changes asks *Discard* or
+  *Keep editing*; the section is *Music*.
+- **Music tab:** *Used by n alarms*; deleting a tune in use names the alarms that lose it.
+- Not done: marking tunes already in the library as *Added* before they are picked (the library
+  knows a tune by the subsong it rendered, which is not known until it is opened); adding a tune
+  again only refreshes its facts, as *Use for alarms* does.
+
+**Checked:** `AlarmSummariesTest`, `AlarmCandidatesTest`, `AlarmMusicQueueTest` (one at a time,
+states, retry, the limit), `AlarmMusicSourcesTest` (real SQLite: playlists, History, catalogue
+search), `AlarmUxUiTest` (floating button per tab and at the limit, a tune added from the editor
+ticked and saved only with Save, Discard / Keep editing, why Save is off, the card values and the
+next alarm, Used by and the delete warning); each failed once its guard was broken. Writing it
+found that the editor's *Rings* line crashed for an alarm with no music, and that the floating
+button did not carry its label for a screen reader; and lint, that the next alarm's wait used a
+call Android 10 and 11 do not have (`Duration.toSeconds`); all three fixed. The existing alarm tests changed
+where the shape did on purpose: *New alarm* is the floating button, a card opens by tapping it.
+Screenshots at 360 dp, English and Polish, dark and light: `dist/evidence/b62-alarm-ux/`.
+**Not checked:** the phone; preparing a real tune from the picker (rendering needs the native
+engine, which the host tests do not run); TalkBack.
 
 ## B61. Search in Browse finds the tunes below too — done and merged 2026-11-09
 
