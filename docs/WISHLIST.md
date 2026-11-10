@@ -10,6 +10,13 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B62. Alarms: add music from the editor, a floating New, better screens — planned 2026-11-10
+
+Raised 2026-11-10: add tunes to an alarm from the alarm's own editor; a floating button at the
+bottom right for a new alarm; the alarm screens made better to use in general. Analysis and the
+selected shape: [ALARM_UX.md](ALARM_UX.md). To be built on `feature/alarm-ux`, unattended, and
+handed over unmerged for the phone.
+
 ## B61. Search in Browse finds the tunes below too — done and merged 2026-11-09
 
 Raised 2026-11-09, right after B60 merged: Search in Browse should find a matching folder on the
