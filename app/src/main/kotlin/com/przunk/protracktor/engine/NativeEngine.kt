@@ -158,7 +158,8 @@ object NativeEngine {
 
     /** An open module. Must be [close]d; the native side owns memory that GC does not see. */
     class Track internal constructor(private val handle: Long) : AutoCloseable {
-        private var closed = false
+        /** A seek in flight keeps the player alive; a close during it waits for it (C140). */
+        private val lifetime = NativeLifetime { nativeClose(handle) }
 
         /** Metadata as `key\tvalue` lines, the module's message whole ([DescribeBlock]). */
         fun describe(): Map<String, String> = DescribeBlock.parse(nativeDescribe(handle()))
@@ -196,7 +197,7 @@ object NativeEngine {
          * thread while the callback plays silence, so this call blocks for as long as the decoder
          * needs, which for a long tune is seconds.
          */
-        fun seekTo(seconds: Double) = nativeSeek(handle(), seconds)
+        fun seekTo(seconds: Double) = lifetime.during { nativeSeek(handle, seconds) }
 
         /**
          * Scales the output. 1.0 is untouched.
@@ -240,16 +241,13 @@ object NativeEngine {
          */
         fun sampleRateNote(): String = nativeSampleRateNote(handle())
 
-        override fun close() {
-            if (closed) return
-            closed = true
-            nativeClose(handle)
-        }
+        override fun close() = lifetime.close()
 
         // Calling into native code with a freed handle is a crash with no useful stack. Failing here
-        // instead names the mistake at the point that made it.
+        // instead names the mistake at the point that made it. A track whose close waits on a seek
+        // counts as closed: nothing new may start on it.
         private fun handle(): Long {
-            check(!closed) { "Track already closed" }
+            check(!lifetime.ending) { "Track already closed" }
             return handle
         }
     }
