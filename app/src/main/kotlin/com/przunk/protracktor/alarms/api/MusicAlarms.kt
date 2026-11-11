@@ -64,14 +64,16 @@ internal object MusicAlarms {
         context.startActivity(Intent(context, AlarmRingingActivity::class.java))
     }
 
-    suspend fun prepare(context: Context, selected: AlarmMusicSelection, load: suspend () -> AlarmMusicInput) {
+    /** Prepares [selected] into the alarm library and hands back the prepared tune's id (B62). */
+    suspend fun prepare(context: Context, selected: AlarmMusicSelection, load: suspend () -> AlarmMusicInput): String {
         check(enabled) { context.getString(com.przunk.protracktor.R.string.alarm_feature_unavailable) }
         withContext(Dispatchers.IO) {
             val control = AlarmCoordinator.from(context)
             check(control.readFailure == null) { "Alarm data cannot be opened; it has been preserved" }
         }
-        AlarmMusicPreparer.add(context, selected.ref, selected.subsong, load)
+        val song = AlarmMusicPreparer.add(context, selected.ref, selected.subsong, load)
         withContext(Dispatchers.IO) { AlarmCoordinator.from(context).reconcile() }
+        return song.id
     }
 
     fun isRinging(context: Context): Boolean = playbackGate(context) is AlarmPlaybackGate.Ringing

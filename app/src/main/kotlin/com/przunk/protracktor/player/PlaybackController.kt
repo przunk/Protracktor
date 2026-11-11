@@ -1258,17 +1258,11 @@ class PlaybackController private constructor(private val context: Context) {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) {
             say(Message(context.getString(R.string.alarm_feature_unavailable))); return
         }
-        val snapshot = _state.value
-        val selected = com.przunk.protracktor.alarms.api.AlarmMusicSelection.capture(ref, snapshot)
+        val selected = alarmSelection(ref)
         scope.launch {
             say(Message(context.getString(R.string.alarm_preparing, ref.title)))
             try {
-                com.przunk.protracktor.alarms.api.MusicAlarms.prepare(context, selected) {
-                    nativeReady.await()
-                    val bytes = trackFiles.read(ref) ?: error("Track cannot be read")
-                    com.przunk.protracktor.alarms.api.AlarmMusicInput(bytes, trackFiles.companions(ref), catalogueFormatOf(ref).orEmpty(),
-                        trackMetadata.forMd5(Md5.of(bytes)), trackMetadata.sampleCredits())
-                }
+                com.przunk.protracktor.alarms.api.MusicAlarms.prepare(context, selected) { alarmMusicInput(ref) }
                 say(Message(context.getString(R.string.alarm_music_ready)))
             } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
                 say(Message(context.getString(R.string.alarm_prepare_failed)))
@@ -1278,6 +1272,21 @@ class PlaybackController private constructor(private val context: Context) {
                 say(Message(context.getString(R.string.alarm_prepare_failed)))
             }
         }
+    }
+
+    /** What [ref] is to an alarm: the subsong playing, when it is the tune on now. */
+    internal fun alarmSelection(ref: TrackRef) =
+        com.przunk.protracktor.alarms.api.AlarmMusicSelection.capture(ref, _state.value)
+
+    /**
+     * What an alarm needs to prepare [ref] -- its bytes, companions, format and facts -- which only
+     * the player can read. One loader for *Use for alarms* and the alarm editor's *Add music* (B62).
+     */
+    internal suspend fun alarmMusicInput(ref: TrackRef): com.przunk.protracktor.alarms.api.AlarmMusicInput {
+        nativeReady.await()
+        val bytes = trackFiles.read(ref) ?: error("Track cannot be read")
+        return com.przunk.protracktor.alarms.api.AlarmMusicInput(bytes, trackFiles.companions(ref), catalogueFormatOf(ref).orEmpty(),
+            trackMetadata.forMd5(Md5.of(bytes)), trackMetadata.sampleCredits())
     }
 
     /** The one tune being turned into audio; a second press while it runs says so instead. */

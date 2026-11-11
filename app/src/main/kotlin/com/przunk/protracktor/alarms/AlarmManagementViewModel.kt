@@ -32,6 +32,19 @@ internal class AlarmManagementViewModel(application: Application) : AndroidViewM
     val state = mutable.asStateFlow()
     private val notices = MutableSharedFlow<Int>(extraBufferCapacity = 4)
     val messages = notices.asSharedFlow()
+    /** Where *Add music* finds tunes (B62). */
+    val sources: AlarmMusicSources = StoredAlarmMusicSources(context)
+    /**
+     * Tunes picked in *Add music*, prepared through the player's loader: only the player can read a
+     * tune's file and facts. Asking for the player here starts it when it is not running yet, which
+     * loads its state and plays nothing.
+     */
+    val music = AlarmMusicQueue(viewModelScope,
+        room = { AlarmLimits.MAX_SONGS - (mutable.value?.book?.songs?.size ?: 0) },
+        prepare = { ref ->
+            val player = com.przunk.protracktor.player.PlaybackController.get(context)
+            com.przunk.protracktor.alarms.api.MusicAlarms.prepare(context, player.alarmSelection(ref)) { player.alarmMusicInput(ref) }
+        })
     init {
         viewModelScope.launch {
             try {

@@ -61,7 +61,7 @@ class AlarmManagementUiTest {
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
             usable = { true }, onBack = {}, onSave = { AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
         val before = compose.onNodeWithText(text(R.string.alarm_back)).fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithText(text(R.string.alarm_new)).performClick()
+        compose.onNodeWithTag("alarm-new").performClick()
         frame()
         val after = compose.onNodeWithText(text(R.string.alarm_back)).fetchSemanticsNode().boundsInRoot
         assertEquals(before, after)
@@ -93,14 +93,14 @@ class AlarmManagementUiTest {
         compose.onNodeWithText(text(R.string.alarm_delete)).performScrollTo().performClick()
         compose.onNodeWithText(text(R.string.alarm_deleted)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.action_undo)).assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.alarm_edit)).assertExists()
+        compose.onNodeWithTag("alarm-card").assertExists()
     }
 
     @Test fun `weekday captions remain on one line and selection is saved`() {
         val saved = mutableListOf<MusicAlarm>()
         show { AlarmManagement(AlarmBook(songs = listOf(song)), null, false, true, true, true, false,
             usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) }, onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
-        compose.onNodeWithText(text(R.string.alarm_new)).performClick()
+        compose.onNodeWithTag("alarm-new").performClick()
         frame()
         val monday = compose.onNodeWithContentDescription("Monday").performScrollTo()
         monday.performClick()
@@ -129,7 +129,7 @@ class AlarmManagementUiTest {
         show { AlarmManagement(AlarmBook(songs = listOf(song), alarms = listOf(alarm)), null,
             false, true, true, true, false, usable = { true }, onBack = {}, onSave = { saved += it; AlarmSaveResult.Saved(AlarmScheduleResult.Idle) },
             onDelete = { true }, onRemoveMusic = {}, onTest = {}, onAccess = {}) }
-        compose.onNodeWithText(text(R.string.alarm_edit)).performScrollTo().performClick()
+        compose.onNodeWithTag("alarm-card").performScrollTo().performClick()
         frame()
         compose.onNodeWithText(text(R.string.alarm_name)).performTextReplacement("A new name")
         compose.onNodeWithText(text(R.string.alarm_save)).performClick()

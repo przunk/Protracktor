@@ -44,8 +44,10 @@ class AlarmsActivity : ComponentActivity() {
                     val book = current.book
                     val readiness = current.readiness
                     val preparing by AlarmMusicPreparer.preparing.collectAsState()
+                    val picks by model.music.picks.collectAsState()
                     AlarmManagement(book, current.schedule.armedAt, current.dataError,
                         preparing = preparing, onCancelPreparation = model::cancelPreparation,
+                        sources = model.sources, picks = picks, onAddMusic = model.music::add,
                         onOpenRinging = {
                             startForegroundService(Intent(this, AlarmService::class.java))
                             startActivity(Intent(this, AlarmRingingActivity::class.java))
