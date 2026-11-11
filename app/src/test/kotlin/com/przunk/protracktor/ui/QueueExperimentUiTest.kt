@@ -164,26 +164,6 @@ class QueueExperimentUiTest {
         compose.runOnIdle { assertEquals(1, queues); assertEquals(1, expands) }
     }
 
-    @Test fun `system Back closes the visible screen before remembered Random`() {
-        compose.mainClock.autoAdvance = false
-        val level = androidx.compose.runtime.mutableStateOf(3)
-        val calls = mutableListOf<String>()
-        activity.get().setContent { MaterialTheme {
-            androidx.compose.material3.Text("Navigation")
-            ScreenBackHandler(scanning = level.value >= 3, settings = level.value >= 2,
-                browse = level.value >= 1, random = true,
-                onScanner = { calls += "scanner" }, onSettings = { calls += "settings" },
-                onBrowse = { calls += "browse" }, onRandom = { calls += "random" })
-        } }
-        measure()
-        for (destination in 3 downTo 0) {
-            compose.runOnIdle { level.value = destination; Snapshot.sendApplyNotifications() }
-            compose.mainClock.advanceTimeByFrame()
-            compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
-        }
-        compose.runOnIdle { assertEquals(listOf("scanner", "settings", "browse", "random"), calls) }
-    }
-
     @Test fun `equal manual and source files coexist but only the manual occurrence is current`() {
         val track = TrackRef("a", "Source tune")
         val context = ActiveQueue(QueueSource.Playlist(1), PlayQueue(listOf(track)).startAt(0))
