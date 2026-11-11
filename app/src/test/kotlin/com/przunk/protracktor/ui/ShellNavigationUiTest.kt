@@ -74,29 +74,34 @@ class ShellNavigationUiTest : PlaybackShellTest() {
         compose.onNodeWithText("Online catalogues").assertDoesNotExist()
     }
 
-    @Test fun `More opens again after it closed, and its places are reachable`() {
+    @Test fun `More holds Alarms, WEB and Settings, and opens again after one is used`() {
         open("more")
-        compose.onNodeWithTag("more-sheet").assertExists()
-        more(R.string.domain_history_title).performClick()
-        frame(500)
-        compose.runOnIdle { assertEquals(BrowseDomain.HISTORY, browse.value.domain) }
-        marked("more")
-        back()
-        atPlaylist()
-
-        open("more")
-        more(R.string.saved_places_title).performClick()
-        frame(500)
-        compose.runOnIdle { assertEquals(BrowseDomain.SAVED, browse.value.domain) }
-        back()
-        atPlaylist()
-
-        open("more")
+        // History and Saved places are Browse's, not More's.
+        more(R.string.domain_history_title).assertDoesNotExist()
+        more(R.string.saved_places_title).assertDoesNotExist()
         more(R.string.settings_title).performClick()
         frame(500)
         marked("more")
         back()
         atPlaylist()
+        open("more")
+        compose.onNodeWithTag("more-sheet").assertExists()
+        more(R.string.settings_title).performClick()
+        frame(500)
+        back()
+        atPlaylist()
+    }
+
+    @Test fun `History opened from Browse is Browse's, and Back returns to Browse's start`() {
+        open("browse")
+        compose.onNode(hasText(application.getString(R.string.domain_history_title)) and !hasAnyAncestor(hasTestTag("shell-navigation")))
+            .performClick()
+        frame(500)
+        compose.runOnIdle { assertEquals(BrowseDomain.HISTORY, browse.value.domain) }
+        marked("browse")
+        back()
+        compose.onNodeWithText("Online catalogues").assertIsDisplayed()
+        marked("browse")
     }
 
     @Test fun `the top row has no Browse, WEB or Settings any more`() {

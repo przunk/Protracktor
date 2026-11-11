@@ -10,6 +10,12 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B64. A more compact History — noted 2026-11-11
+
+Raised 2026-11-11 while checking the redesign: the History view could take less room per tune.
+Not shaped yet: what goes (the second line, the date, the counts) is to be decided with a picture of
+it first.
+
 ## B63. Redesign: bottom navigation, a collapsible dock, one header row — built on a branch 2026-11-11
 
 Raised by testers (pointing at Spotify) and decided 2026-11-11 with the playlist kept as the home
@@ -29,6 +35,16 @@ dark, of the playlist, collapsed dock, selecting, editing, Browse, Search and Ra
 `dist/evidence/ui-redesign/`.
 **Not checked:** the phone; closing More with Back or a tap beside it and opening it again (the
 host cannot send Back to the sheet's window); TalkBack.
+
+**After the first phone check (APK 1548):** the grip went, the collapsed dock took the shape of my
+sketch (seek bar along the top, scrolling tune and author, +, a smaller Play, Queue as an icon),
+History and Saved places went back under Browse, floating controls stay; the crash on a swipe back
+was C140. **Checked:** `DockCollapseUiTest` (a drag down collapses with no grip drawn; the dock's
+TalkBack actions; + before Play before Queue; the seek bar above the tune), `DockShellUiTest` (the
+dock dragged in the real shell), `ShellNavigationUiTest` (More without History and Saved places;
+History opened from Browse marks Browse and Back returns to Browse's start). **Not checked:** the
+phone.
+
 
 ## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 

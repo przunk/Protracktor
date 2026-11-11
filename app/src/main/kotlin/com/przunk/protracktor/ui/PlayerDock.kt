@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
@@ -68,7 +69,7 @@ import com.przunk.protracktor.player.RepeatMode
  * at the start of every pass. Without [scrolls] it is the plain line, cut with `…` as before.
  */
 @OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.dockLine(scrolls: Boolean): Modifier =
+internal fun Modifier.dockLine(scrolls: Boolean): Modifier =
     if (!scrolls) this else basicMarquee(
         iterations = Int.MAX_VALUE,
         initialDelayMillis = DockMarquee.PAUSE_MS,
@@ -117,13 +118,32 @@ fun PlayerDock(
     ) {
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
-        // **Collapsible** (redesign E2): the grip on top says the dock moves; tap it or drag it. The
-        // change of form animates the dock's height. `AnimatedContent` did it with a cross-fade
-        // too, and left the test harness unable to settle in the next test after it; the height is
-        // the part that says where the controls went.
+        // **Collapsible** (redesign E2): drag the dock down to make it smaller, up to have it all
+        // back -- **with nothing drawn to say so** (2026-11-11): a grip cost a row's worth of room
+        // for a gesture that is expected anyway. TalkBack has both as actions on the dock. The
+        // change of form animates the dock's height; `AnimatedContent` did it with a cross-fade too,
+        // and left the test harness unable to settle in the next test after it.
+        val dragThreshold = with(androidx.compose.ui.platform.LocalDensity.current) { DockDrag.THRESHOLD.toPx() }
+        val currentlyCollapsed by rememberUpdatedState(collapsed)
+        val changeForm by rememberUpdatedState(onCollapsedChange)
+        val collapseLabel = stringResource(R.string.dock_collapse)
+        val expandFormLabel = stringResource(R.string.dock_expand)
         Column(modifier = (if (insetBottom) Modifier.navigationBarsPadding() else Modifier)
+            .testTag("player-dock")
+            .dockDrag(dragThreshold) { intent ->
+                when (intent) {
+                    DockDrag.Intent.COLLAPSE -> if (!currentlyCollapsed) changeForm(true)
+                    DockDrag.Intent.EXPAND -> if (currentlyCollapsed) changeForm(false)
+                    else -> Unit
+                }
+            }
+            .semantics {
+                customActions = listOf(
+                    if (collapsed) androidx.compose.ui.semantics.CustomAccessibilityAction(expandFormLabel) { changeForm(false); true }
+                    else androidx.compose.ui.semantics.CustomAccessibilityAction(collapseLabel) { changeForm(true); true },
+                )
+            }
             .animateContentSize(androidx.compose.animation.core.tween(200))) {
-            DockGrip(collapsed, onCollapsedChange)
             collapsed.let { small ->
             if (small) CollapsedDock(state, onSeek, onKeep, onPlayPause, onPrevious, onNext, onQueue,
                 onExpand = { onCollapsedChange(false) })

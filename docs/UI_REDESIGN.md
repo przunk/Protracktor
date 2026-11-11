@@ -117,7 +117,25 @@ seek band easy to hold cost more than the 108 dp of the mock-up.
 **Left for the phone check, not decided:**
 - Random's own **Filter** (what to draw from) and the playlist's **Filter** (narrow the list) now
   share a word with two meanings.
-- Browse's start still lists Random, Search, History, Saved places and Alarms, which the bar and
-  More now also reach.
-- Floating controls (B54) are untouched; the collapsed dock may make them unnecessary.
-- Whether the collapsed dock should be slimmer (seek band on its top edge, under the grip).
+- Browse's start still lists Random, Search and Alarms, which the bar and More now also reach.
+- Floating controls (B54) are untouched (decided after the phone check: they stay).
+
+## After the first phone check, 2026-11-11 (APK 1548)
+
+Changed on `ui/e5-feedback`:
+- **No grip.** Dragging the dock down to make it smaller is expected without being drawn, and the
+  grip cost a row of room. Drag down on the full dock collapses it, drag up on the collapsed dock
+  (or a tap on its tune) expands it; TalkBack has both as an action on the dock.
+- **The collapsed dock after my sketch** (`user/Screenshot_20261111-212205.png`): the seek bar along
+  its top, thin, with a 32 dp band to take; under it the tune and the author, **scrolling when they
+  do not fit**, as on the full dock; + when the tune is not in the playlist; a smaller Play/Pause;
+  Queue as its icon alone (my choice for this form, an exception to the icon-and-label rule, named
+  for TalkBack). No times on it. About 88 dp: the list is about 588 dp with it, 482 dp with the full
+  dock, against 476 dp in 1.9.0.
+- **History and Saved places belong to Browse**, where they are found among the music; More holds
+  Alarms, WEB and Settings.
+- **The crash on a swipe back** was C140, a seek running while the tune was left; fixed on its own
+  branch and merged into `ui/redesign`.
+
+Decided: **floating controls (B54) stay.** They are how the player is reached outside the app, over
+a map in picture-in-picture and another app in front; the collapsed dock does not replace that.

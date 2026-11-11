@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.*
+import androidx.compose.ui.geometry.Offset
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -54,18 +55,26 @@ class DockCollapseUiTest {
             collapsed = collapsed.value, onCollapsedChange = { collapsed.value = it })
     } }
 
-    @Test fun `expanded at first, the grip collapses and expands it`() {
+    @Test fun `expanded at first, a drag down collapses it, and TalkBack has both as actions`() {
         show()
         compose.onNodeWithContentDescription(text(R.string.a11y_shuffle_off)).assertExists()
         compose.onNodeWithTag("dock-collapsed").assertDoesNotExist()
-        compose.onNodeWithTag("dock-grip").assert(hasContentDescription(text(R.string.dock_collapse))).performClick()
+        // No grip: nothing is drawn to say the dock moves.
+        compose.onNodeWithTag("dock-grip").assertDoesNotExist()
+        compose.onNodeWithTag("player-dock").performTouchInput {
+            down(Offset(centerX, 20f)); moveBy(Offset(0f, 60f)); moveBy(Offset(0f, 60f)); up()
+        }
         frame()
         assertTrue(collapsed.value)
         compose.onNodeWithTag("dock-collapsed").assertExists()
-        compose.onNodeWithContentDescription(text(R.string.a11y_shuffle_off)).assertDoesNotExist()
-        compose.onNodeWithTag("dock-grip").assert(hasContentDescription(text(R.string.dock_expand))).performClick()
+        val dock = compose.onNodeWithTag("player-dock").fetchSemanticsNode()
+        val actions = dock.config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
+        assertEquals(listOf(text(R.string.dock_expand)), actions.map { it.label })
+        actions.single().action()
         frame()
         assertFalse(collapsed.value)
+        val again = compose.onNodeWithTag("player-dock").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
+        assertEquals(listOf(text(R.string.dock_collapse)), again.map { it.label })
     }
 
     @Test fun `dragging the collapsed tune up expands`() {
@@ -111,9 +120,14 @@ class DockCollapseUiTest {
         compose.onNodeWithTag("queue-toggle").performClick(); frame()
         compose.onNodeWithTag("dock-keep").performClick(); frame()
         assertEquals(listOf("play", "queue", "keep"), calls)
-        // + takes the right edge.
+        // As sketched: the tune, then +, then Play, then Queue.
         val keep = compose.onNodeWithTag("dock-keep").fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithTag("dock-collapsed-play").fetchSemanticsNode().boundsInRoot
         val queue = compose.onNodeWithTag("queue-toggle").fetchSemanticsNode().boundsInRoot
-        assertTrue(keep.left >= queue.right - 0.5f)
+        assertTrue(keep.right <= play.left + 0.5f && play.right <= queue.left + 0.5f)
+        // The seek bar is along the top, above the tune.
+        val seekBounds = compose.onNodeWithTag("dock-collapsed-seek").fetchSemanticsNode().boundsInRoot
+        val tuneTop = compose.onNodeWithTag("dock-collapsed-tune").fetchSemanticsNode().boundsInRoot.top
+        assertTrue(seekBounds.center.y < tuneTop)
     }
 }

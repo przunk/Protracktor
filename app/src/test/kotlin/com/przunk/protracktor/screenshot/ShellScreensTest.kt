@@ -64,8 +64,12 @@ class ShellScreensTest : PlaybackShellTest() {
             val suffix = "$locale-${theme.name.lowercase()}"
             shell(theme)
             shot("e4-playlist-$suffix")
-            compose.onNodeWithTag("dock-grip").performClick(); shot("e4-collapsed-$suffix")
-            compose.onNodeWithTag("dock-grip").performClick()
+            com.przunk.protracktor.Appearance.selectDockCollapsed(application, true)
+            compose.runOnIdle { activity.get().setContent { ProtracktorTheme(theme, dynamicColour = false) { ProtracktorApp(PlayerViewModel(application)) } } }
+            shot("e4-collapsed-$suffix")
+            com.przunk.protracktor.Appearance.selectDockCollapsed(application, false)
+            compose.runOnIdle { activity.get().setContent { ProtracktorTheme(theme, dynamicColour = false) { ProtracktorApp(PlayerViewModel(application)) } } }
+            frame(400)
             compose.onNodeWithText(tracks[2].title).performTouchInput { longClick() }; shot("e4-selecting-$suffix")
             compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
             compose.runOnIdle { player.value = player.value.copy(dirty = true) }; shot("e4-editing-$suffix")

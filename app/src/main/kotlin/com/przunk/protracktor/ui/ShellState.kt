@@ -75,12 +75,8 @@ data class ShellState(
         null -> ShellTab.PLAYLIST
         ShellScreen.RANDOM -> ShellTab.RANDOM
         ShellScreen.SETTINGS, ShellScreen.SCANNER -> ShellTab.MORE
-        ShellScreen.BROWSE -> when (domain) {
-            com.przunk.protracktor.player.BrowseDomain.SEARCH -> ShellTab.SEARCH
-            com.przunk.protracktor.player.BrowseDomain.HISTORY,
-            com.przunk.protracktor.player.BrowseDomain.SAVED -> ShellTab.MORE
-            else -> ShellTab.BROWSE
-        }
+        // History and Saved places are Browse's own places (2026-11-11).
+        ShellScreen.BROWSE -> if (domain == com.przunk.protracktor.player.BrowseDomain.SEARCH) ShellTab.SEARCH else ShellTab.BROWSE
     }
 
     companion object {
