@@ -10,6 +10,12 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B66. How many tunes are in the queue — noted 2026-11-11
+
+Raised 2026-11-11: it would help to see how many tunes are waiting in the queue. Not shaped yet:
+where the number belongs (on Queue's button in the dock, in the queue's own header, or both) is to
+be decided with the redesign's dock in mind.
+
 ## B65. Stereo mix in Settings as a three-part pill — noted 2026-11-11
 
 Raised 2026-11-11: the stereo mix choice in Settings should be one three-part segmented pill, as
