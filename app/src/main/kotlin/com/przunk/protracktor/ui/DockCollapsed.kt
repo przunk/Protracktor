@@ -108,8 +108,21 @@ internal fun CollapsedDock(
                 modifier = Modifier.requiredHeight(SEEK_BAND).padding(horizontal = 4.dp).testTag("dock-collapsed-seek"),
             )
         }
+        // **The swipes take the whole row** (2026-11-11), the buttons included: a swipe that starts
+        // on Play moves the tune instead of being swallowed by the button. A press on a button is
+        // still a press; a drag past the threshold cancels it. The seek bar is left out, since a
+        // sideways drag there is a seek.
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, bottom = 8.dp),
+            Modifier.fillMaxWidth().testTag("dock-collapsed-row")
+                .dockDrag(threshold) { intent ->
+                    when (intent) {
+                        DockDrag.Intent.EXPAND -> expand()
+                        DockDrag.Intent.NEXT -> next()
+                        DockDrag.Intent.PREVIOUS -> previous()
+                        else -> Unit
+                    }
+                }
+                .padding(start = 16.dp, end = 4.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -118,14 +131,6 @@ internal fun CollapsedDock(
                     .weight(1f)
                     .testTag("dock-collapsed-tune")
                     .clickable(onClickLabel = expandLabel, role = Role.Button) { expand() }
-                    .dockDrag(threshold) { intent ->
-                        when (intent) {
-                            DockDrag.Intent.EXPAND -> expand()
-                            DockDrag.Intent.NEXT -> next()
-                            DockDrag.Intent.PREVIOUS -> previous()
-                            else -> Unit
-                        }
-                    }
                     .semantics {
                         customActions = listOf(
                             CustomAccessibilityAction(nextLabel) { next(); true },

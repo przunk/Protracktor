@@ -130,4 +130,31 @@ class DockCollapseUiTest {
         val tuneTop = compose.onNodeWithTag("dock-collapsed-tune").fetchSemanticsNode().boundsInRoot.top
         assertTrue(seekBounds.center.y < tuneTop)
     }
+
+    @Test fun `a swipe that starts on Play moves the tune and does not press Play, while a tap still does`() {
+        collapsed.value = true
+        state.value = state.value.copy(playback = ActiveQueue(QueueSource.Random(1L), PlayQueue(listOf(tune)).startAt(0)))
+        show()
+        compose.onNodeWithTag("dock-collapsed-play").performTouchInput {
+            down(center); moveBy(Offset(-60f, 0f)); moveBy(Offset(-60f, 0f)); up()
+        }
+        frame()
+        compose.onNodeWithTag("dock-keep").performTouchInput {
+            down(center); moveBy(Offset(60f, 0f)); moveBy(Offset(60f, 0f)); up()
+        }
+        frame()
+        assertEquals(listOf("next", "previous"), calls)
+        compose.onNodeWithTag("dock-collapsed-play").performClick(); frame()
+        assertEquals(listOf("next", "previous", "play"), calls)
+    }
+
+    @Test fun `on the full dock a drag down that starts on Pause collapses it and does not pause`() {
+        show()
+        compose.onNodeWithContentDescription(text(R.string.a11y_pause)).performTouchInput {
+            down(center); moveBy(Offset(0f, 60f)); moveBy(Offset(0f, 60f)); up()
+        }
+        frame()
+        assertTrue(collapsed.value)
+        assertEquals(emptyList<String>(), calls)
+    }
 }
