@@ -434,7 +434,7 @@ fun ProtracktorApp(
                                 if (atBrowse && !showQueue && browseQuery == null &&
                                     com.przunk.protracktor.player.BrowseFilter.filterable(browse)) {
                                     val label = stringResource(R.string.playlist_search_action)
-                                    LabelledAction(PlayerIcons.Filter, label, { browseFilters.open(browseLevel) },
+                                    LabelledAction(PlayerIcons.Search, label, { browseFilters.open(browseLevel) },
                                         slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("browse-search-action"))
                                 }
                                 // No way out to the playlist here any more: the navigation bar's

@@ -626,12 +626,12 @@
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
 
-    <string name="playlist_search_action">Filtruj</string>
-    <string name="playlist_search_hint">Filtruj playlistę…</string>
+    <string name="playlist_search_action">Szukaj</string>
+    <string name="playlist_search_hint">Szukaj na playliście…</string>
     <string name="playlist_search_close">Zamknij wyszukiwanie na playliście</string>
     <string name="playlist_search_clear">Wyczyść wyszukiwanie</string>
     <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
-    <string name="browse_filter_hint">Filtruj tę listę…</string>
+    <string name="browse_filter_hint">Szukaj na tej liście…</string>
     <string name="browse_filter_no_matches">Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.</string>
     <string name="browse_filter_below">W folderach niżej</string>
     <string name="browse_filter_below_capped">W folderach niżej: pierwsze %1$,d</string>
