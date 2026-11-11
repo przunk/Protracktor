@@ -12,7 +12,11 @@ import kotlin.reflect.KProperty
 enum class ShellScreen { SCANNER, SETTINGS, BROWSE, RANDOM }
 
 /** The bottom navigation's tabs (redesign E1, `docs/UI_REDESIGN.md`). */
-enum class ShellTab { PLAYLIST, BROWSE, SEARCH, RANDOM, MORE }
+/**
+ * What the navigation bar can show. Playlist, Browse and More always; two of the rest, chosen in
+ * Settings ([NavSlots]).
+ */
+enum class ShellTab { PLAYLIST, BROWSE, SEARCH, RANDOM, LOCAL, SAVED, ONLINE, HISTORY, ALARMS, MORE }
 
 /**
  * Where the shell is: **a stack of places**, the last one showing, and the queue and Now Playing
@@ -71,12 +75,15 @@ data class ShellState(
     }
 
     /** Which tab is current, for the bar to mark; [domain] is Browse's, which tells Search apart. */
-    fun tabOf(domain: com.przunk.protracktor.player.BrowseDomain): ShellTab = when (shown) {
+    /**
+     * Which tab is marked. **A place on the bar is marked while it shows**, however it was reached;
+     * a place that is not on the bar marks Browse, where it lives (2026-11-11).
+     */
+    internal fun tabOf(domain: com.przunk.protracktor.player.BrowseDomain, slots: NavSlots = NavSlots.DEFAULT): ShellTab = when (shown) {
         null -> ShellTab.PLAYLIST
-        ShellScreen.RANDOM -> ShellTab.RANDOM
+        ShellScreen.RANDOM -> if (ShellTab.RANDOM in slots) ShellTab.RANDOM else ShellTab.BROWSE
         ShellScreen.SETTINGS, ShellScreen.SCANNER -> ShellTab.MORE
-        // History and Saved places are Browse's own places (2026-11-11).
-        ShellScreen.BROWSE -> if (domain == com.przunk.protracktor.player.BrowseDomain.SEARCH) ShellTab.SEARCH else ShellTab.BROWSE
+        ShellScreen.BROWSE -> listOf(slots.first, slots.second).firstOrNull { it.domain() == domain } ?: ShellTab.BROWSE
     }
 
     companion object {

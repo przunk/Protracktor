@@ -123,7 +123,7 @@ internal fun PlaylistSearchHeader(
                 }
             }
             Spacer(Modifier.width(4.dp))
-            LabelledAction(PlayerIcons.Filter, stringResource(R.string.playlist_search_action), onSearch,
+            LabelledAction(PlayerIcons.Search, stringResource(R.string.playlist_search_action), onSearch,
                 slim = true, modifier = Modifier.width(actionWidth ?: slimActionWidth(stringResource(R.string.playlist_search_action))))
             trailing()
         }

@@ -227,15 +227,15 @@ fun ProtracktorApp(
         showRandom = false
     }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showQueue = false; showBrowse = true } }
-    // Back in Browse: a tab's own place (Search, History, Saved places) is that tab's top, so Back
-    // leaves it there instead of walking to Browse's start (redesign E1).
+    // Back in Browse: the top of a place opened from the bar is that tab's top, so Back leaves it
+    // there instead of walking to Browse's start; deeper, it steps up first (redesign E1, round 2).
     val browseUp = {
-        val entry = shell.value.browseEntry
-        val atEntryTop = entry != null && entry != BrowseDomain.ROOT && storedBrowse.domain == entry &&
-            !storedBrowse.arrivedByJump && (entry != BrowseDomain.SEARCH ||
-                storedBrowse.searchScope == com.przunk.protracktor.player.SearchScope.Everywhere)
-        if (atEntryTop) showBrowse = false else leaveBrowse()
+        if (BrowseEntry.atTop(shell.value.browseEntry, storedBrowse)) showBrowse = false else leaveBrowse()
     }
+    // The bar's two chosen places (round 2), remembered across launches.
+    val tabContext = LocalContext.current
+    val alarmsAvailable = com.przunk.protracktor.alarms.api.MusicAlarms.enabled
+    var navSlots by remember { mutableStateOf(com.przunk.protracktor.Appearance.navSlots(tabContext, alarmsAvailable)) }
     // The navigation bar's tabs, each replacing the stack with its own place.
     val openTab: (ShellTab) -> Unit = { tab ->
         when (tab) {
@@ -246,6 +246,13 @@ fun ProtracktorApp(
                 shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.SEARCH)
             }
             ShellTab.RANDOM -> { viewModel.openRandom(); shell.value = shell.value.tab(ShellScreen.RANDOM) }
+            ShellTab.LOCAL, ShellTab.SAVED, ShellTab.ONLINE, ShellTab.HISTORY -> {
+                val domain = tab.domain()!!
+                viewModel.openDomain(domain)
+                shell.value = shell.value.tab(ShellScreen.BROWSE, domain)
+            }
+            // Its own screen, over whatever is open; Back there returns here. Not a marked tab.
+            ShellTab.ALARMS -> com.przunk.protracktor.alarms.api.MusicAlarms.openManager(tabContext)
             ShellTab.MORE -> Unit
         }
     }
@@ -434,7 +441,7 @@ fun ProtracktorApp(
                                 if (atBrowse && !showQueue && browseQuery == null &&
                                     com.przunk.protracktor.player.BrowseFilter.filterable(browse)) {
                                     val label = stringResource(R.string.playlist_search_action)
-                                    LabelledAction(PlayerIcons.Filter, label, { browseFilters.open(browseLevel) },
+                                    LabelledAction(PlayerIcons.Search, label, { browseFilters.open(browseLevel) },
                                         slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("browse-search-action"))
                                 }
                                 // No way out to the playlist here any more: the navigation bar's
@@ -476,8 +483,9 @@ fun ProtracktorApp(
                     )
                     // Selecting rows: the bar steps aside for the selection's own bar (redesign E3).
                     if (!atScanner && selectionPresence.count == 0) ShellNavigationBar(
-                        selected = if (showMore) ShellTab.MORE else shell.value.tabOf(storedBrowse.domain),
+                        selected = if (showMore) ShellTab.MORE else shell.value.tabOf(storedBrowse.domain, navSlots),
                         onSelect = { tab -> if (tab == ShellTab.MORE) showMore = true else openTab(tab) },
+                        slots = navSlots,
                     )
                     }
                     }
@@ -517,6 +525,12 @@ fun ProtracktorApp(
                         onVolumeNormalizationChanged = viewModel::setVolumeNormalization,
                         floatingControlsEnabled = state.floatingControlsEnabled,
                         onFloatingControlsEnabledChanged = viewModel::setFloatingControlsEnabled,
+                        navSlots = navSlots,
+                        alarmsAvailable = alarmsAvailable,
+                        onNavSlotsChanged = { chosen ->
+                            navSlots = chosen
+                            com.przunk.protracktor.Appearance.selectNavSlots(tabContext, chosen)
+                        },
                         selectedLanguage = selectedLanguage,
                         cacheBytes = browse.storageBytes.first,
                         archiveBytes = browse.archiveBytes,

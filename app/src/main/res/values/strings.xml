@@ -139,6 +139,18 @@
     <string name="nav_search">Search</string>
     <string name="nav_random">Random</string>
     <string name="nav_more">More</string>
+    <string name="nav_local">On phone</string>
+    <string name="nav_saved">Saved</string>
+    <string name="nav_online">Catalogues</string>
+    <string name="nav_history">History</string>
+    <string name="nav_alarms">Alarms</string>
+    <string name="settings_nav_bar">Navigation bar</string>
+    <string name="settings_nav_bar_detail">Playlist, Browse and More stay. Tap one of the two highlighted places to choose what it opens.</string>
+    <string name="settings_nav_slot">Place %1$,d on the bar: %2$s</string>
+    <string name="settings_nav_slot_change">Change</string>
+    <string name="settings_nav_choose_title">Place %1$,d on the bar</string>
+    <string name="settings_nav_in_other">In the other place: they swap</string>
+    <string name="settings_nav_restore">Restore defaults</string>
     <string name="dock_expand">Show all player controls</string>
     <string name="dock_collapse">Make the player smaller</string>
     <string name="action_add_folder">Add a folder</string>
@@ -591,12 +603,12 @@
         <item quantity="other">%1$,d stayed on the phone that sent them.</item>
     </plurals>
 
-    <string name="playlist_search_action">Filter</string>
-    <string name="playlist_search_hint">Filter this playlist…</string>
+    <string name="playlist_search_action">Search</string>
+    <string name="playlist_search_hint">Search playlist…</string>
     <string name="playlist_search_close">Close playlist search</string>
     <string name="playlist_search_clear">Clear search</string>
     <string name="playlist_search_no_matches">No playlist tracks match this phrase. Clear search to show the full list.</string>
-    <string name="browse_filter_hint">Filter this list…</string>
+    <string name="browse_filter_hint">Search this list…</string>
     <string name="browse_filter_no_matches">Nothing here matches this phrase. Clear search to show the whole list.</string>
     <string name="browse_filter_below">In folders below</string>
     <string name="browse_filter_below_capped">In folders below: the first %1$,d</string>

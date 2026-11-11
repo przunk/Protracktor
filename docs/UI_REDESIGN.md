@@ -139,3 +139,32 @@ Changed on `ui/e5-feedback`:
 
 Decided: **floating controls (B54) stay.** They are how the player is reached outside the app, over
 a map in picture-in-picture and another app in front; the collapsed dock does not replace that.
+
+## Round 2, after the second phone check (APK 1554), 2026-11-11
+
+On `ui/e6-round2`:
+- **Search again, with the magnifier**, for the playlist and a level of Browse: the words are typed
+  live, which is searching, and Filter suggested a chooser of filters. Random keeps Filter, since
+  there it sets limits on what is drawn.
+- **The collapsed dock's swipes take its whole row**, buttons included: a swipe that started on
+  Play did nothing. A tap on a button is still a press; the seek bar stays out of it.
+- **The collapsed seek bar lies on the dock's top edge**, after my sketch: a 3 dp line where the list
+  ends, a ▲ under it whose tip marks the position, and a 24 dp band under the line that answers to
+  a tap (seek there) or a sideways drag (seek on letting go). A drag up or down passes to the dock.
+  Nothing sticks out over the list. The collapsed dock is 72 dp (88 dp before).
+- **The full dock's dot sat 1 dp above its line** (the collapsed one's old dot, 2 dp). Measured on
+  screenshots: the slider places its thumb in a 16 dp slot and a smaller dot drawn bare sat at that
+  slot's top. The dot is now centred in the slot; measured again, line and dot share a centre.
+- **Two places on the bar are mine to choose** (Settings → Navigation bar): Playlist · Browse · ○ · ○
+  · More, Search and Random until chosen otherwise. Choices: Search, Random, On this phone, Saved
+  places, Online catalogues, History, Alarms (only in a build with music alarms). Settings shows
+  the bar as it will look, the two places outlined and marked *Change*; tapping one lists the
+  choices with icons, the current one ticked, the other place's marked as swapping. *Restore
+  defaults* puts Search and Random back. A stored choice the build cannot offer falls back to
+  that place's default.
+  - A place on the bar opens at its top, is marked while it shows (however reached), and Back from
+    its top returns to the playlist; deeper, Back steps up first. A place not on the bar marks
+    Browse.
+  - Alarms on the bar opens the alarms screen and is not a marked tab. More stays Alarms, WEB,
+    Settings whatever the bar holds.
+  - Online catalogues has the database icon on the bar, since Browse already shows the cloud.

@@ -26,7 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 
 /**
- * The navigation bar under the dock (redesign E1): **Playlist · Browse · Search · Random · More**.
+ * The navigation bar under the dock (redesign E1): **Playlist · Browse · ○ · ○ · More**, the two
+ * middle places chosen in Settings, Search and Random until then ([NavSlots], round 2).
  *
  * Small icons with small labels -- the project's icon-and-label rule, and five icons alone would be
  * guessing -- with the current tab marked by a pill behind its icon and by its semantics, so the
@@ -34,13 +35,14 @@ import com.przunk.protracktor.R
  * way back each place had.
  */
 @Composable
-internal fun ShellNavigationBar(selected: ShellTab, onSelect: (ShellTab) -> Unit, modifier: Modifier = Modifier) {
+internal fun ShellNavigationBar(selected: ShellTab, onSelect: (ShellTab) -> Unit, modifier: Modifier = Modifier,
+    slots: NavSlots = NavSlots.DEFAULT) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = modifier) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding().height(NAV_HEIGHT).testTag("shell-navigation"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ShellTab.entries.forEach { tab ->
+            slots.bar.forEach { tab ->
                 NavItem(tab, tab == selected, Modifier.weight(1f)) { onSelect(tab) }
             }
         }
@@ -73,12 +75,21 @@ private fun NavItem(tab: ShellTab, selected: Boolean, modifier: Modifier, onClic
     }
 }
 
+/**
+ * Each tab's icon and short name. Online catalogues takes the database rather than the cloud
+ * Browse already shows, so the two can sit side by side and still be told apart.
+ */
 @Composable
-private fun tabLook(tab: ShellTab): Pair<ImageVector, String> = when (tab) {
+internal fun tabLook(tab: ShellTab): Pair<ImageVector, String> = when (tab) {
     ShellTab.PLAYLIST -> PlayerIcons.Playlist to stringResource(R.string.action_to_playlist)
     ShellTab.BROWSE -> PlayerIcons.Cloud to stringResource(R.string.action_browse)
     ShellTab.SEARCH -> PlayerIcons.Search to stringResource(R.string.nav_search)
     ShellTab.RANDOM -> PlayerIcons.Dice to stringResource(R.string.nav_random)
+    ShellTab.LOCAL -> PlayerIcons.Folder to stringResource(R.string.nav_local)
+    ShellTab.SAVED -> PlayerIcons.BookmarkFilled to stringResource(R.string.nav_saved)
+    ShellTab.ONLINE -> PlayerIcons.Database to stringResource(R.string.nav_online)
+    ShellTab.HISTORY -> PlayerIcons.History to stringResource(R.string.nav_history)
+    ShellTab.ALARMS -> PlayerIcons.Alarm to stringResource(R.string.nav_alarms)
     ShellTab.MORE -> PlayerIcons.More to stringResource(R.string.nav_more)
 }
 

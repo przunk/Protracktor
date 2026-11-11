@@ -44,7 +44,8 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
                 playing = false)
         }
         frame(300)
-        compose.onNodeWithText(application.getString(R.string.playlist_search_action)).performClick()
+        compose.onNode(hasText(application.getString(R.string.playlist_search_action))
+            and hasAnyAncestor(hasTestTag("playlist-search-header"))).performClick()
         frame(350)
     }
 
@@ -150,7 +151,8 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(12)
         frame(300)
         val top = compose.onNodeWithTag("enqueue-row-12").fetchSemanticsNode().boundsInRoot.top
-        compose.onNodeWithText(application.getString(R.string.playlist_search_action)).performClick()
+        compose.onNode(hasText(application.getString(R.string.playlist_search_action))
+            and hasAnyAncestor(hasTestTag("playlist-search-header"))).performClick()
         frame(350)
         compose.onNodeWithTag("playlist-search-field").performTextInput("Track 20")
         frame(300)

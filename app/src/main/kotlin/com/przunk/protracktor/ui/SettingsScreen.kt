@@ -100,6 +100,9 @@ fun SettingsScreen(
     onVolumeNormalizationChanged: (Boolean) -> Unit,
     floatingControlsEnabled: Boolean,
     onFloatingControlsEnabledChanged: (Boolean) -> Unit,
+    navSlots: NavSlots,
+    alarmsAvailable: Boolean,
+    onNavSlotsChanged: (NavSlots) -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -287,6 +290,10 @@ fun SettingsScreen(
                 onSelect = onLanguageSelected,
             )
         }
+
+        // **The bar's two chosen places** (redesign round 2): the bar as it will look, then the choice.
+        item { HorizontalDivider(); Section(R.string.settings_nav_bar) }
+        item { NavSlotsSetting(navSlots, alarmsAvailable, onNavSlotsChanged) }
 
         item { HorizontalDivider(); Section(R.string.settings_appearance) }
 

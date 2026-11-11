@@ -124,11 +124,6 @@ fun SeekBar(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     label: String? = null,
-    /**
-     * The collapsed dock's bar (redesign E2): a thinner line and a smaller dot, but the same 48dp
-     * band to take hold of -- subtle to look at, not harder to use.
-     */
-    subtle: Boolean = false,
 ) {
     var scrubbing by remember { mutableStateOf<Float?>(null) }
 
@@ -185,7 +180,7 @@ fun SeekBar(
             // getting any fatter. At 28dp it is under Material's minimum, with a full-width
             // button immediately below it -- so a low miss does not do nothing, it opens Now
             // Playing.
-            .then(if (compact || subtle) Modifier.height(COMPACT_TOUCH_HEIGHT) else Modifier)
+            .then(if (compact) Modifier.height(COMPACT_TOUCH_HEIGHT) else Modifier)
             .then(label?.let { text -> Modifier.semantics { contentDescription = text } } ?: Modifier),
         thumb = {
             // A visible grab point: a progress line with nothing to take hold of does not look
@@ -208,7 +203,7 @@ fun SeekBar(
             // read. Nor a smaller dot -- the track is inset by the thumb's radius, so a smaller
             // circle sits higher and the bar shifts with it. Same size, same place; only the
             // colours change.
-            val size = if (subtle) 12.dp else if (compact) 14.dp else 20.dp
+            val size = if (compact) 14.dp else 20.dp
             // Darker where it cannot be dragged, and darker by *mixing with the surface* rather
             // than by going see-through: a translucent dot takes the colour of whatever is behind
             // it, which here is the track it sits on, and then reads as a hole in the bar.
@@ -218,13 +213,18 @@ fun SeekBar(
             } else {
                 lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surface, DIMMED)
             }
-            Box(modifier = Modifier.size(size).background(dot, CircleShape))
+            // **Centred in a slot of [THUMB_SLOT]** (2026-11-11): drawn as a bare circle, a dot under
+            // that height sat high of the line by half the difference -- 1 dp for the dock's 14 dp
+            // dot, measured on a screenshot.
+            Box(Modifier.size(width = size, height = maxOf(size, THUMB_SLOT)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(size).background(dot, CircleShape))
+            }
         },
         track = { state ->
             SliderDefaults.Track(
                 sliderState = state,
                 enabled = enabled,
-                modifier = Modifier.height(if (subtle) 2.dp else if (compact) 4.dp else 8.dp),
+                modifier = Modifier.height(if (compact) 4.dp else 8.dp),
                 drawStopIndicator = null,
             )
         },
@@ -250,6 +250,9 @@ fun SeekBar(
  * forward.
  */
 private const val DIMMED = 0.4f
+
+/** The height the slider places its thumb in; a smaller dot is centred inside it. */
+private val THUMB_SLOT = 16.dp
 
 /**
  * How much finger the dock's seek bar answers to.

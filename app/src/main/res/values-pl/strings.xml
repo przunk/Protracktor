@@ -349,6 +349,18 @@
     <string name="nav_search">Szukaj</string>
     <string name="nav_random">Losuj</string>
     <string name="nav_more">Więcej</string>
+    <string name="nav_local">Na telefonie</string>
+    <string name="nav_saved">Zapisane</string>
+    <string name="nav_online">Katalogi</string>
+    <string name="nav_history">Historia</string>
+    <string name="nav_alarms">Budzik</string>
+    <string name="settings_nav_bar">Pasek nawigacji</string>
+    <string name="settings_nav_bar_detail">Playlista, Przeglądaj i Więcej zostają. Dotknij jednego z dwóch wyróżnionych miejsc, aby wybrać, co otwiera.</string>
+    <string name="settings_nav_slot">Miejsce %1$,d na pasku: %2$s</string>
+    <string name="settings_nav_slot_change">Zmień</string>
+    <string name="settings_nav_choose_title">Miejsce %1$,d na pasku</string>
+    <string name="settings_nav_in_other">W drugim miejscu: zamienią się</string>
+    <string name="settings_nav_restore">Przywróć domyślne</string>
     <string name="dock_expand">Pokaż wszystkie przyciski odtwarzacza</string>
     <string name="dock_collapse">Zmniejsz odtwarzacz</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>
@@ -626,12 +638,12 @@
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
 
-    <string name="playlist_search_action">Filtruj</string>
-    <string name="playlist_search_hint">Filtruj playlistę…</string>
+    <string name="playlist_search_action">Szukaj</string>
+    <string name="playlist_search_hint">Szukaj na playliście…</string>
     <string name="playlist_search_close">Zamknij wyszukiwanie na playliście</string>
     <string name="playlist_search_clear">Wyczyść wyszukiwanie</string>
     <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
-    <string name="browse_filter_hint">Filtruj tę listę…</string>
+    <string name="browse_filter_hint">Szukaj na tej liście…</string>
     <string name="browse_filter_no_matches">Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.</string>
     <string name="browse_filter_below">W folderach niżej</string>
     <string name="browse_filter_below_capped">W folderach niżej: pierwsze %1$,d</string>

@@ -98,7 +98,7 @@ fun PlayerDock(
     longPlayPauseLabel: String? = null,
     /** Whether the dock is the bottom of the screen and keeps clear of the system bar itself. */
     insetBottom: Boolean = true,
-    /** The smaller form (redesign E2): the tune, a subtle seek bar, Play/Pause, Queue and +. */
+    /** The smaller form (redesign E2): the seek bar on its top edge, the tune, +, Play/Pause, Queue. */
     collapsed: Boolean = false,
     onCollapsedChange: (Boolean) -> Unit = {},
 ) {
