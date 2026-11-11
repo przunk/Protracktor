@@ -258,6 +258,8 @@ fun ProtracktorApp(
     // 1.10; this project is on 1.9.3.
     val context = LocalContext.current
     val shareTitle = stringResource(R.string.share_chooser)
+    // The dock's form, remembered across launches; expanded until chosen otherwise (redesign E2).
+    var dockCollapsed by remember { mutableStateOf(com.przunk.protracktor.Appearance.dockCollapsed(context)) }
     LaunchedEffect(Unit) {
         viewModel.share.collect { intent ->
             context.startActivity(Intent.createChooser(intent, shareTitle))
@@ -443,6 +445,11 @@ fun ProtracktorApp(
                         // The navigation bar is the bottom now and keeps clear of the system bar;
                         // under the scanner, which has no bar, the dock does as it did.
                         insetBottom = atScanner,
+                        collapsed = dockCollapsed,
+                        onCollapsedChange = {
+                            dockCollapsed = it
+                            com.przunk.protracktor.Appearance.selectDockCollapsed(context, it)
+                        },
                         state = state,
                         onSeek = viewModel::seekTo,
                         onKeep = viewModel::keepTransient,

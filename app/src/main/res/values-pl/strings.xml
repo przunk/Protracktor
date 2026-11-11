@@ -349,6 +349,8 @@
     <string name="nav_search">Szukaj</string>
     <string name="nav_random">Losuj</string>
     <string name="nav_more">Więcej</string>
+    <string name="dock_expand">Pokaż wszystkie przyciski odtwarzacza</string>
+    <string name="dock_collapse">Zmniejsz odtwarzacz</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>
     <plurals name="browse_selected">
         <item quantity="one">%,d zaznaczony</item>
