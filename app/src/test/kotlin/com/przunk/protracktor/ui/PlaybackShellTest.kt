@@ -10,6 +10,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.data.ProtracktorDatabase
@@ -76,5 +81,14 @@ abstract class PlaybackShellTest {
         compose.runOnIdle { Snapshot.sendApplyNotifications() }
         compose.mainClock.advanceTimeBy(milliseconds)
         compose.waitForIdle()
+    }
+
+    /** Settings through the navigation bar's More (redesign E1), as a person reaches it. */
+    protected fun openSettings() {
+        compose.onNodeWithTag("nav-more").performClick()
+        frame(500)
+        compose.onNode(hasText(application.getString(com.przunk.protracktor.R.string.settings_title)) and
+            hasAnyAncestor(hasTestTag("more-sheet"))).performClick()
+        frame(600)
     }
 }

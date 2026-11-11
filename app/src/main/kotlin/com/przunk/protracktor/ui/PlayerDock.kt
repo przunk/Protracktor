@@ -94,6 +94,8 @@ fun PlayerDock(
     onQueue: () -> Unit = {},
     onLongPlayPause: (() -> Unit)? = null,
     longPlayPauseLabel: String? = null,
+    /** Whether the dock is the bottom of the screen and keeps clear of the system bar itself. */
+    insetBottom: Boolean = true,
 ) {
     val haptics = rememberHaptics()
     val loaded = state.current
@@ -111,7 +113,7 @@ fun PlayerDock(
     ) {
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column(modifier = if (insetBottom) Modifier.navigationBarsPadding() else Modifier) {
             // The same seek control as Now Playing, so a track can be moved through from the main
             // screen without opening anything first.
             //

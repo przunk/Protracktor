@@ -194,7 +194,7 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
         }
         frame(350)
         val before = cleared
-        compose.onNodeWithText(application.getString(R.string.settings_title)).performClick()
+        openSettings()
         frame(350)
         assertEquals("An inactive playlist search must leave the destination's focus alone", before, cleared)
         compose.onNodeWithContentDescription(application.getString(R.string.action_back)).performClick()

@@ -346,6 +346,9 @@
     <string name="folder_unscanned">Jeszcze nieskanowany. Skanowanie otwiera każdy plik, żeby sprawdzić, czym naprawdę jest, zamiast ufać nazwie.</string>
     <string name="folder_stale">Ten folder skanowano innym zestawem dekoderów. Pliki, które wtedy nie grały, mogą grać teraz.</string>
     <string name="action_to_playlist">Playlista</string>
+    <string name="nav_search">Szukaj</string>
+    <string name="nav_random">Losuj</string>
+    <string name="nav_more">Więcej</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>
     <plurals name="browse_selected">
         <item quantity="one">%,d zaznaczony</item>
@@ -621,12 +624,12 @@
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
 
-    <string name="playlist_search_action">Szukaj</string>
-    <string name="playlist_search_hint">Szukaj na playliście…</string>
+    <string name="playlist_search_action">Filtruj</string>
+    <string name="playlist_search_hint">Filtruj playlistę…</string>
     <string name="playlist_search_close">Zamknij wyszukiwanie na playliście</string>
     <string name="playlist_search_clear">Wyczyść wyszukiwanie</string>
     <string name="playlist_search_no_matches">Brak pasujących utworów. Wyczyść wyszukiwanie, aby pokazać całą playlistę.</string>
-    <string name="browse_filter_hint">Szukaj na tej liście…</string>
+    <string name="browse_filter_hint">Filtruj tę listę…</string>
     <string name="browse_filter_no_matches">Nic tu nie pasuje. Wyczyść wyszukiwanie, aby pokazać całą listę.</string>
     <string name="browse_filter_below">W folderach niżej</string>
     <string name="browse_filter_below_capped">W folderach niżej: pierwsze %1$,d</string>

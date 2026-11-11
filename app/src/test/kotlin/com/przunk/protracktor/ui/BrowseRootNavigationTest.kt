@@ -159,7 +159,9 @@ class BrowseRootNavigationTest : PlaybackShellTest() {
             compose.onNodeWithText("Browse").performClick()
             frame()
             rootIsDisplayed()
-            compose.onNodeWithText("Random").performClick()
+            // Browse's own Random row: the navigation bar has a Random tab too (redesign E1).
+            compose.onNode(androidx.compose.ui.test.hasText("Random") and
+                !androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("shell-navigation"))).performClick()
             frame()
             compose.onNodeWithText("Online catalogues").assertDoesNotExist()
             compose.runOnIdle { assertPlaybackUnchanged(before) }

@@ -8,59 +8,94 @@ import androidx.compose.runtime.saveable.Saver
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
-/**
- * The full-screen places over the playlist, **in the order one hides another**: the scanner over
- * Settings over Browse over Random. Several can be open at once -- Browse opened from Random, say --
- * and the first open one in this order is what shows; closing it shows the next. That was six
- * separate flags and an `if` chain in `ProtracktorApp`; it is one state now (redesign E0,
- * `docs/UI_REDESIGN.md`), with the same rules, so the bottom navigation has one thing to change.
- */
+/** The full-screen places over the playlist. */
 enum class ShellScreen { SCANNER, SETTINGS, BROWSE, RANDOM }
 
+/** The bottom navigation's tabs (redesign E1, `docs/UI_REDESIGN.md`). */
+enum class ShellTab { PLAYLIST, BROWSE, SEARCH, RANDOM, MORE }
+
 /**
- * Where the shell is: which places are open, and whether the queue or Now Playing covers them.
+ * Where the shell is: **a stack of places**, the last one showing, and the queue and Now Playing
+ * over them (redesign E0, a stack since E1).
  *
- * Pure and immutable, so a JVM test holds the precedence and Back's order.
+ * A stack because Back is "the place before": Browse, then Random opened from it, then an author
+ * opened from Random, is three places, and Back walks them in reverse -- Random, Browse, the
+ * playlist. The six flags this replaced had a fixed order instead, which sent Back from Random to
+ * Browse whatever came before it. A tab replaces the whole stack with its own place.
+ *
+ * [browseEntry] is the Browse domain a tab or More opened Browse at -- Search, History, Saved
+ * places -- whose own top is the tab's top, so Back leaves there rather than walking to Browse's
+ * start. Null for Browse's start or Browse reached any other way.
+ *
+ * Pure and immutable, so a JVM test holds the stack and Back's order.
  */
 @Immutable
 data class ShellState(
-    val open: Set<ShellScreen> = emptySet(),
+    val stack: List<ShellScreen> = emptyList(),
     /** The queue panel over whatever is shown. Not kept across a rebuild: it reopens on a tap. */
     val queue: Boolean = false,
     /** Now Playing's sheet. */
     val nowPlaying: Boolean = false,
+    val browseEntry: com.przunk.protracktor.player.BrowseDomain? = null,
 ) {
     /** What shows, or null for the playlist. */
-    val shown: ShellScreen? get() = ShellScreen.entries.firstOrNull { it in open }
+    val shown: ShellScreen? get() = stack.lastOrNull()
 
-    fun isOpen(screen: ShellScreen) = screen in open
+    fun isOpen(screen: ShellScreen) = screen in stack
 
-    fun with(screen: ShellScreen, on: Boolean) = copy(open = if (on) open + screen else open - screen)
+    /** Opens [screen] over what shows (unless it already shows), or closes its topmost instance. */
+    fun with(screen: ShellScreen, on: Boolean): ShellState = if (on) {
+        if (shown == screen) this else copy(stack = stack + screen)
+    } else {
+        val at = stack.lastIndexOf(screen)
+        if (at < 0) this
+        else copy(stack = stack.filterIndexed { i, _ -> i != at },
+            browseEntry = browseEntry.takeIf { screen != ShellScreen.BROWSE || ShellScreen.BROWSE in stack.take(at) })
+    }
+
+    /** A tab: the whole stack becomes its one place (or none, for the playlist). */
+    fun tab(screen: ShellScreen?, entry: com.przunk.protracktor.player.BrowseDomain? = null) =
+        copy(stack = listOfNotNull(screen), queue = false, browseEntry = entry)
 
     /** Whether anything at all covers the playlist. */
-    val covered: Boolean get() = queue || nowPlaying || open.isNotEmpty()
+    val covered: Boolean get() = queue || nowPlaying || stack.isNotEmpty()
 
     /**
-     * What Back does to the places, of the shown one: the scanner, Settings and Random close
-     * (Random back to Browse's start), Browse steps up its own levels first. The queue and Now
-     * Playing are layers with Back handlers of their own, registered so that they come first.
+     * What Back does to the places, of the shown one: the scanner, Settings and Random close onto
+     * the place before; Browse steps up its own levels first.
      */
-    fun back(): ShellBack = when (shown) {
-        ShellScreen.SCANNER -> ShellBack.Close(ShellScreen.SCANNER)
-        ShellScreen.SETTINGS -> ShellBack.Close(ShellScreen.SETTINGS)
+    fun back(): ShellBack = when (val top = shown) {
         ShellScreen.BROWSE -> ShellBack.BrowseUp
-        ShellScreen.RANDOM -> ShellBack.RandomToBrowse
         null -> ShellBack.Nothing
+        else -> ShellBack.Close(top)
+    }
+
+    /** Which tab is current, for the bar to mark; [domain] is Browse's, which tells Search apart. */
+    fun tabOf(domain: com.przunk.protracktor.player.BrowseDomain): ShellTab = when (shown) {
+        null -> ShellTab.PLAYLIST
+        ShellScreen.RANDOM -> ShellTab.RANDOM
+        ShellScreen.SETTINGS, ShellScreen.SCANNER -> ShellTab.MORE
+        ShellScreen.BROWSE -> when (domain) {
+            com.przunk.protracktor.player.BrowseDomain.SEARCH -> ShellTab.SEARCH
+            com.przunk.protracktor.player.BrowseDomain.HISTORY,
+            com.przunk.protracktor.player.BrowseDomain.SAVED -> ShellTab.MORE
+            else -> ShellTab.BROWSE
+        }
     }
 
     companion object {
         /** Kept across a rebuild (language, theme, rotation), all but the queue. */
         val Saver: Saver<ShellState, List<String>> = Saver(
-            save = { state -> state.open.map { it.name } + listOfNotNull("nowPlaying".takeIf { state.nowPlaying }) },
+            save = { state ->
+                state.stack.map { it.name } + listOfNotNull("nowPlaying".takeIf { state.nowPlaying },
+                    state.browseEntry?.let { "entry:${it.name}" })
+            },
             restore = { saved ->
                 ShellState(
-                    open = saved.mapNotNull { name -> ShellScreen.entries.firstOrNull { it.name == name } }.toSet(),
+                    stack = saved.mapNotNull { name -> ShellScreen.entries.firstOrNull { it.name == name } },
                     nowPlaying = "nowPlaying" in saved,
+                    browseEntry = saved.firstOrNull { it.startsWith("entry:") }?.removePrefix("entry:")
+                        ?.let { name -> com.przunk.protracktor.player.BrowseDomain.entries.firstOrNull { it.name == name } },
                 )
             },
         )
@@ -72,8 +107,6 @@ sealed interface ShellBack {
     data class Close(val screen: ShellScreen) : ShellBack
     /** Browse goes up a level, and closes from its top. */
     data object BrowseUp : ShellBack
-    /** Random closes onto Browse. */
-    data object RandomToBrowse : ShellBack
     data object Nothing : ShellBack
 }
 
