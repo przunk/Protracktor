@@ -409,7 +409,14 @@ fun ProtracktorApp(
                                 } else if (atBrowse) {
                                     // The screen names itself; whose folder a digression is in is said by the
                                     // header under the bar, in the shape the dice's own heading has.
-                                    Text(stringResource(R.string.browse_title))
+                                    // Named by where it is, now that Search, History and Saved places are
+                                    // reached from the bar and More rather than from Browse (redesign E4).
+                                    Text(stringResource(when (storedBrowse.domain) {
+                                        BrowseDomain.SEARCH -> R.string.nav_search
+                                        BrowseDomain.HISTORY -> R.string.domain_history_title
+                                        BrowseDomain.SAVED -> R.string.saved_places_title
+                                        else -> R.string.browse_title
+                                    }))
                                 } else if (atRandom) {
                                     // The screen says "Playing at random" over its own list, so the bar stays
                                     // out of its way. The playlist chip in particular would be offering to

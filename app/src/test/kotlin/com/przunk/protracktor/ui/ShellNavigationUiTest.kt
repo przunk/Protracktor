@@ -46,6 +46,10 @@ class ShellNavigationUiTest : PlaybackShellTest() {
         open("search")
         compose.runOnIdle { assertEquals(BrowseDomain.SEARCH, browse.value.domain) }
         marked("search")
+        // The bar above says where this is: Search, not Browse's own title.
+        compose.onNode(hasText(application.getString(R.string.nav_search)) and !hasAnyAncestor(hasTestTag("shell-navigation")))
+            .assertExists()
+        compose.onNodeWithText(application.getString(R.string.browse_title)).assertDoesNotExist()
         // Search's top is the tab's top: Back leaves, rather than walking to Browse's start.
         back()
         atPlaylist()
