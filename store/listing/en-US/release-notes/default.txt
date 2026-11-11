@@ -1,5 +1,7 @@
-- AMP is back. If you had it, download its catalogue again in Browse → Online catalogues.
-- Search in Browse: narrow any archive level or folder; tunes from folders below that match are listed under it.
-- Select all, and Share for a whole selection.
-- Add files skips files the app cannot play, and names them.
-- Authors are sorted regardless of upper and lower case.
+Alarms:
+- Add music right from the alarm editor or the Music tab: pick tunes from your playlists or History, or search for them.
+- A New alarm button at the bottom right.
+- The next alarm is shown at the top; alarm cards are clearer and open with a tap.
+- The editor says when the alarm will ring and asks before discarding changes.
+
+Player: the + on the dock (add to playlist) now responds where it is drawn.

@@ -32,11 +32,13 @@ class LightAppearanceScreensTest {
         TrackRef("three", "Space Ninja", "Modland", fileName = "space ninja.mod", author = "Lotus 3"),
     )
 
-    private fun picture(name: String, random: Boolean = false, dirty: Boolean = false, dark: Boolean = false) {
+    private fun picture(name: String, random: Boolean = false, dirty: Boolean = false, dark: Boolean = false, away: Boolean = false) {
         val state = PlayerUiState(
             queue = PlayQueue(tracks).startAt(0), dirty = dirty,
             playing = true, durationSeconds = 200.0, positionSeconds = 24.0, subsongCount = 5,
             randomPicks = tracks, randomIndex = 0,
+            // Playing from elsewhere, so the dock offers + (C137).
+            playback = if (away) ActiveQueue(QueueSource.Random(1L), PlayQueue(tracks).startAt(0)) else null,
         )
         render(720, 1600) {
             ProtracktorTheme(if (dark) AppTheme.DARK else AppTheme.LIGHT, dynamicColour = false) {
@@ -72,6 +74,8 @@ class LightAppearanceScreensTest {
     fun `Polish Light playlist`() {
         picture("redmi-pl-light-playlist")
         picture("redmi-pl-light-playlist-dirty", dirty = true)
+        picture("redmi-pl-light-playlist-keep", away = true)
+        picture("redmi-pl-dark-playlist-keep", away = true, dark = true)
     }
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
     fun `Polish Random themes`() {

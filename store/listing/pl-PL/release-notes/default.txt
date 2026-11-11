@@ -1,5 +1,7 @@
-- AMP wróciło. Jeśli było pobrane, pobierz jego katalog ponownie w Przeglądaj → Katalogi online.
-- Szukaj w Przeglądaj: zawęża poziom archiwum lub folder; pod spodem pasujące utwory z folderów niżej.
-- Zaznacz wszystko oraz Udostępnij dla całego zaznaczenia.
-- Dodaj pliki pomija pliki, których aplikacja nie odtworzy, i je wymienia.
-- Autorzy są sortowani bez względu na wielkość liter.
+Budzik:
+- Dodawaj muzykę prosto z edycji alarmu albo z zakładki Muzyka: wybierz utwory z playlist lub Historii albo je wyszukaj.
+- Przycisk Nowy alarm w prawym dolnym rogu.
+- Najbliższy alarm widać na górze; karty alarmów są czytelniejsze i otwierają się dotknięciem.
+- Edycja pokazuje, kiedy alarm zadzwoni, i pyta przed odrzuceniem zmian.
+
+Odtwarzacz: przycisk + na docku (dodaj do playlisty) reaguje tam, gdzie jest narysowany.

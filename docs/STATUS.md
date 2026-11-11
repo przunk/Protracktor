@@ -1,6 +1,8 @@
 # Status
 
-Updated: 2026-11-09 — 1.8.0 (1518, tag `v1.8.0`, commit `82999218`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-09; that list includes comparing Play's SHA-256 with `e90a6199…f368`. It adds AMP from its daily map (C134), Search in Browse with the tunes below (B60, B61), Select all and Share for a selection (B59), Add files skipping unplayable files (C135) and case-blind author order (C136). A GitHub release of 1.8.0 is not made. Production access is not granted.
+Updated: 2026-11-11 — 1.9.0 (1529, tag `v1.9.0`, commit `3deb6258`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-11, which include comparing Play's SHA-256 with `0157b1d2…d504`. It adds the alarm screens of B62 (add music from the editor, a floating New alarm, clearer list and editor) and C137 (the dock's + answers where it is drawn). A GitHub release of 1.9.0 is not made. Production access is not granted.
+
+Previously: 2026-11-09 — 1.8.0 (1518, tag `v1.8.0`, commit `82999218`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-09; that list includes comparing Play's SHA-256 with `e90a6199…f368`. It adds AMP from its daily map (C134), Search in Browse with the tunes below (B60, B61), Select all and Share for a selection (B59), Add files skipping unplayable files (C135) and case-blind author order (C136). A GitHub release of 1.8.0 is not made. Production access is not granted.
 
 Previously: 2026-11-07 — 1.6.0 (1467) is published on Google Play closed testing and on GitHub (2026-11-05; downloaded APK, checksum and signature verified).
 
@@ -10,6 +12,29 @@ GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C137 The dock's + (add to the playlist) answers above where it is drawn — fixed and merged 2026-11-11
+
+Reported 2026-11-11: the + on the dock's card, which adds the tune playing to the playlist, seems to
+take presses higher than it looks. From the code (`PlayerDock`) and `DockIdentityLayoutTest`: the +
+sits in a 48 × 32 dp slot at the card's top right, with the icon drawn at the slot's bottom, so the
+slot reaches 8 dp above the icon and ends at its lower edge. The row below it (the counter, *Track 1
+of 5*) is the card's own press, which opens Now Playing, and wins there on purpose (C112), so a
+finger landing on the icon's lower half or just under it opens Now Playing instead of adding. The
+slot is also under Material's 48 dp height. **Proposed:** give + the card's right edge to itself,
+a full-height column 48 dp wide with the icon centred, the title, subtitle and counter ending
+before it; the collapsed dock of the redesign keeps + at its right edge the same way
+(`UI_REDESIGN.md`). **Checked:** the layout, from the code and the existing layout test's
+assertions.
+
+**Fixed on `fix/c137-dock-keep`, 2026-11-11**, as proposed, before 1.9.0 and the redesign: + has a
+column 48 dp wide and the card's full height (60 dp) at its right edge, the icon in its middle; the
+title, the subtitle and the counter end before it. The column stays when + is absent, so the title
+keeps its width. **Checked:** `DockIdentityLayoutTest` (+ spans the card's height at its right edge,
+beside the title and counter; presses near the card's bottom and top in that column add, a press on
+the counter opens Now Playing; card height and text insets unchanged); restoring the old slot fails
+it, the press near the bottom being lost. Screenshots in `dist/evidence/c137-dock-keep/`. On the
+phone (APK 1.8.0 (1526), `ef9eb439`) it was reported working; merged the same day.
 
 ## C136 Authors whose names start with a small letter sort after Z — fixed and merged 2026-11-09
 
