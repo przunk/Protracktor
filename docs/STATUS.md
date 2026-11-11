@@ -13,6 +13,28 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C138 Back after "More from this author" from Random lands on the author again — fixed and merged 2026-11-11
+
+Reported 2026-11-11, on the E0 APK (1534): Playlist → Browse → Random → a tune's *More from this
+author* → Back returns to Random, as it should; Back again opens Browse at the author's folder
+instead of where Browse was; Back once more goes up a folder instead of to the playlist. The same
+code is in 1.9.0 (E0 moved it unchanged). Mechanism, from the code: the jump replaces Browse's
+place with the author's folder, marked as reached by a jump; Back from it only clears that mark
+and hides Browse, so Browse keeps the author's folder; Random's Back opens Browse where it is, and
+there the mark is gone, so Back walks up. Only a jump from Browse's own lists (Search, a narrowed
+level) remembered where it came from. **Expected:** leaving the author returns to where I was, and
+Browse to where it was before the jump.
+
+**Fixed on `fix/c138-jump-return`, 2026-11-11:** a jump from outside Browse's lists -- Random, the
+playlist, Now Playing -- remembers where Browse was; leaving the author puts Browse back there
+(navigation only: downloads, indexes and caches are left as they are now), as a jump from Search
+already did. Opening a Browse domain or going back to a queue's source forgets it. So: author →
+Back → Random → Back → Browse where Random was opened from → Back → the playlist. **Checked:**
+`BrowseRootNavigationTest` (a real index and jump: leaving the author leaves Browse at its start,
+and Back from there leaves); without the fix it fails, Browse staying at the author. Merged into
+develop on my instruction before a phone check, to be checked with the redesign's build.
+**Not checked:** the phone.
+
 ## C137 The dock's + (add to the playlist) answers above where it is drawn — fixed and merged 2026-11-11
 
 Reported 2026-11-11: the + on the dock's card, which adds the tune playing to the playlist, seems to

@@ -169,4 +169,37 @@ class BrowseRootNavigationTest : PlaybackShellTest() {
             back(toolbar = it % 2 != 0)
         }
     }
+
+    /** C138: leaving an author reached by a jump puts Browse back where it was before the jump. */
+    @Test fun `leaving an author reached from Random returns Browse to where it was`() {
+        val modland = com.przunk.protracktor.net.Modland
+        kotlinx.coroutines.runBlocking {
+            com.przunk.protracktor.data.CatalogueStore(application).replaceIndex(modland, listOf(
+                com.przunk.protracktor.net.CatalogueEntry("Protracker/Nork/funky.mod", "Protracker", "Nork", "funky.mod", 42)), "test")
+        }
+        try {
+            // Browse at its start, as when Random was opened from it.
+            compose.runOnIdle { browse.value = BrowseState(domain = BrowseDomain.ROOT, knowsWhatIsHeld = true) }
+            val nork = TrackRef(modland.urlFor("Protracker/Nork/funky.mod"), "funky.mod", author = "Nork")
+            compose.runOnIdle { controller.showNeighboursOf(nork) }
+            compose.waitUntil(5_000) {
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+                browse.value.openAuthor == "Nork" && !browse.value.loading
+            }
+            compose.runOnIdle { assertTrue(browse.value.arrivedByJump) }
+            // Back from the author leaves Browse (for Random, underneath) ...
+            compose.runOnIdle { assertFalse(controller.browseBack()) }
+            // ... and Browse is where it was, so Random's Back opens its start, not the author.
+            compose.runOnIdle {
+                assertEquals(BrowseDomain.ROOT, browse.value.domain)
+                assertNull(browse.value.openAuthor)
+                assertNull(browse.value.openCatalogue)
+                assertFalse(browse.value.arrivedByJump)
+            }
+            // A second Back from there leaves, rather than walking up the author's archive.
+            compose.runOnIdle { assertFalse(controller.browseBack()) }
+        } finally {
+            kotlinx.coroutines.runBlocking { com.przunk.protracktor.data.CatalogueStore(application).clearIndex(modland.id) }
+        }
+    }
 }

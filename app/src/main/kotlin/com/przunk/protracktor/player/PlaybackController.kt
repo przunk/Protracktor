@@ -948,6 +948,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun openDomain(domain: BrowseDomain) {
         savedPlaces.cancelOpening()
         waitingBrowse = null
+        jumpLeftBehind = null
         browseWorkflow.openDomain(domain)
     }
 
@@ -955,6 +956,14 @@ class PlaybackController private constructor(private val context: Context) {
         savedPlaces.cancelOpening()
         if (browseWorkflow.browseBack()) return true
         if (waitingBrowse != null) { resumeSearch(); return true }
+        // **Leaving an author reached by a jump from outside Browse** -- Random, the playlist, Now
+        // Playing -- leaves Browse, and puts it back where it was before the jump (C138). Without
+        // this Browse kept the author's folder, so Random's Back opened Browse on the author, and
+        // Back from there walked up the archive instead of leaving.
+        jumpLeftBehind?.let { left ->
+            jumpLeftBehind = null
+            _browse.update { QueueSourceNavigation.restore(left, it) }
+        }
         return false
     }
 
@@ -1738,9 +1747,11 @@ class PlaybackController private constructor(private val context: Context) {
 
             val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
             if (!isCurrent()) return@launch
-            // Read before Browse moves: the search this jump leaves, if it leaves one.
+            // Read before Browse moves: the search this jump leaves, if it leaves one, and in
+            // any case where Browse was, which leaving the author puts back (C138).
             browseWorkflow.cancelSearch()
-            val search = BrowseNavigation.searchToReturnTo(_browse.value, fromBrowse)
+            val before = _browse.value
+            val search = BrowseNavigation.searchToReturnTo(before, fromBrowse)
             val owner = BrowseReadOwner.begin(_browse) {
                 it.copy(
                     domain = BrowseDomain.ONLINE,
@@ -1763,6 +1774,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             // Returning to the search changes navigation, never playback ownership.
             if (search != null) waitingBrowse = search
+            else jumpLeftBehind = before
         }
     }
 
@@ -2290,6 +2302,7 @@ class PlaybackController private constructor(private val context: Context) {
                 savedPlaces.cancelOpening()
                 browseWorkflow.cancelSearch()
                 waitingBrowse = null
+                jumpLeftBehind = null
                 val snapshot = sessionBrowse ?: run { unavailable(); return }
                 _browse.update { QueueSourceNavigation.restore(snapshot, it) }
                 refreshOnPhone()
@@ -2977,6 +2990,8 @@ class PlaybackController private constructor(private val context: Context) {
     /** Navigation snapshots never own playback. */
     private var sessionBrowse: BrowseState? = null
     private var waitingBrowse: BrowseState? = null
+    /** Where Browse was before a jump from outside it, put back when the jump is left (C138). */
+    private var jumpLeftBehind: BrowseState? = null
 
     /** Retry the actual occurrence only while its playback intent remains current. */
     private var pendingRetry: (() -> Unit)? = null
