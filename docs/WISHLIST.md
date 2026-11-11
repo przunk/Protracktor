@@ -10,6 +10,26 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B63. Redesign: bottom navigation, a collapsible dock, one header row — built on a branch 2026-11-11
+
+Raised by testers (pointing at Spotify) and decided 2026-11-11 with the playlist kept as the home
+screen: [UI_REDESIGN.md](UI_REDESIGN.md) holds the plan, the decisions and what was built. Built
+unattended on `ui/redesign` (stages E1–E4 merged into it without a phone check, as agreed; E0
+merged after one); not merged into `develop`.
+
+**Checked:** `ShellStateTest` (the stack, Back, tabs, the saver), `ShellNavigationUiTest` (each tab
+opens its place and marks itself; Back from a tab; a tab replaces the stack; More's History, Saved
+places, Settings, WEB, and WEB held opening the scanner, which hides the bar), `DockDragTest`,
+`DockCollapseUiTest` (grip, swipes and their TalkBack actions, the collapsed bar seeking, Play,
+Queue, + at the right edge), `DockShellUiTest` (the grip dragged in the real shell; the form
+remembered across a new shell), `ShellSelectionUiTest` (the bar steps aside while selecting, in the
+playlist and in Browse); each failed once its guard was broken. Existing tests changed where the
+shape did on purpose (named in each stage's commit). Screenshots at 360 dp, EN and PL, light and
+dark, of the playlist, collapsed dock, selecting, editing, Browse, Search and Random:
+`dist/evidence/ui-redesign/`.
+**Not checked:** the phone; closing More with Back or a tap beside it and opening it again (the
+host cannot send Back to the sheet's window); TalkBack.
+
 ## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 
 Raised 2026-11-10: add tunes to an alarm from the alarm's own editor; a floating button at the
