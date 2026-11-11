@@ -11,7 +11,7 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C137 The dock's + (add to the playlist) answers above where it is drawn — fixed on a branch 2026-11-11
+## C137 The dock's + (add to the playlist) answers above where it is drawn — fixed and merged 2026-11-11
 
 Reported 2026-11-11: the + on the dock's card, which adds the tune playing to the playlist, seems to
 take presses higher than it looks. From the code (`PlayerDock`) and `DockIdentityLayoutTest`: the +
@@ -31,8 +31,8 @@ title, the subtitle and the counter end before it. The column stays when + is ab
 keeps its width. **Checked:** `DockIdentityLayoutTest` (+ spans the card's height at its right edge,
 beside the title and counter; presses near the card's bottom and top in that column add, a press on
 the counter opens Now Playing; card height and text insets unchanged); restoring the old slot fails
-it, the press near the bottom being lost. Screenshots in `dist/evidence/c137-dock-keep/`.
-**Not checked:** the phone.
+it, the press near the bottom being lost. Screenshots in `dist/evidence/c137-dock-keep/`. On the
+phone (APK 1.8.0 (1526), `ef9eb439`) it was reported working; merged the same day.
 
 ## C136 Authors whose names start with a small letter sort after Z — fixed and merged 2026-11-09
 
