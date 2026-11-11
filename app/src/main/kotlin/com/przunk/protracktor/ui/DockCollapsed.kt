@@ -64,8 +64,8 @@ internal fun Modifier.dockDrag(threshold: Float, act: (DockDrag.Intent) -> Unit)
 }
 
 /**
- * The collapsed dock (redesign E2, shaped after my sketch of 2026-11-11): the seek bar along its top,
- * drawn thin but held in a band easy to take; under it the tune and author, scrolling when they do
+ * The collapsed dock (redesign E2, shaped after my sketch of 2026-11-11): the seek bar on its top
+ * edge ([EdgeSeekBar]); under it the tune and author, scrolling when they do
  * not fit as on the full dock; **+** when the tune is not in the playlist; a smaller Play/Pause;
  * Queue as its icon.
  *
@@ -96,18 +96,15 @@ internal fun CollapsedDock(
         android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
     }
     Column(Modifier.fillMaxWidth().testTag("dock-collapsed")) {
-        // Along the top, the line near the edge; the band around it is what is pressed.
-        Box(Modifier.fillMaxWidth().height(SEEK_BAND), contentAlignment = Alignment.Center) {
-            SeekBar(
-                positionSeconds = state.positionSeconds,
-                durationSeconds = state.bar.seconds,
-                enabled = state.seekable && loaded != null,
-                onSeek = onSeek,
-                subtle = true,
-                label = stringResource(R.string.a11y_seek),
-                modifier = Modifier.requiredHeight(SEEK_BAND).padding(horizontal = 4.dp).testTag("dock-collapsed-seek"),
-            )
-        }
+        // Along the dock's top edge, as sketched; the band under the line is what is pressed.
+        EdgeSeekBar(
+            positionSeconds = state.positionSeconds,
+            durationSeconds = state.bar.seconds,
+            enabled = state.seekable && loaded != null,
+            onSeek = onSeek,
+            label = stringResource(R.string.a11y_seek),
+            modifier = Modifier.testTag("dock-collapsed-seek"),
+        )
         // **The swipes take the whole row** (2026-11-11), the buttons included: a swipe that starts
         // on Play moves the tune instead of being swallowed by the button. A press on a button is
         // still a press; a drag past the threshold cancels it. The seek bar is left out, since a
@@ -122,7 +119,7 @@ internal fun CollapsedDock(
                         else -> Unit
                     }
                 }
-                .padding(start = 16.dp, end = 4.dp, bottom = 8.dp),
+                .padding(start = 16.dp, end = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -136,8 +133,7 @@ internal fun CollapsedDock(
                             CustomAccessibilityAction(nextLabel) { next(); true },
                             CustomAccessibilityAction(previousLabel) { previous(); true },
                         )
-                    }
-                    .padding(vertical = 4.dp),
+                    },
             ) {
                 // As on the full dock: a line that does not fit scrolls rather than losing its end.
                 Text(
@@ -186,5 +182,3 @@ internal fun CollapsedDock(
     }
 }
 
-/** The collapsed seek bar's band: the line is thin, the place to press is not. */
-private val SEEK_BAND = 32.dp

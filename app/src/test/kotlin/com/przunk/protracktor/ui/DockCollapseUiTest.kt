@@ -125,10 +125,12 @@ class DockCollapseUiTest {
         val play = compose.onNodeWithTag("dock-collapsed-play").fetchSemanticsNode().boundsInRoot
         val queue = compose.onNodeWithTag("queue-toggle").fetchSemanticsNode().boundsInRoot
         assertTrue(keep.right <= play.left + 0.5f && play.right <= queue.left + 0.5f)
-        // The seek bar is along the top, above the tune.
+        // The seek bar lies on the dock's top edge, above the tune.
         val seekBounds = compose.onNodeWithTag("dock-collapsed-seek").fetchSemanticsNode().boundsInRoot
+        val dockTop = compose.onNodeWithTag("player-dock").fetchSemanticsNode().boundsInRoot.top
         val tuneTop = compose.onNodeWithTag("dock-collapsed-tune").fetchSemanticsNode().boundsInRoot.top
-        assertTrue(seekBounds.center.y < tuneTop)
+        assertEquals(dockTop, seekBounds.top, 0.5f)
+        assertTrue(seekBounds.bottom <= tuneTop + 0.5f)
     }
 
     @Test fun `a swipe that starts on Play moves the tune and does not press Play, while a tap still does`() {
@@ -156,5 +158,56 @@ class DockCollapseUiTest {
         frame()
         assertTrue(collapsed.value)
         assertEquals(emptyList<String>(), calls)
+    }
+
+    private fun collapsedFromRandom() {
+        collapsed.value = true
+        state.value = state.value.copy(playback = ActiveQueue(QueueSource.Random(1L), PlayQueue(listOf(tune)).startAt(0)))
+        show()
+        frame()
+    }
+
+    @Test fun `a sideways drag along the edge bar seeks once, where it is let go`() {
+        collapsedFromRandom()
+        compose.onNodeWithTag("dock-collapsed-seek").performTouchInput {
+            down(percentOffset(0.2f, 0.5f)); moveTo(percentOffset(0.4f, 0.5f)); moveTo(percentOffset(0.5f, 0.5f)); up()
+        }
+        frame()
+        assertEquals(1, seeks.size)
+        assertEquals(100.0, seeks.single(), 5.0)
+        assertTrue(collapsed.value)
+        assertEquals(emptyList<String>(), calls)
+    }
+
+    @Test fun `a drag up from the edge bar expands the dock and does not seek`() {
+        collapsedFromRandom()
+        compose.onNodeWithTag("dock-collapsed-seek").performTouchInput {
+            down(percentOffset(0.5f, 0.5f)); moveBy(Offset(0f, -60f)); moveBy(Offset(0f, -60f)); up()
+        }
+        frame()
+        assertEquals(emptyList<Double>(), seeks)
+        assertFalse(collapsed.value)
+    }
+
+    @Test fun `the edge bar tells TalkBack where the tune is and takes a position`() {
+        collapsedFromRandom()
+        val node = compose.onNodeWithTag("dock-collapsed-seek").fetchSemanticsNode()
+        val range = node.config[androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo]
+        assertEquals(20f, range.current, 0.5f)
+        assertEquals(200f, range.range.endInclusive, 0.5f)
+        assertEquals(text(R.string.a11y_seek), node.config[androidx.compose.ui.semantics.SemanticsProperties.ContentDescription].single())
+        compose.runOnIdle { node.config[androidx.compose.ui.semantics.SemanticsActions.SetProgress].action!!.invoke(60f) }
+        assertEquals(listOf(60.0), seeks)
+    }
+
+    @Test fun `an edge bar that cannot seek ignores a tap`() {
+        collapsed.value = true
+        // A backend that cannot seek says so in the tune's description.
+        state.value = state.value.copy(metadata = state.value.metadata + ("seekable" to "0"))
+        assertFalse(state.value.seekable)
+        show(); frame()
+        compose.onNodeWithTag("dock-collapsed-seek").performTouchInput { click(percentOffset(0.5f, 0.5f)) }
+        frame()
+        assertEquals(emptyList<Double>(), seeks)
     }
 }
