@@ -1,6 +1,8 @@
 # Status
 
-Updated: 2026-11-09 — 1.8.0 (1518, tag `v1.8.0`, commit `82999218`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-09; that list includes comparing Play's SHA-256 with `e90a6199…f368`. It adds AMP from its daily map (C134), Search in Browse with the tunes below (B60, B61), Select all and Share for a selection (B59), Add files skipping unplayable files (C135) and case-blind author order (C136). A GitHub release of 1.8.0 is not made. Production access is not granted.
+Updated: 2026-11-11 — 1.9.0 (1529, tag `v1.9.0`, commit `3deb6258`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-11, which include comparing Play's SHA-256 with `0157b1d2…d504`. It adds the alarm screens of B62 (add music from the editor, a floating New alarm, clearer list and editor) and C137 (the dock's + answers where it is drawn). A GitHub release of 1.9.0 is not made. Production access is not granted.
+
+Previously: 2026-11-09 — 1.8.0 (1518, tag `v1.8.0`, commit `82999218`) is uploaded to Google Play closed testing and published there, with `master`, `develop` and the tag pushed; I reported the steps the release script listed as done on 2026-11-09; that list includes comparing Play's SHA-256 with `e90a6199…f368`. It adds AMP from its daily map (C134), Search in Browse with the tunes below (B60, B61), Select all and Share for a selection (B59), Add files skipping unplayable files (C135) and case-blind author order (C136). A GitHub release of 1.8.0 is not made. Production access is not granted.
 
 Previously: 2026-11-07 — 1.6.0 (1467) is published on Google Play closed testing and on GitHub (2026-11-05; downloaded APK, checksum and signature verified).
 
