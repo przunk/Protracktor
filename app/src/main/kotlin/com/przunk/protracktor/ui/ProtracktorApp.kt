@@ -126,8 +126,12 @@ fun ProtracktorApp(
     val browse = remember(storedBrowse, state.listenedIds, state.learnedTitles) {
         storedBrowse.copy(listenedHere = state.listenedIds, learnedTitles = state.learnedTitles)
     }
-    var showNowPlaying by rememberSaveable { mutableStateOf(false) }
-    var showQueue by remember { mutableStateOf(false) }
+    // **One state for where the shell is** (redesign E0): which places are open, and the queue and
+    // Now Playing over them. The `show…` names below are views of it, so each call site reads as
+    // it did; the precedence and Back's order are `ShellState`'s, tested on the JVM.
+    val shell = rememberSaveable(stateSaver = ShellState.Saver) { mutableStateOf(ShellState()) }
+    var showNowPlaying by shell.layer({ it.nowPlaying }) { copy(nowPlaying = it) }
+    var showQueue by shell.layer({ it.queue }) { copy(queue = it) }
     var playlistSearchOpen by rememberSaveable(state.activePlaylistId) { mutableStateOf(false) }
     var playlistQuery by rememberSaveable(state.activePlaylistId) { mutableStateOf("") }
     var playlistSearchFocused by remember { mutableStateOf(false) }
@@ -166,14 +170,14 @@ fun ProtracktorApp(
     // `remember` that dropped the user back on the playlist from inside Settings, which is where
     // they had just been changing the setting. Rotation lost the same thing, silently, and had
     // done all along.
-    var showBrowse by rememberSaveable { mutableStateOf(false) }
+    var showBrowse by shell.screen(ShellScreen.BROWSE)
     // Not saveable: a sheet asking a question should not survive a rotation as an unanswered one.
     var choosingRandomScope by remember { mutableStateOf(false) }
     // Opened from Browse and drawn here, so a run of downloads survives Browse closing under it.
     var choosingDownloads by remember { mutableStateOf(false) }
-    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showSettings by shell.screen(ShellScreen.SETTINGS)
     /** Remembered Random destination; opening it does not replace an existing active source. */
-    var showRandom by rememberSaveable { mutableStateOf(false) }
+    var showRandom by shell.screen(ShellScreen.RANDOM)
     val randomFilters = rememberRandomFilterState(
         active = showRandom || choosingRandomScope,
         browse = browse,
@@ -238,7 +242,7 @@ fun ProtracktorApp(
 
     // The scanner is a full-screen destination like Browse and Settings, and back leaves it -- the
     // one rule this shell has (`docs/OPEN_QUESTIONS.md` Q1).
-    var scanning by rememberSaveable { mutableStateOf(false) }
+    var scanning by shell.screen(ShellScreen.SCANNER)
     LaunchedEffect(Unit) { viewModel.scan.collect { scanning = true } }
 
     // **Where you are, felt when it becomes somewhere else.**
@@ -251,15 +255,7 @@ fun ProtracktorApp(
     // The scanner gets the firmer `press()`: opening a camera takes a visible moment to warm up,
     // and it is the one destination that asks for a permission, so an answer to the tap is worth
     // more there than anywhere else. Everything else gets the lightest effect there is.
-    HapticOnChange(
-        when {
-            scanning -> "scanner"
-            showSettings -> "settings"
-            showBrowse -> "browse"
-            showRandom -> "random"
-            else -> "player"
-        }
-    ) { if (scanning) press() else transition() }
+    HapticOnChange(shell.value.shown?.name ?: "player") { if (scanning) press() else transition() }
 
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
@@ -684,11 +680,16 @@ fun ProtracktorApp(
         }
     }
 
-    ScreenBackHandler(
-        scanning = scanning, settings = showSettings, browse = showBrowse, random = showRandom,
-        onScanner = { scanning = false }, onSettings = { showSettings = false },
-        onBrowse = leaveBrowse, onRandom = leaveRandom,
-    )
+    // The shown place's Back, from `ShellState.back`; the queue's and Now Playing's come first.
+    val back = shell.value.back()
+    BackHandler(enabled = back != ShellBack.Nothing) {
+        when (back) {
+            is ShellBack.Close -> shell.value = shell.value.with(back.screen, false)
+            ShellBack.BrowseUp -> leaveBrowse()
+            ShellBack.RandomToBrowse -> leaveRandom()
+            ShellBack.Nothing -> Unit
+        }
+    }
 
     // **Here rather than inside Browse.** The Random view's Filter button opens the same sheet,
     // and a sheet that exists only under one destination cannot be reached from another
@@ -1007,18 +1008,3 @@ private val TOP_BAR_SLOT_SEAM = 1.dp
  */
 private val LABELLED_ACTION_INSET = 3.dp
 
-/** Match the visible destination's priority; remembered Random must not consume an author's Back. */
-@Composable
-internal fun ScreenBackHandler(
-    scanning: Boolean, settings: Boolean, browse: Boolean, random: Boolean,
-    onScanner: () -> Unit, onSettings: () -> Unit, onBrowse: () -> Unit, onRandom: () -> Unit,
-) {
-    val onBack = when {
-        scanning -> onScanner
-        settings -> onSettings
-        browse -> onBrowse
-        random -> onRandom
-        else -> null
-    }
-    BackHandler(enabled = onBack != null) { onBack?.invoke() }
-}
