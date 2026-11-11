@@ -84,9 +84,7 @@ private fun tabLook(tab: ShellTab): Pair<ImageVector, String> = when (tab) {
 
 /** What More offers: the places used less often, each an icon with its name. */
 internal class MoreActions(
-    val onHistory: () -> Unit,
     val onAlarms: (() -> Unit)?,
-    val onSavedPlaces: () -> Unit,
     val webIcon: ImageVector,
     val onWeb: () -> Unit,
     val onWebHold: () -> Unit,
@@ -94,8 +92,9 @@ internal class MoreActions(
 )
 
 /**
- * More, as a sheet over the navigation bar: History, Alarms, Saved places, WEB (send the playlist,
- * or pair; hold to pair again, as the old top-row button did) and Settings.
+ * More, as a sheet over the navigation bar: Alarms, WEB (send the playlist, or pair; hold to pair
+ * again, as the old top-row button did) and Settings. History and Saved places belong to Browse,
+ * where they are found among the music (2026-11-11).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,9 +105,7 @@ internal fun MoreSheet(actions: MoreActions, onDismiss: () -> Unit) {
             Text(stringResource(R.string.nav_more), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             val done: (() -> Unit) -> () -> Unit = { action -> { onDismiss(); action() } }
             val items = listOfNotNull<@Composable (Modifier) -> Unit>(
-                { m -> LabelledAction(PlayerIcons.History, stringResource(R.string.domain_history_title), done(actions.onHistory), m) },
                 actions.onAlarms?.let { alarms -> { m -> LabelledAction(PlayerIcons.Alarm, stringResource(R.string.alarm_title), done(alarms), m) } },
-                { m -> LabelledAction(PlayerIcons.Bookmark, stringResource(R.string.saved_places_title), done(actions.onSavedPlaces), m) },
                 { m -> LabelledAction(actions.webIcon, stringResource(R.string.action_send_to_browser), done(actions.onWeb), m,
                     onLongClick = done(actions.onWebHold), longClickLabel = stringResource(R.string.action_pair_again)) },
                 { m -> LabelledAction(PlayerIcons.Settings, stringResource(R.string.settings_title), done(actions.onSettings), m, haptic = null) },

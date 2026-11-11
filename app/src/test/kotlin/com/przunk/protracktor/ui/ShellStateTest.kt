@@ -48,8 +48,9 @@ class ShellStateTest {
         val browse = ShellState(stack = listOf(ShellScreen.BROWSE))
         assertEquals(ShellTab.BROWSE, browse.tabOf(BrowseDomain.ONLINE))
         assertEquals(ShellTab.SEARCH, browse.tabOf(BrowseDomain.SEARCH))
-        assertEquals(ShellTab.MORE, browse.tabOf(BrowseDomain.HISTORY))
-        assertEquals(ShellTab.MORE, browse.tabOf(BrowseDomain.SAVED))
+        // History and Saved places are Browse's own places.
+        assertEquals(ShellTab.BROWSE, browse.tabOf(BrowseDomain.HISTORY))
+        assertEquals(ShellTab.BROWSE, browse.tabOf(BrowseDomain.SAVED))
         assertEquals(ShellTab.RANDOM, ShellState(stack = listOf(ShellScreen.BROWSE, ShellScreen.RANDOM)).tabOf(BrowseDomain.ROOT))
         assertEquals(ShellTab.MORE, ShellState(stack = listOf(ShellScreen.SETTINGS)).tabOf(BrowseDomain.ROOT))
     }

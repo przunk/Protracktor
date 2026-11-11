@@ -93,7 +93,7 @@ class PlaylistReturnNavigationTest {
                         if (tab == ShellTab.MORE) more.value = true
                     })
                 }
-                if (more.value) MoreSheet(MoreActions(onHistory = {}, onAlarms = null, onSavedPlaces = {},
+                if (more.value) MoreSheet(MoreActions(onAlarms = null,
                     webIcon = PlayerIcons.QrCode, onWeb = { calls += "web" }, onWebHold = { calls += "rescan" },
                     onSettings = { calls += "settings" }), onDismiss = { more.value = false })
             }

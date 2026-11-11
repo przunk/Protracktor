@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -63,42 +64,13 @@ internal fun Modifier.dockDrag(threshold: Float, act: (DockDrag.Intent) -> Unit)
 }
 
 /**
- * The grip on top of the dock in both its forms: tap it to change the form, drag it up to expand
- * or down to collapse. A button to TalkBack, named by what a press does.
- */
-@Composable
-internal fun DockGrip(collapsed: Boolean, onCollapsedChange: (Boolean) -> Unit) {
-    val change by rememberUpdatedState(onCollapsedChange)
-    val threshold = with(LocalDensity.current) { DockDrag.THRESHOLD.toPx() }
-    val label = stringResource(if (collapsed) R.string.dock_expand else R.string.dock_collapse)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(GRIP_HEIGHT)
-            .testTag("dock-grip")
-            .clickable(onClickLabel = label, role = Role.Button) { change(!collapsed) }
-            .semantics { contentDescription = label }
-            .dockDrag(threshold) { intent ->
-                when (intent) {
-                    DockDrag.Intent.EXPAND -> change(false)
-                    DockDrag.Intent.COLLAPSE -> change(true)
-                    else -> Unit
-                }
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(Modifier.size(width = 36.dp, height = 4.dp).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)))
-    }
-}
-
-/**
- * The collapsed dock (redesign E2): the tune, its author and time; a seek bar drawn subtly but held
- * as easily as the full one; Play/Pause; Queue; and **+** at the right edge when the tune is not in
- * the playlist (C137's rule, the same column as on the full dock's card).
+ * The collapsed dock (redesign E2, shaped after my sketch of 2026-11-11): the seek bar along its top,
+ * drawn thin but held in a band easy to take; under it the tune and author, scrolling when they do
+ * not fit as on the full dock; **+** when the tune is not in the playlist; a smaller Play/Pause;
+ * Queue as its icon.
  *
- * Tap the tune or drag up to expand; swipe it sideways for the next or previous tune. The swipes
- * are TalkBack actions as well, so nothing is reachable only by a gesture.
+ * Tap the tune or drag the dock up to expand; swipe the tune sideways for the next or previous
+ * tune. The swipes are TalkBack actions as well, so nothing is reachable only by a gesture.
  */
 @Composable
 internal fun CollapsedDock(
@@ -119,20 +91,27 @@ internal fun CollapsedDock(
     val nextLabel = stringResource(R.string.a11y_next)
     val previousLabel = stringResource(R.string.a11y_previous)
     val expandLabel = stringResource(R.string.dock_expand)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val animatorScale = androidx.compose.runtime.remember(context) {
+        android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    }
     Column(Modifier.fillMaxWidth().testTag("dock-collapsed")) {
-        SeekBar(
-            positionSeconds = state.positionSeconds,
-            durationSeconds = state.bar.seconds,
-            enabled = state.seekable && loaded != null,
-            onSeek = onSeek,
-            subtle = true,
-            label = stringResource(R.string.a11y_seek),
-            modifier = Modifier.padding(horizontal = 12.dp).testTag("dock-collapsed-seek"),
-        )
+        // Along the top, the line near the edge; the band around it is what is pressed.
+        Box(Modifier.fillMaxWidth().height(SEEK_BAND), contentAlignment = Alignment.Center) {
+            SeekBar(
+                positionSeconds = state.positionSeconds,
+                durationSeconds = state.bar.seconds,
+                enabled = state.seekable && loaded != null,
+                onSeek = onSeek,
+                subtle = true,
+                label = stringResource(R.string.a11y_seek),
+                modifier = Modifier.requiredHeight(SEEK_BAND).padding(horizontal = 4.dp).testTag("dock-collapsed-seek"),
+            )
+        }
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, bottom = 6.dp),
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Column(
                 Modifier
@@ -155,25 +134,30 @@ internal fun CollapsedDock(
                     }
                     .padding(vertical = 4.dp),
             ) {
+                // As on the full dock: a line that does not fit scrolls rather than losing its end.
                 Text(
                     loaded?.title ?: stringResource(R.string.dock_idle_title),
-                    style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleMedium, maxLines = 1,
+                    modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
                 )
                 Text(
-                    listOf(
-                        NowPlayingText.subtitle(state, loading = stringResource(R.string.dock_loading),
-                            idle = stringResource(R.string.dock_idle_subtitle)),
-                        if (loaded != null) "${formatTime(state.positionSeconds)} / ${formatBarTotal(state)}" else "",
-                    ).filter { it.isNotBlank() }.joinToString(" · "),
+                    NowPlayingText.subtitle(state, loading = stringResource(R.string.dock_loading),
+                        idle = stringResource(R.string.dock_idle_subtitle)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)),
                 )
+            }
+            if (state.awayFromPlaylist) {
+                IconButton(onClick = onKeep, modifier = Modifier.size(44.dp).testTag("dock-keep")) {
+                    Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                }
             }
             FilledIconButton(
                 onClick = onPlayPause,
                 enabled = loaded != null || state.transportQueue.tracks.isNotEmpty(),
-                modifier = Modifier.size(52.dp).testTag("dock-collapsed-play"),
+                modifier = Modifier.size(44.dp).testTag("dock-collapsed-play"),
             ) {
                 Icon(
                     when {
@@ -186,19 +170,16 @@ internal fun CollapsedDock(
                         state.playing -> R.string.a11y_pause
                         else -> R.string.a11y_play
                     }),
+                    Modifier.size(22.dp),
                 )
             }
-            LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
-                onClick = onQueue, slim = true, modifier = Modifier.testTag("queue-toggle"))
-            // The right edge belongs to +, when there is something to add (C137).
-            if (state.awayFromPlaylist) {
-                IconButton(onClick = onKeep, modifier = Modifier.size(width = 48.dp, height = 56.dp).testTag("dock-keep")) {
-                    Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
-                }
+            // Its icon alone here, by my choice for this form (2026-11-11); named for TalkBack.
+            IconButton(onClick = onQueue, modifier = Modifier.size(44.dp).testTag("queue-toggle")) {
+                Icon(PlayerIcons.Playlist, stringResource(R.string.queue_title))
             }
         }
     }
 }
 
-/** The grip's band: the pill is small, the place to press is not. */
-private val GRIP_HEIGHT = 20.dp
+/** The collapsed seek bar's band: the line is thin, the place to press is not. */
+private val SEEK_BAND = 32.dp

@@ -29,15 +29,15 @@ class DockShellUiTest : PlaybackShellTest() {
         frame(300)
     }
 
-    @Test fun `dragging the grip down collapses the dock, up expands it, and the choice is remembered`() {
+    @Test fun `dragging the dock down collapses it, up expands it, and the choice is remembered`() {
         seed()
         assertFalse(Appearance.dockCollapsed(application))
         compose.onNodeWithTag("dock-collapsed").assertDoesNotExist()
-        compose.onNodeWithTag("dock-grip").performTouchInput { down(center); moveBy(Offset(0f, 60f)); moveBy(Offset(0f, 60f)); up() }
+        compose.onNodeWithTag("player-dock").performTouchInput { down(Offset(centerX, 20f)); moveBy(Offset(0f, 60f)); moveBy(Offset(0f, 60f)); up() }
         frame(500)
         compose.onNodeWithTag("dock-collapsed").assertExists()
         assertTrue(Appearance.dockCollapsed(application))
-        compose.onNodeWithTag("dock-grip").performTouchInput { down(center); moveBy(Offset(0f, -60f)); moveBy(Offset(0f, -60f)); up() }
+        compose.onNodeWithTag("player-dock").performTouchInput { down(Offset(centerX, centerY)); moveBy(Offset(0f, -60f)); moveBy(Offset(0f, -60f)); up() }
         frame(500)
         compose.onNodeWithTag("dock-collapsed").assertDoesNotExist()
         assertFalse(Appearance.dockCollapsed(application))

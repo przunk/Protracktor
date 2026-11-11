@@ -757,10 +757,8 @@ fun ProtracktorApp(
 
     if (showMore) MoreSheet(
         MoreActions(
-            onHistory = { viewModel.openDomain(BrowseDomain.HISTORY); shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.HISTORY) },
             onAlarms = { com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context) }
                 .takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
-            onSavedPlaces = { viewModel.openDomain(BrowseDomain.SAVED); shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.SAVED) },
             webIcon = if (browse.pairedBrowser) PlayerIcons.Link else PlayerIcons.QrCode,
             onWeb = viewModel::sendQueueToBrowser,
             onWebHold = viewModel::rescan,
