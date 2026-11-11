@@ -10,13 +10,13 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B62. Alarms: add music from the editor, a floating New, better screens — built on a branch 2026-11-10
+## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 
 Raised 2026-11-10: add tunes to an alarm from the alarm's own editor; a floating button at the
 bottom right for a new alarm; the alarm screens made better to use in general. Analysis and the
 selected shape: [ALARM_UX.md](ALARM_UX.md).
 
-**Built on `feature/alarm-ux`, 2026-11-10, unattended; not merged.**
+**Built on `feature/alarm-ux`, 2026-11-10, unattended; phone check of APK 1.8.0 (1522), `0aeeb051`, reported working, and merged 2026-11-11.**
 - **Add music** (icon and label) in the editor's Music section, and as the Music tab's floating
   button, opens a picker inside Alarms: a search field, Playlists (each opened to its tunes) and
   History; typing searches the saved playlists and the catalogues on the phone (every word, title,
@@ -51,8 +51,7 @@ button did not carry its label for a screen reader; and lint, that the next alar
 call Android 10 and 11 do not have (`Duration.toSeconds`); all three fixed. The existing alarm tests changed
 where the shape did on purpose: *New alarm* is the floating button, a card opens by tapping it.
 Screenshots at 360 dp, English and Polish, dark and light: `dist/evidence/b62-alarm-ux/`.
-**Not checked:** the phone; preparing a real tune from the picker (rendering needs the native
-engine, which the host tests do not run); TalkBack.
+On the phone (APK 1522) it was reported working. **Not checked:** TalkBack.
 
 ## B61. Search in Browse finds the tunes below too — done and merged 2026-11-09
 
