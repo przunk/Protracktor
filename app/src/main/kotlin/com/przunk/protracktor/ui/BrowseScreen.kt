@@ -1343,6 +1343,7 @@ private fun Selectable(
         selected = selected.intersect(allTracks.map { it.id }.toSet())
     }
     val selecting = selected.isNotEmpty()
+    ReportSelecting(selecting)
 
     // Takes back before the level-and-exit handler outside, because the innermost enabled handler
     // wins. That is the stack: leave the selection, then go up a level, then out to the playlist --

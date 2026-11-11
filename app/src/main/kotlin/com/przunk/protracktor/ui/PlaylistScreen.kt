@@ -261,6 +261,7 @@ internal fun PlaylistBody(
         selected = selected.intersect(tracks.mapTo(mutableSetOf()) { it.id })
     }
     val selecting = selected.isNotEmpty()
+    ReportSelecting(selecting)
     // Takes back before the screen's own handler: leave the selection first, ticking nothing.
     BackHandler(enabled = selecting) { selected = emptySet() }
     val haptics = rememberHaptics()

@@ -250,6 +250,7 @@ fun ProtracktorApp(
         }
     }
     var showMore by remember { mutableStateOf(false) }
+    val selectionPresence = remember { SelectionPresence() }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
     // the second and hands the first over here.
@@ -338,7 +339,7 @@ fun ProtracktorApp(
     }
 
     val menuFocus = remember { MenuFocus() }
-    CompositionLocalProvider(LocalMenuFocus provides menuFocus) {
+    CompositionLocalProvider(LocalMenuFocus provides menuFocus, LocalSelectionPresence provides selectionPresence) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
@@ -444,7 +445,7 @@ fun ProtracktorApp(
                     PlayerDock(
                         // The navigation bar is the bottom now and keeps clear of the system bar;
                         // under the scanner, which has no bar, the dock does as it did.
-                        insetBottom = atScanner,
+                        insetBottom = atScanner || selectionPresence.count > 0,
                         collapsed = dockCollapsed,
                         onCollapsedChange = {
                             dockCollapsed = it
@@ -466,7 +467,8 @@ fun ProtracktorApp(
                         onShuffle = viewModel::toggleShuffle,
                         onRepeat = viewModel::cycleRepeat,
                     )
-                    if (!atScanner) ShellNavigationBar(
+                    // Selecting rows: the bar steps aside for the selection's own bar (redesign E3).
+                    if (!atScanner && selectionPresence.count == 0) ShellNavigationBar(
                         selected = if (showMore) ShellTab.MORE else shell.value.tabOf(storedBrowse.domain),
                         onSelect = { tab -> if (tab == ShellTab.MORE) showMore = true else openTab(tab) },
                     )
