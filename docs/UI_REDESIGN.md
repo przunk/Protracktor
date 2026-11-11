@@ -155,3 +155,16 @@ On `ui/e6-round2`:
 - **The full dock's dot sat 1 dp above its line** (the collapsed one's old dot, 2 dp). Measured on
   screenshots: the slider places its thumb in a 16 dp slot and a smaller dot drawn bare sat at that
   slot's top. The dot is now centred in the slot; measured again, line and dot share a centre.
+- **Two places on the bar are mine to choose** (Settings → Navigation bar): Playlist · Browse · ○ · ○
+  · More, Search and Random until chosen otherwise. Choices: Search, Random, On this phone, Saved
+  places, Online catalogues, History, Alarms (only in a build with music alarms). Settings shows
+  the bar as it will look, the two places outlined and marked *Change*; tapping one lists the
+  choices with icons, the current one ticked, the other place's marked as swapping. *Restore
+  defaults* puts Search and Random back. A stored choice the build cannot offer falls back to
+  that place's default.
+  - A place on the bar opens at its top, is marked while it shows (however reached), and Back from
+    its top returns to the playlist; deeper, Back steps up first. A place not on the bar marks
+    Browse.
+  - Alarms on the bar opens the alarms screen and is not a marked tab. More stays Alarms, WEB,
+    Settings whatever the bar holds.
+  - Online catalogues has the database icon on the bar, since Browse already shows the cloud.

@@ -47,6 +47,8 @@ object Appearance {
     private const val VOLUME_NORMALIZATION = "volume_normalization"
     private const val FLOATING_CONTROLS = "floating_controls_enabled"
     private const val DOCK_COLLAPSED = "dock_collapsed"
+    private const val NAV_SLOT_FIRST = "nav_slot_first"
+    private const val NAV_SLOT_SECOND = "nav_slot_second"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -185,6 +187,15 @@ object Appearance {
 
     fun selectDockCollapsed(context: Context, collapsed: Boolean) {
         prefs(context).edit().putBoolean(DOCK_COLLAPSED, collapsed).apply()
+    }
+
+    /** The navigation bar's two chosen places (redesign round 2); Search and Random until chosen. */
+    internal fun navSlots(context: Context, alarms: Boolean): com.przunk.protracktor.ui.NavSlots =
+        com.przunk.protracktor.ui.NavSlots.restore(prefs(context).getString(NAV_SLOT_FIRST, null),
+            prefs(context).getString(NAV_SLOT_SECOND, null), com.przunk.protracktor.ui.NavSlots.available(alarms))
+
+    internal fun selectNavSlots(context: Context, slots: com.przunk.protracktor.ui.NavSlots) {
+        prefs(context).edit().putString(NAV_SLOT_FIRST, slots.first.name).putString(NAV_SLOT_SECOND, slots.second.name).apply()
     }
 
     fun floatingControlsEnabled(context: Context): Boolean = prefs(context).getBoolean(FLOATING_CONTROLS, false)

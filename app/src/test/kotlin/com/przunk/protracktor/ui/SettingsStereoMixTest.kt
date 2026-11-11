@@ -72,6 +72,7 @@ class SettingsStereoMixTest {
                         playAllSubsongs = false, stereoMix = selected.value,
                         volumeNormalization = false, onVolumeNormalizationChanged = {},
                         floatingControlsEnabled = false, onFloatingControlsEnabledChanged = {},
+                        navSlots = NavSlots.DEFAULT, alarmsAvailable = false, onNavSlotsChanged = {},
                         onStereoMixSelected = { mode ->
                             requests += mode
                             Appearance.selectStereoMix(activity.get(), mode)
