@@ -28,18 +28,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -154,23 +155,27 @@ fun PlayerDock(
                         .weight(1f)
                         .semantics { contentDescription = expandLabel },
                 ) {
-                    // Keep and the counter occupy separate rows so subsong counts cannot move
-                    // the save target or narrow the title (C112). Large text may grow the card.
-                    Column(
+                    // **+ owns the card's right edge** (C137, 2026-11-11): a column the card's whole
+                    // height, the icon in its middle, so a press lands where the icon is drawn. It
+                    // was a 32 dp slot above the counter with the icon at its bottom, which took
+                    // presses above the icon and lost those just below it to the counter's own press.
+                    // The column is kept when + is absent, so the title never changes width (C112).
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = DOCK_CARD_HEIGHT)
-                            .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                            .height(IntrinsicSize.Min)
+                            .heightIn(min = DOCK_CARD_HEIGHT),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
+                    ) {
                             Text(
                                 text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
                                 // A title that does not fit scrolls rather than losing its end (A54); one
                                 // that fits stands still, which the marquee decides by measuring.
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                                     .dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
                                 // A size up from titleSmall: this is read at a glance, in a car among
                                 // other places, so the dock grows to fit rather than the text being
@@ -179,23 +184,9 @@ fun PlayerDock(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            // The compact slot preserves the original two text baselines and
-                            // card height, including over a playlist where Keep is absent.
-                            Box(Modifier.size(width = 48.dp, height = 32.dp)) {
-                                if (state.awayFromPlaylist) {
-                                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 32.dp) {
-                                        IconButton(onClick = onKeep, modifier = Modifier.fillMaxSize()) {
-                                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                                                Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         FlowRow(
-                            // A real footer hit wins over Keep's expanded minimum touch area,
-                            // so the tune label cannot accidentally save the track.
+                            // The tune label opens Now Playing, as the card does; + is beside it,
+                            // not above it, so the two presses no longer share an edge (C137).
                             modifier = Modifier.fillMaxWidth().clickable(
                                 onClickLabel = expandLabel,
                                 role = Role.Button,
@@ -231,6 +222,17 @@ fun PlayerDock(
                                 )
                             }
                         }
+                    }
+                    Box(
+                        modifier = Modifier.width(KEEP_COLUMN_WIDTH).fillMaxHeight(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (state.awayFromPlaylist) {
+                            IconButton(onClick = onKeep, modifier = Modifier.fillMaxSize().testTag("dock-keep")) {
+                                Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                            }
+                        }
+                    }
                     }
                 }
                 LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
@@ -482,10 +484,13 @@ internal fun fitsBarLabel(text: String): Boolean =
  * did nothing visible for a moment would read as a press that missed (`AGENTS.md` §8).
  */
 /**
- * Original card height: a 32dp compact Keep slot, 20dp metadata line and 8dp bottom inset.
- * Content may grow for accessibility text sizes, independently of Keep's visibility (C54/C112).
+ * Original card height: an 8dp top inset, a 24dp title line, a 20dp metadata line and an 8dp bottom
+ * inset. Content may grow for accessibility text sizes, independently of Keep's visibility (C54/C112).
  */
 private val DOCK_CARD_HEIGHT = 60.dp
+
+/** The card's right edge, where + lives (C137): Material's minimum width, the card's full height. */
+private val KEEP_COLUMN_WIDTH = 48.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
