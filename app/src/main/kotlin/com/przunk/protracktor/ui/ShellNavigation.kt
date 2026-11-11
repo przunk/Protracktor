@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -123,3 +125,24 @@ internal fun MoreSheet(actions: MoreActions, onDismiss: () -> Unit) {
 
 /** Short enough to sit under the dock without taking back the room the top row gave. */
 private val NAV_HEIGHT = 56.dp
+
+/**
+ * How many lists have rows selected right now (redesign E3). While any has, the navigation bar
+ * steps aside, so the selection bar and the list keep the room it took.
+ */
+@androidx.compose.runtime.Stable
+internal class SelectionPresence {
+    var count by androidx.compose.runtime.mutableIntStateOf(0)
+}
+
+internal val LocalSelectionPresence = androidx.compose.runtime.staticCompositionLocalOf<SelectionPresence?> { null }
+
+/** A list says whether it is selecting; the shell counts it while it does. */
+@Composable
+internal fun ReportSelecting(selecting: Boolean) {
+    val presence = LocalSelectionPresence.current ?: return
+    androidx.compose.runtime.DisposableEffect(selecting, presence) {
+        if (selecting) presence.count++
+        onDispose { if (selecting) presence.count-- }
+    }
+}
