@@ -139,6 +139,8 @@
     <string name="nav_search">Search</string>
     <string name="nav_random">Random</string>
     <string name="nav_more">More</string>
+    <string name="dock_expand">Show all player controls</string>
+    <string name="dock_collapse">Make the player smaller</string>
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>
 

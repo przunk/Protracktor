@@ -15,6 +15,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -96,6 +97,9 @@ fun PlayerDock(
     longPlayPauseLabel: String? = null,
     /** Whether the dock is the bottom of the screen and keeps clear of the system bar itself. */
     insetBottom: Boolean = true,
+    /** The smaller form (redesign E2): the tune, a subtle seek bar, Play/Pause, Queue and +. */
+    collapsed: Boolean = false,
+    onCollapsedChange: (Boolean) -> Unit = {},
 ) {
     val haptics = rememberHaptics()
     val loaded = state.current
@@ -113,7 +117,17 @@ fun PlayerDock(
     ) {
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
-        Column(modifier = if (insetBottom) Modifier.navigationBarsPadding() else Modifier) {
+        // **Collapsible** (redesign E2): the grip on top says the dock moves; tap it or drag it. The
+        // change of form animates the dock's height. `AnimatedContent` did it with a cross-fade
+        // too, and left the test harness unable to settle in the next test after it; the height is
+        // the part that says where the controls went.
+        Column(modifier = (if (insetBottom) Modifier.navigationBarsPadding() else Modifier)
+            .animateContentSize(androidx.compose.animation.core.tween(200))) {
+            DockGrip(collapsed, onCollapsedChange)
+            collapsed.let { small ->
+            if (small) CollapsedDock(state, onSeek, onKeep, onPlayPause, onPrevious, onNext, onQueue,
+                onExpand = { onCollapsedChange(false) })
+            else Column {
             // The same seek control as Now Playing, so a track can be moved through from the main
             // screen without opening anything first.
             //
@@ -323,6 +337,8 @@ fun PlayerDock(
                     // off → all → one → off: only the last step turns the light out.
                     activeAfter = state.transportQueue.repeat != RepeatMode.ONE,
                 )
+            }
+            }
             }
         }
     }

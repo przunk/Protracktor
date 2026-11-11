@@ -46,6 +46,7 @@ object Appearance {
     private const val STEREO_MIX = "stereo_mix"
     private const val VOLUME_NORMALIZATION = "volume_normalization"
     private const val FLOATING_CONTROLS = "floating_controls_enabled"
+    private const val DOCK_COLLAPSED = "dock_collapsed"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -178,6 +179,13 @@ object Appearance {
         com.przunk.protracktor.player.StereoMix.fromStored(prefs(context).getString(STEREO_MIX, null))
 
     fun volumeNormalization(context: Context): Boolean = prefs(context).getBoolean(VOLUME_NORMALIZATION,false)
+
+    /** Whether the dock is in its smaller form (redesign E2). Expanded until chosen otherwise. */
+    fun dockCollapsed(context: Context): Boolean = prefs(context).getBoolean(DOCK_COLLAPSED, false)
+
+    fun selectDockCollapsed(context: Context, collapsed: Boolean) {
+        prefs(context).edit().putBoolean(DOCK_COLLAPSED, collapsed).apply()
+    }
 
     fun floatingControlsEnabled(context: Context): Boolean = prefs(context).getBoolean(FLOATING_CONTROLS, false)
 

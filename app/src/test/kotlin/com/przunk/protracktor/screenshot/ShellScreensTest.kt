@@ -5,6 +5,7 @@ package com.przunk.protracktor.screenshot
 import android.app.Application
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.activity.compose.setContent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.player.*
 import com.przunk.protracktor.ui.PlaybackShellTest
@@ -49,6 +50,13 @@ class ShellScreensTest : PlaybackShellTest() {
         shot("shell-playlist-$suffix")
         compose.onNodeWithTag("nav-browse").performClick(); shot("shell-browse-$suffix")
         compose.onNodeWithTag("nav-more").performClick(); shot("shell-more-$suffix")
+        // A fresh shell for the collapsed picture: More's sheet is a window of its own, which the
+        // host cannot close with Back, and its mark would stay on the bar.
+        compose.runOnIdle { activity.get().setContent { androidx.compose.material3.MaterialTheme {
+            com.przunk.protracktor.ui.ProtracktorApp(viewModel = PlayerViewModel(application)) } } }
+        frame(500)
+        compose.onNodeWithTag("dock-grip").performClick(); shot("shell-collapsed-$suffix")
+        compose.onNodeWithTag("dock-grip").performClick()
     }
 
     @Test fun english() = pictures("en")
