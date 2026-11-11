@@ -13,6 +13,16 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C139 A queue-follow test fails or is skipped now and then — open, found 2026-11-10
+
+`QueueFollowUiTest` ("Next inside the viewport changes selection without scrolling or fading other
+rows") was reported skipped once by the full gate on the B62 branch (2026-11-10), with nothing in
+the test that skips, and failed once ("Visible selection must not fade unrelated rows") in a run of
+all UI tests on the redesign branch (2026-11-11). Run alone it passed every time (four runs). It is
+the Kotlin counterpart of C133: a check that waits on frames and sometimes reads them early. Not
+investigated; no check was weakened or skipped. It matters because the gate refuses a skip, so a
+release check can fail on a sound commit.
+
 ## C138 Back after "More from this author" from Random lands on the author again — fixed and merged 2026-11-11
 
 Reported 2026-11-11, on the E0 APK (1534): Playlist → Browse → Random → a tune's *More from this
