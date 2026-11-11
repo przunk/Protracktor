@@ -11,6 +11,20 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C137 The dock's + (add to the playlist) answers above where it is drawn — open, found 2026-11-11
+
+Reported 2026-11-11: the + on the dock's card, which adds the tune playing to the playlist, seems to
+take presses higher than it looks. From the code (`PlayerDock`) and `DockIdentityLayoutTest`: the +
+sits in a 48 × 32 dp slot at the card's top right, with the icon drawn at the slot's bottom, so the
+slot reaches 8 dp above the icon and ends at its lower edge. The row below it (the counter, *Track 1
+of 5*) is the card's own press, which opens Now Playing, and wins there on purpose (C112), so a
+finger landing on the icon's lower half or just under it opens Now Playing instead of adding. The
+slot is also under Material's 48 dp height. **Proposed:** give + the card's right edge to itself,
+a full-height column 48 dp wide with the icon centred, the title, subtitle and counter ending
+before it; the collapsed dock of the redesign keeps + at its right edge the same way
+(`UI_REDESIGN.md`). **Checked:** the layout, from the code and the existing layout test's
+assertions. **Not checked:** the phone. Not fixed.
+
 ## C136 Authors whose names start with a small letter sort after Z — fixed and merged 2026-11-09
 
 Found while asking why Przunk was missing from ASMA. He is not missing: ASMA's archive of
