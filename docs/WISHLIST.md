@@ -10,6 +10,11 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B65. Stereo mix in Settings as a three-part pill — noted 2026-11-11
+
+Raised 2026-11-11: the stereo mix choice in Settings should be one three-part segmented pill, as
+the language choice is, rather than separate buttons. Not built.
+
 ## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 
 Raised 2026-11-10: add tunes to an alarm from the alarm's own editor; a floating button at the
@@ -296,6 +301,9 @@ migration is needed; A2's historical disposable-test-data assumption no longer a
 schema migration or implementation schedule is selected by this wishlist entry.
 
 ## B50. Animated first-run tutorial — TODO, recorded 2026-10-21
+
+Raised again 2026-11-11, during the redesign: a welcome page or tutorial on first launch, and on
+request from Settings. Still to be done; the redesign changes what it would show.
 
 An app user requested a short multi-page introduction with animated pointers demonstrating
 app usage, available on first launch and/or manually from Settings. Record it as future work;
