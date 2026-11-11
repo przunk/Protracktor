@@ -99,14 +99,19 @@ class DockIdentityLayoutTest {
         val keep = keepBounds()
         val count = textBounds(countLabel())
         assertTrue("Title must have its own upper row", title.bottom <= subtitle.top)
-        assertTrue("Keep must be above the counter, without a shared hit area", keep.bottom <= count.top)
+        // C137: + owns the card's right edge, the card's whole height, beside the text.
+        val card = cardBounds()
+        assertTrue("Keep sits beside the counter, not above it", keep.left >= count.right - 0.5f)
+        assertTrue("Keep sits beside the title", keep.left >= title.right - 0.5f)
+        assertEquals("Keep reaches the card's right edge", card.right, keep.right, 0.5f)
+        assertEquals("Keep spans the card from top", card.top, keep.top, 0.5f)
+        assertEquals("Keep spans the card to bottom", card.bottom, keep.bottom, 0.5f)
         assertTrue("Counter must be below the title", title.bottom <= count.top)
         assertTrue("Metadata and counter must not overlap",
             subtitle.right <= count.left || subtitle.bottom <= count.top)
-        assertEquals("Right-hand content shares an end alignment", keep.right, count.right, 0.5f)
         val density = activity.get().resources.displayMetrics.density
         assertTrue("Keep target is at least 48dp wide", keep.width >= 48f * density)
-        assertTrue("Compact Keep target is at least 32dp high", keep.height >= 32f * density)
+        assertTrue("Keep target is at least 48dp high", keep.height >= 48f * density)
         assertTrue("Queue stays outside the card", queueBounds().left >= cardBounds().right)
     }
 
@@ -122,15 +127,25 @@ class DockIdentityLayoutTest {
         assertEquals("Original consecutive text lines", title.bottom, subtitle.top, 0.5f)
     }
 
-    @Test fun `tapping just below keep opens the player rather than saving through an expanded target`() {
+    @Test fun `a press on + adds wherever on its icon it lands, and one on the counter opens the player`() {
         show()
         val card = cardBounds()
-        val keep = keepBounds()
         val density = activity.get().resources.displayMetrics.density
+        // Measured from the card, not from the button: near the card's bottom and its top, in the
+        // right-hand column. The old slot ended at the icon's lower edge and lost the first (C137).
         compose.onNodeWithContentDescription(expandLabel).performTouchInput {
-            click(Offset(keep.center.x - card.left, keep.bottom - card.top + density))
+            click(Offset(card.width - 24f * density, card.height - 6f * density))
         }
-        assertEquals("A footer tap must never save the track", 0, kept)
+        compose.onNodeWithContentDescription(expandLabel).performTouchInput {
+            click(Offset(card.width - 24f * density, 6f * density))
+        }
+        assertEquals("Presses on + add the track", 2, kept)
+        assertEquals(0, expanded)
+        val count = textBounds(countLabel())
+        compose.onNodeWithContentDescription(expandLabel).performTouchInput {
+            click(Offset(count.center.x - card.left, count.center.y - card.top))
+        }
+        assertEquals("The counter opens the player and never adds", 2, kept)
         assertEquals(1, expanded)
     }
 
