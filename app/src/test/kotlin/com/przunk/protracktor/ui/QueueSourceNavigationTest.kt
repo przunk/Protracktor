@@ -60,7 +60,7 @@ class QueueSourceNavigationTest : PlaybackShellTest() {
         compose.onNodeWithTag("playback-panel").assertDoesNotExist()
     }
 
-    @Test fun `Random source opens its remembered list without playing or rerolling and Back opens Browse`() {
+    @Test fun `Random source opens its remembered list without playing or rerolling and Back returns to the playlist`() {
         compose.runOnIdle {
             ReflectionHelpers.setField(controller, "randomSession", 7L)
             browse.value = browse.value.copy(domain = BrowseDomain.SEARCH, query = "unrelated")
@@ -73,11 +73,12 @@ class QueueSourceNavigationTest : PlaybackShellTest() {
         compose.runOnIdle { unchanged(before) }
         compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
         frame(400)
-        compose.onNodeWithText("Online catalogues").assertIsDisplayed()
-        compose.runOnIdle {
-            assertEquals(BrowseDomain.ROOT, browse.value.domain)
-            unchanged(before)
-        }
+        // Random is a tab now (redesign E1): Back leaves it for the playlist, never for the route
+        // that was underneath the queue.
+        compose.onNodeWithText("Double-tap the dice to reroll the list").assertDoesNotExist()
+        compose.onNodeWithTag("playlist-chooser").assertIsDisplayed()
+        compose.onNodeWithText("Online catalogues").assertDoesNotExist()
+        compose.runOnIdle { unchanged(before) }
     }
 
     private fun collection(snapshot: BrowseState) {

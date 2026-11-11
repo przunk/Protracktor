@@ -29,10 +29,10 @@ import org.robolectric.util.ReflectionHelpers
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 @Config(sdk = [29], application = Application::class, qualifiers = "en-w360dp-h800dp-xhdpi")
 class FloatingControlsSettingsTest : PlaybackShellTest() {
-    private fun openSettings() {
+    private fun openFixtureSettings() {
         val catalogues = ReflectionHelpers.getField<CatalogueBrowser>(controller, "catalogueBrowser")
         ReflectionHelpers.setField(catalogues, "backends", { "host-fixture" })
-        compose.onNodeWithText(application.getString(R.string.settings_title)).performClick()
+        openSettings()
         frame(250)
     }
 
@@ -41,7 +41,7 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
     @Test fun `settings exposes an off by default opt in without starting an overlay`() {
         compose.runOnIdle { player.value = player.value.copy(queue = PlayQueue(listOf(tune)).startAt(0)) }
         frame(250)
-        openSettings()
+        openFixtureSettings()
         val setting = setting()
         setting.performScrollTo().assertIsOff()
         setting.performClick()
@@ -65,7 +65,7 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
         val windowsBefore = WindowInspector.getGlobalWindowViews().toSet()
         try {
             assertFalse(FloatingControls.visible.value)
-            openSettings()
+            openFixtureSettings()
             setting().performScrollTo().performClick()
             frame(250)
             assertTrue(Appearance.floatingControlsEnabled(application))
@@ -78,7 +78,7 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
             frame(250)
             assertTrue("An already running service must create the host after opt-in", FloatingControls.visible.value)
             assertNotEquals(windowsBefore, WindowInspector.getGlobalWindowViews().toSet())
-            openSettings()
+            openFixtureSettings()
             setting().performScrollTo().performClick()
             frame(250)
             assertFalse(Appearance.floatingControlsEnabled(application))

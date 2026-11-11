@@ -179,7 +179,7 @@ fun ProtracktorApp(
     /** Remembered Random destination; opening it does not replace an existing active source. */
     var showRandom by shell.screen(ShellScreen.RANDOM)
     val randomFilters = rememberRandomFilterState(
-        active = showRandom || choosingRandomScope,
+        active = shell.value.shown == ShellScreen.RANDOM || choosingRandomScope,
         browse = browse,
         preparingDatabase = state.preparingDatabase,
         loadAvailability = viewModel::randomFilterAvailability,
@@ -221,11 +221,35 @@ fun ProtracktorApp(
     val leaveBrowse = {
         if (!viewModel.browseBack()) showBrowse = false
     }
+    // Back from Random: the place before it -- Browse when it was opened from there, the
+    // playlist when from the navigation bar (redesign E1).
     val leaveRandom = {
         showRandom = false
-        showBrowse = true
     }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showQueue = false; showBrowse = true } }
+    // Back in Browse: a tab's own place (Search, History, Saved places) is that tab's top, so Back
+    // leaves it there instead of walking to Browse's start (redesign E1).
+    val browseUp = {
+        val entry = shell.value.browseEntry
+        val atEntryTop = entry != null && entry != BrowseDomain.ROOT && storedBrowse.domain == entry &&
+            !storedBrowse.arrivedByJump && (entry != BrowseDomain.SEARCH ||
+                storedBrowse.searchScope == com.przunk.protracktor.player.SearchScope.Everywhere)
+        if (atEntryTop) showBrowse = false else leaveBrowse()
+    }
+    // The navigation bar's tabs, each replacing the stack with its own place.
+    val openTab: (ShellTab) -> Unit = { tab ->
+        when (tab) {
+            ShellTab.PLAYLIST -> { viewModel.returnToPlaylist(); shell.value = shell.value.tab(null) }
+            ShellTab.BROWSE -> { viewModel.openDomain(BrowseDomain.ROOT); shell.value = shell.value.tab(ShellScreen.BROWSE) }
+            ShellTab.SEARCH -> {
+                viewModel.openDomain(BrowseDomain.SEARCH)
+                shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.SEARCH)
+            }
+            ShellTab.RANDOM -> { viewModel.openRandom(); shell.value = shell.value.tab(ShellScreen.RANDOM) }
+            ShellTab.MORE -> Unit
+        }
+    }
+    var showMore by remember { mutableStateOf(false) }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
     // the second and hands the first over here.
@@ -243,6 +267,13 @@ fun ProtracktorApp(
     // The scanner is a full-screen destination like Browse and Settings, and back leaves it -- the
     // one rule this shell has (`docs/OPEN_QUESTIONS.md` Q1).
     var scanning by shell.screen(ShellScreen.SCANNER)
+    // What shows: the top of the stack. The `show…` views above say whether a place is open at
+    // all, which is not the same once places stack (Browse under Random under an author).
+    val shown = shell.value.shown
+    val atScanner = shown == ShellScreen.SCANNER
+    val atSettings = shown == ShellScreen.SETTINGS
+    val atBrowse = shown == ShellScreen.BROWSE
+    val atRandom = shown == ShellScreen.RANDOM
     LaunchedEffect(Unit) { viewModel.scan.collect { scanning = true } }
 
     // **Where you are, felt when it becomes somewhere else.**
@@ -263,11 +294,11 @@ fun ProtracktorApp(
     var pendingQueueSource by remember { mutableStateOf<QueueSource.Playlist?>(null) }
     val revealQueueSource: (QueueSourceView) -> Unit = { destination ->
         if (showQueue) {
-            showQueue = false
-            showNowPlaying = false
-            showSettings = false
-            showBrowse = destination == QueueSourceView.BROWSE
-            showRandom = destination == QueueSourceView.RANDOM
+            shell.value = shell.value.tab(when (destination) {
+                QueueSourceView.BROWSE -> ShellScreen.BROWSE
+                QueueSourceView.RANDOM -> ShellScreen.RANDOM
+                else -> null
+            }).copy(nowPlaying = false)
         }
     }
     var pendingAddToPlaylist by remember { mutableStateOf<List<com.przunk.protracktor.player.TrackRef>?>(null) }
@@ -313,7 +344,7 @@ fun ProtracktorApp(
                         // The playlist screen's own header, because it is the one that can hold more than fits:
                         // the chip and five actions come to more than a phone is wide once Save and Discard
                         // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
-                        if (!showQueue && !showSettings && !showBrowse && !showRandom) {
+                        if (!showQueue && shown == null) {
                             PlaylistTopBar(
                                 state = state,
                                 paired = browse.pairedBrowser,
@@ -344,18 +375,18 @@ fun ProtracktorApp(
                                     IconButton(onClick = { showQueue = false }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
-                                } else if (showSettings) {
+                                } else if (atSettings) {
                                     IconButton(onClick = { showSettings = false }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
-                                } else if (showBrowse) {
+                                } else if (atBrowse) {
                                     // The same step Back takes: Search first, then the level.
                                     IconButton(onClick = {
-                                        if (browseQuery != null) browseFilters.close(browseLevel) else leaveBrowse()
+                                        if (browseQuery != null) browseFilters.close(browseLevel) else browseUp()
                                     }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
-                                } else if (showRandom) {
+                                } else if (atRandom) {
                                     // Return to the Browse entry point without changing playback.
                                     IconButton(onClick = leaveRandom) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
@@ -364,19 +395,19 @@ fun ProtracktorApp(
                             },
                             title = {
                                 if (showQueue) Text(stringResource(R.string.queue_title))
-                                else if (showSettings) {
+                                else if (atSettings) {
                                     Text(stringResource(R.string.settings_title))
-                                } else if (showBrowse && browseQuery != null) {
+                                } else if (atBrowse && browseQuery != null) {
                                     BrowseFilterField(
                                         query = browseQuery,
                                         onQueryChange = { browseFilters.change(browseLevel, it) },
                                         onFocus = { browseFilters.focused = it },
                                     )
-                                } else if (showBrowse) {
+                                } else if (atBrowse) {
                                     // The screen names itself; whose folder a digression is in is said by the
                                     // header under the bar, in the shape the dice's own heading has.
                                     Text(stringResource(R.string.browse_title))
-                                } else if (showRandom) {
+                                } else if (atRandom) {
                                     // The screen says "Playing at random" over its own list, so the bar stays
                                     // out of its way. The playlist chip in particular would be offering to
                                     // switch a playlist that nothing is playing from.
@@ -390,33 +421,15 @@ fun ProtracktorApp(
                                 // Labelled as well as drawn, because an icon alone does not say where it goes.
                                 // Search this level (2026-11-09), as the playlist searches itself. Only
                                 // where there is a list to narrow, and gone while its field is open.
-                                if (showBrowse && !showQueue && browseQuery == null &&
+                                if (atBrowse && !showQueue && browseQuery == null &&
                                     com.przunk.protracktor.player.BrowseFilter.filterable(browse)) {
                                     val label = stringResource(R.string.playlist_search_action)
-                                    LabelledAction(PlayerIcons.Search, label, { browseFilters.open(browseLevel) },
+                                    LabelledAction(PlayerIcons.Filter, label, { browseFilters.open(browseLevel) },
                                         slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("browse-search-action"))
                                 }
-                                if (showBrowse && !showQueue) {
-                                    PlaylistReturnAction(
-                                        // **Out, not back.** During a digression both screens count
-                                        // themselves showing, so without this condition the button is drawn
-                                        // twice. There is one: Back returns to whatever sent you here — the
-                                        // dice — and this leaves for the playlist whatever is waiting.
-                                        onClick = {
-                                            viewModel.returnToPlaylist()
-                                            showRandom = false
-                                            showBrowse = false
-                                        },
-                                        modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                                    )
-                                }
-                                // Return to the selected playlist view without stopping audio.
-                                if (showRandom && !showBrowse && !showQueue) {
-                                    PlaylistReturnAction(
-                                        onClick = { viewModel.returnToPlaylist(); showRandom = false },
-                                        modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                                    )
-                                }
+                                // No way out to the playlist here any more: the navigation bar's
+                                // Playlist is that, from every place (redesign E1).
+                                if (atBrowse || atRandom) Spacer(Modifier.width(TOP_BAR_ACTION_EDGE))
                             },
                         )
                         // Under whichever bar is showing: the lists wait on the database on every screen (A60).
@@ -425,7 +438,11 @@ fun ProtracktorApp(
                 },
                 bottomBar = {
                     PlaylistSearchShield(playlistSearchFocused, finishPlaylistEditing) {
+                    Column {
                     PlayerDock(
+                        // The navigation bar is the bottom now and keeps clear of the system bar;
+                        // under the scanner, which has no bar, the dock does as it did.
+                        insetBottom = atScanner,
                         state = state,
                         onSeek = viewModel::seekTo,
                         onKeep = viewModel::keepTransient,
@@ -442,6 +459,11 @@ fun ProtracktorApp(
                         onShuffle = viewModel::toggleShuffle,
                         onRepeat = viewModel::cycleRepeat,
                     )
+                    if (!atScanner) ShellNavigationBar(
+                        selected = if (showMore) ShellTab.MORE else shell.value.tabOf(storedBrowse.domain),
+                        onSelect = { tab -> if (tab == ShellTab.MORE) showMore = true else openTab(tab) },
+                    )
+                    }
                     }
                 },
                 snackbarHost = {
@@ -450,7 +472,7 @@ fun ProtracktorApp(
             ) { insets ->
                 Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().then(if (showQueue) Modifier.clearAndSetSemantics { } else Modifier)) {
-                if (scanning) {
+                if (atScanner) {
                     ScannerScreen(
                         contentPadding = insets,
                         onScanned = { endpoint ->
@@ -465,7 +487,7 @@ fun ProtracktorApp(
                         },
                         onCancel = { scanning = false },
                     )
-                } else if (showSettings) {
+                } else if (atSettings) {
                     // The storage figures are read by `refreshCatalogues`, which until now only ran when
                     // somebody opened the online catalogues. Settings can be reached without ever going
                     // near Browse, and a storage section reporting zero because nobody asked would be
@@ -513,7 +535,7 @@ fun ProtracktorApp(
                         onDeleteSongMetadata = viewModel::deleteSongMetadata,
                         onDeleteReplayRoutines = viewModel::deleteReplayRoutines,
                     )
-                } else if (showBrowse) {
+                } else if (atBrowse) {
                     BrowseScreen(
                         browse = browse,
                         filters = browseFilters,
@@ -545,9 +567,9 @@ fun ProtracktorApp(
                         // behind glass says nothing about what the dice did; this opens the record it is
                         // about to fill, and rolls once so there is no second press between here and
                         // music.
+                        // Random opens over Browse, so Back from it returns here (redesign E1).
                         onRandom = {
                             viewModel.openRandom()
-                            showBrowse = false
                             showRandom = true
                         },
                         onChooseRandomScope = { choosingRandomScope = true },
@@ -587,7 +609,7 @@ fun ProtracktorApp(
                             pendingAddToPlaylist = tracks
                         },
                     )
-                } else if (showRandom) {
+                } else if (atRandom) {
                     RandomScreen(
                         state = state,
                         browse = browse,
@@ -685,8 +707,7 @@ fun ProtracktorApp(
     BackHandler(enabled = back != ShellBack.Nothing) {
         when (back) {
             is ShellBack.Close -> shell.value = shell.value.with(back.screen, false)
-            ShellBack.BrowseUp -> leaveBrowse()
-            ShellBack.RandomToBrowse -> leaveRandom()
+            ShellBack.BrowseUp -> browseUp()
             ShellBack.Nothing -> Unit
         }
     }
@@ -717,6 +738,20 @@ fun ProtracktorApp(
     }
 
     BackHandler(enabled = showQueue) { showQueue = false }
+
+    if (showMore) MoreSheet(
+        MoreActions(
+            onHistory = { viewModel.openDomain(BrowseDomain.HISTORY); shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.HISTORY) },
+            onAlarms = { com.przunk.protracktor.alarms.api.MusicAlarms.openManager(context) }
+                .takeIf { com.przunk.protracktor.alarms.api.MusicAlarms.enabled },
+            onSavedPlaces = { viewModel.openDomain(BrowseDomain.SAVED); shell.value = shell.value.tab(ShellScreen.BROWSE, BrowseDomain.SAVED) },
+            webIcon = if (browse.pairedBrowser) PlayerIcons.Link else PlayerIcons.QrCode,
+            onWeb = viewModel::sendQueueToBrowser,
+            onWebHold = viewModel::rescan,
+            onSettings = { shell.value = shell.value.tab(ShellScreen.SETTINGS) },
+        ),
+        onDismiss = { showMore = false },
+    )
 
     if (showNowPlaying) {
         // Back closes the overlay before it closes the app. Without this the user's escape from a
@@ -895,7 +930,14 @@ internal fun PlaylistTopBar(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = TOP_BAR_EDGE, vertical = TOP_BAR_SEAM),
         ) {
+            // Shared out evenly when the row cannot give every action its preferred width, keeping
+            // room for the playlist's name rather than squeezing the last button (C48's rule).
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val actionCount = if (state.dirty) 3 else 1
+            val actionWidth = minOf(maxOf(preferredActionWidth, slimActionWidth(stringResource(R.string.playlist_search_action))),
+                (maxWidth - PLAYLIST_NAME_MIN_WIDTH) / actionCount)
             PlaylistSearchHeader(
+                actionWidth = actionWidth,
                 name = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
                 count = state.queue.tracks.size,
                 searchOpen = searchOpen,
@@ -907,77 +949,36 @@ internal fun PlaylistTopBar(
                 onDone = onFinishEditing,
                 onFocus = onSearchFocus,
                 onBounds = onSearchBounds,
-            )
-            PlaylistSearchShield(searchFocused, onFinishEditing) {
-                // Keep Browse left and Settings right. When all actions cannot fit at their preferred
-                // width, shrink the group evenly rather than clipping the final button.
-                BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val actionCount = 2 + (if (state.dirty) 2 else 0) + (if (state.queue.tracks.isNotEmpty()) 1 else 0)
-                    // Divide physical pixels first so rounding cannot steal width from the last action.
-                    val availableActionWidth = with(LocalDensity.current) { (constraints.maxWidth / actionCount).toDp() }
-                    val actionWidth = minOf(preferredActionWidth, availableActionWidth)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                // **In the same row, not a row of their own** (redesign E1): Browse, WEB and
+                // Settings went to the navigation bar and More, and a row appearing only while
+                // editing pushed the whole list down under a finger dragging a row. A permanently
+                // lit Save teaches nothing about whether the list on screen is the list on disk.
+                trailing = {
+                    if (state.dirty) {
                         LabelledAction(
-                            icon = PlayerIcons.Cloud,
-                            label = stringResource(R.string.action_browse),
-                            onClick = onBrowse,
-                            // Arriving at Browse buzzes; pressing the way in as well would be two for one.
-                            haptic = null,
+                            icon = PlayerIcons.Discard,
+                            label = stringResource(R.string.action_discard),
+                            onClick = onDiscard,
                             slim = true,
                             modifier = Modifier.width(actionWidth),
                         )
-                        Spacer(Modifier.weight(1f))
-                        // Only while there is something to save. A permanently lit Save teaches nothing
-                        // about whether the list on screen is the list on disk.
-                        if (state.dirty) {
-                            LabelledAction(
-                                icon = PlayerIcons.Discard,
-                                label = stringResource(R.string.action_discard),
-                                onClick = onDiscard,
-                                slim = true,
-                                modifier = Modifier.width(actionWidth),
-                            )
-                            LabelledAction(
-                                icon = PlayerIcons.Save,
-                                label = stringResource(R.string.action_save),
-                                onClick = onSave,
-                                slim = true,
-                                modifier = Modifier.width(actionWidth),
-                            )
-                        }
-                        // It acts on the whole playlist, so it sits with the app's own actions rather than
-                        // in a row menu. Only while there is a list to send.
-                        if (state.queue.tracks.isNotEmpty()) {
-                            LabelledAction(
-                                // **The icon says which of the two things a press will do.** With nobody
-                                // paired it opens the camera, so it is a code; paired, it sends, so it is a
-                                // link.
-                                icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
-                                label = stringResource(R.string.action_send_to_browser),
-                                onClick = onSendToBrowser,
-                                onLongClick = onRescan,
-                                longClickLabel = stringResource(R.string.action_pair_again),
-                                slim = true,
-                                modifier = Modifier.width(actionWidth),
-                            )
-                        }
                         LabelledAction(
-                            icon = PlayerIcons.Settings,
-                            label = stringResource(R.string.settings_title),
-                            onClick = onSettings,
-                            haptic = null,
+                            icon = PlayerIcons.Save,
+                            label = stringResource(R.string.action_save),
+                            onClick = onSave,
                             slim = true,
                             modifier = Modifier.width(actionWidth),
                         )
                     }
-                }
+                },
+            )
             }
         }
     }
 }
+
+/** What the playlist's name keeps of the header row when actions share the rest. */
+private val PLAYLIST_NAME_MIN_WIDTH = 112.dp
 
 /** The gap between any two controls on the top bar. */
 private val TOP_BAR_SEAM = 6.dp

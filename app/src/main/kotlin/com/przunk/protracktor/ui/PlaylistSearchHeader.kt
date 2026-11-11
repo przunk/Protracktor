@@ -52,6 +52,10 @@ internal fun PlaylistSearchHeader(
     onDone: () -> Unit,
     onFocus: (Boolean) -> Unit,
     onBounds: (Rect) -> Unit,
+    /** The playlist's own actions after Search -- Discard and Save while editing (redesign E1). */
+    trailing: @Composable RowScope.() -> Unit = {},
+    /** Search's width, when the row shares it out among more actions; its own preferred width if null. */
+    actionWidth: androidx.compose.ui.unit.Dp? = null,
 ) {
     val type = MaterialTheme.typography
     val headerHeight = with(LocalDensity.current) {
@@ -119,8 +123,9 @@ internal fun PlaylistSearchHeader(
                 }
             }
             Spacer(Modifier.width(4.dp))
-            LabelledAction(PlayerIcons.Search, stringResource(R.string.playlist_search_action), onSearch,
-                slim = true, modifier = Modifier.width(slimActionWidth(stringResource(R.string.playlist_search_action))))
+            LabelledAction(PlayerIcons.Filter, stringResource(R.string.playlist_search_action), onSearch,
+                slim = true, modifier = Modifier.width(actionWidth ?: slimActionWidth(stringResource(R.string.playlist_search_action))))
+            trailing()
         }
     }
 }

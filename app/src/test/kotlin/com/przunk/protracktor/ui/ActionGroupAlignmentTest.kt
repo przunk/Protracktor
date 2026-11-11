@@ -62,11 +62,13 @@ class ActionGroupAlignmentTest {
             }
         }
         compose.waitForIdle()
+        // Browse, WEB and Settings moved to the navigation bar and More (redesign E1): the row
+        // holds the playlist's own actions only, and only while there is something to save.
+        listOf(R.string.action_browse, R.string.action_send_to_browser, R.string.settings_title).forEach { id ->
+            compose.onNode(hasClickAction() and hasText(activity.get().getString(id))).assertDoesNotExist()
+        }
         val actions = buildList {
-            add(R.string.action_browse to "browse")
             if (dirty) { add(R.string.action_discard to "discard"); add(R.string.action_save to "save") }
-            add(R.string.action_send_to_browser to "web")
-            add(R.string.settings_title to "settings")
         }
         val bounds = actions.map { (id, _) ->
             compose.onNode(hasClickAction() and hasText(activity.get().getString(id)))
@@ -86,11 +88,15 @@ class ActionGroupAlignmentTest {
         }
     }
 
-    @Test fun `English playlist actions have equal bounds`() = playlist()
+    // One composition per test: setting content twice on one activity never settles in Polish.
+    @Test fun `English playlist row has no way elsewhere`() = playlist()
+    @Test fun `English Save and Discard match`() = playlist(dirty = true)
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
-    fun `Polish playlist actions have equal bounds`() = playlist()
+    fun `Polish playlist row has no way elsewhere`() = playlist()
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
-    fun `five Polish actions fit a narrow viewport with large text`() = playlist(dirty = true, width = 320, scale = 2f)
+    fun `Polish Save and Discard match`() = playlist(dirty = true)
+    @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun `Polish Save and Discard fit a narrow viewport with large text`() = playlist(dirty = true, width = 320, scale = 2f)
 
     private fun random(scale: Float = 1f) {
         activity.get().setContent {

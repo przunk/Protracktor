@@ -31,7 +31,7 @@ class SettingsVolumeNormalizationTest: PlaybackShellTest() {
         ReflectionHelpers.setField(catalogues,"backends",{ "host-fixture" })
         assertFalse(player.value.volumeNormalization)
         val before=player.value
-        compose.onNodeWithText("Settings").performClick(); frame(600)
+        openSettings()
         val label=application.getString(R.string.settings_volume_normalization)
         compose.onNodeWithText(label).assertIsDisplayed()
         compose.onNodeWithText(application.getString(R.string.settings_volume_normalization_detail)).assertIsDisplayed()
@@ -42,7 +42,7 @@ class SettingsVolumeNormalizationTest: PlaybackShellTest() {
         assertEquals(before.activePlayback,player.value.activePlayback)
         assertEquals(before.playing,player.value.playing)
         compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }; frame(500)
-        compose.onNodeWithText("Settings").performClick(); frame(500)
+        openSettings()
         compose.onNodeWithContentDescription(label).assertIsOn().performTouchInput { click() }; frame()
         assertFalse(player.value.volumeNormalization)
         assertFalse(Appearance.volumeNormalization(application))
