@@ -790,4 +790,5 @@
         <item quantity="many">Używany w %1$,d alarmach</item>
         <item quantity="other">Używany w %1$,d alarmu</item>
     </plurals>
+    <string name="scrollbar_position">%1$,d / %2$,d</string>
 </resources>

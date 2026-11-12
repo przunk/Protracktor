@@ -21,6 +21,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -44,6 +52,12 @@ import kotlin.math.roundToInt
 internal fun DraggableScrollbar(
     listState: LazyListState,
     modifier: Modifier = Modifier,
+    /**
+     * What a bubble beside the thumb says while it is dragged, for the row at the top of the list
+     * (2026-11-12): "120 / 2,345", or an author's first letter. Without it, where the thumb has got
+     * to and how far is left are guesses. Visual only; the list is what TalkBack reads.
+     */
+    bubble: ((firstIndex: Int, total: Int) -> String)? = null,
 ) {
     val layout = listState.layoutInfo
     val total = layout.totalItemsCount
@@ -62,11 +76,14 @@ internal fun DraggableScrollbar(
     val positionFraction = dragFraction
         ?: (listState.firstVisibleItemIndex.toFloat() / lastFirstIndex).coerceIn(0f, 1f)
 
+    var trackHeight by remember { mutableStateOf(0) }
+    Box(modifier.fillMaxHeight().width(TRACK_WIDTH)) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxHeight()
             .width(TRACK_WIDTH)
             .padding(vertical = 4.dp)
+            .onSizeChanged { trackHeight = it.height }
             .pointerInput(total, visible) {
                 detectVerticalDragGestures(
                     onDragStart = { start -> dragFraction = (start.y / size.height).coerceIn(0f, 1f) },
@@ -98,7 +115,40 @@ internal fun DraggableScrollbar(
         )
         Spacer(Modifier.weight((slack * (1f - positionFraction)).coerceAtLeast(MIN_WEIGHT)))
     }
+    // The bubble, only while the thumb is held, level with its middle and to its left.
+    val dragged = dragFraction
+    if (bubble != null && dragged != null && trackHeight > 0) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val thumbPx = trackHeight * thumbFraction
+        val centre = (trackHeight - thumbPx) * dragged + thumbPx / 2f
+        val index = (lastFirstIndex * dragged).roundToInt().coerceIn(0, total - 1)
+        androidx.compose.material3.Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .wrapContentSize(align = Alignment.TopEnd, unbounded = true)
+                .offset { androidx.compose.ui.unit.IntOffset(
+                    -(TRACK_WIDTH + BUBBLE_GAP).roundToPx(),
+                    (centre - with(density) { BUBBLE_HEIGHT.toPx() } / 2f).roundToInt()) }
+                .testTag("scrollbar-bubble"),
+        ) {
+            Text(bubble(index, total), style = MaterialTheme.typography.titleMedium, maxLines = 1,
+                modifier = Modifier.height(BUBBLE_HEIGHT).wrapContentHeight().padding(horizontal = 14.dp))
+        }
+    }
+    }
 }
+
+/** The bubble's own height, so it can sit level with the thumb's middle. */
+private val BUBBLE_HEIGHT = 40.dp
+private val BUBBLE_GAP = 8.dp
+
+/** "120 / 2,345": the row at the top and how many there are, grouped as every number is. */
+internal fun positionBubble(context: android.content.Context): (Int, Int) -> String =
+    { first, total -> context.getString(com.przunk.protracktor.R.string.scrollbar_position, first + 1, total) }
 
 /** Wide enough to grab, narrow enough not to be grabbed by accident. */
 private val TRACK_WIDTH = 10.dp

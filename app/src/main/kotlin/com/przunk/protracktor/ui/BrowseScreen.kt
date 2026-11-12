@@ -859,13 +859,22 @@ private fun OnlineDomain(
                 val listState = scroll.stateFor(key)
                 RestorePosition(scroll, key, listState, groups.map { it.name }, browse.loading)
                 TopOnNewFilter(listState, filter)
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                    items(groups, key = { it.name }) { group ->
-                        GroupItem(group) {
-                            scroll.descendingFrom(key, group.name)
-                            onOpenGroup(group.name)
+                // A catalogue's formats and authors run to thousands (2026-11-12): the scrollbar the
+                // tunes have, with the first letter of the row at the top while it is dragged.
+                Box(Modifier.fillMaxSize()) {
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().testTag("browse-groups")) {
+                        items(groups, key = { it.name }) { group ->
+                            GroupItem(group) {
+                                scroll.descendingFrom(key, group.name)
+                                onOpenGroup(group.name)
+                            }
                         }
                     }
+                    DraggableScrollbar(
+                        listState = listState,
+                        modifier = Modifier.align(Alignment.CenterEnd).testTag("browse-groups-scrollbar"),
+                        bubble = { index, _ -> groups.getOrNull(index)?.name?.trim()?.firstOrNull()?.uppercase().orEmpty() },
+                    )
                 }
                 }
             }
@@ -1583,9 +1592,11 @@ private fun Selectable(
                 }
             }
 
+                val context = androidx.compose.ui.platform.LocalContext.current
                 DraggableScrollbar(
                     listState = listState,
                     modifier = Modifier.align(Alignment.CenterEnd),
+                    bubble = remember(context) { positionBubble(context) },
                 )
 
                 // The playing row kept on screen as next and previous move it, the same as the
