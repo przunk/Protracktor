@@ -172,6 +172,7 @@
 
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
+    <string name="browse_selection_end">End the selection</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
     <!-- Four different reasons a track will not open. They used to be one message, which sent
          the owner looking in the wrong place twice in a day: a download failure read as an
@@ -265,11 +266,16 @@
     <string name="domain_history_body">Tunes you have played, most recent first</string>
     <string name="history_empty">Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.</string>
     <string name="action_clear_history">Clear history</string>
+    <string name="action_clear_all_history">Clear all history</string>
     <string name="hold_to_confirm_hint">Hold it</string>
     <string name="hold_to_confirm_ask">%1$s, asking first</string>
     <string name="confirm_clear_history_title">Clear History?</string>
     <string name="confirm_clear_history_text">Everything played is removed from History, and the listened marks with it. This cannot be undone.</string>
     <string name="history_search_label">Search History</string>
+    <plurals name="history_entries">
+        <item quantity="one">%1$,d entry</item>
+        <item quantity="other">%1$,d entries</item>
+    </plurals>
     <string name="history_no_matches">No History entries match this phrase.</string>
     <string name="notice_history_read_failed">Could not load History. Please try again.</string>
     <string name="history_retry">Retry</string>

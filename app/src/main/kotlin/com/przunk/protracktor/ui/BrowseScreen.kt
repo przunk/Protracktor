@@ -68,6 +68,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -1178,67 +1181,28 @@ private fun HistoryDomain(
     onEnqueue: ((TrackRef) -> Unit)?,
     onUseForAlarms: ((TrackRef) -> Unit)? = null,
 ) {
+    // **The list first** (2026-11-12): History's search is on the top bar, as every Browse level's
+    // is; paging is said in the list's own header row; and Clear all history stands at the foot,
+    // always in view, its words saying it is all of it, far from Search.
     Column(modifier = Modifier.fillMaxSize()) {
-        HistoryQueryField(browse.historyQuery, onHistoryQueryChange)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            // **Held, not tapped** (2026-11-12): one tap used to clear everything with no way back.
-            val clearLabel = stringResource(R.string.action_clear_history)
-            HoldToConfirm(
-                icon = PlayerIcons.Remove,
-                label = clearLabel,
-                onConfirm = onClearHistory,
-                confirmTitle = stringResource(R.string.confirm_clear_history_title),
-                confirmText = stringResource(R.string.confirm_clear_history_text),
-                enabled = browse.historyTotal > 0 || browse.historyQuery.isNotBlank(),
-                slim = true,
-                modifier = Modifier.width(slimActionWidth(clearLabel, stringResource(R.string.hold_to_confirm_hint)))
-                    .testTag("clear-history"),
-            )
-        }
         // Query changes reset results/follow state without replacing the focused text field.
         key(browse.historyQuery) {
             val scroll = rememberBrowseScroll()
-            when {
-                browse.loading -> Loading()
-                browse.historyReadFailed -> Column(Modifier.padding(24.dp)) {
-                    Text(stringResource(R.string.notice_history_read_failed), color = MaterialTheme.colorScheme.error)
-                    LabelledAction(PlayerIcons.Refresh, stringResource(R.string.history_retry),
-                        { onHistoryQueryChange(browse.historyQuery) }, slim = true)
-                }
-                browse.historyTotal == 0 -> Text(
-                    text = stringResource(if (browse.historyQuery.isBlank()) R.string.history_empty else R.string.history_no_matches),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(24.dp),
-                )
-                else -> {
-                    // Paging stays above the list, reachable after scrolling.
-                    val total = browse.historyTotal
-                    if (HistoryPages.count(total) > 1) {
-                        val page = browse.historyPage
-                        val range = HistoryPages.range(page, total)
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
-                                IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
-                            }
-                            Text(
-                                text = stringResource(R.string.history_page_range, range.first, range.last, total),
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.weight(1f),
-                            )
-                            TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
-                                IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
-                            }
-                        }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    browse.loading -> Loading()
+                    browse.historyReadFailed -> Column(Modifier.padding(24.dp)) {
+                        Text(stringResource(R.string.notice_history_read_failed), color = MaterialTheme.colorScheme.error)
+                        LabelledAction(PlayerIcons.Refresh, stringResource(R.string.history_retry),
+                            { onHistoryQueryChange(browse.historyQuery) }, slim = true)
                     }
-                    Selectable(
+                    browse.historyTotal == 0 -> Text(
+                        text = stringResource(if (browse.historyQuery.isBlank()) R.string.history_empty else R.string.history_no_matches),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(24.dp),
+                    )
+                    else -> Selectable(
                         browse = browse,
                         scroll = scroll,
                         playlistName = playlistName,
@@ -1254,11 +1218,65 @@ private fun HistoryDomain(
                         onShareAudio = onShareAudio,
                         onShareLink = onShareLink,
                         onSendToWeb = onSendToWeb,
+                        selectionOnTopBar = true,
                     )
                 }
             }
         }
+        // Where it is in its pages, and Clear all held for three seconds, at the foot: nothing stands
+        // between the top bar and the first tune (2026-11-12).
+        HorizontalDivider()
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp).testTag("history-footer"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HistoryPaging(browse.historyPage, browse.historyTotal, onHistoryPage)
+            val clearLabel = stringResource(R.string.action_clear_all_history)
+            HoldToConfirm(
+                icon = PlayerIcons.Remove,
+                label = clearLabel,
+                onConfirm = onClearHistory,
+                confirmTitle = stringResource(R.string.confirm_clear_history_title),
+                confirmText = stringResource(R.string.confirm_clear_history_text),
+                enabled = browse.historyTotal > 0 || browse.historyQuery.isNotBlank(),
+                slim = true,
+                modifier = Modifier.width(slimActionWidth(clearLabel, stringResource(R.string.hold_to_confirm_hint)))
+                    .testTag("clear-history"),
+            )
+        }
     }
+}
+
+/**
+ * History's place in its pages, at the foot: the range between two arrows, each arrow named for
+ * TalkBack (Newer, Older) -- icons alone here, where the foot also holds Clear all and words would
+ * not fit beside it. One page says how many entries there are.
+ */
+@Composable
+private fun RowScope.HistoryPaging(page: Int, total: Int, onPage: (Int) -> Unit) {
+    val pages = HistoryPages.count(total)
+    if (pages <= 1) {
+        Text(if (total > 0) pluralStringResource(R.plurals.history_entries, total, total) else "",
+            style = MaterialTheme.typography.labelMedium, maxLines = 1,
+            modifier = Modifier.weight(1f).padding(start = 12.dp).testTag("history-range"))
+        return
+    }
+    val range = HistoryPages.range(page, total)
+    IconButton(onClick = { onPage(page - 1) }, enabled = page > 0, modifier = Modifier.size(40.dp).testTag("history-newer")) {
+        Icon(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+    }
+    Text(
+        text = stringResource(R.string.history_page_range, range.first, range.last, total),
+        style = MaterialTheme.typography.labelMedium,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f).testTag("history-range"),
+    )
+    IconButton(onClick = { onPage(page + 1) }, enabled = page < pages - 1, modifier = Modifier.size(40.dp).testTag("history-older")) {
+        Icon(PlayerIcons.ChevronRight, stringResource(R.string.history_older))
+    }
+    Spacer(Modifier.width(8.dp))
 }
 
 /**
@@ -1323,6 +1341,17 @@ private fun Selectable(
     onOpenSubfolder: (String) -> Unit = {},
     /** Browse's Search on this level; blank shows the whole level. */
     filter: String = "",
+    /**
+     * What the list's header row says when nothing is being selected, in place of the count:
+     * History's paging (2026-11-12). The row keeps its height either way, so starting to select
+     * does not move the list under the finger.
+     */
+    header: (@Composable RowScope.() -> Unit)? = null,
+    /**
+     * The selection said on the top bar rather than in the list's header row, which is then not
+     * drawn at all (History, 2026-11-12). Only where a shell is there to take it ([LocalTopSelection]).
+     */
+    selectionOnTopBar: Boolean = false,
     /** An archive's formats or a format's authors, already narrowed, listed above any tunes. */
     groups: List<CatalogueGroup> = emptyList(),
     /** Whether the level lists folders at all, so none matching reads as no matches. */
@@ -1353,6 +1382,17 @@ private fun Selectable(
     }
     val selecting = selected.isNotEmpty()
     ReportSelecting(selecting)
+    val topSelection = LocalTopSelection.current.takeIf { selectionOnTopBar }
+    if (topSelection != null) {
+        val info = if (!selecting) null else TopSelection(
+            count = selected.size,
+            all = selected.size == allTracks.size,
+            toggleAll = { selected = if (selected.size == allTracks.size) emptySet() else allTracks.map { it.id }.toSet() },
+            exit = { selected = emptySet() },
+        )
+        SideEffect { topSelection.current = info }
+        DisposableEffect(topSelection) { onDispose { topSelection.current = null } }
+    }
 
     // Takes back before the level-and-exit handler outside, because the innermost enabled handler
     // wins. That is the stack: leave the selection, then go up a level, then out to the playlist --
@@ -1407,7 +1447,7 @@ private fun Selectable(
         // **Only for the level's own tunes**, which are there when the list is. The tunes below arrive
         // a moment later, and a header appearing for them pushed every row down under the reader
         // (2026-11-09); their count, and while selecting their Select all, are in their own heading.
-        if (shownTracks.isNotEmpty()) {
+        if (shownTracks.isNotEmpty() && topSelection == null) {
             // A fixed height, because the select-all button only exists while selecting and a
             // header that grows when it appears shifts the whole list under the finger that just
             // long-pressed. Same reason as the row below.
@@ -1415,7 +1455,7 @@ private fun Selectable(
                 modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp).testTag("browse-tracks-header"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
+                if (!selecting && header != null) header() else Text(
                     text = if (selecting) {
                         pluralStringResource(R.plurals.browse_selected, selected.size, selected.size)
                     } else {

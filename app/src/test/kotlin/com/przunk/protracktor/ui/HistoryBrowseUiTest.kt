@@ -149,18 +149,23 @@ class HistoryBrowseUiTest {
         compose.waitForIdle()
     }
 
+    // The words as the top bar's field hands them on (2026-11-12: the field moved to the top bar,
+    // which this harness does not draw; `NavSlotsUiTest`'s shell tests press the field itself).
+    private fun type(query: String) {
+        compose.runOnIdle { historyBrowser.setQuery(query) }
+    }
+
     private fun filter(query: String) {
-        compose.onNode(hasSetTextAction()).performClick().performTextReplacement(query)
+        type(query)
         advanceFilter()
         compose.waitUntil(5_000) { !browse.value.loading }
         compose.waitForIdle()
     }
 
-    @Test fun `live phrase filtering searches old title author and literal filename while keeping focus`() {
+    @Test fun `live phrase filtering searches old title author and literal filename`() {
         show()
         filter("TRACK 150")
         compose.onNodeWithText("History track 150").assertIsDisplayed()
-        compose.onNode(hasSetTextAction()).assertIsFocused()
         filter("HÜLSBECK")
         compose.onNodeWithText("History track 150").assertIsDisplayed()
         filter("SPECIAL_%!")
@@ -172,7 +177,7 @@ class HistoryBrowseUiTest {
         show()
         filter("track 1")
         compose.runOnIdle { org.junit.Assert.assertEquals(111, browse.value.historyTotal) }
-        compose.onNodeWithText("Older").performClick()
+        compose.onNodeWithTag("history-older").performClick()
         compose.onNodeWithText("History track 189").assertIsDisplayed()
         filter("")
         compose.onNodeWithText("History track 0").assertIsDisplayed()
@@ -182,19 +187,18 @@ class HistoryBrowseUiTest {
         }
     }
 
-    @Test fun `pending filtering retains the editable field and only the newest phrase finishes`() {
+    @Test fun `while a phrase is pending only the newest one finishes`() {
         show()
         val gate = CompletableDeferred<Unit>()
         readGate = gate
-        compose.onNode(hasSetTextAction()).performClick().performTextReplacement("track")
+        type("track")
         advanceFilter()
         compose.runOnIdle { org.junit.Assert.assertTrue(browse.value.loading) }
-        compose.onNode(hasSetTextAction()).assertIsFocused().performTextReplacement("track 150")
+        type("track 150")
         advanceFilter()
         compose.runOnIdle { gate.complete(Unit) }
         compose.waitUntil(5_000) { !browse.value.loading }
         compose.onNodeWithText("History track 150").assertIsDisplayed()
-        compose.onNode(hasSetTextAction()).assertIsFocused()
         compose.runOnIdle { org.junit.Assert.assertEquals(1, browse.value.historyTotal) }
     }
 
@@ -237,14 +241,13 @@ class HistoryBrowseUiTest {
 
     @Test
     @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
-    fun `Polish live field and no-match feedback use the selected locale`() {
+    fun `Polish no-match feedback and Clear all use the selected locale`() {
         show()
-        compose.onNodeWithText("Szukaj w historii").assertIsDisplayed()
+        compose.onNodeWithText("Wyczyść całą historię").assertIsDisplayed()
         filter("TRACK 150")
         compose.onNodeWithText("History track 150").assertIsDisplayed()
         filter("nie ma takiego utworu")
         compose.onNodeWithText("Brak wpisów historii pasujących do frazy.").assertIsDisplayed()
-        compose.onNode(hasSetTextAction()).assertIsFocused()
     }
 
     @Test fun `returning through Browse root opens History at the top`() {
@@ -275,15 +278,15 @@ class HistoryBrowseUiTest {
     @Test fun `paging keeps positions until a new History visit`() {
         show()
         scrollTo(50)
-        compose.onNodeWithText("Older").performClick()
+        compose.onNodeWithTag("history-older").performClick()
         compose.onNodeWithText("History track 100").assertIsDisplayed()
         scrollTo(150)
-        compose.onNodeWithText("Newer").performClick()
+        compose.onNodeWithTag("history-newer").performClick()
         compose.onNodeWithText("History track 50").assertIsDisplayed()
         compose.runOnIdle { workflow.browseBack() }
         openHistory()
         compose.onNodeWithText("History track 0").assertIsDisplayed()
-        compose.onNodeWithText("Older").performClick()
+        compose.onNodeWithTag("history-older").performClick()
         compose.onNodeWithText("History track 100").assertIsDisplayed()
     }
 
@@ -307,7 +310,7 @@ class HistoryBrowseUiTest {
         compose.runOnIdle { org.junit.Assert.assertEquals(201, browse.value.historyTotal) }
     }
 
-    @Test fun `live writes respect the phrase retain focus and do not replace captured playback`() {
+    @Test fun `live writes respect the phrase and do not replace captured playback`() {
         show()
         compose.onNodeWithText("History track 0").performClick()
         val captured = playedRows
@@ -317,7 +320,6 @@ class HistoryBrowseUiTest {
         }
         compose.waitForIdle()
         compose.onNodeWithText("Fresh live match").assertIsDisplayed()
-        compose.onNode(hasSetTextAction()).assertIsFocused()
         compose.runOnIdle {
             org.junit.Assert.assertSame(captured, playedRows)
             org.junit.Assert.assertEquals(1, playCalls)
@@ -347,7 +349,7 @@ class HistoryBrowseUiTest {
         compose.mainClock.advanceTimeBy(300)
         compose.onNodeWithTag("clear-history").assertTextContains("Hold it")
         compose.mainClock.advanceTimeBy(2_500)
-        compose.onNodeWithTag("clear-history").assertTextContains("Clear history")
+        compose.onNodeWithTag("clear-history").assertTextContains("Clear all history")
         compose.mainClock.autoAdvance = true
         compose.runOnIdle { org.junit.Assert.assertFalse(stored.isEmpty()) }
         compose.onNodeWithText("History track 0").assertIsDisplayed()
@@ -371,8 +373,38 @@ class HistoryBrowseUiTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.runOnIdle { org.junit.Assert.assertFalse(stored.isEmpty()) }
         compose.onNodeWithTag("clear-history").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
-        compose.onAllNodesWithText("Clear history").filterToOne(hasAnyAncestor(isDialog())).performClick()
+        compose.onAllNodesWithText("Clear all history").filterToOne(hasAnyAncestor(isDialog())).performClick()
         compose.waitForIdle()
         compose.runOnIdle { org.junit.Assert.assertTrue(stored.isEmpty()) }
+    }
+
+    @Test fun `the foot holds the paging and Clear all, and stays put while the list scrolls`() {
+        show()
+        // Newer, the range, Older, then Clear all, in that order along the foot.
+        compose.onNode(hasText("1–100 of 200") and hasAnyAncestor(hasTestTag("history-footer"))).assertIsDisplayed()
+        val newer = compose.onNodeWithTag("history-newer").fetchSemanticsNode().boundsInRoot
+        val range = compose.onNodeWithTag("history-range").fetchSemanticsNode().boundsInRoot
+        val older = compose.onNodeWithTag("history-older").fetchSemanticsNode().boundsInRoot
+        val clear = compose.onNodeWithTag("clear-history").fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue(newer.right <= range.left + 1f && range.right <= older.left + 1f && older.right <= clear.left + 1f)
+        // The arrows are named for TalkBack.
+        compose.onNodeWithContentDescription("Newer").assertExists()
+        compose.onNodeWithContentDescription("Older").assertExists()
+        // Under the list, and not moved by scrolling it.
+        val foot = compose.onNodeWithTag("history-footer").fetchSemanticsNode().boundsInRoot
+        val first = compose.onNodeWithText("History track 0").fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue(first.bottom <= foot.top)
+        scrollTo(99)
+        org.junit.Assert.assertEquals(foot, compose.onNodeWithTag("history-footer").fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("history-older").performClick()
+        compose.waitUntil(5_000) { !browse.value.loading }
+        compose.onNode(hasText("101–200 of 200") and hasAnyAncestor(hasTestTag("history-footer"))).assertIsDisplayed()
+    }
+
+    @Test fun `one page says how many at the foot`() {
+        show()
+        filter("track 15")
+        compose.onNode(hasText("11 entries") and hasAnyAncestor(hasTestTag("history-footer"))).assertIsDisplayed()
+        compose.onNodeWithTag("history-newer").assertDoesNotExist()
     }
 }

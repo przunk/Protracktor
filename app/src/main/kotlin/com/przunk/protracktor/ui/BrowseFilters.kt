@@ -69,13 +69,19 @@ class BrowseFilters {
 
 /** The field that takes the title's place in Browse's bar while Search is open there. */
 @Composable
-internal fun BrowseFilterField(query: String, onQueryChange: (String) -> Unit, onFocus: (Boolean) -> Unit) {
+internal fun BrowseFilterField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onFocus: (Boolean) -> Unit,
+    /** What the empty field says; History's says what it searches (2026-11-12). */
+    hint: Int = R.string.browse_filter_hint,
+) {
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     TextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text(stringResource(R.string.browse_filter_hint), maxLines = 1) },
+        placeholder = { Text(stringResource(hint), maxLines = 1) },
         singleLine = true,
         shape = MaterialTheme.shapes.large,
         colors = TextFieldDefaults.colors(
