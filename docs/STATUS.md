@@ -13,6 +13,17 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C142 A Browse Search test fails now and then in the full gate — open, found 2026-11-13
+
+`BrowseFilterUiTest`, *each level keeps its own Search while Browse is open, and leaving Browse
+forgets it*, failed once in the full gate on `feature/browse-history` (`2e9f00b9`): after the
+Playlist tab and back into Browse, the level's search field was still there with its words. The test
+passed alone twice with forced reruns. The branch does not touch how leaving Browse clears its
+searches (`BrowseFilters.clear` on `showBrowse` going false).
+
+**Mechanism not found.** Third of its kind with C139 and C141: each fails only under the full
+gate's load and passes alone. To be explained before anything is changed.
+
 ## C141 A manual-queue test fails now and then in the full gate — open, found 2026-11-12
 
 `ManualQueueControllerTest`, *Play after manual-only exhaustion starts newly queued track instead of
