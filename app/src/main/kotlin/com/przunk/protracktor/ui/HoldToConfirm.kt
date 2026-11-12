@@ -5,6 +5,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,16 +51,25 @@ internal object HoldRule {
  * The time is measured from frame times, not by an animation, so a phone with animations turned off
  * still waits the three seconds rather than finishing at once.
  *
- * TalkBack cannot hold: for it the same action is a click that asks first, in a dialog.
+ * TalkBack cannot hold: for it the same action is a click that asks first, in a dialog -- or, inside
+ * a dialog that has already asked, a click that confirms.
+ *
+ * In a confirmation dialog it is the confirm button (deleting a playlist, a catalogue's index, song
+ * data, replay routines): the dialog says what will go, the hold makes the yes deliberate.
  */
 @Composable
 internal fun HoldToConfirm(
     icon: ImageVector,
     label: String,
     onConfirm: () -> Unit,
-    confirmTitle: String,
-    confirmText: String,
+    confirmTitle: String = "",
+    confirmText: String = "",
     modifier: Modifier = Modifier,
+    /**
+     * Whether TalkBack's click asks first, in a dialog of its own. Not where the button already
+     * stands in a dialog that has said what will go: there the click confirms (2026-11-12).
+     */
+    askFirst: Boolean = true,
     enabled: Boolean = true,
     slim: Boolean = false,
     holdMillis: Long = HoldRule.HOLD_MILLIS,
@@ -80,11 +90,17 @@ internal fun HoldToConfirm(
     val gesture = Modifier
         .semantics(mergeDescendants = true) {
             role = Role.Button
-            if (enabled) onClick(label = askLabel) { asking = true; true } else disabled()
+            if (!enabled) disabled()
+            else if (askFirst) onClick(label = askLabel) { asking = true; true }
+            else onClick(label = label) { confirm(); true }
         }
         .pointerInput(enabled, holdMillis) {
             if (!enabled) return@pointerInput
             detectTapGestures(onPress = {
+                // The name back at once, not two seconds into the next hold: a label changing
+                // under the finger resized the pill, and inside a dialog the button row was laid
+                // out anew and the hold was lost.
+                hinting = false
                 haptics.grab()
                 val holding = scope.launch {
                     var start = -1L
@@ -117,7 +133,8 @@ internal fun HoldToConfirm(
         icon = icon,
         label = if (hinting) hint else label,
         onClick = {},
-        modifier = modifier,
+        // One width for both words, so the hint does not resize the pill or move its neighbours.
+        modifier = if (slim) Modifier.width(slimActionWidth(label, hint)).then(modifier) else modifier,
         haptic = null,
         enabled = enabled,
         slim = slim,

@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -211,17 +212,20 @@ fun PlaylistSwitcher(
                     )
                 )
             },
+            // Held, not tapped (2026-11-12): the dialog says what goes, the hold makes the yes
+            // deliberate.
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete(playlist.id)
-                    confirmingDelete = null
-                }) {
-                    Text(
-                        stringResource(
-                            if (playlists.size <= 1) R.string.action_empty else R.string.action_delete
-                        )
-                    )
-                }
+                HoldToConfirm(
+                    icon = PlayerIcons.Remove,
+                    label = stringResource(if (playlists.size <= 1) R.string.action_empty else R.string.action_delete),
+                    onConfirm = {
+                        onDelete(playlist.id)
+                        confirmingDelete = null
+                    },
+                    askFirst = false,
+                    slim = true,
+                    modifier = Modifier.testTag("confirm-hold"),
+                )
             },
             dismissButton = {
                 TextButton(onClick = { confirmingDelete = null }) {

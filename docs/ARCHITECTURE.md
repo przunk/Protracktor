@@ -2065,3 +2065,14 @@ candidate offline cache, retaining the previous worker. No skipWaiting is used d
 Pairing, music, remote requests, Range and other installations' caches remain outside this shell.
 The packager normalizes archive metadata separately from its timestamped/source-labelled filename;
 source SHA/dirty state is shared with staged legal metadata and checked before an artifact is made.
+
+## Actions that cannot be undone are held — 2026-11-12
+
+Clearing History was one tap, with no question and no way back. `HoldToConfirm` is now the rule for
+every action that cannot be undone: the press is held for three seconds while the pill fills from
+the left, with light ticks and a firm one at the end; letting go early cancels; a tap says to hold
+it. The time comes from frame times, not an animation, so a phone with animations off still waits.
+TalkBack cannot hold: its click asks first in a dialog, or, where the button already stands in a
+confirmation dialog, confirms. Used for Clear all history (at History's foot, always in view) and
+as the yes of the dialogs deleting a playlist, a catalogue's index, song data and replay routines.
+Clearing fetched tunes stays a tap: they come back by themselves as music plays.

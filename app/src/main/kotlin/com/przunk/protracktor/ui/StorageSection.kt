@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -170,11 +171,19 @@ fun StorageSection(
             onDismissRequest = { confirming = null },
             title = { Text(stringResource(R.string.storage_confirm_title, intent.title)) },
             text = { Text(stringResource(intent.body)) },
+            // Held, not tapped (2026-11-12): what is deleted takes a real download to get back.
             confirmButton = {
-                TextButton(onClick = {
-                    intent.act()
-                    confirming = null
-                }) { Text(stringResource(R.string.action_delete)) }
+                HoldToConfirm(
+                    icon = PlayerIcons.Remove,
+                    label = stringResource(R.string.action_delete),
+                    onConfirm = {
+                        intent.act()
+                        confirming = null
+                    },
+                    askFirst = false,
+                    slim = true,
+                    modifier = Modifier.testTag("confirm-hold"),
+                )
             },
             dismissButton = {
                 TextButton(onClick = { confirming = null }) {
