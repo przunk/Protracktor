@@ -110,6 +110,27 @@ suite and lint precede every release (`/mnt/workspace/AGENTS.md` §6) is met her
 on the code being released, once. The reason is time: a forced suite is about fifteen minutes, and
 running it twice on the same commit only doubled the wait.
 
+## A small interface fix during a round runs its own tests, not the whole suite
+
+Decided 2026-11-12. **This narrows, for this project, the workspace rule that every change to the
+app's code runs the full suite and lint before it is reported ready** (`/mnt/workspace/AGENTS.md`
+§6).
+
+While a round of interface work is under way on a branch, **a small fix of how something is laid
+out or drawn** — a margin, a gap, a size, a colour, an icon — **runs the tests of the area it
+touches, with a negative control where a test guards it, and lint.** The full suite then runs
+**once, before the APK built for my phone check, and always before anything is merged into
+`develop`.**
+
+**Why.** A gap between two dock buttons sent the full suite through twelve minutes twice; it said
+nothing about the gap, which its own test and control had already shown, and stopped only on an
+unrelated intermittent test (C141). The full suite earns its time where a change can reach far, and
+at the points where a build leaves the branch.
+
+**Where it does not apply:** anything that changes behaviour — a gesture, navigation, what a tap does,
+playback, data, a migration — and any change to shared code that other screens use (a common
+control, a theme, a helper). Those run the full suite as before. When in doubt, the full suite.
+
 ## Evidence goes in `dist/evidence/`
 
 Decided 2026-11-08. **`dist/` itself holds only what can be installed or uploaded**: APKs, AABs,
