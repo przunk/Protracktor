@@ -13,6 +13,18 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C141 A manual-queue test fails now and then in the full gate — open, found 2026-11-12
+
+`ManualQueueControllerTest`, *Play after manual-only exhaustion starts newly queued track instead of
+replaying the old one*, failed once in the full gate on `ui/redesign` (`fdc1195d`): it expected the
+newly queued `new` to be current after Play and found `B`. The same class passed alone three times
+in a row with forced reruns (35 tests each). The change on that commit was only a gap between two
+dock buttons, nothing the test reaches.
+
+**Mechanism not found.** A guess, unchecked: work started by the test's setup (opening `B`) finishes
+on a background thread after Play under the gate's load and puts `B` back as current. Like C139,
+it is to be explained before anything is changed; a rerun that passes says nothing.
+
 ## C139 A queue-follow test fails or is skipped now and then — open, found 2026-11-10
 
 `QueueFollowUiTest` ("Next inside the viewport changes selection without scrolling or fading other
