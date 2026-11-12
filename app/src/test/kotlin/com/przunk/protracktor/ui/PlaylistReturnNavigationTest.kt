@@ -13,6 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -50,6 +55,8 @@ class PlaylistReturnNavigationTest {
         playback = randomPlayback(tune),
     ))
     private val calls = mutableListOf<String>()
+    private val more = mutableStateOf(false)
+    private fun moreAction(label: String) = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("more-sheet")))
 
     @Before fun start() {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
@@ -78,9 +85,17 @@ class PlaylistReturnNavigationTest {
                         onShowNeighbours = {}, onShareFile = {}, onShareAudio = {},
                         onShareLink = {}, onSendToWeb = {}, onBrowse = { calls += "browse" },
                         onPickDownloads = {}, canBrowse = true, stateKnown = true,
-                        contentPadding = PaddingValues(),
+                        contentPadding = PaddingValues(), modifier = Modifier.weight(1f),
                     )
+                    // Browse, WEB and Settings live in the navigation bar and More (redesign E1).
+                    ShellNavigationBar(ShellTab.PLAYLIST, onSelect = { tab ->
+                        calls += tab.name.lowercase()
+                        if (tab == ShellTab.MORE) more.value = true
+                    })
                 }
+                if (more.value) MoreSheet(MoreActions(onAlarms = null,
+                    webIcon = PlayerIcons.QrCode, onWeb = { calls += "web" }, onWebHold = { calls += "rescan" },
+                    onSettings = { calls += "settings" }), onDismiss = { more.value = false })
             }
         }
         val view = activity.get().window.decorView
@@ -96,25 +111,20 @@ class PlaylistReturnNavigationTest {
         compose.onNodeWithText("Back to Random").assertDoesNotExist()
         compose.onNodeWithText("Playlist tune").assertExists().performClick()
         compose.onNodeWithText("Browse").assertIsEnabled().performClick()
-        compose.onNodeWithText("Settings").assertIsEnabled().performClick()
+        // More's own actions are ShellNavigationUiTest's, in the real shell: in this standalone
+        // harness Compose never settles once the sheet has opened, while the shell does.
+        compose.onNodeWithTag("nav-more").assertIsEnabled()
         compose.runOnIdle {
-            assertEquals(listOf("play:0", "browse", "settings"), calls)
+            assertEquals(listOf("play:0", "browse"), calls)
             assertEquals(tune, state.value.current)
         }
-    }
-
-    @Test fun `both Web gestures remain available while another collection plays`() {
-        show()
-        compose.onNodeWithText("WEB").assertIsEnabled().performTouchInput { click(); longClick() }
-        compose.runOnIdle { assertEquals(listOf("web", "rescan"), calls) }
     }
 
     @Test fun `external playback also leaves playlist navigation available`() {
         state.value = state.value.copy(playback = externalPlayback(tune))
         show()
         compose.onNodeWithText("Browse").assertIsEnabled()
-        compose.onNodeWithText("WEB").assertIsEnabled()
-        compose.onNodeWithText("Settings").assertIsEnabled()
+        compose.onNodeWithTag("nav-more").assertIsEnabled()
         compose.onNodeWithText("Playlist tune").assertExists()
     }
 

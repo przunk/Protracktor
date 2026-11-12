@@ -44,7 +44,8 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
                 playing = false)
         }
         frame(300)
-        compose.onNodeWithText(application.getString(R.string.playlist_search_action)).performClick()
+        compose.onNode(hasText(application.getString(R.string.playlist_search_action))
+            and hasAnyAncestor(hasTestTag("playlist-search-header"))).performClick()
         frame(350)
     }
 
@@ -150,7 +151,8 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(12)
         frame(300)
         val top = compose.onNodeWithTag("enqueue-row-12").fetchSemanticsNode().boundsInRoot.top
-        compose.onNodeWithText(application.getString(R.string.playlist_search_action)).performClick()
+        compose.onNode(hasText(application.getString(R.string.playlist_search_action))
+            and hasAnyAncestor(hasTestTag("playlist-search-header"))).performClick()
         frame(350)
         compose.onNodeWithTag("playlist-search-field").performTextInput("Track 20")
         frame(300)
@@ -194,7 +196,7 @@ class PlaylistSearchUiTest : PlaybackShellTest() {
         }
         frame(350)
         val before = cleared
-        compose.onNodeWithText(application.getString(R.string.settings_title)).performClick()
+        openSettings()
         frame(350)
         assertEquals("An inactive playlist search must leave the destination's focus alone", before, cleared)
         compose.onNodeWithContentDescription(application.getString(R.string.action_back)).performClick()

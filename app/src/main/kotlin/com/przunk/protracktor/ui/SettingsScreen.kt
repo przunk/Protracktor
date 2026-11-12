@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalContext
@@ -100,6 +101,9 @@ fun SettingsScreen(
     onVolumeNormalizationChanged: (Boolean) -> Unit,
     floatingControlsEnabled: Boolean,
     onFloatingControlsEnabledChanged: (Boolean) -> Unit,
+    navSlots: NavSlots,
+    alarmsAvailable: Boolean,
+    onNavSlotsChanged: (NavSlots) -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -168,25 +172,6 @@ fun SettingsScreen(
                         modifier = Modifier.semantics {
                             contentDescription = context.getString(R.string.settings_volume_normalization)
                         },
-                    )
-                },
-            )
-        }
-
-        item {
-            ListItem(
-                leadingContent = { Icon(PlayerIcons.FloatingControls, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.floating_show)) },
-                supportingContent = { Text(stringResource(R.string.settings_floating_controls_detail),
-                    style = MaterialTheme.typography.bodySmall) },
-                trailingContent = {
-                    Switch(
-                        checked = floatingControlsEnabled,
-                        onCheckedChange = { enabled ->
-                            haptics.toggle(enabled)
-                            onFloatingControlsEnabledChanged(enabled)
-                        },
-                        modifier = Modifier.semantics { contentDescription = context.getString(R.string.floating_show) },
                     )
                 },
             )
@@ -261,34 +246,78 @@ fun SettingsScreen(
             )
         }
 
+        // **How the player is reached** (2026-11-12): the bar's places and the controls over other
+        // apps. Both were filed elsewhere -- the floating controls among sound settings.
+        item { HorizontalDivider(); Section(R.string.settings_controls) }
+
+        // **The bar's two chosen places** (redesign round 2): the bar as it will look, then the choice.
+        item { NavSlotsSetting(navSlots, alarmsAvailable, onNavSlotsChanged) }
+
+
+        item {
+            ListItem(
+                leadingContent = { Icon(PlayerIcons.FloatingControls, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.floating_show)) },
+                supportingContent = { Text(stringResource(R.string.settings_floating_controls_detail),
+                    style = MaterialTheme.typography.bodySmall) },
+                trailingContent = {
+                    Switch(
+                        checked = floatingControlsEnabled,
+                        onCheckedChange = { enabled ->
+                            haptics.toggle(enabled)
+                            onFloatingControlsEnabledChanged(enabled)
+                        },
+                        modifier = Modifier.semantics { contentDescription = context.getString(R.string.floating_show) },
+                    )
+                },
+            )
+        }
+
+        item { HorizontalDivider(); Section(R.string.settings_sharing) }
+
         // **The longest a tune shared as audio runs** (`docs/BACKLOG.md` A62). Beside the
         // fallback length because it answers the same question for a different listener: the
         // one at the other end of a chat, who gets a file rather than a player.
+        // **A slider, like the length when nothing knows it** (2026-11-12): two lengths, one control.
+        // Its stops are the same four lengths it always offered, so nothing stored changes.
         item {
-            SettingChoice(
-                label = stringResource(R.string.settings_share_audio_length),
-                options = AudioExport.LIMIT_MINUTES,
-                selected = shareAudioMinutes,
-                labelOf = { stringResource(R.string.settings_share_audio_minutes, it) },
-                onSelect = onShareAudioMinutesSelected,
-                supporting = stringResource(R.string.settings_share_audio_length_detail),
+            var dragging by remember(shareAudioMinutes) {
+                mutableStateOf(AudioExport.LIMIT_MINUTES.indexOf(shareAudioMinutes).coerceAtLeast(0))
+            }
+            val minutes = AudioExport.LIMIT_MINUTES[dragging]
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_share_audio_length)) },
+                supportingContent = {
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_share_audio_length_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            pluralStringResource(R.plurals.minutes, minutes, minutes),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Slider(
+                            value = dragging.toFloat(),
+                            onValueChange = { dragging = Math.round(it).coerceIn(0, AudioExport.LIMIT_MINUTES.lastIndex) },
+                            onValueChangeFinished = {
+                                haptics.toggle(true)
+                                onShareAudioMinutesSelected(AudioExport.LIMIT_MINUTES[dragging])
+                            },
+                            valueRange = 0f..AudioExport.LIMIT_MINUTES.lastIndex.toFloat(),
+                            // A notch per length; `steps` counts the ones between the ends.
+                            steps = AudioExport.LIMIT_MINUTES.size - 2,
+                            modifier = Modifier.testTag("share-length-slider"),
+                        )
+                    }
+                },
             )
         }
 
-        // Two settings, one shape. Both are "pick one of a handful", and both show every option
-        // and the current answer at once rather than behind a dialog, which would cost a tap to
-        // find out what the options are and then hide the answer again behind a summary line.
-        item {
-            SettingChoice(
-                label = stringResource(R.string.settings_language),
-                options = AppLanguage.entries,
-                selected = selectedLanguage,
-                labelOf = { it.label() },
-                onSelect = onLanguageSelected,
-            )
-        }
-
-        item { HorizontalDivider(); Section(R.string.settings_appearance) }
+        // **Looks and words together** (2026-11-12): the language was the last row of Playback, where
+        // nobody looks for it.
+        item { HorizontalDivider(); Section(R.string.settings_appearance_language) }
 
         item {
             SettingChoice(
@@ -322,6 +351,18 @@ fun SettingsScreen(
             }
         }
 
+        // A pick of a handful, shown whole rather than behind a dialog, which would cost a tap to
+        // find out what the options are and then hide the answer again behind a summary line.
+        item {
+            SettingChoice(
+                label = stringResource(R.string.settings_language),
+                options = AppLanguage.entries,
+                selected = selectedLanguage,
+                labelOf = { it.label() },
+                onSelect = onLanguageSelected,
+            )
+        }
+
         // **Fetching a folder ahead** (`docs/BACKLOG.md` A55). Its own group because it spends the
         // user's data, and that is a question about the network, not about sound or looks.
         item { HorizontalDivider(); Section(R.string.settings_online_section) }
@@ -337,9 +378,8 @@ fun SettingsScreen(
             )
         }
 
-        // **Its own group, below the palette.** Under Playback it would sit between the language
-        // picker and the appearance heading, which is where it least belongs: it is not a
-        // preference about how music sounds, it is the address of a second copy of the app.
+        // **Its own group.** Not a preference about how music sounds or looks: it is the address of
+        // a second copy of the app.
         item { HorizontalDivider(); Section(R.string.settings_web_player_section) }
 
         // Text rather than a choice, because the answer is an address and there is no list of them.

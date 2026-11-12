@@ -213,7 +213,12 @@ fun SeekBar(
             } else {
                 lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surface, DIMMED)
             }
-            Box(modifier = Modifier.size(size).background(dot, CircleShape))
+            // **Centred in a slot of [THUMB_SLOT]** (2026-11-11): drawn as a bare circle, a dot under
+            // that height sat high of the line by half the difference -- 1 dp for the dock's 14 dp
+            // dot, measured on a screenshot.
+            Box(Modifier.size(width = size, height = maxOf(size, THUMB_SLOT)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(size).background(dot, CircleShape))
+            }
         },
         track = { state ->
             SliderDefaults.Track(
@@ -245,6 +250,9 @@ fun SeekBar(
  * forward.
  */
 private const val DIMMED = 0.4f
+
+/** The height the slider places its thumb in; a smaller dot is centred inside it. */
+private val THUMB_SLOT = 16.dp
 
 /**
  * How much finger the dock's seek bar answers to.

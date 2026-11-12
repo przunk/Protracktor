@@ -25,6 +25,26 @@ dock buttons, nothing the test reaches.
 on a background thread after Play under the gate's load and puts `B` back as current. Like C139,
 it is to be explained before anything is changed; a rerun that passes says nothing.
 
+## C140 The app crashes when a tune is left while it seeks — fixed, merged into develop 2026-11-12
+
+Reported 2026-11-11 on the redesign's APK (1548), with a native crash: `__cxa_pure_virtual` under
+`NativeEngine.nativeSeek`, on a worker thread, right after a swipe back on the dock. Mechanism,
+from the code: a seek runs on a worker thread and can take seconds (an emulator reaches a place by
+playing up to it); leaving the tune meanwhile closes it on the main thread, and `nativeClose`
+deleted the native player under the running seek, which then called into an object half
+destroyed. The race is in 1.9.0 as well; the redesign's swipes on the collapsed dock, just under
+its seek bar, made it easy to reach.
+
+**Fixed on `fix/c140-seek-close`, 2026-11-11:** `NativeLifetime` keeps the player alive while a
+seek runs: a close during it is noted, and the seek's end frees the player, once; nothing starts on
+a player that is going. **Checked:** `NativeLifetimeTest`, with real threads (a close during a seek
+frees after it, once; two seeks at once free after the last; nothing runs after a close); without
+the wait it fails. **Not checked:** the phone; the native seek itself, which host tests cannot run.
+
+Merged into `develop` with the redesign (B63) on 2026-11-12; the redesign's APKs 1559 and 1561
+carry it. The scenario itself (a long SID or AY, the bar dragged far, Next at once) is still to be
+tried on the phone.
+
 ## C139 A queue-follow test fails or is skipped now and then — open, found 2026-11-10
 
 `QueueFollowUiTest` ("Next inside the viewport changes selection without scrolling or fading other

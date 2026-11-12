@@ -29,10 +29,10 @@ import org.robolectric.util.ReflectionHelpers
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 @Config(sdk = [29], application = Application::class, qualifiers = "en-w360dp-h800dp-xhdpi")
 class FloatingControlsSettingsTest : PlaybackShellTest() {
-    private fun openSettings() {
+    private fun openFixtureSettings() {
         val catalogues = ReflectionHelpers.getField<CatalogueBrowser>(controller, "catalogueBrowser")
         ReflectionHelpers.setField(catalogues, "backends", { "host-fixture" })
-        compose.onNodeWithText(application.getString(R.string.settings_title)).performClick()
+        openSettings()
         frame(250)
     }
 
@@ -41,9 +41,10 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
     @Test fun `settings exposes an off by default opt in without starting an overlay`() {
         compose.runOnIdle { player.value = player.value.copy(queue = PlayQueue(listOf(tune)).startAt(0)) }
         frame(250)
-        openSettings()
+        openFixtureSettings()
+        scrollSettingsTo(hasContentDescription(application.getString(R.string.floating_show)))
         val setting = setting()
-        setting.performScrollTo().assertIsOff()
+        setting.assertIsOff()
         setting.performClick()
         frame(250)
         setting.assertIsOn()
@@ -65,8 +66,9 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
         val windowsBefore = WindowInspector.getGlobalWindowViews().toSet()
         try {
             assertFalse(FloatingControls.visible.value)
-            openSettings()
-            setting().performScrollTo().performClick()
+            openFixtureSettings()
+            scrollSettingsTo(hasContentDescription(application.getString(R.string.floating_show)))
+            setting().performClick()
             frame(250)
             assertTrue(Appearance.floatingControlsEnabled(application))
             compose.onNodeWithContentDescription(application.getString(R.string.action_back)).performClick()
@@ -78,8 +80,9 @@ class FloatingControlsSettingsTest : PlaybackShellTest() {
             frame(250)
             assertTrue("An already running service must create the host after opt-in", FloatingControls.visible.value)
             assertNotEquals(windowsBefore, WindowInspector.getGlobalWindowViews().toSet())
-            openSettings()
-            setting().performScrollTo().performClick()
+            openFixtureSettings()
+            scrollSettingsTo(hasContentDescription(application.getString(R.string.floating_show)))
+            setting().performClick()
             frame(250)
             assertFalse(Appearance.floatingControlsEnabled(application))
             assertFalse(FloatingControls.visible.value)

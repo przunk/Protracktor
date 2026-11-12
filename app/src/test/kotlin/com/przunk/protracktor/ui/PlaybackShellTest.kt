@@ -10,6 +10,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.data.ProtracktorDatabase
@@ -76,5 +86,34 @@ abstract class PlaybackShellTest {
         compose.runOnIdle { Snapshot.sendApplyNotifications() }
         compose.mainClock.advanceTimeBy(milliseconds)
         compose.waitForIdle()
+    }
+
+    /** Settings through the navigation bar's More (redesign E1), as a person reaches it. */
+    protected fun openSettings() {
+        compose.onNodeWithTag("nav-more").performClick()
+        frame(500)
+        compose.onNode(hasText(application.getString(com.przunk.protracktor.R.string.settings_title)) and
+            hasAnyAncestor(hasTestTag("more-sheet"))).performClick()
+        frame(600)
+    }
+
+    /**
+     * Swipes Settings up until [matcher] shows between the top and the dock. Not
+     * `performScrollToNode`: it waits for this harness's clock, which moves only when told, and
+     * never returns. The swipe starts above the dock, which takes a vertical drag as its own, and
+     * moves a fifth of the screen at a time so a row is not swept past.
+     */
+    protected fun scrollSettingsTo(matcher: SemanticsMatcher) {
+        repeat(20) {
+            val node = compose.onAllNodes(matcher).fetchSemanticsNodes().firstOrNull()
+            val dockTop = compose.onAllNodesWithTag("player-dock").fetchSemanticsNodes().firstOrNull()?.boundsInRoot?.top
+                ?: Float.MAX_VALUE
+            if (node != null && node.boundsInRoot.top >= 0f && node.boundsInRoot.bottom <= dockTop) return
+            compose.onNode(hasScrollToNodeAction()).performTouchInput {
+                swipeUp(startY = bottom * 0.55f, endY = bottom * 0.35f, durationMillis = 300)
+            }
+            frame(600)
+        }
+        throw AssertionError("Not reached in Settings: ${matcher.description}")
     }
 }

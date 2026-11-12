@@ -84,7 +84,8 @@ class QueueFollowUiTest : PlaybackShellTest() {
         val frames = (1..40).map { frame(16); ink() }
         assertEquals(1, player.value.activePlayback.order.currentIndex)
         assertEquals(top, row(2).fetchSemanticsNode().boundsInRoot.top, 1f)
-        assertTrue("Visible selection must not fade unrelated rows", frames.all { it == before })
+        // What was seen goes into the message (C139): this has failed now and then, never alone.
+        assertTrue("Visible selection must not fade unrelated rows: before=$before, frames=$frames", frames.all { it == before })
     }
 
     @Test fun `rapid Next presses still settle the actual current row wholly above the dock`() {

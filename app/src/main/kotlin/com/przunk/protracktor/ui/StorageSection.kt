@@ -69,6 +69,8 @@ fun StorageSection(
     Text(
         text = stringResource(R.string.storage_title),
         style = MaterialTheme.typography.titleSmall,
+        // The same colour as every other section's title (2026-11-12); it alone was drawn plain.
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
     )
 

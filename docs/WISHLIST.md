@@ -23,10 +23,58 @@ Raised 2026-11-11: it would help to see how many tunes are waiting in the queue.
 where the number belongs (on Queue's button in the dock, in the queue's own header, or both) is to
 be decided with the redesign's dock in mind.
 
-## B65. Stereo mix in Settings as a three-part pill — noted 2026-11-11
+## B65. ~~Stereo mix in Settings as a three-part pill~~ — done, merged 2026-11-12
 
 Raised 2026-11-11: the stereo mix choice in Settings should be one three-part segmented pill, as
-the language choice is, rather than separate buttons. Not built.
+the language choice is, rather than separate buttons. Built in the redesign's round 3 (B63) on the
+control the theme and the language use, each part with its icon; checked on the phone by me on
+2026-11-12 (APK 1561) and merged with the redesign.
+
+## B64. A more compact History — noted 2026-11-11
+
+Raised 2026-11-11 while checking the redesign: the History view could take less room per tune.
+Not shaped yet: what goes (the second line, the date, the counts) is to be decided with a picture of
+it first.
+
+## B63. Redesign: bottom navigation, a collapsible dock, one header row — merged into develop 2026-11-12
+
+Raised by testers (pointing at Spotify) and decided 2026-11-11 with the playlist kept as the home
+screen: [UI_REDESIGN.md](UI_REDESIGN.md) holds the plan, the decisions and what was built. Built
+unattended on `ui/redesign` (stages E1–E4 merged into it without a phone check, as agreed; E0
+merged after one); merged into `develop` on 2026-11-12 after my phone checks of each round.
+
+**Checked:** `ShellStateTest` (the stack, Back, tabs, the saver), `ShellNavigationUiTest` (each tab
+opens its place and marks itself; Back from a tab; a tab replaces the stack; More's History, Saved
+places, Settings, WEB, and WEB held opening the scanner, which hides the bar), `DockDragTest`,
+`DockCollapseUiTest` (grip, swipes and their TalkBack actions, the collapsed bar seeking, Play,
+Queue, + at the right edge), `DockShellUiTest` (the grip dragged in the real shell; the form
+remembered across a new shell), `ShellSelectionUiTest` (the bar steps aside while selecting, in the
+playlist and in Browse); each failed once its guard was broken. Existing tests changed where the
+shape did on purpose (named in each stage's commit). Screenshots at 360 dp, EN and PL, light and
+dark, of the playlist, collapsed dock, selecting, editing, Browse, Search and Random:
+`dist/evidence/ui-redesign/`.
+**Not checked:** the phone; closing More with Back or a tap beside it and opening it again (the
+host cannot send Back to the sheet's window); TalkBack.
+
+**After the first phone check (APK 1548):** the grip went, the collapsed dock took the shape of my
+sketch (seek bar along the top, scrolling tune and author, +, a smaller Play, Queue as an icon),
+History and Saved places went back under Browse, floating controls stay; the crash on a swipe back
+was C140. **Checked:** `DockCollapseUiTest` (a drag down collapses with no grip drawn; the dock's
+TalkBack actions; + before Play before Queue; the seek bar above the tune), `DockShellUiTest` (the
+dock dragged in the real shell), `ShellNavigationUiTest` (More without History and Saved places;
+History opened from Browse marks Browse and Back returns to Browse's start). **Not checked:** the
+phone.
+
+**Rounds 2 and 3 (2026-11-11/12, APKs 1559 and the next):** Search with the magnifier again; the
+collapsed dock's swipes on its whole row; its seek bar on the top edge with a ▲; two places on the
+bar chosen in Settings; Settings in titled sections; B65's stereo pill; the share length as a
+slider; the collapsed dock's content centred; Queue with a background; WEB keeping both bars.
+Details in [UI_REDESIGN.md](UI_REDESIGN.md). **Checked:** host tests of each (shell tests for the
+bar's places, Back and WEB; Settings order and the slider; the dock's edge bar, swipes and drags),
+each guarding test broken once to see it fail; the dock's centring and the full dock's dot measured
+on screenshots. Rounds 2 and 3 checked on the phone by me on 2026-11-12 (APKs 1559 and 1561); Play
+and Queue then sat too close and were moved 12 dp apart. **Not checked:** that gap on the phone;
+TalkBack.
 
 ## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 
