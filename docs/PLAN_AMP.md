@@ -166,3 +166,13 @@ stored and download file names, size, MD5, path). The app uses it instead of the
 `Amp.parseIndex` streams it, `AmpModuleIds` keeps id-by-path beside the catalogue files, and a module
 downloads from `/module/<id>`, already unpacked. Identity stays the path. AMP serves only single-file
 formats, so no companions are needed. The web player still has no AMP: the map is served without CORS.
+
+**CORS added by AMP, 2026-11-12.** At our request AMP's maintainer added
+`Access-Control-Allow-Origin: *` (a Cloudflare response-header rule) to `/module/*` and
+`/download/amp_modules.*`, and published `/download/amp_modules.md5` beside the map. He kept
+everything on `amp.dascene.net` behind Cloudflare rather than a separate server. Checked from here
+the same day with plain GET requests: the map answers 200 with the header and gzip (10.0 MB over the
+wire, 45.7 MB decoded, its MD5 equal to the `.md5` file's), and `/module/2` answers 200 with the
+header. HEAD and OPTIONS answer 405, so the web player must fetch with plain GETs and no custom
+headers, which need no preflight. The web player can now have AMP; that is a separate task, not yet
+planned.
