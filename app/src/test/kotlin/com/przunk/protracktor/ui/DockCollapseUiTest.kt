@@ -125,6 +125,10 @@ class DockCollapseUiTest {
         val play = compose.onNodeWithTag("dock-collapsed-play").fetchSemanticsNode().boundsInRoot
         val queue = compose.onNodeWithTag("queue-toggle").fetchSemanticsNode().boundsInRoot
         assertTrue(keep.right <= play.left + 0.5f && play.right <= queue.left + 0.5f)
+        // Play and Queue are kept apart, so the two filled shapes do not read as one.
+        val density = hostRule.controller.get().resources.displayMetrics.density
+        assertTrue("Play and Queue too close: ${queue.left - play.right} px",
+            queue.left - play.right >= PLAY_QUEUE_GAP.value * density - 0.5f)
         // The seek bar lies on the dock's top edge, above the tune.
         val seekBounds = compose.onNodeWithTag("dock-collapsed-seek").fetchSemanticsNode().boundsInRoot
         val dockTop = compose.onNodeWithTag("player-dock").fetchSemanticsNode().boundsInRoot.top

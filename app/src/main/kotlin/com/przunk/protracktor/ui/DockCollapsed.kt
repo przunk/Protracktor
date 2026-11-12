@@ -176,6 +176,8 @@ internal fun CollapsedDock(
                     Modifier.size(22.dp),
                 )
             }
+            // A clear gap before Queue (2026-11-12): two filled shapes side by side read as one.
+            Spacer(Modifier.width(PLAY_QUEUE_GAP))
             // Its icon alone here, by my choice for this form (2026-11-11); named for TalkBack. On the
             // full dock's tonal background and shape (2026-11-12), so it reads as the same button.
             FilledTonalIconButton(
@@ -193,3 +195,5 @@ internal fun CollapsedDock(
     }
 }
 
+/** Between Play and Queue on the collapsed dock, on top of the row's own 2 dp. */
+internal val PLAY_QUEUE_GAP = 8.dp

@@ -188,5 +188,7 @@ Round 2 held on the phone; the full-width Restore defaults under the bar's previ
   row (from 4); the dock stays 72 dp. Measured on a screenshot: 8.5 dp from the marker to the
   content and from the content to the navigation bar.
 - **Queue on the collapsed dock has the full dock's tonal background**, still its icon alone.
+  Checked on the phone (APK 1561): Play and Queue sat too close and read as one shape; they are now
+  12 dp apart.
 - **WEB keeps the navigation bar** as well as the dock: hiding the bar alone took away the way out
   every other place has. More stays marked there; a tab leaves it.
