@@ -10,6 +10,13 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B67. AMP's map fetched only when its MD5 has changed — noted 2026-11-12
+
+AMP publishes `/download/amp_modules.md5` beside its module map (2026-11-12, `PLAN_AMP.md`). The
+app could ask for that small file first and fetch the map (about 10 MB over the wire, 45 MB
+unpacked) only when the sum differs from the one it holds, instead of on every refresh. Not built;
+the sum's format is `<md5>  amp_modules.json`.
+
 ## B66. How many tunes are in the queue — noted 2026-11-11
 
 Raised 2026-11-11: it would help to see how many tunes are waiting in the queue. Not shaped yet:
