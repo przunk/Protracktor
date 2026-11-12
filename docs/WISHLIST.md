@@ -30,11 +30,31 @@ the language choice is, rather than separate buttons. Built in the redesign's ro
 control the theme and the language use, each part with its icon; checked on the phone by me on
 2026-11-12 (APK 1561) and merged with the redesign.
 
-## B64. A more compact History — noted 2026-11-11
+## B64. A more compact History, Browse's scrollbar, holding to delete — built on a branch 2026-11-12
 
-Raised 2026-11-11 while checking the redesign: the History view could take less room per tune.
-Not shaped yet: what goes (the second line, the date, the counts) is to be decided with a picture of
-it first.
+Raised 2026-11-11, shaped 2026-11-12 on pictures from the whole app; built on
+`feature/browse-history`, not merged.
+
+- **History:** the list straight under the top bar. Search is on the top bar as on every Browse
+  level; selecting is said on the top bar (the way out, how many, Select all) instead of a row over
+  the list; the paging (two arrows, the range between) and **Clear all history** sit at the foot,
+  always in view, far from Search. The rows themselves were not what took the room; the rows above
+  them were.
+- **Holding to delete:** Clear all history is held for three seconds, not tapped (one tap used to
+  clear it all with no way back); the dialogs deleting a playlist, a catalogue's index, song data
+  and replay routines keep saying what goes, and their yes is held too. TalkBack's click asks first,
+  or confirms inside a dialog that has asked. The rule is in [ARCHITECTURE.md](ARCHITECTURE.md).
+- **Browse's scrollbar:** a catalogue's formats and authors have the scrollbar the tunes have; while
+  the thumb is held a bubble says where the list is (position and count, or an author's first
+  letter), in Browse and in the playlist.
+
+**Checked:** `HistoryBrowseUiTest` (the foot, paging, the hold let go early and held to the end, a
+tap's hint, TalkBack's dialog), `ShellNavigationUiTest` (History's search on the top bar and Back
+closing it; selecting on the top bar, in English and Polish), `HoldToConfirmDialogsTest` (each
+dialog's yes is the hold; a tap deletes nothing; TalkBack confirms), `ScrollbarBubbleTest` (the
+bubble while held and gone after; no bar on a list that fits; the authors' bar and letter); each
+broken once to see it fail. **Not checked:** the phone; a hold inside a dialog, whose gesture this
+host's harness cannot drive (the same hold is checked outside a dialog).
 
 ## B63. Redesign: bottom navigation, a collapsible dock, one header row — merged into develop 2026-11-12
 
