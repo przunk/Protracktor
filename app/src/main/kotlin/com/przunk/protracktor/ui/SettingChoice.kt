@@ -6,6 +6,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -25,9 +26,9 @@ import androidx.compose.ui.unit.dp
  * behind a summary line. Here the choice and the current answer are the same thing, and changing it
  * is one tap from anywhere on the screen.
  *
- * It is deliberately one component used twice. Language and theme are the same question — pick one
- * of a handful — and two controls that behave identically should be one piece of code, or they
- * drift.
+ * It is deliberately one component used for every such setting. Language, theme and the stereo mix
+ * are the same question — pick one of a handful — and controls that behave identically should be
+ * one piece of code, or they drift.
  *
  * **Only for two to four options that fit on a phone.** Anything longer wants a list, and anything
  * whose labels do not fit will ellipsise them into nonsense.
@@ -42,6 +43,11 @@ internal fun <T> SettingChoice(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     supporting: String? = null,
+    /**
+     * An icon per answer, where the answers have one (the stereo mix, 2026-11-12). The answer
+     * chosen shows a tick in its place, so which one is chosen is a shape and not only a fill.
+     */
+    iconOf: (@Composable (T) -> androidx.compose.ui.graphics.vector.ImageVector)? = null,
 ) {
     val haptics = rememberHaptics()
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -66,6 +72,15 @@ internal fun <T> SettingChoice(
                         onSelect(option)
                     },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    // Material's own tick where an answer has no icon; only answers with one get the
+                    // cross-fade between the tick and their icon.
+                    icon = {
+                        val own = iconOf?.invoke(option)
+                        if (own == null) SegmentedButtonDefaults.Icon(active = option == selected)
+                        else SegmentedButtonDefaults.Icon(active = option == selected) {
+                            androidx.compose.material3.Icon(own, null, Modifier.size(SegmentedButtonDefaults.IconSize))
+                        }
+                    },
                 ) {
                     Text(
                         text = labelOf(option),

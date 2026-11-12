@@ -293,6 +293,9 @@
 
     <string name="settings_title">Ustawienia</string>
     <string name="settings_appearance">Wygląd</string>
+    <string name="settings_controls">Sterowanie</string>
+    <string name="settings_sharing">Udostępnianie</string>
+    <string name="settings_appearance_language">Wygląd i język</string>
     <string name="settings_theme">Motyw</string>
     <string name="settings_theme_system">Systemowy</string>
     <string name="settings_theme_light">Jasny</string>
@@ -305,7 +308,6 @@
     <string name="settings_stereo_mix_original">Oryginał</string>
     <string name="settings_stereo_mix_narrow">Zwężone</string>
     <string name="settings_stereo_mix_mono">Mono</string>
-    <string name="settings_stereo_mix_selected">Wybrane: %1$s</string>
     <string name="settings_play_all_subsongs">Graj wszystkie utwory w pliku</string>
     <string name="settings_play_all_subsongs_detail">Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.</string>
     <string name="settings_language">Język</string>
@@ -441,7 +443,6 @@
     <string name="notice_share_audio_busy">Wciąż przygotowuję poprzedni utwór jako audio.</string>
     <string name="settings_share_audio_length">Długość przy udostępnianiu jako audio</string>
     <string name="settings_share_audio_length_detail">Najdłuższy czas utworu udostępnionego jako audio. Krótszy utwór idzie w całości; dłuższy, albo taki, który nie podaje swojej długości, zostaje tu ucięty i wyciszony.</string>
-    <string name="settings_share_audio_minutes">%1$,d min</string>
     <string name="notice_link_online_only">Odnośnik mają tylko utwory z katalogu online.</string>
     <string name="notice_online_only_action">To działa tylko dla utworów z katalogu online.</string>
     <string name="notice_nothing_to_send">Nie ma czego wysłać — playlista jest pusta.</string>

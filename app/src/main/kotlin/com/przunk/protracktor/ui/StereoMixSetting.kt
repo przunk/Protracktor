@@ -3,49 +3,32 @@
 
 package com.przunk.protracktor.ui
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.StereoMix
 
+/**
+ * The stereo mix as one three-part pill, like the language and the theme (B65, 2026-11-12): the
+ * three answers and the current one in a single control, each with its icon.
+ */
 @Composable
 internal fun StereoMixSetting(selected: StereoMix, onSelect: (StereoMix) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(stringResource(R.string.settings_stereo_mix), style = MaterialTheme.typography.bodyLarge)
-        Text(stringResource(R.string.settings_stereo_mix_detail), style = MaterialTheme.typography.bodySmall)
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp).selectableGroup()) {
-            StereoMix.entries.forEach { mode ->
-                LabelledAction(
-                    icon = when (mode) {
-                        StereoMix.ORIGINAL -> PlayerIcons.StereoOriginal
-                        StereoMix.NARROW -> PlayerIcons.StereoNarrow
-                        StereoMix.MONO -> PlayerIcons.StereoMono
-                    },
-                    label = mode.label(),
-                    onClick = { onSelect(mode) },
-                    haptic = if (mode == selected) null else { { toggle(on = true) } },
-                    modifier = Modifier.weight(1f).semantics { this.selected = mode == selected }
-                        .then(if (mode == selected) Modifier.border(2.dp,
-                            MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.shapes.medium)
-                            else Modifier),
-                )
+    SettingChoice(
+        label = stringResource(R.string.settings_stereo_mix),
+        options = StereoMix.entries,
+        selected = selected,
+        labelOf = { it.label() },
+        onSelect = onSelect,
+        supporting = stringResource(R.string.settings_stereo_mix_detail),
+        iconOf = { mode ->
+            when (mode) {
+                StereoMix.ORIGINAL -> PlayerIcons.StereoOriginal
+                StereoMix.NARROW -> PlayerIcons.StereoNarrow
+                StereoMix.MONO -> PlayerIcons.StereoMono
             }
-        }
-        Text(stringResource(R.string.settings_stereo_mix_selected, selected.label()),
-            style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-    }
+        },
+    )
 }
 
 @Composable
