@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -107,6 +108,9 @@ private val SLIM_ICON = 20.dp
 
 /** Minimum surface width; groups measure their longest localized label separately. */
 private val SLIM_MIN_WIDTH = 56.dp
+
+/** The hold's fill: the error colour, light enough that the label stays readable over it. */
+private const val HOLD_FILL_ALPHA = 0.45f
 private val ACTION_HORIZONTAL_PADDING = 6.dp
 
 /** Includes the surface's padding and outer seams; the caller constrains the group to its row. */
@@ -202,7 +206,12 @@ internal fun LabelledAction(
     wrapLabel: Boolean = false,
     /** Keep centered paragraphs within their measured node in a width-constrained window. */
     fillLabelWidth: Boolean = false,
-
+    /**
+     * For [HoldToConfirm] only: how far a hold has filled the pill, 0 to 1, drawn from the left
+     * under the icon and label; and the gesture that replaces a plain press.
+     */
+    holdFill: () -> Float = { 0f },
+    holdGesture: Modifier? = null,
 ) {
     val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
@@ -249,19 +258,24 @@ internal fun LabelledAction(
             // offered the whole screen.
             .then(if (wrapLabel) Modifier.heightIn(min = pillHeight(slim)) else Modifier.height(pillHeight(slim)))
             .clip(MaterialTheme.shapes.medium)
-            .combinedClickable(
+            .then(holdGesture ?: Modifier.combinedClickable(
                 enabled = enabled,
                 role = Role.Button,
                 onClickLabel = label,
                 onLongClickLabel = longClickLabel,
                 onLongClick = if (hasLongClick) longClick else null,
                 onClick = click,
-            ),
+            )),
     ) {
+        val fillColour = MaterialTheme.colorScheme.error.copy(alpha = HOLD_FILL_ALPHA)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = if (wrapLabel) Arrangement.Top else Arrangement.Center,
             modifier = Modifier
+                .drawBehind {
+                    val fraction = holdFill()
+                    if (fraction > 0f) drawRect(fillColour, size = size.copy(width = size.width * fraction))
+                }
                 .fillMaxHeight()
                 // **The air goes before the word does.** A slim pill cannot grow past the bar it
                 // lives in, so at the largest text sizes the choice is between padding and

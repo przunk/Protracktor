@@ -1184,10 +1184,19 @@ private fun HistoryDomain(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = onClearHistory,
-                enabled = browse.historyTotal > 0 || browse.historyQuery.isNotBlank()) {
-                IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
-            }
+            // **Held, not tapped** (2026-11-12): one tap used to clear everything with no way back.
+            val clearLabel = stringResource(R.string.action_clear_history)
+            HoldToConfirm(
+                icon = PlayerIcons.Remove,
+                label = clearLabel,
+                onConfirm = onClearHistory,
+                confirmTitle = stringResource(R.string.confirm_clear_history_title),
+                confirmText = stringResource(R.string.confirm_clear_history_text),
+                enabled = browse.historyTotal > 0 || browse.historyQuery.isNotBlank(),
+                slim = true,
+                modifier = Modifier.width(slimActionWidth(clearLabel, stringResource(R.string.hold_to_confirm_hint)))
+                    .testTag("clear-history"),
+            )
         }
         // Query changes reset results/follow state without replacing the focused text field.
         key(browse.historyQuery) {

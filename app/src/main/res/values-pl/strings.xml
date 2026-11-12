@@ -246,6 +246,10 @@
     <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
     <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
     <string name="action_clear_history">Wyczyść historię</string>
+    <string name="hold_to_confirm_hint">Przytrzymaj</string>
+    <string name="hold_to_confirm_ask">%1$s, z pytaniem</string>
+    <string name="confirm_clear_history_title">Wyczyścić historię?</string>
+    <string name="confirm_clear_history_text">Wszystko, co grało, zniknie z historii, a z nim oznaczenia odsłuchanych. Tego nie da się cofnąć.</string>
     <string name="history_search_label">Szukaj w historii</string>
     <string name="history_no_matches">Brak wpisów historii pasujących do frazy.</string>
     <string name="notice_history_read_failed">Nie udało się wczytać historii. Spróbuj ponownie.</string>

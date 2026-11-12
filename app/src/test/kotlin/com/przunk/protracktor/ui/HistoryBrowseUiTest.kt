@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -228,7 +228,7 @@ class HistoryBrowseUiTest {
         show()
         filter("no such title")
         compose.onNodeWithText("No History entries match this phrase.").assertIsDisplayed()
-        compose.onNodeWithText("Clear history").performClick()
+        holdClear(3_200)
         filter("")
         compose.onNodeWithText("Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.")
             .assertIsDisplayed()
@@ -323,5 +323,56 @@ class HistoryBrowseUiTest {
             org.junit.Assert.assertEquals(1, playCalls)
             org.junit.Assert.assertEquals("fresh", browse.value.historyQuery)
         }
+    }
+
+    // A hold as a finger makes it: down, the time passing, up. The clock is held meanwhile: left to
+    // run by itself it would play out the whole hold while waiting for the screen to settle, and a
+    // short hold would pass for a full one.
+    private fun holdClear(millis: Long) {
+        val clear = compose.onNodeWithTag("clear-history")
+        compose.mainClock.autoAdvance = false
+        clear.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(millis)
+        clear.performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(500)
+        compose.mainClock.autoAdvance = true
+        compose.waitForIdle()
+    }
+
+    @Test fun `a tap on Clear history clears nothing and says to hold it`() {
+        show()
+        // The clock held, so the hint is read before its two seconds run out.
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("clear-history").performTouchInput { down(center); up() }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithTag("clear-history").assertTextContains("Hold it")
+        compose.mainClock.advanceTimeBy(2_500)
+        compose.onNodeWithTag("clear-history").assertTextContains("Clear history")
+        compose.mainClock.autoAdvance = true
+        compose.runOnIdle { org.junit.Assert.assertFalse(stored.isEmpty()) }
+        compose.onNodeWithText("History track 0").assertIsDisplayed()
+    }
+
+    @Test fun `a hold let go before three seconds clears nothing, a full one clears all`() {
+        show()
+        holdClear(1_500)
+        compose.runOnIdle { org.junit.Assert.assertFalse(stored.isEmpty()) }
+        compose.onNodeWithText("History track 0").assertIsDisplayed()
+        holdClear(3_200)
+        compose.onNodeWithText("Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.")
+            .assertIsDisplayed()
+        compose.runOnIdle { org.junit.Assert.assertTrue(stored.isEmpty()) }
+    }
+
+    @Test fun `TalkBack's click on Clear history asks first, and clears only on yes`() {
+        show()
+        compose.onNodeWithTag("clear-history").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.onNodeWithText("Clear History?").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle { org.junit.Assert.assertFalse(stored.isEmpty()) }
+        compose.onNodeWithTag("clear-history").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.onAllNodesWithText("Clear history").filterToOne(hasAnyAncestor(isDialog())).performClick()
+        compose.waitForIdle()
+        compose.runOnIdle { org.junit.Assert.assertTrue(stored.isEmpty()) }
     }
 }
