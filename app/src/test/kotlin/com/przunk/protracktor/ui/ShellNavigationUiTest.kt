@@ -123,13 +123,28 @@ class ShellNavigationUiTest : PlaybackShellTest() {
         compose.onNodeWithText(application.getString(R.string.notice_nothing_to_send)).assertExists()
     }
 
-    @Test fun `holding WEB in More opens the scanner, which hides the bar, and Back closes it`() {
+    private fun openScanner() {
         open("more")
         more(R.string.action_send_to_browser).performTouchInput { longClick() }
         frame(800)
-        compose.onNodeWithTag("shell-navigation").assertDoesNotExist()
+        compose.onNodeWithText(application.getString(R.string.action_send_as_link)).assertExists()
+    }
+
+    @Test fun `holding WEB in More opens the scanner with both bars kept, and Back closes it`() {
+        openScanner()
+        // The bar stays, with More marked, as in any other place (2026-11-12); so does the dock.
+        compose.onNodeWithTag("shell-navigation").assertIsDisplayed()
+        marked("more")
+        compose.onNodeWithTag("player-dock").assertIsDisplayed()
         back()
-        compose.onNodeWithTag("shell-navigation").assertExists()
+        compose.onNodeWithText(application.getString(R.string.action_send_as_link)).assertDoesNotExist()
+        atPlaylist()
+    }
+
+    @Test fun `a tab leaves the scanner like any other place`() {
+        openScanner()
+        open("playlist")
+        compose.onNodeWithText(application.getString(R.string.action_send_as_link)).assertDoesNotExist()
         atPlaylist()
     }
 }

@@ -85,6 +85,9 @@
     <string name="notice_queued_track">Added to queue: %1$s</string>
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_controls">Controls</string>
+    <string name="settings_sharing">Sharing</string>
+    <string name="settings_appearance_language">Appearance and language</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
@@ -97,7 +100,6 @@
     <string name="settings_stereo_mix_original">Original</string>
     <string name="settings_stereo_mix_narrow">Narrow</string>
     <string name="settings_stereo_mix_mono">Mono</string>
-    <string name="settings_stereo_mix_selected">Current: %1$s</string>
     <string name="settings_play_all_subsongs">Play every tune in a file</string>
     <string name="settings_play_all_subsongs_detail">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</string>
     <string name="settings_language">Language</string>
@@ -432,7 +434,6 @@
     <string name="notice_share_audio_busy">Still preparing the previous tune as audio.</string>
     <string name="settings_share_audio_length">Length when shared as audio</string>
     <string name="settings_share_audio_length_detail">The longest a tune shared as audio runs. A shorter tune is sent whole; a longer one, or one that does not say how long it is, is cut here and fades out.</string>
-    <string name="settings_share_audio_minutes">%1$,d min</string>
     <string name="notice_link_online_only">Only tracks from an online catalogue have a link.</string>
     <string name="notice_online_only_action">Only tracks from an online catalogue can do that.</string>
     <string name="notice_nothing_to_send">There is nothing in the playlist to send.</string>

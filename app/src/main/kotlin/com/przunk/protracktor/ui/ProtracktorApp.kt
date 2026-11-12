@@ -459,7 +459,7 @@ fun ProtracktorApp(
                     PlayerDock(
                         // The navigation bar is the bottom now and keeps clear of the system bar;
                         // under the scanner, which has no bar, the dock does as it did.
-                        insetBottom = atScanner || selectionPresence.count > 0,
+                        insetBottom = selectionPresence.count > 0,
                         collapsed = dockCollapsed,
                         onCollapsedChange = {
                             dockCollapsed = it
@@ -482,7 +482,9 @@ fun ProtracktorApp(
                         onRepeat = viewModel::cycleRepeat,
                     )
                     // Selecting rows: the bar steps aside for the selection's own bar (redesign E3).
-                    if (!atScanner && selectionPresence.count == 0) ShellNavigationBar(
+                    // **WEB keeps the bar too** (2026-11-12): hiding only the bar left the dock and
+                    // took away the way out every other place has; the scanner fits above both.
+                    if (selectionPresence.count == 0) ShellNavigationBar(
                         selected = if (showMore) ShellTab.MORE else shell.value.tabOf(storedBrowse.domain, navSlots),
                         onSelect = { tab -> if (tab == ShellTab.MORE) showMore = true else openTab(tab) },
                         slots = navSlots,

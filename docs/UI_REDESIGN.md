@@ -168,3 +168,25 @@ On `ui/e6-round2`:
   - Alarms on the bar opens the alarms screen and is not a marked tab. More stays Alarms, WEB,
     Settings whatever the bar holds.
   - Online catalogues has the database icon on the bar, since Browse already shows the cloud.
+
+## Round 3, after the phone check of APK 1559, 2026-11-12
+
+Round 2 held on the phone; the full-width Restore defaults under the bar's preview did not fit. On
+`ui/e7-settings`:
+- **Settings in titled sections, one style:** Playback (stereo mix, volume normalisation, all
+  subsongs, the length when nothing knows it), Controls (the navigation bar, floating controls),
+  Sharing (the length when shared as audio), Appearance and language (theme, dynamic colour,
+  language), then Online catalogues, Storage, Web player, About. The language had been the last row
+  of Playback and floating controls sat among the sound settings; Storage's title was drawn without
+  the section colour.
+- **Restore defaults** is a small action in the navigation bar's title row.
+- **B65: the stereo mix is one three-part pill**, on the same control as the theme and the
+  language, each part with its icon; the separate buttons and the "Current: …" line went.
+- **The length when shared as audio is a slider**, like the length when nothing knows it, over the
+  same four lengths (1, 3, 5, 10 minutes), so nothing stored changes.
+- **The collapsed dock's content sits centred**: the seek band 19.5 dp (from 24), 8.5 dp under the
+  row (from 4); the dock stays 72 dp. Measured on a screenshot: 8.5 dp from the marker to the
+  content and from the content to the navigation bar.
+- **Queue on the collapsed dock has the full dock's tonal background**, still its icon alone.
+- **WEB keeps the navigation bar** as well as the dock: hiding the bar alone took away the way out
+  every other place has. More stays marked there; a tab leaves it.

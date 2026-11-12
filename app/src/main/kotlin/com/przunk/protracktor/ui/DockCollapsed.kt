@@ -119,7 +119,9 @@ internal fun CollapsedDock(
                         else -> Unit
                     }
                 }
-                .padding(start = 16.dp, end = 4.dp, bottom = 4.dp),
+                // More room under the row than over it (2026-11-12): the band above already
+                // separates it from the line, and with 4 dp it sat tight on the navigation bar.
+                .padding(start = 16.dp, end = 8.dp, bottom = 8.5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -174,8 +176,17 @@ internal fun CollapsedDock(
                     Modifier.size(22.dp),
                 )
             }
-            // Its icon alone here, by my choice for this form (2026-11-11); named for TalkBack.
-            IconButton(onClick = onQueue, modifier = Modifier.size(44.dp).testTag("queue-toggle")) {
+            // Its icon alone here, by my choice for this form (2026-11-11); named for TalkBack. On the
+            // full dock's tonal background and shape (2026-11-12), so it reads as the same button.
+            FilledTonalIconButton(
+                onClick = onQueue,
+                shape = MaterialTheme.shapes.medium,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+                modifier = Modifier.size(44.dp).testTag("queue-toggle"),
+            ) {
                 Icon(PlayerIcons.Playlist, stringResource(R.string.queue_title))
             }
         }

@@ -133,8 +133,12 @@ internal fun EdgeSeekBar(
     )
 }
 
-/** The band that answers to a finger, under the line. */
-internal val EDGE_BAND = 24.dp
+/**
+ * The band that answers to a finger, under the line. 19.5 dp (24 until 2026-11-12, when the dock's
+ * content moved up to sit centred in its height, measured equal above and below); with the line and the marker it is still a strip
+ * a thumb finds along the dock's whole width.
+ */
+internal val EDGE_BAND = 19.5.dp
 /** The line along the dock's top edge. */
 internal val EDGE_LINE = 3.dp
 internal val EDGE_MARK_WIDTH = 12.dp

@@ -33,18 +33,9 @@ class NavSlotsUiTest : PlaybackShellTest() {
     private fun back() { compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }; frame(500) }
     private fun atPlaylist() { compose.onNodeWithTag("playlist-chooser").assertIsDisplayed(); marked("playlist") }
 
-    // Swiped into view a step at a time: this harness's clock moves only when told to, and
-    // `performScrollToNode` waits for it and never returns. Swiped above the dock, which takes a
-    // vertical drag as its own.
     private fun toPreview() {
         openSettings()
-        repeat(12) {
-            if (compose.onAllNodesWithTag("nav-slot-2").fetchSemanticsNodes().isNotEmpty() &&
-                compose.onAllNodesWithTag("nav-restore").fetchSemanticsNodes().singleOrNull()?.let { it.boundsInRoot.bottom < 1000f } == true) return
-            compose.onNode(hasScrollToNodeAction()).performTouchInput { swipeUp(startY = bottom * 0.55f, endY = bottom * 0.2f, durationMillis = 300) }
-            frame(600)
-        }
-        compose.onNodeWithTag("nav-slot-2").assertIsDisplayed()
+        scrollSettingsTo(hasTestTag("nav-preview"))
     }
 
     private fun tabName(tab: ShellTab) = application.getString(when (tab) {

@@ -45,6 +45,16 @@ dock dragged in the real shell), `ShellNavigationUiTest` (More without History a
 History opened from Browse marks Browse and Back returns to Browse's start). **Not checked:** the
 phone.
 
+**Rounds 2 and 3 (2026-11-11/12, APKs 1559 and the next):** Search with the magnifier again; the
+collapsed dock's swipes on its whole row; its seek bar on the top edge with a ▲; two places on the
+bar chosen in Settings; Settings in titled sections; B65's stereo pill; the share length as a
+slider; the collapsed dock's content centred; Queue with a background; WEB keeping both bars.
+Details in [UI_REDESIGN.md](UI_REDESIGN.md). **Checked:** host tests of each (shell tests for the
+bar's places, Back and WEB; Settings order and the slider; the dock's edge bar, swipes and drags),
+each guarding test broken once to see it fail; the dock's centring and the full dock's dot measured
+on screenshots. Round 2 checked on the phone by me on 2026-11-12. **Not checked:** round 3 on the
+phone.
+
 
 ## B62. Alarms: add music from the editor, a floating New, better screens — done and merged 2026-11-11
 

@@ -34,12 +34,19 @@ import com.przunk.protracktor.R
  * **The bar itself first**, as it will look, with the two places that can change outlined and
  * marked *Change*: what the choice does is seen before anything is chosen. Tapping one lists every
  * place it can hold, icon and name, the current one ticked; the one already in the other place says
- * so, and choosing it swaps the two. *Restore defaults* puts Search and Random back.
+ * so, and choosing it swaps the two. *Restore defaults*, small in the part's title row, puts Search
+ * and Random back (2026-11-12: under the preview and full width it was a second, heavier heading).
  */
 @Composable
 fun NavSlotsSetting(slots: NavSlots, alarms: Boolean, onChange: (NavSlots) -> Unit) {
     var choosing by remember { mutableStateOf<Int?>(null) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_nav_bar), style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f))
+            LabelledAction(PlayerIcons.Refresh, stringResource(R.string.settings_nav_restore), { onChange(NavSlots.DEFAULT) },
+                Modifier.testTag("nav-restore"), enabled = slots != NavSlots.DEFAULT, slim = true)
+        }
         Text(stringResource(R.string.settings_nav_bar_detail), style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(12.dp)) {
@@ -51,8 +58,6 @@ fun NavSlotsSetting(slots: NavSlots, alarms: Boolean, onChange: (NavSlots) -> Un
                 }
             }
         }
-        LabelledAction(PlayerIcons.Refresh, stringResource(R.string.settings_nav_restore), { onChange(NavSlots.DEFAULT) },
-            Modifier.testTag("nav-restore"), enabled = slots != NavSlots.DEFAULT)
     }
     choosing?.let { slot ->
         NavSlotChooser(slot, slots, NavSlots.available(alarms),
