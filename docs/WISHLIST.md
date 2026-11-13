@@ -34,7 +34,8 @@ control the theme and the language use, each part with its icon; checked on the 
 
 Raised 2026-11-11, shaped 2026-11-12 on pictures from the whole app; built on
 `feature/browse-history` and merged into `develop` on 2026-11-13 on my word, after the full suite
-passed on the branch (APK 1575). The phone check of APK 1575 is still to come.
+passed on the branch (APK 1575). Checked on the phone by me on 2026-11-13 (APK 1575): all of it
+works, the hold inside the delete dialogs included.
 
 - **History:** the list straight under the top bar. Search is on the top bar as on every Browse
   level; selecting is said on the top bar (the way out, how many, Select all) instead of a row over
@@ -54,8 +55,8 @@ tap's hint, TalkBack's dialog), `ShellNavigationUiTest` (History's search on the
 closing it; selecting on the top bar, in English and Polish), `HoldToConfirmDialogsTest` (each
 dialog's yes is the hold; a tap deletes nothing; TalkBack confirms), `ScrollbarBubbleTest` (the
 bubble while held and gone after; no bar on a list that fits; the authors' bar and letter); each
-broken once to see it fail. **Not checked:** the phone; a hold inside a dialog, whose gesture this
-host's harness cannot drive (the same hold is checked outside a dialog).
+broken once to see it fail. On the host the hold inside a dialog could not be driven; the phone
+showed it working.
 
 ## B63. Redesign: bottom navigation, a collapsible dock, one header row — merged into develop 2026-11-12
 

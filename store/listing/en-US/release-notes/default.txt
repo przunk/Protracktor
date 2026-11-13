@@ -1,7 +1,10 @@
-Alarms:
-- Add music right from the alarm editor or the Music tab: pick tunes from your playlists or History, or search for them.
-- A New alarm button at the bottom right.
-- The next alarm is shown at the top; alarm cards are clearer and open with a tap.
-- The editor says when the alarm will ring and asks before discarding changes.
+New look:
+- A navigation bar: Playlist, Browse, More and two places you choose in Settings.
+- Swipe the player down to make it smaller; its seek bar sits on its edge.
+- Settings in clear sections; the stereo mix is one switch.
 
-Player: the + on the dock (add to playlist) now responds where it is drawn.
+History: search on the top bar; "Clear all history" is held for 3 seconds, as is deleting a playlist or stored data.
+
+Browse: author lists have a scrollbar, with a bubble showing where you are.
+
+Fixed: a crash when changing tune while seeking.

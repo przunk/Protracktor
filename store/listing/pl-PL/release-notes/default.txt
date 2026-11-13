@@ -1,7 +1,10 @@
-Budzik:
-- Dodawaj muzykę prosto z edycji alarmu albo z zakładki Muzyka: wybierz utwory z playlist lub Historii albo je wyszukaj.
-- Przycisk Nowy alarm w prawym dolnym rogu.
-- Najbliższy alarm widać na górze; karty alarmów są czytelniejsze i otwierają się dotknięciem.
-- Edycja pokazuje, kiedy alarm zadzwoni, i pyta przed odrzuceniem zmian.
+Nowy wygląd:
+- Pasek nawigacji: Playlista, Przeglądaj, Więcej i dwa miejsca wybrane w Ustawieniach.
+- Przesuń odtwarzacz w dół, by go zmniejszyć; pasek przewijania jest na jego krawędzi.
+- Ustawienia w czytelnych sekcjach; miks stereo to jeden przełącznik.
 
-Odtwarzacz: przycisk + na docku (dodaj do playlisty) reaguje tam, gdzie jest narysowany.
+Historia: szukanie na górnym pasku; „Wyczyść całą historię” wymaga przytrzymania 3 s, jak usuwanie playlisty i danych.
+
+Przeglądaj: listy autorów mają suwak z dymkiem pozycji.
+
+Poprawka: awaria przy zmianie utworu w trakcie przewijania.

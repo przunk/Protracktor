@@ -36,7 +36,7 @@ dock buttons, nothing the test reaches.
 on a background thread after Play under the gate's load and puts `B` back as current. Like C139,
 it is to be explained before anything is changed; a rerun that passes says nothing.
 
-## C140 The app crashes when a tune is left while it seeks — fixed, merged into develop 2026-11-12
+## ~~C140 The app crashes when a tune is left while it seeks~~ — fixed, merged 2026-11-12, checked on the phone 2026-11-13
 
 Reported 2026-11-11 on the redesign's APK (1548), with a native crash: `__cxa_pure_virtual` under
 `NativeEngine.nativeSeek`, on a worker thread, right after a swipe back on the dock. Mechanism,
@@ -53,8 +53,8 @@ frees after it, once; two seeks at once free after the last; nothing runs after 
 the wait it fails. **Not checked:** the phone; the native seek itself, which host tests cannot run.
 
 Merged into `develop` with the redesign (B63) on 2026-11-12; the redesign's APKs 1559 and 1561
-carry it. The scenario itself (a long SID or AY, the bar dragged far, Next at once) is still to be
-tried on the phone.
+carry it. **Checked on the phone by me on 2026-11-13** (APK 1575), with the scenario among the
+checks (a long SID or AY, the bar dragged far, Next at once): no crash.
 
 ## C139 A queue-follow test fails or is skipped now and then — open, found 2026-11-10
 
