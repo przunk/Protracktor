@@ -30,10 +30,11 @@ the language choice is, rather than separate buttons. Built in the redesign's ro
 control the theme and the language use, each part with its icon; checked on the phone by me on
 2026-11-12 (APK 1561) and merged with the redesign.
 
-## B64. A more compact History, Browse's scrollbar, holding to delete — built on a branch 2026-11-12
+## B64. A more compact History, Browse's scrollbar, holding to delete — merged into develop 2026-11-13
 
 Raised 2026-11-11, shaped 2026-11-12 on pictures from the whole app; built on
-`feature/browse-history`, not merged.
+`feature/browse-history` and merged into `develop` on 2026-11-13 on my word, after the full suite
+passed on the branch (APK 1575). The phone check of APK 1575 is still to come.
 
 - **History:** the list straight under the top bar. Search is on the top bar as on every Browse
   level; selecting is said on the top bar (the way out, how many, Select all) instead of a row over
