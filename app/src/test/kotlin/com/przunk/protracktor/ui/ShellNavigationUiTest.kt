@@ -147,4 +147,73 @@ class ShellNavigationUiTest : PlaybackShellTest() {
         compose.onNodeWithText(application.getString(R.string.action_send_as_link)).assertDoesNotExist()
         atPlaylist()
     }
+
+    @Test fun `History's search is on the top bar, and Back closes it and clears its words before leaving`() {
+        open("browse")
+        compose.onNode(hasText(application.getString(R.string.domain_history_title)) and !hasAnyAncestor(hasTestTag("shell-navigation")))
+            .performClick()
+        frame(500)
+        compose.onNodeWithTag("browse-filter-field").assertDoesNotExist()
+        compose.onNodeWithTag("history-search-action").performClick()
+        frame(300)
+        compose.onNodeWithTag("browse-filter-field").assertIsDisplayed()
+        compose.onNodeWithText(application.getString(R.string.history_search_label)).assertExists()
+        compose.onNodeWithTag("history-search-action").assertDoesNotExist()
+        compose.onNodeWithTag("browse-filter-field").performTextInput("jester")
+        frame(500)
+        compose.runOnIdle { assertEquals("jester", browse.value.historyQuery) }
+        back()
+        compose.onNodeWithTag("browse-filter-field").assertDoesNotExist()
+        compose.runOnIdle { assertEquals("", browse.value.historyQuery) }
+        compose.runOnIdle { assertEquals(BrowseDomain.HISTORY, browse.value.domain) }
+        compose.onNodeWithTag("clear-history").assertExists()
+    }
+
+    private fun openHistoryWith(entries: Int) {
+        val writes = ReflectionHelpers.getField<com.przunk.protracktor.player.HistoryWrites>(controller, "historyWrites")
+        compose.runOnIdle {
+            repeat(entries) { i -> writes.record(com.przunk.protracktor.player.TrackRef("history-$i", "History tune $i"), writes.generation) }
+        }
+        frame(1500)
+        open("browse")
+        compose.onNode(hasText(application.getString(R.string.domain_history_title)) and !hasAnyAncestor(hasTestTag("shell-navigation")))
+            .performClick()
+        // The writes land on the database's own thread; History shows them once they have.
+        repeat(50) {
+            // A frame more once they are counted, so the rows are drawn too.
+            if (browse.value.historyTotal >= entries && !browse.value.loading) { frame(300); return }
+            frame(200)
+        }
+        throw AssertionError("History did not show $entries entries: ${browse.value.historyTotal}")
+    }
+
+    @Test fun `in History nothing stands above the first tune, and selecting is said on the top bar`() {
+        openHistoryWith(3)
+        compose.onNodeWithTag("browse-tracks-header").assertDoesNotExist()
+        val first = compose.onNodeWithText("History tune 2").fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithText("History tune 2").performTouchInput { longClick() }
+        frame(500)
+        // The bar takes the selection over: the way out, how many, Select all; the list did not move.
+        compose.onNodeWithTag("top-selection-count").assertTextEquals("1 selected")
+        compose.onNodeWithTag("browse-tracks-header").assertDoesNotExist()
+        assertEquals(first, compose.onNodeWithText("History tune 2").fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("history-search-action").assertDoesNotExist()
+        compose.onNodeWithTag("top-select-all").performClick()
+        frame(300)
+        compose.onNodeWithTag("top-selection-count").assertTextEquals("3 selected")
+        compose.onNodeWithTag("top-selection-exit").performClick()
+        frame(300)
+        compose.onNodeWithTag("top-selection-count").assertDoesNotExist()
+        compose.onNodeWithText(application.getString(R.string.domain_history_title)).assertIsDisplayed()
+        compose.onNodeWithTag("history-search-action").assertExists()
+    }
+
+    @Test
+    @Config(sdk = [29], application = Application::class, qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun `in Polish too, a held History row starts the selection on the top bar`() {
+        openHistoryWith(3)
+        compose.onNodeWithText("History tune 2").performTouchInput { longClick() }
+        frame(500)
+        compose.onNodeWithTag("top-selection-count").assertTextEquals("1 zaznaczony")
+    }
 }

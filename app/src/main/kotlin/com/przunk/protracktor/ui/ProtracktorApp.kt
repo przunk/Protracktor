@@ -321,9 +321,25 @@ fun ProtracktorApp(
     // Browse's Search, per level, for one visit to Browse: leaving it starts the next visit clean,
     // as its scroll positions do.
     val browseFilters = remember { BrowseFilters() }
+    // A Browse list whose selection is said on this bar (History) puts it here while selecting.
+    val topSelectionHost = remember { TopSelectionHost() }
+    // **History's search, on the top bar** as every Browse level's is (2026-11-12). It asks the
+    // database rather than narrowing a list on screen, so it is its own field state; closing it, or
+    // leaving History, clears its words, so History is never narrowed by a field nobody can see.
+    var historySearching by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(showBrowse) { if (!showBrowse) browseFilters.clear() }
     val browseLevel = browse.levelKey()
     val browseQuery = browseFilters.queryAt(browseLevel)
+    val inHistory = atBrowse && !showQueue && storedBrowse.domain == BrowseDomain.HISTORY
+    val closeHistorySearch = {
+        historySearching = false
+        // Always, not only when the words look non-empty: the state read here can lag the field.
+        viewModel.setHistoryQuery("")
+    }
+    LaunchedEffect(inHistory) {
+        if (inHistory) { if (storedBrowse.historyQuery.isNotEmpty()) historySearching = true }
+        else if (historySearching || storedBrowse.historyQuery.isNotEmpty()) closeHistorySearch()
+    }
     LaunchedEffect(showQueue, showSettings, showBrowse, showRandom, scanning, showNowPlaying) {
         if (showQueue || showSettings || showBrowse || showRandom || scanning || showNowPlaying) closePlaylistSearch()
     }
@@ -346,7 +362,8 @@ fun ProtracktorApp(
     }
 
     val menuFocus = remember { MenuFocus() }
-    CompositionLocalProvider(LocalMenuFocus provides menuFocus, LocalSelectionPresence provides selectionPresence) {
+    CompositionLocalProvider(LocalMenuFocus provides menuFocus, LocalSelectionPresence provides selectionPresence,
+        LocalTopSelection provides topSelectionHost) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
@@ -381,7 +398,12 @@ fun ProtracktorApp(
                             )
                         } else TopAppBar(
                             navigationIcon = {
-                                if (showQueue) {
+                                val topSelection = topSelectionHost.current.takeIf { atBrowse && !showQueue }
+                                if (topSelection != null) {
+                                    IconButton(onClick = topSelection.exit, modifier = Modifier.testTag("top-selection-exit")) {
+                                        Icon(PlayerIcons.Close, stringResource(R.string.browse_selection_end))
+                                    }
+                                } else if (showQueue) {
                                     IconButton(onClick = { showQueue = false }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
@@ -392,7 +414,8 @@ fun ProtracktorApp(
                                 } else if (atBrowse) {
                                     // The same step Back takes: Search first, then the level.
                                     IconButton(onClick = {
-                                        if (browseQuery != null) browseFilters.close(browseLevel) else browseUp()
+                                        if (inHistory && historySearching) closeHistorySearch()
+                                        else if (browseQuery != null) browseFilters.close(browseLevel) else browseUp()
                                     }) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
@@ -404,9 +427,21 @@ fun ProtracktorApp(
                                 }
                             },
                             title = {
+                                val topSelection = topSelectionHost.current.takeIf { atBrowse && !showQueue }
+                                if (topSelection != null) {
+                                    Text(pluralStringResource(R.plurals.browse_selected, topSelection.count, topSelection.count),
+                                        modifier = Modifier.testTag("top-selection-count"))
+                                } else
                                 if (showQueue) Text(stringResource(R.string.queue_title))
                                 else if (atSettings) {
                                     Text(stringResource(R.string.settings_title))
+                                } else if (inHistory && historySearching) {
+                                    BrowseFilterField(
+                                        query = storedBrowse.historyQuery,
+                                        onQueryChange = viewModel::setHistoryQuery,
+                                        onFocus = {},
+                                        hint = R.string.history_search_label,
+                                    )
                                 } else if (atBrowse && browseQuery != null) {
                                     BrowseFilterField(
                                         query = browseQuery,
@@ -432,6 +467,15 @@ fun ProtracktorApp(
                                 }
                             },
                             actions = {
+                                val topSelection = topSelectionHost.current.takeIf { atBrowse && !showQueue }
+                                if (topSelection != null) {
+                                    val label = stringResource(if (topSelection.all) R.string.browse_select_none else R.string.browse_select_all)
+                                    LabelledAction(PlayerIcons.SelectAll, label, topSelection.toggleAll, slim = true,
+                                        modifier = Modifier.width(slimActionWidth(stringResource(R.string.browse_select_all),
+                                            stringResource(R.string.browse_select_none))).testTag("top-select-all"))
+                                    Spacer(Modifier.width(TOP_BAR_ACTION_EDGE))
+                                    return@TopAppBar
+                                }
                                 // The way out, as opposed to the way back. Back is a stack -- leave the
                                 // selection, then up a level, then out -- and from four levels deep that is
                                 // four presses even when it is behaving correctly. This is one, from anywhere.
@@ -443,6 +487,11 @@ fun ProtracktorApp(
                                     val label = stringResource(R.string.playlist_search_action)
                                     LabelledAction(PlayerIcons.Search, label, { browseFilters.open(browseLevel) },
                                         slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("browse-search-action"))
+                                }
+                                if (inHistory && !historySearching) {
+                                    val label = stringResource(R.string.playlist_search_action)
+                                    LabelledAction(PlayerIcons.Search, label, { historySearching = true },
+                                        slim = true, modifier = Modifier.width(slimActionWidth(label)).testTag("history-search-action"))
                                 }
                                 // No way out to the playlist here any more: the navigation bar's
                                 // Playlist is that, from every place (redesign E1).
@@ -739,7 +788,9 @@ fun ProtracktorApp(
     BackHandler(enabled = back != ShellBack.Nothing) {
         when (back) {
             is ShellBack.Close -> shell.value = shell.value.with(back.screen, false)
-            ShellBack.BrowseUp -> browseUp()
+            // History's open search closes first, as the bar's arrow does; a handler of its own
+            // lost to this one, which then left History with the words still set.
+            ShellBack.BrowseUp -> if (inHistory && historySearching) closeHistorySearch() else browseUp()
             ShellBack.Nothing -> Unit
         }
     }

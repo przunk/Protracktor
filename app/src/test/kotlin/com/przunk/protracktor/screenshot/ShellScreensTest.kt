@@ -4,6 +4,8 @@ package com.przunk.protracktor.screenshot
 
 import android.app.Application
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -77,6 +79,32 @@ class ShellScreensTest : PlaybackShellTest() {
             compose.onNodeWithTag("nav-browse").performClick(); shot("e4-browse-$suffix")
             compose.onNodeWithTag("nav-search").performClick(); shot("e4-search-$suffix")
             compose.onNodeWithTag("nav-random").performClick(); shot("e4-random-$suffix")
+            // History with two pages (2026-11-12): its paging, its rows, Clear all at the foot.
+            if (theme == AppTheme.LIGHT) {
+                val writes = ReflectionHelpers.getField<com.przunk.protracktor.player.HistoryWrites>(controller, "historyWrites")
+                compose.runOnIdle { repeat(130) { i -> writes.record(tracks[i % tracks.size].copy(id = "history-$i"), writes.generation) } }
+                frame(1500)
+            }
+            compose.onNodeWithTag("nav-browse").performClick(); frame(400)
+            // Opened as its row opens it; the row sits under the fold of Browse's start.
+            compose.runOnIdle { controller.openDomain(com.przunk.protracktor.player.BrowseDomain.HISTORY) }
+            frame(500)
+            // Shown once the writes have landed on the database's own thread.
+            for (i in 0 until 50) { if (browse.value.historyTotal >= 130 && !browse.value.loading) break; frame(200) }
+            frame(400); shot("h-history-$suffix")
+            // Selecting, in English only: the second run's database already holds these entries
+            // and goes on reordering them under the hold (selecting in Polish is a shell test).
+            if (locale == "en") {
+                // Let late writes finish reordering the list before holding a row.
+                frame(2500)
+                // Whichever tune is on top: the order follows when each was recorded.
+                val onTop = tracks.mapNotNull { t ->
+                    compose.onAllNodesWithText(t.title).fetchSemanticsNodes().map { it.boundsInRoot.top }
+                        .filter { it > 140f }.minOrNull()?.let { t to it }
+                }.minBy { it.second }.first
+                compose.onAllNodesWithText(onTop.title).onFirst().performTouchInput { longClick() }; shot("h-history-selecting-$suffix")
+                compose.onNodeWithTag("top-selection-exit").performClick(); frame(300)
+            }
             compose.onNodeWithTag("nav-playlist").performClick()
         }
     }

@@ -410,11 +410,13 @@ internal fun PlaylistBody(
         // (`docs/BACKLOG.md` A3). Absent while the list is behind glass: dragging a scrollbar for a
         // list you cannot touch would be a control that lies.
         if (enabled) {
+            val context = androidx.compose.ui.platform.LocalContext.current
             DraggableScrollbar(
                 listState = listState,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(contentPadding),
+                bubble = remember(context) { positionBubble(context) },
             )
         }
     }

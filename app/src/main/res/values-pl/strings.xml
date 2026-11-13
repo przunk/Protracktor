@@ -102,6 +102,7 @@
 
     <string name="browse_select_all">Zaznacz wszystko</string>
     <string name="browse_select_none">Odznacz wszystko</string>
+    <string name="browse_selection_end">Zakończ zaznaczanie</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
     <string name="open_failed_not_fetched">Nie udało się pobrać %1$s. To może być połączenie — spróbuj ponownie.</string>
     <string name="open_failed_amp_unmapped">%1$s nie ma na aktualnej liście AMP. AMP przeniosło się na nową stronę: pobierz katalog AMP ponownie w Przeglądaj → Katalogi online. Jeśli nadal go nie ma, AMP zmieniło jego nazwę albo go usunęło.</string>
@@ -246,7 +247,18 @@
     <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
     <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
     <string name="action_clear_history">Wyczyść historię</string>
+    <string name="action_clear_all_history">Wyczyść całą historię</string>
+    <string name="hold_to_confirm_hint">Przytrzymaj</string>
+    <string name="hold_to_confirm_ask">%1$s, z pytaniem</string>
+    <string name="confirm_clear_history_title">Wyczyścić historię?</string>
+    <string name="confirm_clear_history_text">Wszystko, co grało, zniknie z historii, a z nim oznaczenia odsłuchanych. Tego nie da się cofnąć.</string>
     <string name="history_search_label">Szukaj w historii</string>
+    <plurals name="history_entries">
+        <item quantity="one">%1$,d wpis</item>
+        <item quantity="few">%1$,d wpisy</item>
+        <item quantity="many">%1$,d wpisów</item>
+        <item quantity="other">%1$,d wpisu</item>
+    </plurals>
     <string name="history_no_matches">Brak wpisów historii pasujących do frazy.</string>
     <string name="notice_history_read_failed">Nie udało się wczytać historii. Spróbuj ponownie.</string>
     <string name="history_retry">Spróbuj ponownie</string>
@@ -778,4 +790,5 @@
         <item quantity="many">Używany w %1$,d alarmach</item>
         <item quantity="other">Używany w %1$,d alarmu</item>
     </plurals>
+    <string name="scrollbar_position">%1$,d / %2$,d</string>
 </resources>

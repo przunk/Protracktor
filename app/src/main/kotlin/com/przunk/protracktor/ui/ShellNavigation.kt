@@ -154,3 +154,17 @@ internal fun ReportSelecting(selecting: Boolean) {
         onDispose { if (selecting) presence.count-- }
     }
 }
+
+/**
+ * A list's selection said on the top bar instead of in a row over the list (History, 2026-11-12):
+ * how many, Select all and the way out. The bar takes it over while selecting, so nothing appears
+ * above the list and nothing moves under the finger that started the selection.
+ */
+internal class TopSelection(val count: Int, val all: Boolean, val toggleAll: () -> Unit, val exit: () -> Unit)
+
+@androidx.compose.runtime.Stable
+internal class TopSelectionHost {
+    var current by androidx.compose.runtime.mutableStateOf<TopSelection?>(null)
+}
+
+internal val LocalTopSelection = androidx.compose.runtime.staticCompositionLocalOf<TopSelectionHost?> { null }
