@@ -116,7 +116,7 @@ android {
         // fixes, minor for a round of work that added capability, major reserved for "publishable".
         // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
         // a second, worse timestamp.
-        versionName = "1.9.0"
+        versionName = "1.10.0"
         buildConfigField("boolean", "MUSIC_ALARMS_ENABLED", musicAlarmsEnabled.get().toString())
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
