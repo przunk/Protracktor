@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.screenshot
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -157,6 +158,38 @@ class ShellScreensTest : PlaybackShellTest() {
                 }
             }
             shot("p-playlists-$suffix")
+            // Now Playing with every action it can offer (2026-11-14), in the same drawn sheet frame.
+            val playing = player.value.copy(metadata = mapOf("title" to tracks[0].title, "format" to "ProTracker MOD",
+                "tracker" to "ProTracker 2.3", "artist" to "Treks", "channels" to "4", "patterns" to "38",
+                "instruments" to "21", "seekable" to "1"))
+            compose.runOnIdle {
+                activity.get().setContent {
+                    ProtracktorTheme(theme, dynamicColour = false) {
+                        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                            ProtracktorApp(PlayerViewModel(application))
+                            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                                .background(androidx.compose.material3.MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f)))
+                            androidx.compose.material3.Surface(
+                                modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth()
+                                    .padding(top = 48.dp),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow,
+                            ) {
+                                androidx.compose.foundation.layout.Column {
+                                    androidx.compose.material3.BottomSheetDefaults.DragHandle(
+                                        androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally))
+                                    com.przunk.protracktor.ui.NowPlaying(state = playing, onSeek = {}, onShowInPlaylist = {},
+                                        onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
+                                        onUseForAlarms = {}, onAddToOtherPlaylist = {})
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            shot("n-nowplaying-$suffix")
+            compose.onNodeWithTag("action-row-forward").performClick(); frame(600)
+            shot("n-nowplaying-scrolled-$suffix")
             compose.runOnIdle { activity.get().setContent { ProtracktorTheme(theme, dynamicColour = false) { ProtracktorApp(PlayerViewModel(application)) } } }
             frame(400)
         }

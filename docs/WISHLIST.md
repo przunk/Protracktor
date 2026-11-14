@@ -10,6 +10,23 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B69. Now Playing's actions in one scrolling row — built on a branch 2026-11-14
+
+Raised 2026-11-14 before new store screenshots: the actions in Now Playing were too large for the
+room they took. Settled on pictures the same day: one row of small buttons (slim pills, icon above
+label), all as wide as the longest of their short labels (In playlist / Na playliście, Author /
+Autor, Add / Dodaj, Alarm / Budzik, Share / Udostępnij), their full names said to TalkBack. When
+they do not fit, the edge they continue past fades into the sheet and carries an arrow that moves
+the row that way; when they fit, neither. About 56 dp instead of about 156. Built on
+`feature/now-playing-actions`, not merged.
+
+**Checked:** `ScrollingActionRowTest` (the arrow only on the side with more, moving the row, to the
+end and back; none when everything fits; equal widths with labels of different lengths; the full
+name said; Now Playing's actions in the row), each guard broken once to see it fail -- the width
+test first passed with its guard broken, its labels all being one length, and was made to tell.
+Pictures in `dist/evidence/now-playing-actions/`, in a sheet frame drawn by the screenshot test.
+**Not checked:** the phone.
+
 ## B68. The playlists sheet as cards — merged into develop 2026-11-14
 
 Raised 2026-11-14: the list of playlists (a tap on the playlist's name) looked out of step with the

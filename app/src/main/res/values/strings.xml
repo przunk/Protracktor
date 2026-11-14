@@ -764,4 +764,10 @@
         <item quantity="one">%1$,d added by hand</item>
         <item quantity="other">%1$,d added by hand</item>
     </plurals>
+    <string name="a11y_scroll_back">Scroll back</string>
+    <string name="a11y_scroll_forward">Scroll on</string>
+    <string name="np_short_show_in_playlist">In playlist</string>
+    <string name="np_short_author">Author</string>
+    <string name="np_short_add">Add</string>
+    <string name="np_short_alarm">Alarm</string>
 </resources>
