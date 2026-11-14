@@ -96,6 +96,9 @@ class RemoteFiles(
     /** Where a catalogue that ships as one archive keeps it. */
     fun archiveFile(catalogueId: String): File = File(archiveDir, "$catalogueId.zip")
 
+    /** The sum of the map a catalogue's index was last built from (B67). */
+    fun indexSumFile(catalogueId: String): File = File(archiveDir, "$catalogueId-map.md5")
+
     /** AMP's module numbers by path, written with its index (C134). */
     internal val ampModuleIds = AmpModuleIds(File(archiveDir, "amp-module-ids.tsv"))
 

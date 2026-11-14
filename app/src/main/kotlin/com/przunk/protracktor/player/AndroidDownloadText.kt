@@ -27,6 +27,7 @@ internal class AndroidDownloadText(private val context: Context) : DownloadText 
                 R.plurals.notice_indexed_partly, notice.listed, notice.listed, notice.name, notice.playable,
             )
         }
+        is DownloadNotice.IndexUpToDate -> context.getString(R.string.notice_index_up_to_date, notice.name)
         DownloadNotice.SongLengthsFailed -> context.getString(R.string.notice_song_lengths_failed)
         DownloadNotice.SongLengthsEmpty -> context.getString(R.string.notice_song_lengths_empty)
         is DownloadNotice.SongLengthsDone -> context.resources.getQuantityString(

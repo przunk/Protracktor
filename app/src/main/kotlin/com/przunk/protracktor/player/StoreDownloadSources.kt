@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.player
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.FavouriteStore
 import com.przunk.protracktor.data.SongDbLengthStore
@@ -10,6 +12,7 @@ import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.data.TrackMetadataStore
 import com.przunk.protracktor.engine.NativeEngine
+import com.przunk.protracktor.net.AtomicFileWrite
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
 import com.przunk.protracktor.net.RemoteFiles
@@ -39,4 +42,13 @@ internal class StoreDownloadSources(
     override suspend fun replaceSongDbLengths(bytes: ByteArray) = songDbLengths.replaceAllFrom(bytes)
     override suspend fun replaceFavourites(bytes: ByteArray) = favourites.replaceAllFrom(bytes)
     override suspend fun playableFavourites() = favourites.playableCount()
+    override suspend fun storedIndexSum(id: String): String? = withContext(Dispatchers.IO) {
+        remoteFiles.indexSumFile(id).takeIf { it.isFile }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+    }
+    override suspend fun rememberIndexSum(id: String, sum: String) {
+        withContext(Dispatchers.IO) { AtomicFileWrite.write(remoteFiles.indexSumFile(id), sum.toByteArray()) }
+    }
+    override suspend fun indexCurrent(id: String): Boolean =
+        catalogues.summaries().firstOrNull { it.id == id }
+            ?.let { it.indexed && !it.isStale(NativeEngine.backendsFingerprint()) } ?: false
 }

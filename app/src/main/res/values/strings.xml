@@ -467,6 +467,7 @@
     <string name="notice_history_cleared">History cleared.</string>
     <string name="notice_index_deleted">Index deleted. Download it again any time.</string>
     <string name="notice_index_download_failed">Could not download the %1$s index.</string>
+    <string name="notice_index_up_to_date">%1$s is up to date: nothing has changed since it was downloaded.</string>
     <string name="notice_archive_store_failed">Could not store the %1$s archive.</string>
     <plurals name="notice_indexed_all">
         <item quantity="one">Indexed the one track %2$s lists.</item>

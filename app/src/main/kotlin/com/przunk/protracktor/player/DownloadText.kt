@@ -7,6 +7,8 @@ internal sealed interface DownloadNotice {
     data class IndexDownloadFailed(val name: String) : DownloadNotice
     data class ArchiveStoreFailed(val name: String) : DownloadNotice
     data class Indexed(val name: String, val listed: Int, val playable: Int) : DownloadNotice
+    /** The catalogue's map has not changed since it was stored (B67). */
+    data class IndexUpToDate(val name: String) : DownloadNotice
     data object SongLengthsFailed : DownloadNotice
     data object SongLengthsEmpty : DownloadNotice
     data class SongLengthsDone(val count: Int) : DownloadNotice

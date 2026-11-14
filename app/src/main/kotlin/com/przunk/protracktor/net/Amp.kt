@@ -126,3 +126,23 @@ object Amp : Catalogue(
         return output.toByteArray()
     }
 }
+
+/**
+ * AMP's map is fetched only when it has changed (B67, 2026-11-13). AMP publishes the map's MD5 sum
+ * beside it (since 2026-11-12), a few dozen bytes against about 10 MB over the wire and 45 MB
+ * unpacked; the sum of the map last stored is kept, and an index refresh whose sum matches it, with
+ * the index still on the phone and current, downloads nothing.
+ */
+internal object AmpMapSum {
+    const val URL = "https://amp.dascene.net/download/amp_modules.md5"
+    private val HEX = Regex("[0-9a-f]{32}")
+
+    /** The sum in AMP's file, `<md5>  amp_modules.json`; null for anything that is not one. */
+    fun parse(bytes: ByteArray): String? =
+        String(bytes, Charsets.US_ASCII).trim().split(Regex("\\s+")).firstOrNull()
+            ?.lowercase(Locale.ROOT)?.takeIf { HEX.matches(it) }
+
+    /** The sum of the map as downloaded, in the same form. */
+    fun of(bytes: ByteArray): String =
+        java.security.MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
+}
