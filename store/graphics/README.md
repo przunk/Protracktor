@@ -54,30 +54,31 @@ looks like. Upload the `-store.png` files; the originals stay as what the phone 
 Source:
 [Google Play preview-asset requirements](https://support.google.com/googleplay/android-developer/answer/9866151?hl=en).
 
-## Next set — to be captured for 1.7.0 (recorded 2026-11-09)
+## Next set — to be captured after the redesign (recorded 2026-11-15)
 
-The current screenshots date from **2026-09-24** (around 0.9). Since then the app gained the
-playback Queue, Random with its dice, Saved places, played-before marks, music alarms, playlist
-search, Feedback and Music sources, and the appearance changed. New screenshots are needed.
+The current screenshots date from **2026-09-24** (around 0.9). Since then the app was redesigned
+(1.10.0: the navigation bar, the collapsible dock, Settings in sections), and gained the playback
+Queue with its count, Random with its dice, the playlists sheet as cards, Now Playing's single row of
+actions, Saved places, played-before marks, music alarms and AMP. The set planned for 1.7.0 never
+got captured and no longer shows the app; this one replaces it.
 
-**Who:** captured by me on the phone — the store requires the real application on a real device,
-and there is no emulator here. **English only:** no Polish screenshots for the store. After
-capture, `node scripts/fit-store-screenshots.mjs store/graphics/<new files>` makes the `-store`
-versions; check them against the rules above before uploading.
+**Who:** captured by me on the phone -- the store requires the real application on a real device,
+and there is no emulator here. **English only, dark theme**, one coherent library; Settings →
+Language → English before capturing. No notification banners, no network-provider names (airplane
+mode with the tunes already on the phone does it), no personal folder names. After capture,
+`node scripts/fit-store-screenshots.mjs store/graphics/<new files>` makes the `-store` versions;
+check them against the rules above before uploading.
 
-Proposed set (six, in this order; dark theme, one coherent library, nothing from AMP while it is
-switched off — C134):
+The set, eight, in this order:
 
-1. a playlist playing, with the dock and a highlighted playing row;
-2. expanded Now Playing with the subsong strip and actions;
-3. Browse root with its destinations (Local, Saved places, Online catalogues, Random, Search,
-   Alarms, History);
-4. Random with the dice and a few heard rows, played-before marks visible;
-5. the Queue with a manual request ahead of its source;
-6. Alarms: the list, or the three-answer recognition screen.
-
-Keep from the capture plan below: no notification banners, personal folder names, provider names
-or music that cannot be shown publicly.
+1. a playlist playing: the full dock, the navigation bar, a highlighted playing row;
+2. the same playlist with the dock collapsed: more of the list on screen;
+3. Now Playing: metadata, subsongs where the file has them (a SID), the row of actions;
+4. Browse → Online catalogues: Modland, ASMA, AMP, The Mod Archive, UnExoticA;
+5. Random: the dice and a few drawn tunes, played-before marks visible;
+6. the Queue: a tune queued by hand ahead of its source, the count in the header and on the button;
+7. the playlists sheet: several playlists as cards, the open one marked;
+8. Alarms: the list, the next alarm at the top.
 
 ## Capture plan
 
