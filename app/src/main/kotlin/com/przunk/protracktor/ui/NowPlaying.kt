@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -127,43 +129,40 @@ fun NowPlaying(
         // second row. `weight` makes them a grid however many there are -- and the number does
         // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
         // and a local file has neither an author folder nor an address anyone else could open.
-        androidx.compose.foundation.layout.FlowRow(
-            maxItemsInEachRow = 3,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            onShowInPlaylist?.let {
-                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it, Modifier.weight(1f))
+        // **One row of small actions, scrolling when they do not fit** (2026-11-14): two rows of
+        // full-size buttons took about 156 dp of a sheet that is read for its metadata. Short labels
+        // under the icons, their full names said to TalkBack. Each is absent rather than disabled
+        // when it has nowhere to go -- a local file has no catalogue folder and no address anyone
+        // else could open, and "In playlist" goes while what plays is not in the playlist.
+        val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
+        var shareMenuOpen by rememberSaveable { mutableStateOf(false) }
+        fun simple(icon: androidx.compose.ui.graphics.vector.ImageVector, short: String, full: String, action: () -> Unit) =
+            RowAction(short, full) { label, said, m ->
+                LabelledAction(icon, label, action, m.semantics { contentDescription = said }, slim = true)
             }
-            onShowNeighbours?.let {
-                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it, Modifier.weight(1f))
-            }
-            onAddToOtherPlaylist?.let {
-                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
-            }
-            onUseForAlarms?.let {
-                LabelledAction(PlayerIcons.Alarm, stringResource(R.string.alarm_use_music), it, Modifier.weight(1f))
-            }
-            // **One Share, with the ways to share behind it** (the owner, 2026-09-24): six buttons
-            // left each about 60 dp, too narrow for any label. Behind it the same four ways a row's
-            // menu has (2026-09-25), drawn by the same `ShareMenuItems`.
-            val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
-            if (shares.any) {
-                var shareMenuOpen by rememberSaveable { mutableStateOf(false) }
-                Box(modifier = Modifier.weight(1f)) {
-                    LabelledAction(
-                        PlayerIcons.Share,
-                        stringResource(R.string.action_share),
-                        { shareMenuOpen = true },
-                        Modifier.fillMaxWidth(),
-                    )
-                    DropdownMenu(expanded = shareMenuOpen, onDismissRequest = { shareMenuOpen = false }) {
-                        ShareMenuItems(shares, onBack = null, onDone = { shareMenuOpen = false })
+        val actions = listOfNotNull(
+            onShowInPlaylist?.let { simple(PlayerIcons.Locate, stringResource(R.string.np_short_show_in_playlist),
+                stringResource(R.string.action_show_in_playlist), it) },
+            onShowNeighbours?.let { simple(PlayerIcons.Folder, stringResource(R.string.np_short_author),
+                stringResource(R.string.action_show_neighbours), it) },
+            onAddToOtherPlaylist?.let { simple(PlayerIcons.PlaylistAdd, stringResource(R.string.np_short_add),
+                stringResource(R.string.action_add_to_playlist), it) },
+            onUseForAlarms?.let { simple(PlayerIcons.Alarm, stringResource(R.string.np_short_alarm),
+                stringResource(R.string.alarm_use_music), it) },
+            // **One Share, with the ways to share behind it** (2026-09-24): the same four ways a
+            // row's menu has, drawn by the same `ShareMenuItems`.
+            if (!shares.any) null else stringResource(R.string.action_share).let { share ->
+                RowAction(share, share) { label, _, m ->
+                    Box(m) {
+                        LabelledAction(PlayerIcons.Share, label, { shareMenuOpen = true }, Modifier.fillMaxWidth(), slim = true)
+                        DropdownMenu(expanded = shareMenuOpen, onDismissRequest = { shareMenuOpen = false }) {
+                            ShareMenuItems(shares, onBack = null, onDone = { shareMenuOpen = false })
+                        }
                     }
                 }
-            }
-        }
+            },
+        )
+        ScrollingActionRow(actions, Modifier.padding(top = 8.dp))
 
         val message = state.metadata["message"].orEmpty()
         // The year is derived rather than looked up, because no two backends record it under the

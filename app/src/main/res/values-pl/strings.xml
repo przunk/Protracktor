@@ -807,4 +807,10 @@
         <item quantity="many">%1$,d dodanych ręcznie</item>
         <item quantity="other">%1$,d dodanego ręcznie</item>
     </plurals>
+    <string name="a11y_scroll_back">Przewiń w lewo</string>
+    <string name="a11y_scroll_forward">Przewiń w prawo</string>
+    <string name="np_short_show_in_playlist">Na playliście</string>
+    <string name="np_short_author">Autor</string>
+    <string name="np_short_add">Dodaj</string>
+    <string name="np_short_alarm">Budzik</string>
 </resources>
