@@ -101,8 +101,14 @@ class BrowseFilterUiTest : PlaybackShellTest() {
         // The way out of Browse, and back in: a fresh start.
         compose.onNodeWithText(application.getString(R.string.action_to_playlist)).performClick()
         frame(300)
+        // Said apart from the end (C142, failed once in the full gate): Browse really was left.
+        compose.onNodeWithTag("playlist-chooser").assertIsDisplayed()
         authorsOfMod()
-        compose.onNodeWithTag("browse-filter-field").assertDoesNotExist()
+        val fields = compose.onAllNodesWithTag("browse-filter-field").fetchSemanticsNodes()
+        org.junit.Assert.assertTrue("Search survived leaving Browse (C142): " +
+            "field=${fields.map { it.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.EditableText) { null } }} " +
+            "domain=${browse.value.domain} format=${browse.value.openFormat} author=${browse.value.openAuthor} " +
+            "loading=${browse.value.loading}", fields.isEmpty())
         compose.onNodeWithText("4-Mat").assertExists()
     }
 
