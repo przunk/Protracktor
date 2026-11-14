@@ -10,10 +10,11 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B67. AMP's map fetched only when its MD5 has changed — built on a branch 2026-11-13
+## B67. AMP's map fetched only when its MD5 has changed — merged into develop 2026-11-14
 
 AMP publishes `/download/amp_modules.md5` beside its module map (2026-11-12, `PLAN_AMP.md`). Built
-on `feature/amp-md5`, not merged: refreshing AMP asks for that file first (a few dozen bytes) and
+on `feature/amp-md5` and merged on 2026-11-14, to be lived with for a few days before a release
+(APK 1585): refreshing AMP asks for that file first (a few dozen bytes) and
 fetches the map (about 10 MB over the wire, 45 MB unpacked) only when the sum differs from the one
 kept with the stored index, or the index is gone or built by other decoders; otherwise it says AMP
 is up to date. The sum kept is that of the map actually stored, and only once it is stored. A sum
