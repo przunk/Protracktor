@@ -211,6 +211,8 @@
     <string name="a11y_choose_playlist">Choose a playlist</string>
     <string name="playlist_switch_title">Playlists</string>
     <string name="playlist_new">New playlist</string>
+    <string name="playlist_new_short">New</string>
+    <string name="playlist_open_with_count">Open · %1$s</string>
     <string name="playlist_rename">Rename playlist</string>
     <string name="playlist_name_label">Name</string>
     <string name="playlist_clear_title">Empty %1$s?</string>

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.przunk.protracktor.screenshot
 
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import android.app.Application
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.onFirst
@@ -32,6 +36,7 @@ import org.robolectric.util.ReflectionHelpers
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 @Config(sdk = [29], application = Application::class, qualifiers = "en-w360dp-h800dp-xhdpi")
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 class ShellScreensTest : PlaybackShellTest() {
     private val tracks = listOf("Battle of honour" to "Treks", "Studium Fałszu" to "Jakim", "Space Ninja" to "Lotus 3",
         "Elysium" to "Jester", "Stardust Memories" to "Jester", "Hybris" to "Mr. Man", "Enigma" to "Phenomena",
@@ -105,7 +110,47 @@ class ShellScreensTest : PlaybackShellTest() {
                 compose.onAllNodesWithText(onTop.title).onFirst().performTouchInput { longClick() }; shot("h-history-selecting-$suffix")
                 compose.onNodeWithTag("top-selection-exit").performClick(); frame(300)
             }
-            compose.onNodeWithTag("nav-playlist").performClick()
+            compose.onNodeWithTag("nav-playlist").performClick(); frame(400)
+            // The playlists sheet (2026-11-14), with lists of every size and the open one among them.
+            compose.runOnIdle {
+                val open = player.value.activePlaylistId
+                player.value = player.value.copy(playlists = listOf(
+                    com.przunk.protracktor.data.SavedPlaylist(open, "Playlist", 8),
+                    com.przunk.protracktor.data.SavedPlaylist(open + 100, "Chiptunes for the train", 128),
+                    com.przunk.protracktor.data.SavedPlaylist(open + 101, "Jester", 23),
+                    com.przunk.protracktor.data.SavedPlaylist(open + 102, "Crack intros", 1),
+                    com.przunk.protracktor.data.SavedPlaylist(open + 103, "Empty", 0),
+                ))
+            }
+            // The sheet is a window of its own, which this capture cannot draw; so the picture lays
+            // the same switcher over the app in a frame drawn as Material's bottom sheet draws it.
+            val playlists = player.value.playlists
+            val open = player.value.activePlaylistId
+            compose.runOnIdle {
+                activity.get().setContent {
+                    ProtracktorTheme(theme, dynamicColour = false) {
+                        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                            ProtracktorApp(PlayerViewModel(application))
+                            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                                .background(androidx.compose.material3.MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f)))
+                            androidx.compose.material3.Surface(
+                                modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth(),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow,
+                            ) {
+                                androidx.compose.foundation.layout.Column {
+                                    androidx.compose.material3.BottomSheetDefaults.DragHandle(
+                                        androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally))
+                                    com.przunk.protracktor.ui.PlaylistSwitcher(playlists, open, {}, {}, { _, _ -> }, {}, {}, {})
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            shot("p-playlists-$suffix")
+            compose.runOnIdle { activity.get().setContent { ProtracktorTheme(theme, dynamicColour = false) { ProtracktorApp(PlayerViewModel(application)) } } }
+            frame(400)
         }
     }
 

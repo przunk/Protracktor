@@ -10,6 +10,23 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B68. The playlists sheet as cards — built on a branch 2026-11-14
+
+Raised 2026-11-14: the list of playlists (a tap on the playlist's name) looked out of step with the
+rest of the app. Shaped on pictures the same day after the alarms' cards: one rounded, contrasting
+card per playlist with little air between them; a cover with the playlist sign, a tick on the open
+one, which also says Open beside its count, so it is not told by colour alone (it was before); the
+count in words where a bare number read as a row number; New and Import as small labelled actions
+beside the title instead of outlined buttons under the list; the list grows with the sheet. What a
+card and its menu do is unchanged. Built on `feature/playlist-sheet`, not merged.
+
+**Checked:** `PlaylistSwitcherTest` (cards with their size in words; the open one marked and saying
+so; a tap opens that playlist; New and Import beside the title; the menu still exports), each
+guard broken once to see it fail; the menu's delete dialog in `HoldToConfirmDialogsTest`. Pictures
+in `dist/evidence/playlist-sheet/`, the sheet's frame drawn by the screenshot test as Material draws
+it (the sheet's own window is beyond its capture). **Not checked:** the phone; New's naming dialog
+in this harness (its blinking cursor never lets it settle).
+
 ## B67. AMP's map fetched only when its MD5 has changed — merged into develop 2026-11-14
 
 AMP publishes `/download/amp_modules.md5` beside its module map (2026-11-12, `PLAN_AMP.md`). Built

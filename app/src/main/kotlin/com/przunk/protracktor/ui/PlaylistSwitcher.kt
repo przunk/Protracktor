@@ -3,6 +3,16 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Card
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +29,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
@@ -65,107 +72,114 @@ fun PlaylistSwitcher(
     var confirmingDelete by remember { mutableStateOf<SavedPlaylist?>(null) }
     var menuFor by remember { mutableStateOf<Long?>(null) }
 
+    // **Cards, as the alarms have them** (2026-11-14): one rounded, contrasting card per playlist
+    // with little air between them, the open one drawn stronger and saying so in words, and the two
+    // ways to a new playlist as small labelled actions beside the title rather than outlined buttons
+    // under the list. The sheet grows with the list instead of stopping at a fixed height.
+    val maxListHeight = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.62f).dp
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(stringResource(R.string.playlist_switch_title), style = MaterialTheme.typography.titleLarge)
-
-        LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
-            items(playlists, key = { it.id }) { playlist ->
-                val active = playlist.id == activeId
-                ListItem(
-                    headlineContent = {
-                        Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    },
-                    // The size, rather than a dot marking the current one: highlighting the row
-                    // says that already, and the slot is better spent on the question a list of
-                    // bare names cannot answer -- which of these has anything in it
-                    // (`docs/BACKLOG.md` A21).
-                    leadingContent = {
-                        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "${playlist.trackCount}",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (active) {
-                                    MaterialTheme.colorScheme.onSecondaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                    },
-                    // Everything you can do *to* this playlist, behind the same three dots a
-                    // track row uses in Browse and in the playlist. One shape for everything
-                    // that acts on one playlist, rather than rename on the active row, an
-                    // unlabelled delete beside it and an export button at the bottom that silently
-                    // means "the open one".
-                    trailingContent = {
-                        Box {
-                            IconButton(onClick = { menuFor = playlist.id }) {
-                                Icon(
-                                    PlayerIcons.More,
-                                    stringResource(R.string.a11y_playlist_menu, playlist.name),
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = menuFor == playlist.id,
-                                onDismissRequest = { menuFor = null },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.playlist_rename)) },
-                                    leadingIcon = { Icon(PlayerIcons.Rename, null) },
-                                    onClick = {
-                                        menuFor = null
-                                        naming = NamingIntent.Rename(playlist.id, playlist.name)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(R.string.action_export_playlist))
-                                    },
-                                    leadingIcon = { Icon(PlayerIcons.Export, null) },
-                                    onClick = {
-                                        menuFor = null
-                                        onExport(playlist.id)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_delete)) },
-                                    leadingIcon = { Icon(PlayerIcons.Remove, null) },
-                                    onClick = {
-                                        menuFor = null
-                                        confirmingDelete = playlist
-                                    },
-                                )
-                            }
-                        }
-                    },
-                    // The whole row, the same way the playing track is marked in the playlist, so
-                    // that "which one is current" is one convention rather than two.
-                    colors = if (active) {
-                        ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    } else {
-                        ListItemDefaults.colors()
-                    },
-                    modifier = Modifier.clickable { onSelect(playlist.id) },
-                )
-            }
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.playlist_switch_title), style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            val newLabel = stringResource(R.string.playlist_new_short)
+            LabelledAction(PlayerIcons.Add, newLabel, { naming = NamingIntent.Create }, slim = true,
+                modifier = Modifier.width(slimActionWidth(newLabel)).testTag("playlist-new"))
+            val importLabel = stringResource(R.string.action_import_playlist)
+            LabelledAction(PlayerIcons.Download, importLabel, onImport, slim = true,
+                modifier = Modifier.width(slimActionWidth(importLabel)).testTag("playlist-import"))
         }
 
-        // The two ways to end up with a playlist that was not there before, side by side.
-        // Import stays out of the row menu on purpose: it does not add to the playlist you opened
-        // the menu on, it makes a new one (`docs/ARCHITECTURE.md` §16), and an "Import" sitting
-        // among that row's own actions would promise exactly the thing it refuses to do.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { naming = NamingIntent.Create },
-                modifier = Modifier.weight(1f),
-            ) { IconLabel(PlayerIcons.Add, stringResource(R.string.playlist_new)) }
-            OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
-                IconLabel(PlayerIcons.Download, stringResource(R.string.action_import_playlist))
+        LazyColumn(
+            modifier = Modifier.heightIn(max = maxListHeight),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(playlists, key = { it.id }) { playlist ->
+                val active = playlist.id == activeId
+                Card(
+                    onClick = { onSelect(playlist.id) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = if (active) CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ) else CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
+                    modifier = Modifier.fillMaxWidth().testTag("playlist-card-${playlist.id}")
+                        .semantics { selected = active },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // The cover: the playlist's sign, a tick on the open one, so it is told
+                        // apart by shape as well as by the card's colour (AGENTS.md §8).
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(
+                                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(if (active) PlayerIcons.Check else PlayerIcons.Playlist, contentDescription = null,
+                                tint = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(playlist.name, style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            // How much is in it, in words: a bare number read as a row number.
+                            val count = pluralStringResource(R.plurals.track_count, playlist.trackCount, playlist.trackCount)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(PlayerIcons.AudioFile, contentDescription = null, modifier = Modifier.size(16.dp),
+                                    tint = LocalContentColor.current.copy(alpha = 0.8f))
+                                Text(if (active) stringResource(R.string.playlist_open_with_count, count) else count,
+                                    style = MaterialTheme.typography.bodyMedium, maxLines = 1,
+                                    color = LocalContentColor.current.copy(alpha = 0.8f))
+                            }
+                        }
+                            Box {
+                                IconButton(onClick = { menuFor = playlist.id }) {
+                                    Icon(
+                                        PlayerIcons.More,
+                                        stringResource(R.string.a11y_playlist_menu, playlist.name),
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menuFor == playlist.id,
+                                    onDismissRequest = { menuFor = null },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.playlist_rename)) },
+                                        leadingIcon = { Icon(PlayerIcons.Rename, null) },
+                                        onClick = {
+                                            menuFor = null
+                                            naming = NamingIntent.Rename(playlist.id, playlist.name)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(stringResource(R.string.action_export_playlist))
+                                        },
+                                        leadingIcon = { Icon(PlayerIcons.Export, null) },
+                                        onClick = {
+                                            menuFor = null
+                                            onExport(playlist.id)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.action_delete)) },
+                                        leadingIcon = { Icon(PlayerIcons.Remove, null) },
+                                        onClick = {
+                                            menuFor = null
+                                            confirmingDelete = playlist
+                                        },
+                                    )
+                                }
+                            }
+                    }
+                }
             }
         }
     }
