@@ -291,10 +291,19 @@ class ManualQueueControllerTest {
 
     @Test fun `Play after manual-only exhaustion starts newly queued track instead of replaying the old one`() {
         controller.clearQueue()
+        val cleared = state.value
         state.value = state.value.copy(schedule = state.value.schedule.finishCurrent())
         controller.enqueueTrack(track("new"))
+        val queued = state.value
         controller.togglePlayPause()
-        assertEquals("new", state.value.current!!.title)
+        // What was seen goes into the message (C141): this has failed once in the full gate and
+        // never alone; Play takes "next" only with no source, the current finished and a pending
+        // request, and the message says which of the three was missing.
+        assertEquals("cleared: source=${cleared.activePlayback.source} message=${cleared.message?.text} | " +
+            "queued: source=${queued.activePlayback.source} consumed=${queued.schedule.consumed} " +
+            "pending=${queued.schedule.pending.map { it.track.title }} loading=${queued.loadingTrack} | " +
+            "alarm=${ReflectionHelpers.getField<Any?>(controller, "alarmBootstrap")}",
+            "new", state.value.current!!.title)
         assertTrue(state.value.schedule.pending.isEmpty())
         assertFalse(state.value.schedule.consumed)
     }

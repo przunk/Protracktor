@@ -26,6 +26,10 @@ searches (`BrowseFilters.clear` on `showBrowse` going false).
 **Mechanism not found.** Third of its kind with C139 and C141: each fails only under the full
 gate's load and passes alone. To be explained before anything is changed.
 
+**Looked into, 2026-11-14, on `fix/flaky-tests`:** the test now says apart whether Browse was really
+left (the playlist on screen after the Playlist tab) and, if the field outlives the return, what it
+held and at which level Browse stood.
+
 ## C141 A manual-queue test fails now and then in the full gate — open, found 2026-11-12
 
 `ManualQueueControllerTest`, *Play after manual-only exhaustion starts newly queued track instead of
@@ -37,6 +41,14 @@ dock buttons, nothing the test reaches.
 **Mechanism not found.** A guess, unchecked: work started by the test's setup (opening `B`) finishes
 on a background thread after Play under the gate's load and puts `B` back as current. Like C139,
 it is to be explained before anything is changed; a rerun that passes says nothing.
+
+**Looked into, 2026-11-14, on `fix/flaky-tests`:** not reproduced in 80 runs of the scenario, 40 under
+ten busy loops on all cores and 40 in parallel forks beside the UI tests. Ruled out: load alone; state
+leaking between test classes (each class has a JVM of its own, `forkEvery = 1`); `PlayerUiState`
+written from a background thread (the player package writes it only on the main thread, so in the
+test it changes only when the main looper is idled). Still open: which startup work has run when the
+setup's wait ends. The test now says, when it fails, which of the three things Play's "next" needs
+was missing (no source, the current finished, a pending request).
 
 ## ~~C140 The app crashes when a tune is left while it seeks~~ — fixed, merged 2026-11-12, checked on the phone 2026-11-13
 
