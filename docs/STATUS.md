@@ -15,6 +15,18 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — open, found 2026-11-15
+
+Seen on the store screenshots I took on 2026-11-15 (APK 1594): in the playlist a Mod Archive tune's
+second line reads `MOD · MOD`, and the Queue and Now Playing show its raw download address
+(`https://api.modarchive.org/downloads.php?moduleid=…#lotus3_4.mod`) where a file name or folder
+stands for other catalogues.
+
+**Mechanism, from the code (not yet reproduced in a test):** `TrackRef.displayAuthor`
+(`player/PlayQueue.kt`) falls back, when the author is blank, to the last part of the subtitle; a
+Mod Archive tune's subtitle is its format, so the format is shown as the author and again as the
+format. The address is the tune's id, shown where the source line takes the file's location.
+
 ## C142 A Browse Search test fails now and then in the full gate — open, found 2026-11-13
 
 `BrowseFilterUiTest`, *each level keeps its own Search while Browse is open, and leaving Browse
