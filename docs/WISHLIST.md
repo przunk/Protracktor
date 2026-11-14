@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B68. The playlists sheet as cards — built on a branch 2026-11-14
+## B68. The playlists sheet as cards — merged into develop 2026-11-14
 
 Raised 2026-11-14: the list of playlists (a tap on the playlist's name) looked out of step with the
 rest of the app. Shaped on pictures the same day after the alarms' cards: one rounded, contrasting
@@ -18,14 +18,15 @@ card per playlist with little air between them; a cover with the playlist sign, 
 one, which also says Open beside its count, so it is not told by colour alone (it was before); the
 count in words where a bare number read as a row number; New and Import as small labelled actions
 beside the title instead of outlined buttons under the list; the list grows with the sheet. What a
-card and its menu do is unchanged. Built on `feature/playlist-sheet`, not merged.
+card and its menu do is unchanged. Built on `feature/playlist-sheet` and merged on 2026-11-14 after
+I checked APK 1588 on the phone, all of it.
 
 **Checked:** `PlaylistSwitcherTest` (cards with their size in words; the open one marked and saying
 so; a tap opens that playlist; New and Import beside the title; the menu still exports), each
 guard broken once to see it fail; the menu's delete dialog in `HoldToConfirmDialogsTest`. Pictures
 in `dist/evidence/playlist-sheet/`, the sheet's frame drawn by the screenshot test as Material draws
-it (the sheet's own window is beyond its capture). **Not checked:** the phone; New's naming dialog
-in this harness (its blinking cursor never lets it settle).
+it (the sheet's own window is beyond its capture). New's naming dialog cannot be driven in this
+harness (its blinking cursor never lets it settle); I checked it on the phone.
 
 ## B67. AMP's map fetched only when its MD5 has changed — merged into develop 2026-11-14
 
