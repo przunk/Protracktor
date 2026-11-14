@@ -45,11 +45,12 @@ stale index fetches; a map that did not land keeps no sum), each broken once to 
 class now runs under Robolectric, since AMP's map is read with Android's JsonReader. **Not
 checked:** the phone, against AMP's live server.
 
-## B66. How many tunes are in the queue — built on a branch 2026-11-14
+## B66. How many tunes are in the queue — merged into develop 2026-11-14
 
 Raised 2026-11-11: it would help to see how many tunes are waiting in the queue. Meant, as I made
 clear on 2026-11-14: **in the Queue view, how long its list is** -- the source's tunes with those
-queued by hand, the latter going as they play. Built on `feature/queue-count`, not merged:
+queued by hand, the latter going as they play. Built on `feature/queue-count` and merged on
+2026-11-14 after I checked APK 1591 (`908fc6cc`) on the phone:
 
 - **The Queue view's header** says under the source how many rows its list has, and how many of them
   were added by hand: "11 tracks · 3 added by hand", or "8 tracks" with none. It is the count of the
@@ -61,7 +62,7 @@ queued by hand, the latter going as they play. Built on `feature/queue-count`, n
 **Checked:** `QueueExperimentUiTest` (the header's count with and without tunes queued by hand, and
 falling as one is gone); `QueueCountTest` (nothing for none, the number, 99+); `DockCollapseUiTest`
 (the badge and TalkBack's state on both forms of the dock, absent with nothing waiting), each broken
-once to see it fail. Pictures in `dist/evidence/queue-count/`. **Not checked:** the phone.
+once to see it fail. Pictures in `dist/evidence/queue-count/`.
 
 ## B65. ~~Stereo mix in Settings as a three-part pill~~ — done, merged 2026-11-12
 
