@@ -10,12 +10,21 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B67. AMP's map fetched only when its MD5 has changed — noted 2026-11-12
+## B67. AMP's map fetched only when its MD5 has changed — built on a branch 2026-11-13
 
-AMP publishes `/download/amp_modules.md5` beside its module map (2026-11-12, `PLAN_AMP.md`). The
-app could ask for that small file first and fetch the map (about 10 MB over the wire, 45 MB
-unpacked) only when the sum differs from the one it holds, instead of on every refresh. Not built;
-the sum's format is `<md5>  amp_modules.json`.
+AMP publishes `/download/amp_modules.md5` beside its module map (2026-11-12, `PLAN_AMP.md`). Built
+on `feature/amp-md5`, not merged: refreshing AMP asks for that file first (a few dozen bytes) and
+fetches the map (about 10 MB over the wire, 45 MB unpacked) only when the sum differs from the one
+kept with the stored index, or the index is gone or built by other decoders; otherwise it says AMP
+is up to date. The sum kept is that of the map actually stored, and only once it is stored. A sum
+that cannot be read changes nothing: the map is fetched as before. Same host as the map, so the
+privacy policy and data safety answers are unchanged.
+
+**Checked:** `AmpMapSumTest` (reading AMP's file, the MD5); `LibraryDownloadsTest` (unchanged map not
+fetched and said; changed map fetched, stored, its sum kept; no readable sum fetches; a gone or
+stale index fetches; a map that did not land keeps no sum), each broken once to see it fail. The test
+class now runs under Robolectric, since AMP's map is read with Android's JsonReader. **Not
+checked:** the phone, against AMP's live server.
 
 ## B66. How many tunes are in the queue — noted 2026-11-11
 

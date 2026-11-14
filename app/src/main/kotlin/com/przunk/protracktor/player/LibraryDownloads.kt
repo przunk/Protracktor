@@ -7,6 +7,7 @@ import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
 import com.przunk.protracktor.net.Amp
+import com.przunk.protracktor.net.AmpMapSum
 import com.przunk.protracktor.net.Modland
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -35,6 +36,11 @@ internal class LibraryDownloads(
         suspend fun replaceSongDbLengths(bytes: ByteArray): Int
         suspend fun replaceFavourites(bytes: ByteArray): Int
         suspend fun playableFavourites(): Int
+        /** The map sum kept with [id]'s last stored index (B67), or null. */
+        suspend fun storedIndexSum(id: String): String?
+        suspend fun rememberIndexSum(id: String, sum: String)
+        /** Whether [id]'s index is on the phone and built by this build's decoders. */
+        suspend fun indexCurrent(id: String): Boolean
     }
 
     interface Ui {
@@ -151,6 +157,16 @@ internal class LibraryDownloads(
             if (!ended) { ended = true; ui.end(catalogue.id) }
         }
         try {
+            // **AMP's map only when it has changed** (B67): its published sum first, a few dozen
+            // bytes. A sum that cannot be read changes nothing: the map is fetched as before.
+            if (catalogue == Amp) {
+                val remote = sources.fetchIndex(AmpMapSum.URL)?.let(AmpMapSum::parse)
+                if (!Amp.access.allows(ampTicket!!)) return null
+                if (remote != null && remote == sources.storedIndexSum(Amp.id) && sources.indexCurrent(Amp.id)) {
+                    finish()
+                    return Fetched(true, text.message(DownloadNotice.IndexUpToDate(catalogue.displayName)))
+                }
+            }
             val bytes = sources.fetchIndex(catalogue.indexUrl)
             if (catalogue == Amp && !Amp.access.allows(ampTicket!!)) return null
             if (bytes == null) {
@@ -182,6 +198,11 @@ internal class LibraryDownloads(
             }
             val playable =
                 sources.replaceIndex(catalogue, entries)
+            // Kept only once the index is stored, and as the sum of what was stored, so a map that
+            // failed to land is fetched again next time.
+            if (catalogue == Amp && playable > 0) {
+                sources.rememberIndexSum(Amp.id, withContext(Dispatchers.Default) { AmpMapSum.of(bytes) })
+            }
             finish()
             ui.catalogueStored()
             // **Both numbers, because there are now two** (`docs/ROADMAP_FORMATS.md` step 0).

@@ -480,6 +480,7 @@
     <string name="notice_history_cleared">Historia wyczyszczona.</string>
     <string name="notice_index_deleted">Indeks usunięty. Możesz go pobrać ponownie w każdej chwili.</string>
     <string name="notice_index_download_failed">Nie udało się pobrać indeksu %1$s.</string>
+    <string name="notice_index_up_to_date">%1$s jest aktualny: nic się nie zmieniło od ostatniego pobrania.</string>
     <string name="notice_archive_store_failed">Nie udało się zapisać archiwum %1$s.</string>
     <plurals name="notice_indexed_all">
         <item quantity="one">Zaindeksowano jedyny utwór, jaki wymienia %2$s.</item>

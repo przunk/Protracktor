@@ -25,6 +25,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Under Robolectric since 2026-11-13 (B67): AMP's map is read with Android's JsonReader, which the
+// plain JVM's android.jar only stubs, so a map could not land here before.
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [29], application = android.app.Application::class)
 class LibraryDownloadsTest {
     @Test fun `retiring an AMP index write does not cancel unrelated selected metadata downloads`() = runBlocking {
         val f = Fixture(this)
@@ -66,6 +70,75 @@ class LibraryDownloadsTest {
             assertFalse("catalogue-stored" in f.events)
         } finally { release.complete(Unit); Amp.access.setEnabled(true) }
     }
+    // **AMP's map only when it has changed** (B67).
+    private fun ampMap(): ByteArray = ("{\"generated_at\":\"2026-11-13T14:00:00Z\",\"module_count\":1,\"modules\":[" +
+        "{\"module_id\":2,\"title\":\"song\",\"authors\":[\"Artist\"],\"file_name\":\"MOD.song.gz\"," +
+        "\"file_size\":10,\"download_file_name\":\"song.mod\",\"md5\":\"$HASH\",\"path\":\"A/Artist/MOD.song.gz\"}]}").toByteArray()
+
+    private fun Fixture.amp(sumFile: String?) {
+        payloads[Amp.indexUrl] = ampMap()
+        payloads[com.przunk.protracktor.net.AmpMapSum.URL] = sumFile?.toByteArray()
+    }
+
+    @Test fun `an unchanged AMP map is not downloaded again, and says it is up to date`() = runBlocking {
+        val f = Fixture(this)
+        val sum = com.przunk.protracktor.net.AmpMapSum.of(ampMap())
+        f.amp("$sum  amp_modules.json\n")
+        f.sums[Amp.id] = sum
+        f.downloads.indexCatalogue(Amp.id)
+        drain()
+        assertEquals(listOf(com.przunk.protracktor.net.AmpMapSum.URL), f.fetched())
+        assertFalse(Amp.id in f.indexed)
+        assertTrue(f.shown.any { it is DownloadNotice.IndexUpToDate })
+        assertTrue(f.busy.isEmpty())
+    }
+
+    @Test fun `a changed AMP map is downloaded, stored, and its sum kept`() = runBlocking {
+        val f = Fixture(this)
+        f.amp("ffffffffffffffffffffffffffffffff  amp_modules.json")
+        f.sums[Amp.id] = "00000000000000000000000000000000"
+        f.downloads.indexCatalogue(Amp.id)
+        drain()
+        assertEquals(listOf(com.przunk.protracktor.net.AmpMapSum.URL, Amp.indexUrl), f.fetched())
+        assertTrue(Amp.id in f.indexed)
+        // The sum of what was stored, not the sum the server announced.
+        assertEquals(com.przunk.protracktor.net.AmpMapSum.of(ampMap()), f.sums[Amp.id])
+    }
+
+    @Test fun `without a readable sum the AMP map is downloaded as before`() = runBlocking {
+        for (file in listOf(null, "", "not a sum")) {
+            val f = Fixture(this)
+            f.amp(file)
+            f.sums[Amp.id] = com.przunk.protracktor.net.AmpMapSum.of(ampMap())
+            f.downloads.indexCatalogue(Amp.id)
+            drain()
+            assertTrue("map fetched with sum file '$file'", Amp.indexUrl in f.fetched())
+            assertTrue(Amp.id in f.indexed)
+        }
+    }
+
+    @Test fun `the same sum still downloads when the index is gone or built by other decoders`() = runBlocking {
+        val f = Fixture(this)
+        val sum = com.przunk.protracktor.net.AmpMapSum.of(ampMap())
+        f.amp(sum)
+        f.sums[Amp.id] = sum
+        f.indexCurrent = false
+        f.downloads.indexCatalogue(Amp.id)
+        drain()
+        assertTrue(Amp.indexUrl in f.fetched())
+        assertTrue(Amp.id in f.indexed)
+    }
+
+    @Test fun `a map that did not land keeps no sum, so it is fetched again next time`() = runBlocking {
+        val f = Fixture(this)
+        f.amp("ffffffffffffffffffffffffffffffff")
+        f.playable = 0
+        f.downloads.indexCatalogue(Amp.id)
+        drain()
+        assertFalse("sum:${Amp.id}" in f.events)
+        assertFalse(Amp.id in f.sums)
+    }
+
     private companion object {
         const val METADATA = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/1bad3e8/tsv/pretty/md5/metadata.tsv"
         const val LENGTHS = "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/1bad3e8/tsv/pretty/md5/songlengths.tsv"
@@ -146,6 +219,14 @@ class LibraryDownloadsTest {
             events += "count-favourites"
             return favouritePlayable
         }
+        val sums = mutableMapOf<String, String>()
+        var indexCurrent = true
+        override suspend fun storedIndexSum(id: String): String? = sums[id]
+        override suspend fun rememberIndexSum(id: String, sum: String) {
+            events += "sum:$id"
+            sums[id] = sum
+        }
+        override suspend fun indexCurrent(id: String): Boolean = indexCurrent
         override fun begin(key: String, label: String): Boolean {
             events += "begin:$key:$label"
             return busy.add(key)
@@ -386,6 +467,8 @@ class LibraryDownloadsTest {
                 DownloadKeys.SONG_LENGTHS -> listOf(LibraryDownloads.SONG_LENGTHS_URL)
                 DownloadKeys.FAVOURITES -> listOf(FAVOURITES)
                 DownloadKeys.TRACK_METADATA -> listOf(METADATA, LENGTHS)
+                // AMP asks its published sum before its map (B67).
+                Amp.id -> listOf(com.przunk.protracktor.net.AmpMapSum.URL, Amp.indexUrl)
                 else -> listOf(Catalogue.byId(step)!!.indexUrl)
             }
         }
