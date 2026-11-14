@@ -215,4 +215,25 @@ class QueueExperimentUiTest {
         assertEquals(before, compose.onNodeWithTag("playback-row-source:1").fetchSemanticsNode().boundsInRoot)
         assertEquals("b.mod", shown.value.activePlayback.order.tracks[1].fileName)
     }
+
+    // B66: the header says how long the list is -- the source's rows with those queued by hand, which
+    // go as they play.
+    @Test fun `the header counts the list, the source with what was queued by hand`() {
+        val source = listOf(TrackRef("a", "First"), TrackRef("b", "Second"), TrackRef("c", "Third"))
+        val plain = PlayerUiState(playback = collectionPlayback(PlayQueue(source).startAt(0)))
+        val state = androidx.compose.runtime.mutableStateOf(plain)
+        activity.get().setContent { MaterialTheme { panel(state.value) } }
+        measure()
+        compose.onNodeWithTag("queue-list-count").assertTextEquals("3 tracks")
+        compose.runOnIdle {
+            state.value = plain.copy(schedule = plain.schedule
+                .enqueue(TrackRef("x", "Queued one")).enqueue(TrackRef("y", "Queued two")))
+        }
+        measure()
+        compose.onNodeWithTag("queue-list-count").assertTextEquals("5 tracks · 2 added by hand")
+        // One played and gone: the count follows the list.
+        compose.runOnIdle { state.value = plain.copy(schedule = plain.schedule.enqueue(TrackRef("y", "Queued two"))) }
+        measure()
+        compose.onNodeWithTag("queue-list-count").assertTextEquals("4 tracks · 1 added by hand")
+    }
 }

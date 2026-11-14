@@ -180,16 +180,19 @@ internal fun CollapsedDock(
             Spacer(Modifier.width(PLAY_QUEUE_GAP))
             // Its icon alone here, by my choice for this form (2026-11-11); named for TalkBack. On the
             // full dock's tonal background and shape (2026-11-12), so it reads as the same button.
-            FilledTonalIconButton(
-                onClick = onQueue,
-                shape = MaterialTheme.shapes.medium,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
-                modifier = Modifier.size(44.dp).testTag("queue-toggle"),
-            ) {
-                Icon(PlayerIcons.Playlist, stringResource(R.string.queue_title))
+            // How many wait in it, on its corner (B66).
+            QueueCountBadge(state.schedule.pending.size) { said ->
+                FilledTonalIconButton(
+                    onClick = onQueue,
+                    shape = MaterialTheme.shapes.medium,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    modifier = Modifier.size(44.dp).testTag("queue-toggle").then(said),
+                ) {
+                    Icon(PlayerIcons.Playlist, stringResource(R.string.queue_title))
+                }
             }
         }
     }

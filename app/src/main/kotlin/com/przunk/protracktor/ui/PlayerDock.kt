@@ -271,8 +271,11 @@ fun PlayerDock(
                     }
                     }
                 }
-                LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
-                    onClick = onQueue, slim = true, modifier = Modifier.testTag("queue-toggle"))
+                // How many wait in it, on its corner (B66).
+                QueueCountBadge(state.schedule.pending.size) { said ->
+                    LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
+                        onClick = onQueue, slim = true, modifier = Modifier.testTag("queue-toggle").then(said))
+                }
             }
 
             Row(

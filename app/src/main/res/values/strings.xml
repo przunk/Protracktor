@@ -755,4 +755,13 @@
         <item quantity="other">Used by %1$,d alarms</item>
     </plurals>
     <string name="scrollbar_position">%1$,d / %2$,d</string>
+    <plurals name="queue_waiting">
+        <item quantity="one">%1$,d waiting</item>
+        <item quantity="other">%1$,d waiting</item>
+    </plurals>
+    <string name="queue_list_count">%1$s · %2$s</string>
+    <plurals name="queue_added_by_hand">
+        <item quantity="one">%1$,d added by hand</item>
+        <item quantity="other">%1$,d added by hand</item>
+    </plurals>
 </resources>

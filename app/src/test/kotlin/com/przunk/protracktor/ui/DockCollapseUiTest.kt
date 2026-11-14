@@ -214,4 +214,40 @@ class DockCollapseUiTest {
         frame()
         assertEquals(emptyList<Double>(), seeks)
     }
+
+    // B66: how many wait in the queue, on Queue's button, in both forms of the dock.
+    private fun queued(count: Int) {
+        var schedule = state.value.schedule
+        repeat(count) { i -> schedule = schedule.enqueue(TrackRef("queued-$i", "Queued $i"), false) }
+        state.value = state.value.copy(schedule = schedule)
+    }
+
+    private fun assertCount(text: String?) {
+        if (text == null) {
+            compose.onNodeWithTag("queue-count").assertDoesNotExist()
+            compose.onNodeWithTag("queue-toggle").assert(SemanticsMatcher.keyNotDefined(androidx.compose.ui.semantics.SemanticsProperties.StateDescription))
+        } else {
+            compose.onNodeWithTag("queue-count", useUnmergedTree = true).onChild().assertTextEquals(text)
+            compose.onNodeWithTag("queue-toggle").assert(SemanticsMatcher.expectValue(
+                androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+                hostRule.controller.get().resources.getQuantityString(R.plurals.queue_waiting, 3, 3)))
+        }
+    }
+
+    @Test fun `the full dock's Queue shows how many wait, and nothing when none do`() {
+        show()
+        assertCount(null)
+        compose.runOnIdle { queued(3) }
+        frame()
+        assertCount("3")
+    }
+
+    @Test fun `the collapsed dock's Queue shows how many wait, and nothing when none do`() {
+        collapsed.value = true
+        show()
+        assertCount(null)
+        compose.runOnIdle { queued(3) }
+        frame()
+        assertCount("3")
+    }
 }
