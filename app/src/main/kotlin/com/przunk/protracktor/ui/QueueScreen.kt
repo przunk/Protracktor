@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,9 +75,17 @@ fun QueueScreen(
         val source = (active.source as? QueueSource.Playlist)?.let { playlist ->
             playlist.copy(name = state.playlists.firstOrNull { it.id == playlist.id }?.name ?: playlist.name)
         } ?: active.source
+        val byHand = rows.count { it is PlaybackRow.Manual }
+        val total = pluralStringResource(R.plurals.track_count, rows.size, rows.size)
         QueueHeader(queueSourceLabel(source), onClear,
             onSource = onOpenSource?.takeIf { QueueSourceNavigation.hasView(active.source) }
-                ?.let { action -> { action(active.source) } })
+                ?.let { action -> { action(active.source) } },
+            count = when {
+                rows.isEmpty() -> null
+                byHand == 0 -> total
+                else -> stringResource(R.string.queue_list_count, total,
+                    pluralStringResource(R.plurals.queue_added_by_hand, byHand, byHand))
+            })
         if (state.schedule.pending.isNotEmpty() && active.order.repeat == RepeatMode.ONE)
             Text(stringResource(R.string.queue_repeat_one_wait), style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))

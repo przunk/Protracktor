@@ -45,11 +45,23 @@ stale index fetches; a map that did not land keeps no sum), each broken once to 
 class now runs under Robolectric, since AMP's map is read with Android's JsonReader. **Not
 checked:** the phone, against AMP's live server.
 
-## B66. How many tunes are in the queue — noted 2026-11-11
+## B66. How many tunes are in the queue — built on a branch 2026-11-14
 
-Raised 2026-11-11: it would help to see how many tunes are waiting in the queue. Not shaped yet:
-where the number belongs (on Queue's button in the dock, in the queue's own header, or both) is to
-be decided with the redesign's dock in mind.
+Raised 2026-11-11: it would help to see how many tunes are waiting in the queue. Meant, as I made
+clear on 2026-11-14: **in the Queue view, how long its list is** -- the source's tunes with those
+queued by hand, the latter going as they play. Built on `feature/queue-count`, not merged:
+
+- **The Queue view's header** says under the source how many rows its list has, and how many of them
+  were added by hand: "11 tracks · 3 added by hand", or "8 tracks" with none. It is the count of the
+  rows shown, so a tune queued by hand drops out of it once it has played.
+- **Also kept, built first on a reading of the wish I liked as it was:** a count on the corner of
+  Queue's button, on the full dock and the collapsed one, of the tunes queued by hand only, shown
+  while something waits, "99+" past two digits, and said to TalkBack as the button's state.
+
+**Checked:** `QueueExperimentUiTest` (the header's count with and without tunes queued by hand, and
+falling as one is gone); `QueueCountTest` (nothing for none, the number, 99+); `DockCollapseUiTest`
+(the badge and TalkBack's state on both forms of the dock, absent with nothing waiting), each broken
+once to see it fail. Pictures in `dist/evidence/queue-count/`. **Not checked:** the phone.
 
 ## B65. ~~Stereo mix in Settings as a three-part pill~~ — done, merged 2026-11-12
 

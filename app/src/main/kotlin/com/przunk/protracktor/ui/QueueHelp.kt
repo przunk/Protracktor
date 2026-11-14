@@ -42,7 +42,7 @@ import com.przunk.protracktor.R
 
 /** Keep gesture discovery available without making instructions a permanent part of the list. */
 @Composable
-internal fun QueueHeader(source: String, onClear: () -> Unit, onSource: (() -> Unit)? = null) {
+internal fun QueueHeader(source: String, onClear: () -> Unit, onSource: (() -> Unit)? = null, count: String? = null) {
     var help by remember { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Reserve 80dp after the 32dp outer insets: large translated labels can consume the source.
@@ -62,8 +62,14 @@ internal fun QueueHeader(source: String, onClear: () -> Unit, onSource: (() -> U
                 verticalAlignment = Alignment.CenterVertically) {
                 if (onSource != null) Icon(PlayerIcons.Back, null, Modifier.padding(end = 6.dp).size(20.dp).rotate(180f),
                     tint = MaterialTheme.colorScheme.primary)
-                Text(source, style = MaterialTheme.typography.bodyMedium, maxLines = 2,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    Text(source, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    // How long the list below is (B66, 2026-11-14): what the source has, with what
+                    // was queued by hand, which goes as it plays.
+                    if (count != null) Text(count, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                        modifier = Modifier.testTag("queue-list-count"))
+                }
             }
             LabelledAction(PlayerIcons.Remove, stringResource(R.string.queue_clear), onClear,
                 modifier = Modifier.testTag("queue-clear").widthIn(max = clearWidth).then(actionSizing),

@@ -71,6 +71,14 @@ class ShellScreensTest : PlaybackShellTest() {
             val suffix = "$locale-${theme.name.lowercase()}"
             shell(theme)
             shot("e4-playlist-$suffix")
+            // How many wait in the queue, on Queue's button (B66).
+            compose.runOnIdle {
+                var schedule = player.value.schedule
+                repeat(3) { i -> schedule = schedule.enqueue(tracks[(i + 3) % tracks.size].copy(id = "queued-$i"), false) }
+                player.value = player.value.copy(schedule = schedule)
+            }
+            shot("q-count-$suffix")
+            compose.runOnIdle { player.value = player.value.copy(schedule = com.przunk.protracktor.player.PlaybackSchedule()) }
             com.przunk.protracktor.Appearance.selectDockCollapsed(application, true)
             compose.runOnIdle { activity.get().setContent { ProtracktorTheme(theme, dynamicColour = false) { ProtracktorApp(PlayerViewModel(application)) } } }
             shot("e4-collapsed-$suffix")
