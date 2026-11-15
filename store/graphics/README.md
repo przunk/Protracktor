@@ -43,7 +43,10 @@ where these surfaces want 1080. Both wrong, and nothing on the device says so.
 **padded to 1080 wide, never scaled**, with the bars filled from the image's own top-left pixel. On
 this app's dark screens that reads as a wider phone rather than as letterboxing, and every pixel of
 the actual screen survives — which matters for a picture whose whole job is to show what the app
-looks like. Upload the `-store.png` files; the originals stay as what the phone produced.
+looks like. Upload the `-store.png` files. **Only those are kept** (decided 2026-11-15): a
+`-store` file holds every pixel of the phone's original, so cropping its side bars gives the
+original back, and a second copy of each screenshot was only clutter. Delete the originals once the
+`-store` versions are checked.
 
 - **Feature graphic:** exactly 1024×500 px, JPEG or 24-bit PNG without alpha.
 - **Screenshots:** at least two to publish; JPEG or 24-bit PNG without alpha, dimensions from 320 to
@@ -54,9 +57,25 @@ looks like. Upload the `-store.png` files; the originals stay as what the phone 
 Source:
 [Google Play preview-asset requirements](https://support.google.com/googleplay/android-developer/answer/9866151?hl=en).
 
-## Next set — to be captured after the redesign (recorded 2026-11-15)
+## Current set — captured 2026-11-14 and 2026-11-15, after the redesign
 
-The current screenshots date from **2026-09-24** (around 0.9). Since then the app was redesigned
+Captured on the phone with 1.10.0 and, for 3 and 6, the C143 fix; these replace the screenshots of
+**2026-09-24** (around 0.9), which are in git history. In upload order:
+
+| # | file | screen |
+|---|---|---|
+| 1 | `Screenshot_20261115-012205-store.png` | a playlist playing, the full dock |
+| 2 | `Screenshot_20261115-012212-store.png` | the same playlist, the dock collapsed |
+| 3 | `Screenshot_20261115-014932-store.png` | Now Playing |
+| 4 | `Screenshot_20261115-004740-store.png` | Browse |
+| 5 | `Screenshot_20261115-004818-store.png` | Random |
+| 6 | `Screenshot_20261115-015005-store.png` | the Queue |
+| 7 | `Screenshot_20261115-004918-store.png` | the playlists sheet |
+| 8 | `Screenshot_20261115-012648-store.png` | Alarms |
+
+What follows is the plan this set was captured to.
+
+The screenshots before it date from **2026-09-24** (around 0.9). Since then the app was redesigned
 (1.10.0: the navigation bar, the collapsible dock, Settings in sections), and gained the playback
 Queue with its count, Random with its dice, the playlists sheet as cards, Now Playing's single row of
 actions, Saved places, played-before marks, music alarms and AMP. The set planned for 1.7.0 never
