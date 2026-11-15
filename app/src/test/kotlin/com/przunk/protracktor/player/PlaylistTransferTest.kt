@@ -152,7 +152,7 @@ class PlaylistTransferTest {
     fun `import resolves exact IDs then remote identities then locations and finally indexed filename and size`() = runBlocking {
         val known = track("content://provider/known").copy(title = "Stored title", sizeBytes = 7)
         val remote = track().copy(title = "Remote", sizeBytes = 8)
-        val asma = TrackRef("asma://Music/a.sap", "ASMA", subtitle = "Music", sizeBytes = 9, fileName = "a.sap", author = "S")
+        val asma = TrackRef("asma://Music/a.sap", "ASMA", subtitle = "${com.przunk.protracktor.net.Asma.displayName}/Music", sizeBytes = 9, fileName = "a.sap", author = "S")
         val match = track("content://provider/matched").copy(fileName = "matched.mod", sizeBytes = 10)
         val records = listOf(known.copy(title = "Old title"), remote, asma,
             match.copy(id = "content://other/matched", subtitle = "Somewhere"))

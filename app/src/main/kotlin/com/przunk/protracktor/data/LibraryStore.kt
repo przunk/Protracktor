@@ -141,7 +141,7 @@ class LibraryStore(context: Context) {
                             sizeBytes = row.getLong(3),
                             fileName = row.getString(4),
                             author = row.getString(5),
-                        )
+                        ).canonical() // C143: older Mod Archive rows read right as they are
                     )
                 }
             }
@@ -163,7 +163,7 @@ class LibraryStore(context: Context) {
                                 sizeBytes = row.getLong(3),
                                 fileName = row.getString(4),
                                 author = row.getString(5),
-                            )
+                            ).canonical()
                         )
                     }
                 }

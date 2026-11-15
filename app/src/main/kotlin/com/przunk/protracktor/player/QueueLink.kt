@@ -235,12 +235,8 @@ object QueueLink {
             val id = if ("://" in address) address else Modland.urlFor(address)
             // The Mod Archive names the file only in the fragment: `downloads.php?moduleid=42#lotus.mod`.
             val last = address.substringAfterLast('/')
-            val file = if ('#' in last) last.substringAfter('#') else last.substringBefore('?')
-            val source = Catalogue.owning(id)?.let { catalogue ->
-                catalogue.pathFrom(id)?.substringBeforeLast('/', "")?.let { folder ->
-                    listOf(catalogue.displayName, folder).filter { it.isNotBlank() }.joinToString("/")
-                }
-            }.orEmpty()
+            val file = Catalogue.fileOf(id) ?: if ('#' in last) last.substringAfter('#') else last.substringBefore('?')
+            val source = Catalogue.sourceOf(id).orEmpty()
             TrackRef(id = id, title = title.ifBlank { file }, subtitle = source, fileName = file)
         }
         return Opened(play, tracks, stayed)

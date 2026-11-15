@@ -69,9 +69,42 @@ data class TrackRef(
     /** The filename, falling back to the title for references made before it was recorded. */
     val fileNameOrTitle: String get() = fileName.ifBlank { title }
 
-    /** What to show as the author: the tag if there is one, otherwise the folder it came from. */
+    /**
+     * What to show as the author: the tag if there is one, otherwise the folder it came from.
+     *
+     * **Not for The Mod Archive's tunes** (C143, 2026-11-15): their subtitle is the archive and the
+     * format, so its last part read as the author showed "MOD · MOD". An exported playlist then wrote
+     * that "MOD" out as the author and an import read it back as one; an author that is only the
+     * format is that mistake, and goes.
+     */
     val displayAuthor: String
-        get() = author.ifBlank { subtitle.substringAfterLast('/').substringAfterLast(" · ") }
+        get() = if (com.przunk.protracktor.net.ModArchive.owns(id)) {
+            author.takeUnless { it.equals(SupportedFormats.labelFor(fileNameOrTitle), ignoreCase = true) }.orEmpty()
+        } else {
+            author.ifBlank { subtitle.substringAfterLast('/').substringAfterLast(" · ") }
+        }
+
+    /**
+     * A catalogue tune with the fields the app itself gives it (C143). A playlist imported from a
+     * file built them from the bare address -- `https://modland.com/pub/modules/SNDH/Jess` as the
+     * subtitle, `downloads.php?moduleid=…#lotus3_4.mod` as The Mod Archive's file -- and kept them,
+     * which is the address the File line and the Queue then showed. A subtitle that does not start
+     * with the catalogue's name is that shape, and is rebuilt from the address, with the file name;
+     * The Mod Archive also loses an author that is only the format. Read through this, such rows
+     * show right without a change to what is stored. Anything else is returned as it is.
+     */
+    fun canonical(): TrackRef {
+        val catalogue = com.przunk.protracktor.net.Catalogue.owning(id) ?: return this
+        val ownShape = subtitle.startsWith(catalogue.displayName)
+        val file = if (ownShape) fileName else com.przunk.protracktor.net.Catalogue.fileOf(id).orEmpty().ifBlank { fileName }
+        val fixed = copy(
+            fileName = file,
+            subtitle = if (ownShape) subtitle else com.przunk.protracktor.net.Catalogue.sourceOf(id).orEmpty(),
+            author = if (catalogue == com.przunk.protracktor.net.ModArchive &&
+                author.equals(SupportedFormats.labelFor(file), ignoreCase = true)) "" else author,
+        )
+        return if (fixed == this) this else fixed
+    }
 
     fun sameFileAs(other: TrackRef): Boolean = when {
         id == other.id -> true

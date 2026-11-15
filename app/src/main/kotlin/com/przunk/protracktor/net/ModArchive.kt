@@ -34,6 +34,9 @@ object ModArchive : Catalogue(
 
     override val isOnlineOnly: Boolean get() = true
 
+    /** Whether [id] is one of this archive's tunes: its ids are its download addresses (C143). */
+    fun owns(id: String): Boolean = id.startsWith(DOWNLOAD_PREFIX)
+
     override fun urlFor(path: String): String =
         if (path.startsWith("http")) path else "$DOWNLOAD_PREFIX$path"
 
