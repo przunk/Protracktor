@@ -144,7 +144,7 @@ internal class PlaylistTransfer(
                     sizeBytes = entry.sizeBytes,
                     fileName = entry.fileName,
                     author = entry.author,
-                )
+                ).canonical()
             }
         }
         if (entry.location.startsWith("http")) {
@@ -155,7 +155,7 @@ internal class PlaylistTransfer(
                 sizeBytes = entry.sizeBytes,
                 fileName = entry.fileName,
                 author = entry.author,
-            )
+            ).canonical()
         }
         return store.findByFile(entry.fileName, entry.sizeBytes)
     }

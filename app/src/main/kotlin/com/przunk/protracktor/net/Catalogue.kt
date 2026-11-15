@@ -118,6 +118,27 @@ sealed class Catalogue(
 
         /** Which catalogue a track reference belongs to, if any. Each recognises only its own. */
         fun owning(trackId: String): Catalogue? = all.firstOrNull { it.pathFrom(trackId) != null }
+
+        /**
+         * Where a catalogue tune is filed, the way the app shows it -- "Modland/Protracker/4-Mat",
+         * "The Mod Archive" -- worked out from its address alone; null when no catalogue owns it.
+         * A link's rows and an imported playlist's rows have nothing else to go on (C143).
+         */
+        fun sourceOf(trackId: String): String? {
+            val catalogue = owning(trackId) ?: return null
+            val folder = catalogue.pathFrom(trackId)?.substringBeforeLast('/', "").orEmpty()
+            return listOf(catalogue.displayName, folder).filter { it.isNotBlank() }.joinToString("/")
+        }
+
+        /**
+         * A catalogue tune's file name from its address: the path's last part, decoded, or for The
+         * Mod Archive, which names the file only in the fragment (`…moduleid=42#lotus.mod`), what
+         * follows the `#`. Null when no catalogue owns the address.
+         */
+        fun fileOf(trackId: String): String? {
+            val last = owning(trackId)?.pathFrom(trackId)?.substringAfterLast('/') ?: return null
+            return if ('#' in last) last.substringAfter('#') else last.substringBefore('?')
+        }
     }
 }
 

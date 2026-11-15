@@ -15,17 +15,38 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — open, found 2026-11-15
+## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — fixed on a branch 2026-11-15
 
 Seen on the store screenshots I took on 2026-11-15 (APK 1594): in the playlist a Mod Archive tune's
 second line reads `MOD · MOD`, and the Queue and Now Playing show its raw download address
 (`https://api.modarchive.org/downloads.php?moduleid=…#lotus3_4.mod`) where a file name or folder
 stands for other catalogues.
 
-**Mechanism, from the code (not yet reproduced in a test):** `TrackRef.displayAuthor`
-(`player/PlayQueue.kt`) falls back, when the author is blank, to the last part of the subtitle; a
-Mod Archive tune's subtitle is its format, so the format is shown as the author and again as the
-format. The address is the tune's id, shown where the source line takes the file's location.
+**Mechanism, two layers, found from the code and reproduced in tests:**
+- `TrackRef.displayAuthor` (`player/PlayQueue.kt`) falls back, when the author is blank, to the last
+  part of the subtitle; a Mod Archive tune's subtitle is `The Mod Archive/MOD`, so the format showed
+  as the author and again as the format.
+- An exported playlist writes that author into its `#EXTINF` line (`MOD - title`), and an import of
+  the file reads it back as a real author; the import also built the subtitle and the file name from
+  the bare download address (`https://api.modarchive.org` and `downloads.php?moduleid=…#lotus3_4.mod`),
+  which is the address Now Playing's File and the Queue then showed. My "Favorites" came through
+  such an export and import.
+
+**Fixed on `fix/c143-modarchive-labels`, 2026-11-15:** for a Mod Archive tune the author is never
+taken from the subtitle, and an author that is only the format is dropped. `TrackRef.canonical()`
+gives a catalogue tune whose subtitle does not start with the catalogue's name -- the imported
+shape -- the fields the app gives it: the source and the file name worked out from the address
+(`Catalogue.sourceOf` and `Catalogue.fileOf`, the rule a shared queue link already used and now
+takes from there). It is applied when a playlist is read from the database and when one is
+imported, so rows already stored on a phone read right without a migration. The first fix covered
+The Mod Archive only; the new screenshots showed the same address for Modland tunes of the same
+imported playlist (Now Playing's File, a Queue row), the same import mechanism, so the repair now
+covers every catalogue. **Checked:** `CatalogueLabelsTest` (both shapes for The Mod Archive and
+Modland; a real author kept; the app's own shape and local tunes untouched; an export no longer
+writing `MOD - `), `CatalogueStoredRowsTest` (imported Mod Archive and Modland rows read back from a
+playlist), each broken to see it fail; `QueueLinkTest` and `PlaylistTransferTest` pass (the latter's
+ASMA fixture now carries the subtitle the app gives such a tune). **Not checked:** the phone;
+History rows recorded before the fix keep their stored subtitle and file name.
 
 ## C142 A Browse Search test fails now and then in the full gate — open, found 2026-11-13
 
