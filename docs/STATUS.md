@@ -15,7 +15,7 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — fixed on a branch 2026-11-15
+## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — fixed 2026-11-15
 
 Seen on the store screenshots I took on 2026-11-15 (APK 1594): in the playlist a Mod Archive tune's
 second line reads `MOD · MOD`, and the Queue and Now Playing show its raw download address
@@ -45,8 +45,12 @@ covers every catalogue. **Checked:** `CatalogueLabelsTest` (both shapes for The 
 Modland; a real author kept; the app's own shape and local tunes untouched; an export no longer
 writing `MOD - `), `CatalogueStoredRowsTest` (imported Mod Archive and Modland rows read back from a
 playlist), each broken to see it fail; `QueueLinkTest` and `PlaylistTransferTest` pass (the latter's
-ASMA fixture now carries the subtitle the app gives such a tune). **Not checked:** the phone;
+ASMA fixture now carries the subtitle the app gives such a tune). **Not checked:**
 History rows recorded before the fix keep their stored subtitle and file name.
+
+**Merged into `develop` 2026-11-15, checked on the phone:** the store screenshots I took that day
+with the fix show Favorites' Mod Archive rows as `MOD`, Now Playing's File as
+`Modland/SNDH/Jess/Middle_Earth_Theme.sndh`, and the Queue's rows by the catalogue's path.
 
 ## C142 A Browse Search test fails now and then in the full gate — open, found 2026-11-13
 
