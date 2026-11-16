@@ -1,8 +1,8 @@
 # Code review — Protracktor Android app, November 2026
 
-**Status: in progress.** This document is filled in stage by stage; the coverage ledger (§10) says
-what has been read so far. Until the summary (§2) is written, nothing here is a conclusion about
-the whole code base.
+**Status: findings written for everything read so far; reading is not complete.** The coverage
+ledger (§10) says exactly what was read, what was read only in part, and what was not reached. The
+summary (§2) is provisional until the ledger has no open rows.
 
 ## 1. Header
 
@@ -12,11 +12,12 @@ the whole code base.
 | Reviewed commit | `af2606123d0d6fc304eb3362d6823970233a86c7` (`af260612`), 2026-11-15 |
 | Tree at start | clean; no untracked files; one worktree; level with `origin/develop` |
 | `versionCode` at that commit | 1602 (commit count) |
-| Review started | 2026-11-15 |
+| Review dates | 2026-11-15 and 2026-11-16 |
 | Reviewer | the agent (Claude), unattended, against `GOAL.md` |
-| Method | every in-scope own file read in full once; cross-cutting concepts compared side by side; reading, not execution, unless a finding says otherwise |
+| Method | in-scope own files read in full once, in order of risk; cross-cutting concepts compared side by side; reading, not execution, unless a finding says otherwise |
 
-Every `file:line` reference below is valid for the reviewed commit.
+Every `file:line` reference below is valid for the reviewed commit. Kotlin paths are relative to
+`app/src/main/kotlin/com/przunk/protracktor/`.
 
 ### Why this review exists
 
@@ -36,26 +37,18 @@ In priority order:
 own native code that is compiled into the APK; the boundary with third-party code; build
 configuration that shapes the APK (`app/build.gradle.kts`, `app/proguard-rules.pro`,
 `gradle/libs.versions.toml`); the database schema and migrations; tests under `app/src/test` as a
-secondary subject (266 files, about 32 000 lines).
+secondary subject (262 Kotlin files, about 32 000 lines).
 
 **Own native code, as settled at the start** from `app/notices/components.tsv` and the CMake files:
+`native/engine/` (`engine.cpp`, `engine.h`, `player_oboe.cpp`, `lha_jni.cpp`, `log.h`,
+`loudness.h`, `loudness_analysis.h`, `stereo_mix.h`), `native/lhasa/lha_extract.*`,
+`native/backends/asap/asap_measure.*`, `native/backends/zxtune/lha_zxtune.cpp` and
+`uint16_char_traits.h`, `native/backends/minimp3/minimp3.c`, and the one patch under
+`native/patches/libopenmpt/`.
 
-| in scope (own, in the APK) | lines |
-| --- | --- |
-| `native/engine/engine.cpp`, `engine.h` | 2 970 + 208 |
-| `native/engine/player_oboe.cpp` | 914 |
-| `native/engine/lha_jni.cpp`, `log.h`, `loudness.h`, `loudness_analysis.h`, `stereo_mix.h` | 323 |
-| `native/lhasa/lha_extract.cpp`, `lha_extract.h` | 178 |
-| `native/backends/asap/asap_measure.c`, `.h` | 227 |
-| `native/backends/zxtune/lha_zxtune.cpp`, `uint16_char_traits.h` | 175 |
-| `native/backends/minimp3/minimp3.c` | 16 |
-| `native/patches/libopenmpt/0001-read-c1-text-as-cp437.patch` | 25 |
-| `native/CMakeLists.txt`, `native/*/CMakeLists.txt`, generated config headers (build wiring only) | — |
-
-**Out:** `web/` and `native/engine/player_wasm.cpp` (the website's engine host); `scripts/`;
-`native/probe/` (host-side probes, not linked into the APK); `native/vendor/` and everything else
-`components.tsv` lists as third-party, except at the boundary; `store/`, `user/`, `dist/`,
-`artwork/`.
+**Out:** `web/` and `native/engine/player_wasm.cpp`; `scripts/`; `native/probe/`; `native/vendor/`
+and everything else `components.tsv` lists as third-party, except at the boundary; `store/`,
+`user/`, `dist/`, `artwork/`.
 
 ### Legend
 
@@ -79,378 +72,1227 @@ secondary subject (266 files, about 32 000 lines).
 | **unverified** | concluded from reading alone |
 
 Anything about the screen, audio output or behaviour on a device is unverified by definition:
-this workshop has no emulator and no device.
+this workshop has no emulator and no device. Nothing in this review was run on a phone.
 
 **Bug or observation.** A bug has a concrete input or state that produces a wrong outcome in the
 code as it is. Fragility that has not broken yet, and anything whose mechanism could not be
 established, is an observation.
 
 **Identifiers:** `RV-B###` bugs, `RV-O###` observations, `RV-S###` suggestions, `RV-I###` ideas.
-The prefix `RV-` was checked against the identifiers the project documents already use (A, B, C,
-D, E, F, Q, R, S, W, MP, CP, CC, CX, ID) and collides with none.
+The prefix was checked against the identifiers the project documents already use and collides with
+none. Numbers are not contiguous: some were given up while the findings were sorted, and none is
+reused.
 
 ## 2. Summary
 
-*Written last.*
+*Provisional — see the status line at the top.*
+
+**Counts.** 33 bugs: 0 Critical, 1 High, 13 Medium, 19 Low. 37 observations, 14 suggestions,
+9 ideas, 5 questions. Four bugs are partially verified (RV-B003, B004, B006, B033); everything
+else is from reading.
+
+**The ten things to look at first**
+
+1. RV-B001 — a Protracktor page link may name any address; the app fetches it and plays it at once.
+2. RV-B002 — choosing a subsong while paused starts the sound while the app goes on showing pause.
+3. RV-B003 — a SID whose default song is not the first plays that song while the app believes it
+   is on the first: wrong length, wrong strip, wrong order under "play all".
+4. RV-B005 — music started from a page link runs without the foreground service.
+5. RV-B004 — notices from the controller ignore the language chosen in the app.
+6. RV-B007 — a download that arrives but parses to nothing erases the index or table it replaces.
+7. RV-B008 — scanning a folder that is no longer reachable ends the app.
+8. RV-B006 — a malformed `%` in a Modland address ends the app (link, imported list).
+9. RV-B014 — a database error in most write paths ends the app; only three areas handle one.
+10. RV-B012 — indexing Modland holds the whole 40 MB list and half a million rows in memory at once.
+
+**Verdict on the three reasons**
+
+*(a) Could it have been written better — yes, and the gap has a clear shape.* The code is not
+careless: individual files are deliberate, most rules are pure and tested, and the data layer and
+the alarms module are well built. What is missing is the level above the file. The one abstraction
+that should carry the app's central idea — an online catalogue — covers identity and index parsing
+and stops there; everything else a catalogue needs is decided by `if` chains on the id's prefix in
+at least nine places (RV-O001), with AMP, Modland, The Mod Archive and UnExoticA each special-cased
+inside generic code. The same holds one level down: "only the newest request may publish" exists
+twelve times under twelve names (RV-O002), there are five HTTP clients (RV-O003) and five search
+rules (RV-O005). `PlaybackController` is 3 825 lines and still owns playback, Random, sharing,
+pairing, scanning and playlist edits (RV-O029). A careful engineer would have written the same
+features with roughly the same rules and far fewer places to remember; §6.1 sketches that shape.
+
+*(b) Bugs and robustness — no critical defect found; the weak points are at the edges.* The native
+boundary is better defended than I feared: every JNI entry in `player_oboe.cpp` is guarded, the
+audio thread never blocks, exceptions do not escape. The exceptions to that discipline are the
+findings: the LHA wrapper has no guard at all (RV-B009), `restart` skips the decoder lock
+(RV-B011), a subsong switch runs on the main thread behind that lock (RV-B010). On the Kotlin side
+the recurring cause is one decision: the controller's coroutine scope has no failure path, so any
+exception in most `launch` blocks ends the process (RV-B008, RV-B014, RV-B007). Untrusted input
+arrives through three doors — a page link, an imported list, an intent — and none restricts where
+a tune may come from (RV-B001).
+
+*(c) Traces of lost context — plentiful, mostly harmless, a few misleading.* Comments still
+describe a threading model the engine left months ago (RV-O034); at least twenty KDoc blocks are
+attached to the wrong declaration or to none (RV-O035); a "hard requirement" keeps a background
+pass idle for a reason another comment in the same file says no longer holds (RV-O036); a kill
+switch for AMP guards a toggle nothing can flip (RV-O021); code cites review documents that are not
+in the repository (RV-O037). The fixes layered on fixes are visible mainly as special cases added
+where the symptom appeared rather than where the rule lives.
+
+**What was not reached** is listed in §10: most of `ui/` beyond mechanical checks, the rules and
+screens of `alarms/`, and the tests beyond a survey.
 
 ## 3. Architecture as built
 
-*Stage 1.*
+### Processes and entry points
+
+One process, no `Application` class. Entry points: `MainActivity` (exported; launcher, `VIEW` for
+`content`/`file`/`http(s)` with name patterns, the app link for the web page, `SEND`),
+`PlaybackService` (foreground, media playback), `ScanStopReceiver`, a `FileProvider` for shares,
+and the alarms module's two activities, service and receiver (direct-boot aware). UADE runs
+`libuadecore.so` as a child process per opened tune.
+
+### Wiring
+
+`PlaybackController` is a process-wide singleton created on first use by `PlayerViewModel`,
+`PlaybackService` or the alarm manager's view model. It is the composition root: it builds every
+store (`data/`), `RemoteFiles`, and about twenty-five collaborators, most of them through anonymous
+adapter objects that expose slices of itself. It publishes two state flows — `PlayerUiState`
+(playback, queue, playlists, settings) and `BrowseState` (navigation, catalogue levels, search,
+history page, download progress, storage sizes, pairing) — and four event flows. `PlayerViewModel`
+forwards about a hundred calls one for one; `ProtracktorApp` passes them on as lambdas.
+
+### Packages and the way dependencies point
+
+| package | holds | depends on |
+| --- | --- | --- |
+| `engine` | JNI facade, native data unpacking | `player` (formats, platforms, stereo, loudness), `net` (replay stores) |
+| `net` | catalogues, downloading, cache, pairing | `player` (`TrackRef`, `QueueLink`) |
+| `data` | SQLite schema and stores, parsers | `player` (models, platforms, formats), `net` |
+| `player` | controller, queue model, everything else | `engine`, `net`, `data`, `alarms.api`, `ui` (one helper) |
+| `alarms` | alarm feature behind `alarms.api` | `player`, `data`, `engine` |
+| `ui` | Compose screens | everything |
+| root | activity, locale, `Appearance` (settings) | `player`, `ui`, `data` |
+
+There is no layering: `engine`, `net`, `data` and `player` all import each other. `player` is a
+catch-all of 104 files — queue model, browse navigation, downloads, scanning, sharing, history
+views, Android adapters and text providers side by side. `alarms` is the exception: a module with a
+facade, pure rules, a repository and platform adapters.
+
+### One track, from tap to sound
+
+1. A tap reaches `PlaybackController` through the view model; the queue model (`ActiveQueue`,
+   `PlayQueue`, `PlaybackSchedule` — immutable, pure, well tested) decides which track.
+2. `load()` (main thread) cancels the previous open, closes the previous native track, and reads
+   the file through `TrackFiles`, which picks the source from the id's prefix.
+3. `NativeEngine.open` copies the bytes into native memory; `openBackend` asks nine decoders in a
+   fixed order; a `Player` wraps the chosen one.
+4. On the main thread again: describe, loudness lookup, MD5, song-length lookups, audio focus,
+   `start()` — which opens an Oboe stream whose callback pulls PCM from the decoder.
+5. A 200 ms poll on the main thread reads published position, detects the end, and drives the
+   queue.
+
+### Threads at the native boundary
+
+The audio callback only *tries* the decoder lock and plays silence when it is taken. Seeks run on
+an IO thread under the lock. Subsong switches run on the caller's thread — the main thread — under
+the same lock. Position, duration, description and subsong count are published by whichever thread
+holds the decoder and read lock-free by everyone else. Closing is deferred behind a running seek
+(`NativeLifetime`). `restart`, `start` and the first-play hook touch the decoder without the lock.
+
+### Persistence
+
+Three mechanisms: one SQLite database (hand-written helper, 23 schema versions, statements shared
+between create and migrate); `SharedPreferences` for thirteen settings in `Appearance` plus language
+and recent searches; a JSON ledger in device-protected storage for alarms. Files: fetched tracks in
+`cacheDir/remote` under a 512 MB budget, archives and replay routines in `filesDir`.
+
+### Cross-cutting concepts compared in this review
+
+Online catalogues (5); format backends (9); download and cache; "latest request wins"; search;
+notices and their text; settings; feature switches; length knowledge; store skeletons.
 
 ## 4. Bugs
 
 ### 4.1 Critical
 
+None found.
+
 ### 4.2 High
+
+### RV-B001 — A page link can name any address, and the app fetches and plays it at once
+- Severity: High · Likelihood: rare · Evidence: unverified (reading)
+- Where: `player/QueueLink.kt:235` (any row containing `://` becomes a track id verbatim);
+  `player/PlaybackController.kt:1985` (`openLink` plays row 0 immediately);
+  `net/RemoteFiles.kt:258` (the body is read whole unless the URL is AMP's);
+  `app/src/main/res/xml/network_security_config.xml:20` (cleartext allowed app-wide);
+  `player/AndroidTrackFileAccess.kt:24` (any other scheme is opened through the resolver).
+- Mechanism: a link to `przunk.github.io/Protracktor/#…` carries a packed list of addresses. A row
+  is turned into a `TrackRef` whose id is the address as written; nothing requires the address to
+  belong to a catalogue. `TrackFiles.read` then fetches any `http(s)` id — plain `http` included —
+  with no size limit, caches it, and hands the bytes to the decoders. A `content://` or `file://`
+  row is opened through the content resolver.
+- Trigger: somebody sends a link whose packed list names a file on a server of their choosing. One
+  tap opens the app (the link is a verified app link), and the file is downloaded and decoded with
+  no further question.
+- Impact: the whole native decoder surface becomes reachable from one tap on a link. Any memory
+  safety defect in a third-party decoder — outside this review — is then remotely triggerable; a
+  very large response is read into memory; a plain-`http` address is fetched in the clear.
+- Direction: accept only ids a catalogue owns (`Catalogue.owning(id) != null`) when reading a link;
+  apply the same rule to an imported list (`player/PlaylistTransfer.kt:139`) and to `http(s)`
+  intents; give every download the size bound AMP's already has; do not start a foreign tune
+  without a press.
+- Already known: no. `docs/OPEN_QUESTIONS.md` Q9 (playback in a separate process) discusses a
+  malformed file taking the app down, not where files may come from.
 
 ### 4.3 Medium
 
+### RV-B002 — Choosing a subsong while paused starts the sound and leaves the app showing pause
+- Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
+- Where: `player/PlaybackController.kt:2890-2923` (`selectSubsong` never sets `playing`);
+  `native/engine/player_oboe.cpp:151-154` (a switch on a stopped stream closes and starts it);
+  `player/SubsongNormalization.kt:43` (`play = true` whenever a switch is requested);
+  `player/PlaybackController.kt:798` (the poll skips everything while `playing` is false).
+- Mechanism: pause closes the audio stream. A subsong switch on a player that is not running
+  restarts the stream unconditionally. The controller updates the subsong, position and length and
+  nothing else.
+- Trigger: pause a multi-tune file; tap another tune in the subsong strip (or press next with
+  "play all" on).
+- Impact: music plays while the transport shows play; the poll is idle, so the bar does not move
+  and the end is never handled — a SID then never ends; audio focus was released at pause and is
+  not taken again, so it plays over a call; the notification shows paused.
+- Direction: decide what a subsong tap means when paused (question 1), then make the controller
+  and the engine agree: either the controller starts playback properly, or the engine is told not
+  to start.
+- Already known: no.
+
+### RV-B003 — A SID that opens at its default song is treated as being on its first
+- Severity: Medium · Likelihood: plausible · Evidence: partially verified — the vendored header
+  states the contract (`native/vendor/sidplayfp/src/sidplayfp/SidTune.h:146`, "0 = default starting
+  song"); the path through the app was traced, not run.
+- Where: `native/engine/engine.cpp:1413` (`tune_.selectSong(0)`), `:1494` (`currentSubsong`
+  returns `song_`, which stays 0 until a switch); `native/engine/player_oboe.cpp:295-299` (the
+  published subsong); `player/PlaybackController.kt:3600-3610` (length and strip taken from it).
+- Mechanism: the constructor asks libsidplayfp for the tune's own default song but records
+  nothing. The app is told subsong 0. The length is then looked up for the first song.
+- Trigger: any multi-song SID whose header names a start song other than the first.
+- Impact: the tune is ended at another song's length (cut short, or left playing into silence);
+  the strip highlights the wrong tune; under "play all" the first song is never played and the
+  default one is played twice.
+- Direction: record `info_->currentSong() - 1` at open, as ASAP and game-music-emu already do.
+- Already known: partly. `docs/STATUS.md` C30 (the web player believed every file was on its first
+  tune) fixed what a backend reports after a switch and notes that ASAP's default is not always
+  zero; the SID's own default at open was left.
+
+### RV-B004 — Notices from the controller ignore the language chosen in the app
+- Severity: Medium · Likelihood: common for anyone whose app language differs from the phone's ·
+  Evidence: partially verified — traced that the context is the application's and is never
+  wrapped; not seen on a device.
+- Where: `player/PlaybackController.kt:86` (holds `applicationContext`) and its 99 uses of
+  `context.getString`/`context.resources`; `AppLocale.kt:33` (the language is applied by wrapping a
+  context); the wrap is applied in `MainActivity.kt:40` and in about fifteen single places —
+  `PlaybackController.kt:543` and `:1821` among them — and nowhere else.
+- Mechanism: the in-app language exists only on contexts passed through `AppLocale.wrap`. The
+  controller, the three text providers (`AndroidDownloadText`, `AndroidMaintenanceText`,
+  `AndroidPlaylistText`) and `ScanNotification` read strings from the unwrapped application
+  context, which follows the phone's language.
+- Trigger: set the app to English on a Polish phone (or the reverse) and do anything that raises a
+  notice: add a track, scan a folder, download an index.
+- Impact: the screen is in one language and the snackbars, the default playlist name, History's
+  "yesterday, 21:14" and the scan notification are in the other.
+- Direction: one provider of localised text that wraps once, handed to everything that builds a
+  notice (RV-S005). The test that exists for this purpose does not see it (§8).
+- Already known: no.
+
+### RV-B005 — Music started from a page link plays without the foreground service
+- Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
+- Where: `ui/ProtracktorApp.kt:162` (a page link goes to `viewModel.openLink`);
+  `player/PlayerViewModel.kt:86` (`openLink` does not call `ensureServiceRunning`, although the
+  comment above it says it does); `:255` (the rule, applied by hand at fourteen other entries).
+- Mechanism: the service is started by the view model before each call that can make sound. The
+  call for a link was missed. `selectSubsong` (`:109`) is the second entry without it, and with
+  RV-B002 it too can start sound.
+- Trigger: open a Protracktor link while the service is not running — a cold start, or after Stop
+  in the notification.
+- Impact: no notification, no lock-screen transport, and the process is a candidate for being
+  stopped as soon as the app leaves the screen. This is the defect `docs/STATUS.md` C43 (playback
+  from Random and Browse had no service) described, through a door added later.
+- Direction: the controller asks for the service when playback starts, in one place (RV-S008).
+- Already known: the class is (C43); this instance is not.
+
+### RV-B006 — A malformed `%` in a Modland address ends the app
+- Severity: Medium · Likelihood: rare · Evidence: partially verified — `URLDecoder.decode("%zz.mod")`
+  and `("tune%")` both throw `IllegalArgumentException` on the workshop JDK (run in a scratch
+  folder, 2026-11-16); the path through the app was not run.
+- Where: `net/Catalogue.kt:178` and `:185` (`Modland.pathFrom` decodes each segment and lets the
+  exception out; `:169` wraps the same call in `runCatching`); `player/OpenFailure.kt:102` (a
+  second unguarded copy); reached from `player/QueueLink.kt:238` and from `TrackRef.canonical()`
+  in `player/PlaylistTransfer.kt:139-147`.
+- Mechanism: `Catalogue.owning`, `fileOf` and `sourceOf` call `pathFrom` on any id that starts with
+  Modland's file base. None of the callers on the link and import paths catches.
+- Trigger: a link or an M3U holding `https://modland.com/pub/modules/%zz`.
+- Impact: an uncaught exception on the main thread — the app closes.
+- Direction: `pathFrom` answers null for an address it cannot decode.
+- Already known: no.
+
+### RV-B007 — A download that arrives but parses to nothing erases what it replaces
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `player/LibraryDownloads.kt:186-200` (the "no rows means failure" guard at `:196` is for
+  AMP only); `net/Catalogue.kt:191` (a body that is not a zip yields an empty list);
+  `player/LibraryDownloads.kt:178` (ASMA's archive is overwritten before parsing);
+  `data/TrackMetadataStore.kt:63`, `data/SongDbLengthStore.kt:54`, `data/FavouriteStore.kt:62` (the
+  delete is committed even when no row follows).
+- Mechanism: for Modland, ASMA and UnExoticA an index that yields no rows is passed to
+  `replaceIndex`, which deletes every row and stamps the catalogue complete with nothing in it. The
+  three tables of facts do the same inside their own transaction and only then report "empty". A
+  corrupt zip throws, and `fetchCatalogue` catches only cancellation — the exception ends the app.
+- Trigger: a server answers 200 with a maintenance page; UnExoticA's list or Modland's favourites —
+  both read from another project's `master` branch — change shape.
+- Impact: half a million indexed rows, or a table of lengths, replaced by nothing until downloaded
+  again; for ASMA the 20 MB archive too.
+- Direction: treat zero rows as a failed download everywhere, before anything is deleted; parse
+  before storing an archive; catch what parsing throws.
+- Already known: no.
+
+### RV-B008 — Scanning a folder that is no longer reachable ends the app
+- Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
+- Where: `player/PlaybackController.kt:1043-1108` (`scanFolder`, no `try`);
+  `player/MediaScanner.kt:100` (`resolver.query` on the granted tree).
+- Mechanism: the query throws `SecurityException` when the grant has been revoked and other
+  runtime exceptions when the provider's storage is gone. Nothing between it and the coroutine
+  scope catches, and the scope has no handler.
+- Trigger: revoke the folder's access in system settings, or remove the card or disconnect the
+  share it lives on, then press Scan.
+- Impact: the app closes.
+- Direction: a scan that cannot list its folder says so and marks the folder as needing access.
+- Already known: no.
+
+### RV-B009 — The LHA wrapper trusts the size an archive states and has no guard at the boundary
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `native/lhasa/lha_extract.cpp:128` (`result.resize(header->length)` before a byte is
+  read); `native/engine/lha_jni.cpp` (neither function contains what is thrown; the result of
+  `NewByteArray` is not checked).
+- Mechanism: the uncompressed length is a 32-bit field in the member's header. A member claiming
+  four gigabytes makes the vector allocate that much; `std::bad_alloc` crosses the JNI frame, which
+  is `std::terminate`. Every JNI function in `player_oboe.cpp` is wrapped against exactly this;
+  these two are not.
+- Trigger: a damaged or hostile archive served for an UnExoticA tune.
+- Impact: the process ends with no message.
+- Direction: cap the stated length against the archive's own size and a ceiling; wrap both
+  functions as the player's are.
+- Already known: no.
+
+### RV-B010 — A subsong switch waits on the main thread behind a running seek
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `player/PlaybackController.kt:2903` and `:329` (the switch is called on the main thread,
+  directly and through `SubsongNormalization`); `native/engine/player_oboe.cpp:134` (it takes the
+  decoder lock); `player/PlaybackController.kt:2870` (a seek holds that lock on an IO thread for as
+  long as the emulator needs).
+- Mechanism: a seek on a SID, an SNDH or a UADE tune runs the machine to the position and holds
+  the lock throughout — seconds. A subsong switch asked meanwhile blocks its caller.
+- Trigger: drag the seek bar far on a long SID, then tap another subsong, or let "play all" move
+  on, before the seek lands.
+- Impact: the interface freezes for the rest of the seek; past five seconds the system offers to
+  close the app.
+- Direction: switches go to the same worker a seek uses; a newer request abandons the older, as
+  seeks already do among themselves.
+- Already known: no.
+
+### RV-B011 — `restart` rewinds the decoder without the lock a seek holds
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `native/engine/player_oboe.cpp:358-365` (`restart`: `stop()`, then `backend_->rewind()`
+  with no lock); `:345-355` (`seek` works under the lock on another thread);
+  `player/PlaybackController.kt:3085` and `:3207` (the two callers, on the main thread).
+- Mechanism: stopping the stream removes the audio thread but not a seek in flight. `restart` then
+  enters the same decoder a second thread is running.
+- Trigger: seek to the very end of a slowly seeking tune, then pause and play before it lands
+  (`PlayFromEnd` reads the position the bar shows, which is already the target); or a tune ends and
+  a seek is started in the 200 ms before the poll replays it under repeat-one.
+- Impact: two threads inside one emulator — the class of crash `docs/STATUS.md` C140 (a close
+  under a running seek) was.
+- Direction: every entry that touches the decoder takes the lock; `NativeLifetime` then has one
+  thing less to protect.
+- Already known: no (C140 fixed close against seek only).
+
+### RV-B012 — Indexing Modland holds the whole list and every row in memory at once
+- Severity: Medium · Likelihood: plausible on phones with a small heap limit · Evidence:
+  unverified — the figures are the agent's arithmetic from the code, not a measurement.
+- Where: `net/Catalogue.kt:189-216` (`Modland.parseIndex`); `data/CatalogueStore.kt:208`
+  (`replaceIndex` takes the list); the same shape for AMP's 45 MB map in
+  `player/StoreDownloadSources.kt:230-234`.
+- Mechanism: the 40 MB list is unzipped into one string — two bytes a character, since a few names
+  are not ASCII — and then into about 516 000 `CatalogueEntry` objects of four fresh strings each,
+  all alive until the last insert. Roughly 200 MB of Java heap at the peak.
+  `data/TrackMetadataStore.kt:281-286` describes this failure for a file a third the size and
+  streams instead.
+- Trigger: download Modland's index on a phone whose heap limit is 192 MB or less.
+- Impact: `OutOfMemoryError` — the app closes mid-download and the index is not stored.
+- Direction: read lines from the zip stream straight into the insert statement, as the metadata
+  table does.
+- Already known: no.
+
+### RV-B013 — AMP's number lookup shares one read buffer between threads
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `net/AmpModuleIds.kt:70` (`private val chunk`, one per instance), `:39` (`idFor`, not
+  synchronised); callers: `player/BrowseCache.kt:48` (IO thread, once per visible AMP row),
+  `player/TrackFiles.kt:111` (the caller's thread — the main thread from `load()`).
+- Mechanism: each lookup opens its own file but reads into the same array. Two lookups at once
+  overwrite each other's line mid-parse.
+- Trigger: open an AMP folder with many rows and tap a tune while the "on this phone" marks are
+  still being worked out.
+- Impact: the lookup answers nothing — the tune is reported as not in AMP's list — or another
+  line's number, and a different module is fetched.
+- Direction: a buffer per call. The lookup also does file I/O on the main thread for every AMP
+  play, which a suspend function would move.
+- Already known: no.
+
+### RV-B014 — A database error in most write and read paths ends the app
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `player/PlaybackController.kt:133` (the scope: no exception handler);
+  `player/PlaylistSession.kt:72-88`, `:215-229`, `:243-264`, `:128-134`, `:199-211` (restore,
+  create, rename, delete, write, discard — no `catch`); `player/PlaybackController.kt:2442-2468`,
+  `:2476-2488`; `player/CatalogueBrowser.kt:62-173`; `player/LocalFolderBrowser.kt:35-87`; the
+  reads in the controller's `init` (`:730-736`).
+- Mechanism: an uncaught exception in a `launch` on a scope without a handler reaches the thread's
+  default handler. History, Saved places, search and the playlist switch catch and report; the
+  rest do not.
+- Trigger: the disk fills while a playlist is saved; a migration fails on the first start after an
+  update (the pre-flight check in `data/DatabaseAccess.kt` reads only the version, so the gate
+  opens and the first store call throws — on every start).
+- Impact: the app closes; with a failed migration, on each launch, with no message.
+- Direction: one failure path for the scope, and stores that return a result where the caller can
+  say something useful (RV-S005).
+- Already known: no.
+
 ### 4.4 Low
+
+### RV-B015 — A seek clears "finished" without restarting a stream that had stopped
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `native/engine/player_oboe.cpp:353`; `:163` (`running()` then answers true).
+- Mechanism: at the end of a tune the callback returns Stop and the stream stays open and idle. A
+  seek issued in the 200 ms before the poll notices resets the flag; nothing calls the callback
+  again.
+- Impact: the app shows playing and is silent until pause and play.
+- Direction: a seek on a finished player restarts output, as a subsong switch does.
+
+### RV-B016 — sc68's replay path is read once, and only one of five open paths waits for it
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `native/engine/engine.cpp:505-517` (the path is applied in a once-only initialiser);
+  `player/PlaybackController.kt:73`, `:774-783` (`nativeReady`), `:1295` (its only `await`).
+- Mechanism: an Atari ST file opened before `setDataPath` has run initialises sc68 with no replay
+  path, for the life of the process.
+- Trigger: tap an `.sndh` in a file manager on the first start after an update, while assets are
+  still being unpacked.
+- Impact: ICE-packed SNDH files play silence until the app is restarted.
+- Direction: `load`, the scan probe and the other opens wait for `nativeReady`; or the path is
+  applied whenever it is set.
+
+### RV-B017 — A failed unpack of decoder data is recorded as done
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `engine/NativeData.kt:42` and `:99` (the version marker is written after copies whose
+  failures were swallowed at `:163-168`).
+- Trigger: the disk is full on the first start after an update.
+- Impact: Atari ST or Amiga formats stay broken until the next version, with nothing said.
+- Direction: write the marker only when every copy succeeded.
+
+### RV-B018 — The offline renderer hands out a description the engine has not converted
+- Severity: Low · Likelihood: plausible · Evidence: unverified
+- Where: `native/engine/player_oboe.cpp:718` (`backend->describe()`); the player's path goes
+  through `describeOf` (`:293`), which `native/engine/engine.h:176-183` calls the one way out for
+  a description; used by `alarms/AlarmMusicPreparer.kt:70`.
+- Mechanism: titles in CP437 or ISO-8859-1 reach `NewStringUTF` as raw bytes.
+- Impact: alarm music whose title or author has letters outside ASCII is stored — and asked in
+  the quiz — with damaged characters; a debuggable build aborts in CheckJNI instead.
+- Direction: the renderer uses `describeOf`.
+
+### RV-B019 — A console file whose first tune states a length never measures the others
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `native/engine/engine.cpp:914` (the measuring thread is started only if the track playing
+  at first start has no length); `:1066` (a later switch only sets what is wanted).
+- Impact: a later tune with no stated length keeps the approximate bar although it could be
+  measured.
+
+### RV-B020 — The favourites count includes tunes this build cannot play
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `data/FavouriteStore.kt:42` (the join has no `playable = 1`); the dice draws with it
+  (`data/CatalogueStore.kt:588`).
+- Mechanism: since schema version 15 the index keeps every row; the count was written when it held
+  only playable ones.
+- Impact: the chip shows a larger number than Random draws from — the mismatch the function's own
+  comment warns against.
+
+### RV-B021 — The total beside search results ignores the platform filter for local files
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `data/LibraryIndexStore.kt:195` (`countMatches(query)` has no platform argument, while
+  `search` filters by platform). The comment at `:223` says the query has no limit; it has one.
+
+### RV-B022 — Tracks removed from every playlist still come up in search
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `data/LibraryStore.kt:192` (only membership rows are deleted; nothing in the code deletes
+  from `tracks`); `data/LibraryStore.kt:152` and `player/PlaybackController.kt:518` (`allTracks`
+  is search's "playlists" source).
+- Impact: a tune taken out of a playlist, or left behind by a deleted one, is still offered as the
+  phone's own. Whether `tracks` is meant to be a library that outlives playlists is question 2.
+
+### RV-B023 — Folder and file grants are never given back
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `player/MediaScanner.kt:33-35`, `:160` (a persisted grant per tree and per picked file);
+  `player/LocalFolderBrowser.kt:52-60` (forgetting a folder deletes rows only).
+- Mechanism: Android keeps a bounded number of persisted grants per app and drops the oldest.
+- Impact: after many individually picked files, earlier ones — or a folder — silently become
+  unreadable; a forgotten folder stays readable by the app.
+
+### RV-B024 — The background title pass downloads tunes on any network
+- Severity: Low · Likelihood: plausible · Evidence: unverified
+- Where: `player/PlaybackController.kt:3689-3701` (rows with no author whose title equals the file
+  name are read with `trackFiles.read`, which fetches `http` ids).
+- Trigger: a playlist holding rows that came from a link or from an imported list of addresses.
+- Impact: every such row is fetched in the background, on mobile data too, although the visible
+  "cache ahead" setting defaults to Wi-Fi only.
+
+### RV-B025 — Browse's Search does not match learned titles among "tunes below" in a folder
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `player/PlaybackController.kt:994` (reads `learnedTitles` from the controller's state,
+  where it is always empty); `ui/ProtracktorApp.kt:127` (the only place it is filled, on a copy).
+
+### RV-B026 — Deleting the replay routines leaves sc68's installed copies
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `player/LibraryMaintenance.kt:186` onwards; `player/AndroidMaintenanceFiles.kt:22`
+  (`deleteAdoptedUade` exists, nothing equivalent for sc68); `engine/NativeData.kt:62` (the copies
+  are made into `filesDir/sc68/Replay`).
+- Impact: after "delete", Atari ST replays still play and still occupy the disk until the next
+  version re-unpacks; the notice reports what the store held.
+
+### RV-B027 — English on a Polish screen
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `player/LibraryDownloads.kt:79`, `:109`, `:114` and `player/ReplayDownloads.kt:36-37`
+  (the labels in the download banner, with "done/total" appended);
+  `player/PlaybackController.kt:1627`, `:1662-1663` (share subjects);
+  `player/PlaylistTransfer.kt` (the default names "playlist" and "Imported").
+
+### RV-B028 — AMP's tunes are missing from the Amiga platform where their prefix is not listed
+- Severity: Low · Likelihood: plausible · Evidence: unverified
+- Where: `player/Platforms.kt:238` (`wholeCatalogues` names ASMA and UnExoticA; AMP, which is
+  entirely Amiga, is not there).
+- Impact: such rows are absent from the Amiga chip's search, count and Random.
+
+### RV-B029 — An interrupted replay download counts as installed
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `net/Sc68Replays.kt:87` and `net/UadePlayers.kt:253-259` in the file (each file written as
+  it arrives, not atomically); `net/UadePlayers.kt:77` (`present` is "more than none").
+- Impact: a partial set shows as downloaded; the missing routines fail one format at a time; a
+  truncated file is never replaced, because only missing files are copied in.
+
+### RV-B030 — Three actions drawn as a word without an icon
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `ui/BrowseScreen.kt:685-688` (Scan folder), `:1632-1640` (Add selected), `:2025-2029`
+  (Select all / none).
+- Mechanism: the project rule is an icon with its name for every action outside a dialogue's
+  confirm and cancel. The selection bar is the example the rule itself gives.
+
+### RV-B031 — Two additions to another playlist at once can lose one
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `player/PlaybackController.kt:2442-2456` (read, append, replace, with no transaction or
+  lock); `data/LearnedLengthStore.kt` `remember` has the same shape.
+
+### RV-B032 — A link's packed list is inflated without a bound, on the main thread
+- Severity: Low · Likelihood: rare · Evidence: unverified
+- Where: `player/QueueLink.kt:246` onwards (`decode`); `runCatching` there also swallows
+  `OutOfMemoryError`.
+
+### RV-B033 — A ZXTune failure outside its own guards skips the decoders after it
+- Severity: Low · Likelihood: rare · Evidence: partially verified — `native/vendor/zxtune/include/error.h:20`
+  shows `class Error` has no base class.
+- Where: `native/engine/engine.cpp:2893-2899` (`catch (const std::exception &)`), `:1870-1873`
+  (calls outside the per-decoder `catch (...)`).
+- Impact: such a file is reported with a generic failure and sc68, libopenmpt and UADE are never
+  asked. Contained one level up, so nothing crashes.
 
 ## 5. Observations
 
 ### 5.1 Duplication
 
+- **RV-O001 — "Which source is this id" is decided by hand in at least nine places.**
+  `player/TrackFiles.kt:32-49` and `:66-106`, `player/OnPhone.kt` `checkFor`,
+  `data/PlaylistFile.kt` `locationOf`, `player/QueueLink.kt` `pack`/`canSend`/`open`,
+  `net/WebRemote.kt` `buildJson`, `player/SelectionShare.kt`, `player/PlaybackController.kt`
+  `localBytesFor`, `player/PlaybackReadAhead.kt:55`. `amp://` is tested for in seven places in the
+  controller alone. The `Catalogue` class (`net/Catalogue.kt`) covers identity and index parsing;
+  how a track is read, what travels with it, whether it is on the phone, whether it may be
+  prefetched, what it costs to download and which platform it is are all answered elsewhere, per
+  catalogue, by name.
+- **RV-O002 — "Only the newest request may publish" is written twelve times.**
+  `BrowseReadOwner` (visit), `HistoryReads` (ticket), `HistoryWrites` (generation and revision),
+  `BrowseWorkflow.SearchOwner` (generation), `SavedPlaces` (open ticket), `PlaylistSession`
+  (activation generation, write revisions), `PlaybackReadAhead` (generation), `RandomHistory`
+  (generation), the controller's `playbackEpoch`, `alarmIntent`, `seekGeneration`,
+  `neighboursRequest`, `AmpAccess` (epoch), `PlaybackSchedule.generation`. Each carries its own
+  comment about assigning before an immediate dispatcher re-enters.
+- **RV-O003 — Five HTTP clients.** `net/RemoteFiles.kt` `attempt`, `net/ModArchive.kt` `search`,
+  `net/Sc68Replays.kt` `fetch`, `net/UadePlayers.kt` `openStream`, `net/WebRemote.kt` `send` — five
+  sets of timeouts, one size bound (AMP's), and the user agent that exists so archive operators can
+  whitelist the app is sent by two of the four that fetch.
+- **RV-O004 — Store skeletons and small helpers.** Four stores repeat `any`/`count`/`clear`/
+  `replaceAll` down to an identical four-line comment (`SongLengthStore`, `SongDbLengthStore`,
+  `TrackMetadataStore`, `FavouriteStore`), and disagree on whether to stream. Two `transaction`
+  helpers are in use (the project's own in `data/ProtracktorDatabase.kt:99`, and androidx's).
+  Bytes-to-hex is written five times and MD5 twice. Modland's file base is a constant in three
+  files.
+- **RV-O005 — Five search rules.** Catalogue rows (title, author; every word, accents folded),
+  local index (plus file name), playlist rows in `player/LibrarySearch.kt:45` (title and file name,
+  not author), `player/PlaylistSearch.kt:14` (title, file, author, source), and
+  `player/HistoryFilter.kt:10` (one literal phrase, no folding). "space ninja" finds
+  `space_ninja` everywhere except History.
+- **RV-O006 — What formats exist is kept in at least six lists.** `player/SupportedFormats.kt`
+  (six sets), the native name checks (`engine.cpp` `worthTrying`, `claimsName`),
+  `web/src/formats.tsv` (held to the Kotlin by a test), `player/Platforms.kt` (the extensions
+  again, per platform), `player/Companions.kt`, and the manifest's 37 extensions × 3 patterns × 2
+  filters, which nothing checks.
+- **RV-O007 — Inside `engine.cpp`.** Nine decoders in one 2 970-line unit; `openBackend` is nine
+  near-identical try/catch blocks though `engine.h` speaks of a registry; 16-bit-to-float loops in
+  six backends; chunk buffering in three; a background length measurer in three (ASAP's and
+  game-music-emu's loops are the same code).
+- **RV-O008 — Twins that drifted.** `engine/NativeData.kt` `ensureUnpacked` and
+  `ensureUadeUnpacked` (one re-adopts downloads on every start, one does not); the replay
+  deletion (RV-B026); length resolution in `PlaybackController.kt:3553-3558` and `:1369-1372`,
+  which a comment says must stay the same; the `playable` and `platform` rules, each written in
+  Kotlin and again in SQL.
+- **RV-O009 — Five shapes of "a notice and its text".** `DownloadText`,
+  `LibraryMaintenance.Text`, `AndroidPlaylistText`, the lambda handed to `SavedPlaces`,
+  `PlaylistHeartActions.feedback` — beside about sixty direct `getString` calls in the controller.
+  Two undo mechanisms: a lambda on the `Message`, and a label the screen recognises plus
+  `undoRemoval()` (`ui/MessageSnackbar.kt:28`).
+- **RV-O010 — An icon with its name is drawn three ways**: `LabelledAction`, `IconLabel`, and
+  `Icon`, `Spacer`, `Text` inline (`ui/ScannerScreen.kt:119-133`, `ui/PlaylistScreen.kt:765`).
+
 ### 5.2 Brittleness
+
+- **RV-O011 — The engine describes a tune as text and the app parses it ad hoc.** `subsong`,
+  `subsongs`, `seekable == "0"`, `ends_at`, a format ending in `(UADE)`
+  (`player/PlaybackController.kt:900` decides behaviour on it), `title`, `artist`, `year` are read
+  in the controller, `PlayerUiState`, `ReleaseYear` and the alarms.
+- **RV-O012 — Rules kept as lists to remember.** The service start (RV-B005);
+  `player/QueueSourceNavigation.kt:29` (about 28 fields of `BrowseState` copied by hand);
+  `player/DownloadPlan.kt:79` (`else -> 0` for a catalogue nobody listed); the 28 `inputs.file`
+  lines of the test task in `app/build.gradle.kts`.
+- **RV-O013 — Adding a catalogue touches about a dozen places by hand**: `Catalogue.known`,
+  `DownloadSizes`, `DownloadPlan` (twice), `BrowseCache.folderOf` (`player/BrowseCache.kt:39`,
+  Modland only), `TrackFiles`, `OnPhone`, `QueueLink`, `Platforms.wholeCatalogues` (RV-B028 is what
+  forgetting one looks like), `sources.tsv`, the manifest's hosts, strings.
+- **RV-O014 — The native track is confined to the main thread by convention only.**
+  `engine/NativeEngine.kt:249-252` checks "not closed" and then calls; `NativeLifetime` protects a
+  seek and nothing else. It holds today because every other caller is on the main thread.
+- **RV-O015 — Identity has two shapes.** Modland's and The Mod Archive's ids are their download
+  addresses; ASMA, UnExoticA and AMP use `<id>://path`. `ModArchive.owns` exists beside `pathFrom`.
 
 ### 5.3 Inconsistency
 
+- **RV-O016 — Three ways to switch a feature off.** `UnExoticA.ENABLED` (left out of the list,
+  rows pruned), `Amp.ENABLED` with `AmpAccess` (kept, hidden, rows retained), and the alarms'
+  Gradle property with a manifest transform and a `BuildConfig` field.
+- **RV-O017 — Settings live in two stores.** Thirteen in `Appearance` (`AppTheme.kt`) —
+  appearance, but also the web address, pairing, cache-ahead, stereo mix, normalisation — and five
+  in the database's `player_state`. The preferences file's name is a literal in four files.
+- **RV-O018 — Failure handling.** History, Saved places, search, the playlist switch and the alarms
+  catch and report; the rest of the controller's coroutines do not (RV-B014). `runCatching` is used
+  in 72 places and catches `Error` too.
+- **RV-O019 — Thread safety inside the backends.** sc68's counters and `SidBackend::rendered_`
+  became atomics after a review; ASAP's, game-music-emu's, Hively's and ZXTune's equivalents are
+  plain fields. Only `seekByRendering` honours "a newer seek abandons this one"; Hively's and
+  UADE's own seeks do not.
+- **RV-O020 — Two hands are visible.** The loudness code (`native/engine/loudness.h`, parts of
+  `player_oboe.cpp:199-217` and `:307-327`, `player/LoudnessProfiles.kt`, parts of the controller)
+  and the alarms module are written densely, without spaces after commas and with 200-character
+  lines; the rest is not.
+
 ### 5.4 Dead code
+
+- **RV-O021 — AMP's gate guards a switch nothing can flip.** `net/AmpAccess.kt:18` `setEnabled`
+  has no caller in the app and `Amp.ENABLED` is a constant `true`; the tickets, epochs, attached
+  transfers, `CatalogueRetention`, `catalogueVisibility` and about twenty-five checks across
+  `RemoteFiles`, `TrackFiles`, `CatalogueStore`, the controller and the read-ahead are therefore
+  always satisfied in this build.
+- **RV-O022 — Smaller remains.** `Lha.list` and its JNI function have no caller
+  (`net/UnExoticA.kt:177`); the `composer` key no decoder emits is read in three places;
+  `library_index.backend` always equals `format` (`player/PlaybackController.kt:1128-1129`);
+  `player/MediaScanner.kt:32-36` has two identical branches; `player/PlaybackReadAhead.kt:50` tests
+  a condition that cannot be false; `SidBackend::rate_` only ever holds 44 100; the R8 rule in
+  `app/proguard-rules.pro` repeats what the default rules already keep.
 
 ### 5.5 Complexity
 
+- **RV-O029 — `PlaybackController`: 3 825 lines.** Composition root, playback, the poll, Random,
+  scanning, sharing in five forms, pairing, history mapping, playlist adds, queue edits, failure
+  wording. Parts were extracted, each with its own port shape; the centre remains.
+- **RV-O030 — `BrowseState`: about 55 fields in one data class** for navigation, the folder tree,
+  catalogue levels, search, the history page, download progress, storage sizes, replay counts,
+  pairing, the web address, Random's scope and cache marks. Five extracted classes each wrap it in
+  an adapter of their own.
+- **RV-O031 — Every action travels four hand-wired hops.** Controller method, a one-line forward
+  in `PlayerViewModel` (about a hundred of them), a lambda in `ProtracktorApp` (144 references to
+  the view model), a parameter on the screen (`BrowseScreen` takes about forty).
+- **RV-O032 — History's view is five classes and four counters** for a paged list that can be
+  cleared. Correct as far as read; heavier than the problem.
+
 ### 5.6 Traces of lost context
+
+- **RV-O034 — Comments describe a threading model the engine no longer has.** Subsong switches
+  have run on the caller's thread since the lock was introduced, yet "applied on the audio thread"
+  stands at `native/engine/engine.cpp:556-567`, `:575`, `:753`, `:1064`,
+  `native/engine/player_oboe.cpp:117-125` (above a body that says the opposite),
+  `engine/NativeEngine.kt:230-233`, `player/PlaybackController.kt:831`, `:849`, `:2907`, `:2917`.
+- **RV-O035 — KDoc attached to the wrong thing or to nothing.** Stacked or orphaned blocks at
+  `engine/NativeEngine.kt:50-93`; `player/PlaybackController.kt:101-108`, `:1016-1034`,
+  `:1411-1432`, `:1901-1909`, `:2936-2948`, `:3756-3768`; `player/PlayerUiState.kt:142-148`,
+  `:174-187`; `player/PlayQueue.kt:60-69`; `data/CatalogueStore.kt:149-155`, `:496`, `:518-534`
+  (documents a parameter that no longer exists); `data/LibraryIndexStore.kt:176-184`;
+  `data/SchemaSql.kt:240-247`, `:386`, `:465-472`; `data/PlaylistFile.kt:101-108`;
+  `net/RemoteFiles.kt:129`; `player/LibraryDownloads.kt:72-79`, `:101-109`.
+- **RV-O036 — A constraint kept alive by a reason that expired.**
+  `player/PlaybackController.kt:3678-3682` calls it a hard requirement that the background title
+  pass runs only while nothing is loaded, because sc68 keeps global state; `:1029-1033` in the same
+  file records that sc68 3.0 does not, which is why scans run during playback.
+- **RV-O037 — Numbers, names and references that rotted.** "Seven backends"
+  (`native/engine/engine.cpp:8`, `engine.h:7`, with "fifteen JNI functions" and "1,868 lines");
+  "three functions" (`native/engine/lha_jni.cpp:4`, there are two); Modland as "the only one wired
+  up so far" (`net/Catalogue.kt`); a tombstone for a deleted function
+  (`player/PlaybackController.kt:2430-2434`). The code cites `docs/review.md`,
+  `docs/review-round-8.md` and `docs/review-2026-09-28.md`; no file of those names is in `docs/`.
 
 ### 5.7 Documentation drift
 
+- **RV-O038** — `MainActivity.kt:63` says the activity is `singleTask`; the manifest says
+  `singleTop` (`AndroidManifest.xml:74`). `player/PlaybackController.kt:1023-1027` and the class
+  comment of `player/SupportedFormats.kt` say a scan decides by content and that a module under any
+  name is found; since `MediaScanner.worthReading` only listed names are opened, and
+  `MediaScanner.listFiles` says "no filter on its name" a few lines above the filter.
+  `player/BrowseState.kt` calls Random's scope "not persisted"; it is saved.
+  `AppTheme.kt` says `rememberPairing` is called only after a browser was reached;
+  `player/PlaybackController.kt:1458` stores an untested address when the queue is empty.
+
 ### 5.8 Performance
+
+- **RV-O039 — The media session is republished five times a second.**
+  `player/PlaybackService.kt:124-127` publishes metadata — with a 512 × 512 bitmap
+  (`player/PlaybackPresentation.kt:60`) — and playback state on every state emission; the position
+  changes every 200 ms. The comment above says the split exists to avoid that.
+- **RV-O040 — Native and hashing work on the main thread at every track change**: closing the
+  previous track (stream stop, decoder teardown, thread joins, a UADE process), MD5 over the whole
+  file (`player/PlaybackController.kt:3553`), opening the Oboe stream (`:3567`).
+- **RV-O041 — A file is held several times over.** The Kotlin array is kept for the life of the
+  track (`:3543`), the engine copies it, several backends copy it again, the loudness analysis
+  opens another decoder, and up to three read-ahead files wait beside it. Local playback has no
+  size cap (a scan has one: 32 MB).
+- **RV-O042 — Position ticks share one state object with everything else**, collected at the root
+  of the screen (`ui/ProtracktorApp.kt:119`). How far that recomposes was not measured.
+- **RV-O043 — One lock for every loudness analysis** (`player/LoudnessPreparation.kt`): the tapped
+  tune waits behind read-ahead measurements; the content hash is computed with normalisation off.
+
+### 5.9 Security notes that are not bugs by themselves
+
+- **RV-O044** — `MainActivity` is exported and accepts `file://` and any `http(s)` address in an
+  explicit intent; nothing leaves the phone without a share. UADE's file loader falls through to
+  UADE's own search for absolute paths and `..` (`native/engine/engine.cpp:2496-2516`). Three
+  downloads follow another project's `master` branch (UnExoticA's list, `song.conf`, favourites).
+  UADE's scratch folders are removed only by the destructor; nothing clears them at start after a
+  crash. `AlarmService.onCreate` calls `startForeground` without the guard `PlaybackService` has.
 
 ## 6. Suggestions
 
 ### 6.1 Architectural
 
+**RV-S001 — Make `Catalogue` the whole strategy.** *Size L · risk medium · prerequisite: a
+contract test every catalogue must pass.*
+
+```
+Catalogue                      one object per archive, nothing about it lives elsewhere
+  id, displayName, enabled     enabled replaces both switch patterns
+  identity: owns(id), pathOf(id), idFor(path)
+  index:    IndexSource?       how the list arrives; null for a live-search catalogue
+              stream(bytes) -> Sequence<CatalogueEntry>     never a List (RV-B012)
+  files:    TrackSource        read(ref): bytes?, companions(ref), onPhone(ref): Check
+              ModlandFiles(http + legacy path retry)   ArchiveFiles(zip)   LhaFiles(game archive)
+  fetch:    FetchPolicy        maxBytes, cookieGate, userAgent; one HttpFetcher applies it
+  sharing:  webUrl(path), browserUrl(path)
+  traits:   platform?, prefetchable, approxDownloadMb, extras (Modland: favourites)
+  search:   LiveSearch?        The Mod Archive only
+```
+
+`TrackFiles`, `OnPhone`, `QueueLink`, `WebRemote`, `DownloadPlan`, `BrowseCache`, `Platforms` and
+the controller then ask `Catalogue.owning(id)` and stop testing prefixes. Local files become one
+more source (`content://`), so the dispatch has no `else`. The contract test fails for a catalogue
+that leaves a member unanswered — the compiler and one test replace the checklist of RV-O013.
+
+**RV-S002 — One `LatestOnly` primitive** in place of the twelve counters (RV-O002): `launch(key)`
+cancels the previous run and lets a result through only if it is still the newest. *Size M · risk
+low per site; convert one site at a time under its existing tests.*
+
+**RV-S003 — Split the controller along the lines it already hints at.** *Size L · risk high ·
+prerequisite: RV-S004 and the scope's failure path.*
+
+```
+PlaybackEngine      owns the native Track and ONE control thread; every decoder call goes
+                    through it (open, start, seek, subsong, restart, close) -> RV-B010/011/015/016
+PlaybackSession     queue + schedule + poll; decides, never touches native code directly
+Library             playlists, edits, import/export        Discovery   browse, search, history, saved
+Sharing             files, links, audio, pairing           Downloads   indexes, facts, replays
+PlaybackController  composition root and facade only
+```
+
+State follows: a small `PlaybackClock` (position, seeking) apart from `PlayerUiState`, and
+`BrowseState` split by the section headings it already has.
+
+**RV-S004 — A typed description from the engine.** Parse the describe block once, at the
+boundary, into `TrackDescription(title, artist, format, backend: Backend, subsong, subsongs,
+seekable, endsAt, …)`; `Backend` is an enum, so "is this UADE" stops being a string suffix
+(RV-O011). *Size S · risk low.*
+
+**RV-S005 — One way to say something and one way to fail.** A `Notices` provider that owns the
+wrapped context and every sentence (RV-B004, RV-B027, RV-O009), and a `CoroutineExceptionHandler`
+on the controller's scope that turns an unexpected failure into a notice and a log line instead of
+a closed app (RV-B008, RV-B014). *Size M · risk low.*
+
+**RV-S006 — One HTTP fetcher** with a size bound, the user agent, timeouts and an allow-list of
+hosts taken from the catalogues (RV-B001, RV-O003). *Size S–M · risk low.*
+
+**RV-S007 — In the engine.** A table of `{claims, make}` entries for `openBackend`; shared
+helpers for PCM conversion, chunk buffering and background length measurement; the same guard on
+every JNI function; atomics or the lock for every field two threads touch. *Size M · risk medium ·
+prerequisite: the host probes already in the repository.*
+
+**RV-S008 — The service start becomes the controller's business**: when a track is about to be
+loaded it asks for the service through an injected hook (RV-B005). *Size S · risk low.*
+
+**Order of work**
+
+| step | what | size | must exist first | only I can check on the phone |
+| --- | --- | --- | --- | --- |
+| 1 | RV-S005: failure path and `Notices` | M | — | notices in the chosen language |
+| 2 | RV-S006 and the id allow-list (RV-B001, B006, B032) | S–M | — | a real link still opens |
+| 3 | RV-S008, RV-B002, RV-B003 | S | question 1, question 5 | subsong while paused; a SID with a start song |
+| 4 | RV-B007, RV-B012 (streaming, zero-row guard) | M | — | indexing Modland on the phone |
+| 5 | RV-S004 | S | — | — |
+| 6 | RV-S001 | L | contract test | every catalogue: browse, play, share, prefetch |
+| 7 | RV-S002 | M | step 1 | — |
+| 8 | RV-S003 | L | steps 1, 5 | all of playback |
+| 9 | RV-S007 | M | host probes | all formats |
+
+Steps 1–5 are small and each removes several findings; they are worth doing whatever happens to
+the rest. Steps 6 and 8 are rewrites of code that works today and can only be confirmed on the
+phone: I would do 6, because the catalogue is where most of the special cases breed, and take 8
+only in pieces — the engine facade first, since it carries four bugs. I would leave the queue
+model (`PlayQueue`, `ActiveQueue`, `PlaybackSchedule`), the schema and the alarms alone.
+
 ### 6.2 Local
+
+- **RV-S009** — Decide the AMP gate (question 4) and delete what the answer makes dead (RV-O021).
+- **RV-S010** — A `ReplaceableTable` helper for the four stores, with the zero-row guard built in
+  (RV-O004, RV-B007).
+- **RV-S011** — One format table — `web/src/formats.tsv` already is one — from which
+  `SupportedFormats`, `Platforms.names` and a test for the manifest's patterns are derived
+  (RV-O006).
+- **RV-S012** — Release persisted grants when a folder is forgotten or a picked file leaves the
+  last playlist (RV-B023).
+- **RV-S013** — Thread assertions in `NativeEngine.Track` in debug builds, and `StrictMode` there
+  (RV-O014, RV-O040).
+- **RV-S014** — A pass over comments: delete history that belongs to git, fix what RV-O034 to
+  RV-O038 list. Comments that narrate past mistakes are a large part of this code base and the
+  part that goes stale.
 
 ## 7. Ideas
 
 ### 7.1 Features
 
+- **RV-I001 — A diagnostics page**: the last few hundred of the app's own log lines, the decoder
+  fingerprint, what is installed (replays 176/176, index dates), with Share. The code repeatedly
+  notes that logcat is out of reach on the phone; refusals already carry reasons that only reach
+  the log.
+- **RV-I002 — "Play from an unknown address?"** — a confirmation for a tune a catalogue does not
+  own, instead of a silent refusal, once RV-B001 is closed.
+- **RV-I003 — Repair for downloads**: verify the replay sets and the archives against expected
+  counts and offer to fetch what is missing (RV-B029).
+- **RV-I004 — Keep an author offline**: the folder prefetch exists; a pinned folder would be
+  exempt from the cache budget.
+- **RV-I005 — Sleep timer**: the alarm module has the clock, the service and the fade; stopping
+  after *n* minutes or at the end of the tune is small beside it. Not found in `docs/WISHLIST.md`
+  or `docs/BACKLOG.md` by keyword.
+- **RV-I006 — One-file backup** of playlists, history, saved places and settings: nothing survives
+  an uninstall by design, and export exists per playlist only.
+- **RV-I007 — Tunes in no playlist** as a view, if `tracks` is meant to be a library (question 2).
+
 ### 7.2 Other
+
+- **RV-I008 — Fuzzing on the host** for the parsers this project owns: `lha_extract`,
+  `QueueLink.decode`/`open`, `PlaylistFile.read`, each `parseIndex`, the describe block, the tar
+  reader. Small, pure, and the place three findings came from.
+- **RV-I009 — Rules the build can hold**: a test that fails on a prefix test outside `net/`
+  (`startsWith("amp://")`), one for package dependencies (`engine` must not import `player`), one
+  that every JNI function is wrapped, detekt for swallowed exceptions; a sanitizer build of the
+  engine's host probe.
 
 ## 8. Tests
 
-*Stage 4.*
+Surveyed, not reviewed: 262 files and about 1 645 tests (player 827, ui 345, data 154, alarms 153,
+net 98). What the survey shows:
+
+- **Migrations are the best-tested part.** `SchemaSqlTest` runs every statement against real
+  SQLite, compares an upgraded database with a fresh one, checks data survives, and fails on a
+  missing step; three more tests cover single migrations and the downgrade refusal.
+- **Pure rules are tested where they were extracted** — queue, schedule, search terms, cache
+  budget, length sources — often against shared case tables in `docs/rules/`.
+- **The controller is barely reachable.** Two tests construct `PlaybackController`. None of
+  RV-B002, B005, B008, B010, B014 could have been caught by the suite as it is; they live in the
+  3 825 lines that need a phone.
+- **The native boundary has no JVM test** beyond `NativeLifetime`; its checks are host scripts,
+  outside this review.
+- **A test that gives false comfort:** `MessagesAreTranslatedTest` exists so that no notice
+  reaches a Polish screen in English. It checks that no `Message` is built from a literal and that
+  both languages name the same strings. It cannot see the language of the context the string is
+  read from (RV-B004) or text that is not a `Message` (RV-B027).
+- **The test task lists its inputs by hand** (28 files); a new case table that is not added is a
+  test Gradle will report as up to date.
 
 ## 9. Questions
+
+1. **A subsong tapped while paused** (RV-B002): start playing, or select and stay paused?
+   *Recommended: start playing — a tap on a tune is a request to hear it — and do it properly:
+   state, focus, service.*
+2. **Is `tracks` a library that outlives playlists** (RV-B022)? *Recommended: no. Remove a row
+   when its last playlist lets go of it; if a library is wanted, give it a view (RV-I007).*
+3. **Where may a tune come from** (RV-B001)? Only the catalogues; or anything, after a
+   confirmation; or anything. *Recommended: the catalogues silently, anything else after a
+   confirmation.*
+4. **AMP's runtime gate** (RV-O021): keep the machinery for a future switch, or reduce it to a
+   build-time property of the catalogue? *Recommended: reduce.*
+5. **A SID's default song** (RV-B003): open at the song the file names, or always at the first?
+   *Recommended: the file's, shown correctly.*
 
 ## 10. Coverage ledger
 
 Status is one of: **not read** · **read — findings** · **read — nothing found** · **read in part**
 (with what was skipped and why) · **out of scope**. "Nothing found" is written only for a file that
-was read in full.
+was read in full. "Code only" means every line of code was read and comment lines were not.
 
 ### 10.1 By area
 
 | area | files | lines | status |
 | --- | --- | --- | --- |
-| native engine and JNI (`native/engine`, `native/lhasa`, own backend glue) | 15 | 5 036 | not read |
-| `engine/` (Kotlin side of the native boundary) | 5 | 598 | not read |
-| `player/` | 104 | 13 816 | not read |
-| `data/` | 25 | 3 652 | not read |
-| `net/` | 16 | 2 016 | not read |
-| `alarms/` | 34 | 3 163 | not read |
-| `permissions/` | 2 | 169 | not read |
-| `ui/` | 64 | 12 864 | not read |
-| app root (`MainActivity`, theme, locale) | 4 | 412 | not read |
-| manifest, resources, build configuration, schemas | — | — | not read |
-| tests (`app/src/test`), secondary | 266 | 32 067 | not read |
+| native engine and JNI | 16 | 5 061 | read in full — findings |
+| `engine/` | 5 | 598 | read in full — findings |
+| `player/` | 104 | 13 816 | read — findings; 26 files code only; `TrackArtwork.kt` in part |
+| `data/` | 25 | 3 652 | read in full — findings |
+| `net/` | 16 | 2 016 | read in full — findings |
+| `permissions/`, app root | 6 | 581 | read — nothing found beyond observations |
+| manifest, XML configuration, build files, R8 rules, versions | 9 | — | read — findings |
+| string resources | 2 | 1 589 | key parity checked mechanically (647 = 647); texts not read |
+| `alarms/` | 34 | 3 163 | read in part: 9 files code only (entry points, service, coordinator, repository, file store, sound, playback observation) — nothing found; 25 not read |
+| `ui/` | 64 | 12 864 | read in part: mechanical checks over all files (text-only buttons, literal text, non-null assertions), wiring points in `ProtracktorApp.kt`, `MessageSnackbar.kt`; not read as code |
+| tests | 262 | 32 067 | surveyed (§8); not reviewed |
 
 ### 10.2 By file
 
-| file | lines | status | findings |
-| --- | --- | --- | --- |
-| `native/engine/engine.cpp` | 2970 | not read | |
-| `native/engine/engine.h` | 208 | not read | |
-| `native/engine/player_oboe.cpp` | 914 | not read | |
-| `native/engine/lha_jni.cpp` | 72 | not read | |
-| `native/engine/log.h` | 27 | not read | |
-| `native/engine/loudness.h` | 158 | not read | |
-| `native/engine/loudness_analysis.h` | 31 | not read | |
-| `native/engine/stereo_mix.h` | 35 | not read | |
-| `native/lhasa/lha_extract.cpp` | 143 | not read | |
-| `native/lhasa/lha_extract.h` | 35 | not read | |
-| `native/backends/asap/asap_measure.c` | 180 | not read | |
-| `native/backends/asap/asap_measure.h` | 47 | not read | |
-| `native/backends/zxtune/lha_zxtune.cpp` | 79 | not read | |
-| `native/backends/zxtune/uint16_char_traits.h` | 96 | not read | |
-| `native/backends/minimp3/minimp3.c` | 16 | not read | |
-| `native/patches/libopenmpt/0001-read-c1-text-as-cp437.patch` | 25 | not read | |
-| `engine/DescribeBlock.kt` | 50 | not read | |
-| `engine/NativeData.kt` | 177 | not read | |
-| `engine/NativeEngine.kt` | 305 | not read | |
-| `engine/NativeLifetime.kt` | 51 | not read | |
-| `engine/OutputRecovery.kt` | 15 | not read | |
-| `player/ActiveQueue.kt` | 103 | not read | |
-| `player/AndroidCatalogueStorage.kt` | 29 | not read | |
-| `player/AndroidDownloadText.kt` | 67 | not read | |
-| `player/AndroidFolderAccess.kt` | 18 | not read | |
-| `player/AndroidMaintenanceFiles.kt` | 23 | not read | |
-| `player/AndroidMaintenanceText.kt` | 32 | not read | |
-| `player/AndroidPlaylistFiles.kt` | 35 | not read | |
-| `player/AndroidPlaylistText.kt` | 30 | not read | |
-| `player/AndroidTrackFileAccess.kt` | 60 | not read | |
-| `player/AudioExport.kt` | 63 | not read | |
-| `player/AudioFocus.kt` | 116 | not read | |
-| `player/BarLength.kt` | 26 | not read | |
-| `player/BrowseCache.kt` | 93 | not read | |
-| `player/BrowseFilter.kt` | 78 | not read | |
-| `player/BrowseNavigation.kt` | 78 | not read | |
-| `player/BrowseReadOwner.kt` | 39 | not read | |
-| `player/BrowseState.kt` | 266 | not read | |
-| `player/BrowseWorkflow.kt` | 337 | not read | |
-| `player/CatalogueBrowseState.kt` | 109 | not read | |
-| `player/CatalogueBrowser.kt` | 203 | not read | |
-| `player/CatalogueTracks.kt` | 32 | not read | |
-| `player/Companions.kt` | 50 | not read | |
-| `player/DownloadKeys.kt` | 38 | not read | |
-| `player/DownloadPlan.kt` | 82 | not read | |
-| `player/DownloadSizes.kt` | 46 | not read | |
-| `player/DownloadText.kt` | 33 | not read | |
-| `player/FallbackLength.kt` | 65 | not read | |
-| `player/FloatingControls.kt` | 63 | not read | |
-| `player/FloatingControlsWindow.kt` | 367 | not read | |
-| `player/FloatingPanelDrag.kt` | 40 | not read | |
-| `player/FloatingPanelPosition.kt` | 49 | not read | |
-| `player/FolderPrefetch.kt` | 118 | not read | |
-| `player/HistoryBrowser.kt` | 90 | not read | |
-| `player/HistoryFilter.kt` | 31 | not read | |
-| `player/HistoryPages.kt` | 32 | not read | |
-| `player/HistoryPresentation.kt` | 25 | not read | |
-| `player/HistoryPresentationReads.kt` | 49 | not read | |
-| `player/HistoryReads.kt` | 106 | not read | |
-| `player/HistoryRecording.kt` | 9 | not read | |
-| `player/HistoryWrites.kt` | 80 | not read | |
-| `player/IncrementalScan.kt` | 47 | not read | |
-| `player/LengthSource.kt` | 73 | not read | |
-| `player/LibraryDownloads.kt` | 424 | not read | |
-| `player/LibraryMaintenance.kt` | 206 | not read | |
-| `player/LibraryMaintenanceState.kt` | 87 | not read | |
-| `player/LibrarySearch.kt` | 122 | not read | |
-| `player/ListeningSession.kt` | 57 | not read | |
-| `player/LocalFolderBrowser.kt` | 125 | not read | |
-| `player/LocalTree.kt` | 53 | not read | |
-| `player/LoudnessPreparation.kt` | 49 | not read | |
-| `player/LoudnessProfiles.kt` | 80 | not read | |
-| `player/M4aWriter.kt` | 108 | not read | |
-| `player/MediaScanner.kt` | 193 | not read | |
-| `player/Message.kt` | 19 | not read | |
-| `player/NowPlayingText.kt` | 21 | not read | |
-| `player/OnPhone.kt` | 50 | not read | |
-| `player/OpenFailure.kt` | 113 | not read | |
-| `player/PcmExport.kt` | 74 | not read | |
-| `player/PickedFiles.kt` | 27 | not read | |
-| `player/Platforms.kt` | 310 | not read | |
-| `player/PlayFromEnd.kt` | 41 | not read | |
-| `player/PlayQueue.kt` | 352 | not read | |
-| `player/PlaybackController.kt` | 3825 | not read | |
-| `player/PlaybackMediaSession.kt` | 21 | not read | |
-| `player/PlaybackMetadata.kt` | 22 | not read | |
-| `player/PlaybackPlan.kt` | 32 | not read | |
-| `player/PlaybackPresentation.kt` | 111 | not read | |
-| `player/PlaybackReadAhead.kt` | 91 | not read | |
-| `player/PlaybackSchedule.kt` | 138 | not read | |
-| `player/PlaybackService.kt` | 292 | not read | |
-| `player/PlayerUiState.kt` | 206 | not read | |
-| `player/PlayerViewModel.kt` | 259 | not read | |
-| `player/PlaylistHeart.kt` | 70 | not read | |
-| `player/PlaylistHeartActions.kt` | 73 | not read | |
-| `player/PlaylistSearch.kt` | 19 | not read | |
-| `player/PlaylistSession.kt` | 309 | not read | |
-| `player/PlaylistSessionState.kt` | 142 | not read | |
-| `player/PlaylistTransfer.kt` | 162 | not read | |
-| `player/QueueLink.kt` | 278 | not read | |
-| `player/QueueSourceNavigation.kt` | 44 | not read | |
-| `player/RandomHistory.kt` | 96 | not read | |
-| `player/RandomScope.kt` | 74 | not read | |
-| `player/RecentSearches.kt` | 41 | not read | |
-| `player/ReleaseYear.kt` | 70 | not read | |
-| `player/ReplayDownloads.kt` | 98 | not read | |
-| `player/SavedPlace.kt` | 38 | not read | |
-| `player/SavedPlaces.kt` | 126 | not read | |
-| `player/ScanBatch.kt` | 115 | not read | |
-| `player/ScanNotification.kt` | 82 | not read | |
-| `player/SearchResults.kt` | 85 | not read | |
-| `player/SearchScope.kt` | 60 | not read | |
-| `player/SeekProgress.kt` | 26 | not read | |
-| `player/SelectionShare.kt` | 47 | not read | |
-| `player/SessionSource.kt` | 57 | not read | |
-| `player/StereoMix.kt` | 15 | not read | |
-| `player/StoreDownloadSources.kt` | 54 | not read | |
-| `player/SubsongAdvance.kt` | 55 | not read | |
-| `player/SubsongNormalization.kt` | 64 | not read | |
-| `player/SupportedFormats.kt` | 260 | not read | |
-| `player/TrackArtwork.kt` | 155 | not read | |
-| `player/TrackArtworkBitmaps.kt` | 76 | not read | |
-| `player/TrackEditing.kt` | 41 | not read | |
-| `player/TrackFiles.kt` | 137 | not read | |
-| `player/TunesFound.kt` | 9 | not read | |
-| `data/CatalogueStore.kt` | 644 | not read | |
-| `data/DatabaseAccess.kt` | 37 | not read | |
-| `data/DatabasePreparation.kt` | 41 | not read | |
-| `data/FavouriteStore.kt` | 89 | not read | |
-| `data/HistoryStore.kt` | 159 | not read | |
-| `data/LearnedLengthStore.kt` | 53 | not read | |
-| `data/LegalText.kt` | 76 | not read | |
-| `data/LibraryIndexStore.kt` | 288 | not read | |
-| `data/LibraryStore.kt` | 291 | not read | |
-| `data/Md5.kt` | 19 | not read | |
-| `data/ModlandFavourites.kt` | 65 | not read | |
-| `data/MusicSources.kt` | 38 | not read | |
-| `data/OpenSourceNotices.kt` | 60 | not read | |
-| `data/PlaylistFile.kt` | 163 | not read | |
-| `data/ProtracktorDatabase.kt` | 107 | not read | |
-| `data/RecentSearchPreferences.kt` | 28 | not read | |
-| `data/SavedPlacesStore.kt` | 43 | not read | |
-| `data/SchemaSql.kt` | 683 | not read | |
-| `data/SearchTerms.kt` | 141 | not read | |
-| `data/SongDbLengthStore.kt` | 89 | not read | |
-| `data/SongDbLengths.kt` | 152 | not read | |
-| `data/SongDbMetadata.kt` | 99 | not read | |
-| `data/SongLengthStore.kt` | 85 | not read | |
-| `data/SongLengths.kt` | 85 | not read | |
-| `data/TrackMetadataStore.kt` | 117 | not read | |
-| `net/Amp.kt` | 148 | not read | |
-| `net/AmpAccess.kt` | 35 | not read | |
-| `net/AmpModuleIds.kt` | 115 | not read | |
-| `net/AtomicFileWrite.kt` | 23 | not read | |
-| `net/CacheBudget.kt` | 121 | not read | |
-| `net/Catalogue.kt` | 291 | not read | |
-| `net/CatalogueHttp.kt` | 9 | not read | |
-| `net/CatalogueRetention.kt` | 11 | not read | |
-| `net/ModArchive.kt` | 199 | not read | |
-| `net/RemoteFileCache.kt` | 46 | not read | |
-| `net/RemoteFiles.kt` | 282 | not read | |
-| `net/Sc68Replays.kt` | 108 | not read | |
-| `net/SharedFetches.kt` | 50 | not read | |
-| `net/UadePlayers.kt` | 213 | not read | |
-| `net/UnExoticA.kt` | 190 | not read | |
-| `net/WebRemote.kt` | 175 | not read | |
-| `alarms/AlarmCodec.kt` | 103 | not read | |
-| `alarms/AlarmCoordinator.kt` | 148 | not read | |
-| `alarms/AlarmFeatureLifecycle.kt` | 55 | not read | |
-| `alarms/AlarmFileStore.kt` | 67 | not read | |
-| `alarms/AlarmManagement.kt` | 536 | not read | |
-| `alarms/AlarmManagementViewModel.kt` | 114 | not read | |
-| `alarms/AlarmMetadata.kt` | 37 | not read | |
-| `alarms/AlarmModels.kt` | 141 | not read | |
-| `alarms/AlarmMusicPicker.kt` | 194 | not read | |
-| `alarms/AlarmMusicPreparer.kt` | 96 | not read | |
-| `alarms/AlarmMusicQueue.kt` | 73 | not read | |
-| `alarms/AlarmMusicSource.kt` | 66 | not read | |
-| `alarms/AlarmNotifications.kt` | 62 | not read | |
-| `alarms/AlarmPlanner.kt` | 49 | not read | |
-| `alarms/AlarmPlatform.kt` | 24 | not read | |
-| `alarms/AlarmPlaybackObservation.kt` | 64 | not read | |
-| `alarms/AlarmQuizFactory.kt` | 51 | not read | |
-| `alarms/AlarmReadiness.kt` | 52 | not read | |
-| `alarms/AlarmReceiver.kt` | 48 | not read | |
-| `alarms/AlarmRepository.kt` | 62 | not read | |
-| `alarms/AlarmResults.kt` | 15 | not read | |
-| `alarms/AlarmRingingActivity.kt` | 49 | not read | |
-| `alarms/AlarmRingingScreen.kt` | 202 | not read | |
-| `alarms/AlarmRingingViewModel.kt` | 107 | not read | |
-| `alarms/AlarmRules.kt` | 132 | not read | |
-| `alarms/AlarmService.kt` | 192 | not read | |
-| `alarms/AlarmSound.kt` | 96 | not read | |
-| `alarms/AlarmSourcePolicy.kt` | 17 | not read | |
-| `alarms/AlarmSummaries.kt` | 43 | not read | |
-| `alarms/AlarmTimeLabels.kt` | 34 | not read | |
-| `alarms/AlarmsActivity.kt` | 82 | not read | |
-| `alarms/AndroidAlarmScheduler.kt` | 52 | not read | |
-| `alarms/api/AlarmMusicSelection.kt` | 17 | not read | |
-| `alarms/api/MusicAlarms.kt` | 83 | not read | |
-| `permissions/AccessRequestCoordinator.kt` | 84 | not read | |
-| `permissions/AppAccess.kt` | 85 | not read | |
-| `ui/AddToPlaylistDialog.kt` | 151 | not read | |
-| `ui/AlarmMenuItem.kt` | 15 | not read | |
-| `ui/BrowseFilters.kt` | 164 | not read | |
-| `ui/BrowseScreen.kt` | 2071 | not read | |
-| `ui/BrowseScroll.kt` | 117 | not read | |
-| `ui/DatabaseGate.kt` | 85 | not read | |
-| `ui/DockCollapsed.kt` | 202 | not read | |
-| `ui/DockEdgeSeek.kt` | 147 | not read | |
-| `ui/DockMarquee.kt` | 29 | not read | |
-| `ui/DownloadPicker.kt` | 211 | not read | |
-| `ui/DraggableScrollbar.kt` | 160 | not read | |
-| `ui/FeedbackRow.kt` | 84 | not read | |
-| `ui/FloatingControlsAction.kt` | 105 | not read | |
-| `ui/FloatingControlsPanel.kt` | 140 | not read | |
-| `ui/FloatingDismissTarget.kt` | 74 | not read | |
-| `ui/FloatingDragContainer.kt` | 90 | not read | |
-| `ui/Haptics.kt` | 174 | not read | |
-| `ui/HistoryScroll.kt` | 25 | not read | |
-| `ui/HoldToConfirm.kt` | 157 | not read | |
-| `ui/LabelledAction.kt` | 328 | not read | |
-| `ui/LegalScreens.kt` | 234 | not read | |
-| `ui/ListScrolling.kt` | 123 | not read | |
-| `ui/ManualQueueReorder.kt` | 157 | not read | |
-| `ui/MenuFocus.kt` | 70 | not read | |
-| `ui/MessageSnackbar.kt` | 33 | not read | |
-| `ui/NavSlots.kt` | 86 | not read | |
-| `ui/NavSlotsSetting.kt` | 131 | not read | |
-| `ui/NowPlaying.kt` | 278 | not read | |
-| `ui/PlayedBefore.kt` | 38 | not read | |
-| `ui/PlayerDock.kt` | 601 | not read | |
-| `ui/PlayerIcons.kt` | 493 | not read | |
-| `ui/PlaylistScreen.kt` | 785 | not read | |
-| `ui/PlaylistSearchHeader.kt` | 156 | not read | |
-| `ui/PlaylistSwitcher.kt` | 297 | not read | |
-| `ui/PreparingDatabase.kt` | 75 | not read | |
-| `ui/ProtracktorApp.kt` | 1092 | not read | |
-| `ui/QueueActions.kt` | 20 | not read | |
-| `ui/QueueCount.kt` | 52 | not read | |
-| `ui/QueueHelp.kt` | 105 | not read | |
-| `ui/QueueScreen.kt` | 161 | not read | |
-| `ui/QueueSwipeIntent.kt` | 17 | not read | |
-| `ui/QueueSwipeRow.kt` | 172 | not read | |
-| `ui/RandomDice.kt` | 56 | not read | |
-| `ui/RandomFilterState.kt` | 88 | not read | |
-| `ui/RandomScreen.kt` | 220 | not read | |
-| `ui/SavedPlacesScreen.kt` | 123 | not read | |
-| `ui/ScannerScreen.kt` | 203 | not read | |
-| `ui/ScrollingActionRow.kt` | 129 | not read | |
-| `ui/SearchQueryField.kt` | 99 | not read | |
-| `ui/SearchScopePanel.kt` | 260 | not read | |
-| `ui/SeekBar.kt` | 271 | not read | |
-| `ui/SettingChoice.kt` | 94 | not read | |
-| `ui/SettingsScreen.kt` | 557 | not read | |
-| `ui/ShareMenu.kt` | 120 | not read | |
-| `ui/ShellNavigation.kt` | 170 | not read | |
-| `ui/ShellState.kt` | 133 | not read | |
-| `ui/StereoMixSetting.kt` | 39 | not read | |
-| `ui/StorageSection.kt` | 210 | not read | |
-| `ui/SubsongStrip.kt` | 144 | not read | |
-| `ui/SwipeableSnackbar.kt` | 81 | not read | |
-| `ui/TrackInfo.kt` | 64 | not read | |
-| `ui/theme/LightColors.kt` | 41 | not read | |
-| `ui/theme/SystemBars.kt` | 21 | not read | |
-| `ui/theme/Theme.kt` | 36 | not read | |
-| `AppLanguage.kt` | 17 | not read | |
-| `AppLocale.kt` | 42 | not read | |
-| `AppTheme.kt` | 220 | not read | |
-| `MainActivity.kt` | 133 | not read | |
-| `app/src/main/AndroidManifest.xml` | 437 | not read | |
-| `app/build.gradle.kts` | 427 | not read | |
-| `app/proguard-rules.pro` | 15 | not read | |
-| `gradle/libs.versions.toml` | 49 | not read | |
-| `app/src/main/res/xml/data_extraction_rules.xml` | 21 | not read | |
-| `app/src/main/res/xml/file_paths.xml` | 11 | not read | |
-| `app/src/main/res/xml/network_security_config.xml` | 21 | not read | |
-| `app/src/main/res/values/strings.xml` | 773 | not read | |
-| `app/src/main/res/values-pl/strings.xml` | 816 | not read | |
+| file | lines | status |
+| --- | --- | --- |
+| `native/backends/asap/asap_measure.c` | 180 | read — nothing found |
+| `native/backends/asap/asap_measure.h` | 47 | read — nothing found |
+| `native/backends/minimp3/minimp3.c` | 16 | read — nothing found |
+| `native/backends/zxtune/lha_zxtune.cpp` | 79 | read — findings |
+| `native/backends/zxtune/uint16_char_traits.h` | 96 | read — nothing found |
+| `native/engine/engine.cpp` | 2970 | read — findings |
+| `native/engine/engine.h` | 208 | read — findings |
+| `native/engine/lha_jni.cpp` | 72 | read — findings |
+| `native/engine/log.h` | 27 | read — nothing found |
+| `native/engine/loudness.h` | 158 | read — nothing found |
+| `native/engine/loudness_analysis.h` | 31 | read — nothing found |
+| `native/engine/player_oboe.cpp` | 914 | read — findings |
+| `native/engine/stereo_mix.h` | 35 | read — nothing found |
+| `native/lhasa/lha_extract.cpp` | 143 | read — findings |
+| `native/lhasa/lha_extract.h` | 35 | read — nothing found |
+| `native/patches/libopenmpt/0001-read-c1-text-as-cp437.patch` | 25 | read — nothing found |
+| `alarms/AlarmCodec.kt` | 103 | not read |
+| `alarms/AlarmCoordinator.kt` | 148 | read (code only) — nothing found |
+| `alarms/AlarmFeatureLifecycle.kt` | 55 | not read |
+| `alarms/AlarmFileStore.kt` | 67 | read (code only) — nothing found |
+| `alarms/AlarmManagement.kt` | 536 | not read |
+| `alarms/AlarmManagementViewModel.kt` | 114 | not read |
+| `alarms/AlarmMetadata.kt` | 37 | not read |
+| `alarms/AlarmModels.kt` | 141 | not read |
+| `alarms/AlarmMusicPicker.kt` | 194 | not read |
+| `alarms/AlarmMusicPreparer.kt` | 96 | not read |
+| `alarms/AlarmMusicQueue.kt` | 73 | not read |
+| `alarms/AlarmMusicSource.kt` | 66 | not read |
+| `alarms/AlarmNotifications.kt` | 62 | not read |
+| `alarms/AlarmPlanner.kt` | 49 | not read |
+| `alarms/AlarmPlatform.kt` | 24 | not read |
+| `alarms/AlarmPlaybackObservation.kt` | 64 | read (code only) — nothing found |
+| `alarms/AlarmQuizFactory.kt` | 51 | not read |
+| `alarms/AlarmReadiness.kt` | 52 | not read |
+| `alarms/AlarmReceiver.kt` | 48 | read (code only) — nothing found |
+| `alarms/AlarmRepository.kt` | 62 | read (code only) — nothing found |
+| `alarms/AlarmResults.kt` | 15 | not read |
+| `alarms/AlarmRingingActivity.kt` | 49 | not read |
+| `alarms/AlarmRingingScreen.kt` | 202 | not read |
+| `alarms/AlarmRingingViewModel.kt` | 107 | not read |
+| `alarms/AlarmRules.kt` | 132 | not read |
+| `alarms/AlarmService.kt` | 192 | read (code only) — nothing found |
+| `alarms/AlarmSound.kt` | 96 | read (code only) — nothing found |
+| `alarms/AlarmSourcePolicy.kt` | 17 | not read |
+| `alarms/AlarmSummaries.kt` | 43 | not read |
+| `alarms/AlarmTimeLabels.kt` | 34 | not read |
+| `alarms/AlarmsActivity.kt` | 82 | not read |
+| `alarms/AndroidAlarmScheduler.kt` | 52 | read (code only) — nothing found |
+| `alarms/api/AlarmMusicSelection.kt` | 17 | not read |
+| `alarms/api/MusicAlarms.kt` | 83 | read (code only) — nothing found |
+| `data/CatalogueStore.kt` | 644 | read — findings |
+| `data/DatabaseAccess.kt` | 37 | read — findings |
+| `data/DatabasePreparation.kt` | 41 | read — findings |
+| `data/FavouriteStore.kt` | 89 | read — findings |
+| `data/HistoryStore.kt` | 159 | read — findings |
+| `data/LearnedLengthStore.kt` | 53 | read — findings |
+| `data/LegalText.kt` | 76 | read — findings |
+| `data/LibraryIndexStore.kt` | 288 | read — findings |
+| `data/LibraryStore.kt` | 291 | read — findings |
+| `data/Md5.kt` | 19 | read — findings |
+| `data/ModlandFavourites.kt` | 65 | read — findings |
+| `data/MusicSources.kt` | 38 | read — findings |
+| `data/OpenSourceNotices.kt` | 60 | read — findings |
+| `data/PlaylistFile.kt` | 163 | read — findings |
+| `data/ProtracktorDatabase.kt` | 107 | read — findings |
+| `data/RecentSearchPreferences.kt` | 28 | read — findings |
+| `data/SavedPlacesStore.kt` | 43 | read — findings |
+| `data/SchemaSql.kt` | 683 | read — findings |
+| `data/SearchTerms.kt` | 141 | read — findings |
+| `data/SongDbLengthStore.kt` | 89 | read — findings |
+| `data/SongDbLengths.kt` | 152 | read — findings |
+| `data/SongDbMetadata.kt` | 99 | read — findings |
+| `data/SongLengthStore.kt` | 85 | read — findings |
+| `data/SongLengths.kt` | 85 | read — findings |
+| `data/TrackMetadataStore.kt` | 117 | read — findings |
+| `engine/DescribeBlock.kt` | 50 | read — findings |
+| `engine/NativeData.kt` | 177 | read — findings |
+| `engine/NativeEngine.kt` | 305 | read — findings |
+| `engine/NativeLifetime.kt` | 51 | read — findings |
+| `engine/OutputRecovery.kt` | 15 | read — findings |
+| `gradle/libs.versions.toml` | 49 | read — findings |
+| `net/Amp.kt` | 148 | read — findings |
+| `net/AmpAccess.kt` | 35 | read — findings |
+| `net/AmpModuleIds.kt` | 115 | read — findings |
+| `net/AtomicFileWrite.kt` | 23 | read — findings |
+| `net/CacheBudget.kt` | 121 | read — findings |
+| `net/Catalogue.kt` | 291 | read — findings |
+| `net/CatalogueHttp.kt` | 9 | read — findings |
+| `net/CatalogueRetention.kt` | 11 | read — findings |
+| `net/ModArchive.kt` | 199 | read — findings |
+| `net/RemoteFileCache.kt` | 46 | read — findings |
+| `net/RemoteFiles.kt` | 282 | read — findings |
+| `net/Sc68Replays.kt` | 108 | read — findings |
+| `net/SharedFetches.kt` | 50 | read — findings |
+| `net/UadePlayers.kt` | 213 | read — findings |
+| `net/UnExoticA.kt` | 190 | read — findings |
+| `net/WebRemote.kt` | 175 | read — findings |
+| `permissions/AccessRequestCoordinator.kt` | 84 | read — nothing found |
+| `permissions/AppAccess.kt` | 85 | read — nothing found |
+| `player/ActiveQueue.kt` | 103 | read — nothing found |
+| `player/AndroidCatalogueStorage.kt` | 29 | read (code only) — nothing found |
+| `player/AndroidDownloadText.kt` | 67 | read (code only) — findings |
+| `player/AndroidFolderAccess.kt` | 18 | read — nothing found |
+| `player/AndroidMaintenanceFiles.kt` | 23 | read (code only) — findings |
+| `player/AndroidMaintenanceText.kt` | 32 | read (code only) — findings |
+| `player/AndroidPlaylistFiles.kt` | 35 | read (code only) — nothing found |
+| `player/AndroidPlaylistText.kt` | 30 | read (code only) — findings |
+| `player/AndroidTrackFileAccess.kt` | 60 | read — findings |
+| `player/AudioExport.kt` | 63 | read — nothing found |
+| `player/AudioFocus.kt` | 116 | read — nothing found |
+| `player/BarLength.kt` | 26 | read — nothing found |
+| `player/BrowseCache.kt` | 93 | read — findings |
+| `player/BrowseFilter.kt` | 78 | read — nothing found |
+| `player/BrowseNavigation.kt` | 78 | read — nothing found |
+| `player/BrowseReadOwner.kt` | 39 | read — nothing found |
+| `player/BrowseState.kt` | 266 | read — findings |
+| `player/BrowseWorkflow.kt` | 337 | read — findings |
+| `player/CatalogueBrowseState.kt` | 109 | read (code only) — nothing found |
+| `player/CatalogueBrowser.kt` | 203 | read — findings |
+| `player/CatalogueTracks.kt` | 32 | read — nothing found |
+| `player/Companions.kt` | 50 | read — nothing found |
+| `player/DownloadKeys.kt` | 38 | read (code only) — nothing found |
+| `player/DownloadPlan.kt` | 82 | read (code only) — findings |
+| `player/DownloadSizes.kt` | 46 | read (code only) — nothing found |
+| `player/DownloadText.kt` | 33 | read (code only) — nothing found |
+| `player/FallbackLength.kt` | 65 | read — nothing found |
+| `player/FloatingControls.kt` | 63 | read (code only) — nothing found |
+| `player/FloatingControlsWindow.kt` | 367 | read (code only) — nothing found |
+| `player/FloatingPanelDrag.kt` | 40 | read (code only) — nothing found |
+| `player/FloatingPanelPosition.kt` | 49 | read (code only) — nothing found |
+| `player/FolderPrefetch.kt` | 118 | read — nothing found |
+| `player/HistoryBrowser.kt` | 90 | read — nothing found |
+| `player/HistoryFilter.kt` | 31 | read — findings |
+| `player/HistoryPages.kt` | 32 | read — nothing found |
+| `player/HistoryPresentation.kt` | 25 | read — nothing found |
+| `player/HistoryPresentationReads.kt` | 49 | read — nothing found |
+| `player/HistoryReads.kt` | 106 | read — nothing found |
+| `player/HistoryRecording.kt` | 9 | read — nothing found |
+| `player/HistoryWrites.kt` | 80 | read — nothing found |
+| `player/IncrementalScan.kt` | 47 | read — nothing found |
+| `player/LengthSource.kt` | 73 | read — nothing found |
+| `player/LibraryDownloads.kt` | 424 | read — findings |
+| `player/LibraryMaintenance.kt` | 206 | read (code only) — findings |
+| `player/LibraryMaintenanceState.kt` | 87 | read (code only) — nothing found |
+| `player/LibrarySearch.kt` | 122 | read — findings |
+| `player/ListeningSession.kt` | 57 | read — nothing found |
+| `player/LocalFolderBrowser.kt` | 125 | read — findings |
+| `player/LocalTree.kt` | 53 | read — nothing found |
+| `player/LoudnessPreparation.kt` | 49 | read — findings |
+| `player/LoudnessProfiles.kt` | 80 | read — findings |
+| `player/M4aWriter.kt` | 108 | read — nothing found |
+| `player/MediaScanner.kt` | 193 | read — findings |
+| `player/Message.kt` | 19 | read — findings |
+| `player/NowPlayingText.kt` | 21 | read — nothing found |
+| `player/OnPhone.kt` | 50 | read — findings |
+| `player/OpenFailure.kt` | 113 | read — findings |
+| `player/PcmExport.kt` | 74 | read — nothing found |
+| `player/PickedFiles.kt` | 27 | read — nothing found |
+| `player/Platforms.kt` | 310 | read (code only) — findings |
+| `player/PlayFromEnd.kt` | 41 | read — findings |
+| `player/PlayQueue.kt` | 352 | read — findings |
+| `player/PlaybackController.kt` | 3825 | read — findings |
+| `player/PlaybackMediaSession.kt` | 21 | read — nothing found |
+| `player/PlaybackMetadata.kt` | 22 | read — nothing found |
+| `player/PlaybackPlan.kt` | 32 | read — nothing found |
+| `player/PlaybackPresentation.kt` | 111 | read — findings |
+| `player/PlaybackReadAhead.kt` | 91 | read — findings |
+| `player/PlaybackSchedule.kt` | 138 | read — nothing found |
+| `player/PlaybackService.kt` | 292 | read — findings |
+| `player/PlayerUiState.kt` | 206 | read — findings |
+| `player/PlayerViewModel.kt` | 259 | read — findings |
+| `player/PlaylistHeart.kt` | 70 | read (code only) — nothing found |
+| `player/PlaylistHeartActions.kt` | 73 | read (code only) — nothing found |
+| `player/PlaylistSearch.kt` | 19 | read — nothing found |
+| `player/PlaylistSession.kt` | 309 | read — findings |
+| `player/PlaylistSessionState.kt` | 142 | read (code only) — nothing found |
+| `player/PlaylistTransfer.kt` | 162 | read — findings |
+| `player/QueueLink.kt` | 278 | read — findings |
+| `player/QueueSourceNavigation.kt` | 44 | read — findings |
+| `player/RandomHistory.kt` | 96 | read — nothing found |
+| `player/RandomScope.kt` | 74 | read — nothing found |
+| `player/RecentSearches.kt` | 41 | read — nothing found |
+| `player/ReleaseYear.kt` | 70 | read — nothing found |
+| `player/ReplayDownloads.kt` | 98 | read (code only) — findings |
+| `player/SavedPlace.kt` | 38 | read (code only) — nothing found |
+| `player/SavedPlaces.kt` | 126 | read (code only) — nothing found |
+| `player/ScanBatch.kt` | 115 | read — nothing found |
+| `player/ScanNotification.kt` | 82 | read — findings |
+| `player/SearchResults.kt` | 85 | read — nothing found |
+| `player/SearchScope.kt` | 60 | read — nothing found |
+| `player/SeekProgress.kt` | 26 | read — nothing found |
+| `player/SelectionShare.kt` | 47 | read — nothing found |
+| `player/SessionSource.kt` | 57 | read — nothing found |
+| `player/StereoMix.kt` | 15 | read — nothing found |
+| `player/StoreDownloadSources.kt` | 54 | read (code only) — findings |
+| `player/SubsongAdvance.kt` | 55 | read — nothing found |
+| `player/SubsongNormalization.kt` | 64 | read — findings |
+| `player/SupportedFormats.kt` | 260 | read — findings |
+| `player/TrackArtwork.kt` | 155 | read in part — signatures and the seed rule |
+| `player/TrackArtworkBitmaps.kt` | 76 | read (code only) — findings |
+| `player/TrackEditing.kt` | 41 | read — nothing found |
+| `player/TrackFiles.kt` | 137 | read — findings |
+| `player/TunesFound.kt` | 9 | read — nothing found |
+| `ui/AddToPlaylistDialog.kt` | 151 | read in part — mechanical checks only |
+| `ui/AlarmMenuItem.kt` | 15 | read in part — mechanical checks only |
+| `ui/BrowseFilters.kt` | 164 | read in part — mechanical checks only |
+| `ui/BrowseScreen.kt` | 2071 | read in part — mechanical checks and wiring points — findings |
+| `ui/BrowseScroll.kt` | 117 | read in part — mechanical checks only |
+| `ui/DatabaseGate.kt` | 85 | read in part — mechanical checks only |
+| `ui/DockCollapsed.kt` | 202 | read in part — mechanical checks only |
+| `ui/DockEdgeSeek.kt` | 147 | read in part — mechanical checks only |
+| `ui/DockMarquee.kt` | 29 | read in part — mechanical checks only |
+| `ui/DownloadPicker.kt` | 211 | read in part — mechanical checks only |
+| `ui/DraggableScrollbar.kt` | 160 | read in part — mechanical checks only |
+| `ui/FeedbackRow.kt` | 84 | read in part — mechanical checks only |
+| `ui/FloatingControlsAction.kt` | 105 | read in part — mechanical checks only |
+| `ui/FloatingControlsPanel.kt` | 140 | read in part — mechanical checks only |
+| `ui/FloatingDismissTarget.kt` | 74 | read in part — mechanical checks only |
+| `ui/FloatingDragContainer.kt` | 90 | read in part — mechanical checks only |
+| `ui/Haptics.kt` | 174 | read in part — mechanical checks only |
+| `ui/HistoryScroll.kt` | 25 | read in part — mechanical checks only |
+| `ui/HoldToConfirm.kt` | 157 | read in part — mechanical checks only |
+| `ui/LabelledAction.kt` | 328 | read in part — mechanical checks only |
+| `ui/LegalScreens.kt` | 234 | read in part — mechanical checks only |
+| `ui/ListScrolling.kt` | 123 | read in part — mechanical checks only |
+| `ui/ManualQueueReorder.kt` | 157 | read in part — mechanical checks only |
+| `ui/MenuFocus.kt` | 70 | read in part — mechanical checks only |
+| `ui/MessageSnackbar.kt` | 33 | read in part — mechanical checks and wiring points — findings |
+| `ui/NavSlots.kt` | 86 | read in part — mechanical checks only |
+| `ui/NavSlotsSetting.kt` | 131 | read in part — mechanical checks only |
+| `ui/NowPlaying.kt` | 278 | read in part — mechanical checks only |
+| `ui/PlayedBefore.kt` | 38 | read in part — mechanical checks only |
+| `ui/PlayerDock.kt` | 601 | read in part — mechanical checks only |
+| `ui/PlayerIcons.kt` | 493 | read in part — mechanical checks only |
+| `ui/PlaylistScreen.kt` | 785 | read in part — mechanical checks only |
+| `ui/PlaylistSearchHeader.kt` | 156 | read in part — mechanical checks only |
+| `ui/PlaylistSwitcher.kt` | 297 | read in part — mechanical checks only |
+| `ui/PreparingDatabase.kt` | 75 | read in part — mechanical checks only |
+| `ui/ProtracktorApp.kt` | 1092 | read in part — mechanical checks and wiring points — findings |
+| `ui/QueueActions.kt` | 20 | read in part — mechanical checks only |
+| `ui/QueueCount.kt` | 52 | read in part — mechanical checks only |
+| `ui/QueueHelp.kt` | 105 | read in part — mechanical checks only |
+| `ui/QueueScreen.kt` | 161 | read in part — mechanical checks only |
+| `ui/QueueSwipeIntent.kt` | 17 | read in part — mechanical checks only |
+| `ui/QueueSwipeRow.kt` | 172 | read in part — mechanical checks only |
+| `ui/RandomDice.kt` | 56 | read in part — mechanical checks only |
+| `ui/RandomFilterState.kt` | 88 | read in part — mechanical checks only |
+| `ui/RandomScreen.kt` | 220 | read in part — mechanical checks only |
+| `ui/SavedPlacesScreen.kt` | 123 | read in part — mechanical checks only |
+| `ui/ScannerScreen.kt` | 203 | read in part — mechanical checks only |
+| `ui/ScrollingActionRow.kt` | 129 | read in part — mechanical checks only |
+| `ui/SearchQueryField.kt` | 99 | read in part — mechanical checks only |
+| `ui/SearchScopePanel.kt` | 260 | read in part — mechanical checks only |
+| `ui/SeekBar.kt` | 271 | read in part — mechanical checks only |
+| `ui/SettingChoice.kt` | 94 | read in part — mechanical checks only |
+| `ui/SettingsScreen.kt` | 557 | read in part — mechanical checks only |
+| `ui/ShareMenu.kt` | 120 | read in part — mechanical checks only |
+| `ui/ShellNavigation.kt` | 170 | read in part — mechanical checks only |
+| `ui/ShellState.kt` | 133 | read in part — mechanical checks only |
+| `ui/StereoMixSetting.kt` | 39 | read in part — mechanical checks only |
+| `ui/StorageSection.kt` | 210 | read in part — mechanical checks only |
+| `ui/SubsongStrip.kt` | 144 | read in part — mechanical checks only |
+| `ui/SwipeableSnackbar.kt` | 81 | read in part — mechanical checks only |
+| `ui/TrackInfo.kt` | 64 | read in part — mechanical checks only |
+| `ui/theme/LightColors.kt` | 41 | read in part — mechanical checks only |
+| `ui/theme/SystemBars.kt` | 21 | read in part — mechanical checks only |
+| `ui/theme/Theme.kt` | 36 | read in part — mechanical checks only |
+| `app/build.gradle.kts` | 427 | read (comments not read) — findings |
+| `app/proguard-rules.pro` | 15 | read — findings |
+| `app/src/main/AndroidManifest.xml` | 437 | read — findings |
+| `app/src/main/res/values-pl/strings.xml` | 816 | key parity only |
+| `app/src/main/res/values/strings.xml` | 773 | key parity only |
+| `app/src/main/res/xml/data_extraction_rules.xml` | 21 | read — nothing found |
+| `app/src/main/res/xml/file_paths.xml` | 11 | read — nothing found |
+| `app/src/main/res/xml/network_security_config.xml` | 21 | read — findings |
 
 ## 11. Dismissed suspicions
 
+- **A use-after-free of game-music-emu's track info on a subsong switch** — the switch runs on the
+  caller's thread under the decoder lock and the description is published under it; no reader
+  touches the pointer.
+- **SQLite's 999-parameter limit in the `playable` and `platform` updates on Android 10 and 11** —
+  about 170 and 450 parameters respectively.
+- **R8 renaming `net.Lha`'s native methods** — the default optimise rules keep native method names
+  for every class.
+- **A SID's position computed at the device's rate** — the stream is opened at the decoder's rate
+  and a mismatch is reported.
+- **Exceptions from decoders reaching the audio thread or the JVM** — contained by `guarded` at
+  every entry in `player_oboe.cpp` (the LHA wrapper is the exception, RV-B009).
+- **A crash loop from a malformed address stored in a playlist** — the import evaluates the
+  address before storing it, so it fails there (RV-B006) and nothing is kept.
+- **Pairing with an address that was never validated** — the scanner checks the code's shape and,
+  for plain `http`, that the host is local, before the controller sees it.
+- **Lost native handles when an open is cancelled** — ownership passes to `track` before the next
+  suspension, and `prepareOrClose` covers the window before that.
+
 ## 12. Working notes
 
-*Open threads to follow in areas not read yet. Empty at completion.*
+Open threads, to be closed before this review is complete:
+
+- `alarms/`: rules, codec, planner, music preparer, quiz, metadata and all screens — not read.
+- `ui/`: every file as code — state, effects, accessibility (information by colour alone was not
+  checked at all).
+- Tests: whether the tests of the high-risk areas enter by the production path.
+- `player/TrackArtwork.kt`: body not read.
