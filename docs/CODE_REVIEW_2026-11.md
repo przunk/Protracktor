@@ -1,8 +1,8 @@
 # Code review — Protracktor Android app, November 2026
 
-**Status: findings written for everything read so far; reading is not complete.** The coverage
-ledger (§10) says exactly what was read, what was read only in part, and what was not reached. The
-summary (§2) is provisional until the ledger has no open rows.
+**Status: complete as far as this run reached.** The native code, `engine/`, `player/`, `data/`,
+`net/`, the alarms' logic and the build configuration were read; the Compose screens were read only
+in part and the tests only surveyed. The coverage ledger (§10) says exactly which, file by file.
 
 ## 1. Header
 
@@ -85,9 +85,7 @@ reused.
 
 ## 2. Summary
 
-*Provisional — see the status line at the top.*
-
-**Counts.** 33 bugs: 0 Critical, 1 High, 13 Medium, 19 Low. 37 observations, 14 suggestions,
+**Counts.** 34 bugs: 0 Critical, 1 High, 14 Medium, 19 Low. 39 observations, 14 suggestions,
 9 ideas, 5 questions. Four bugs are partially verified (RV-B003, B004, B006, B033); everything
 else is from reading.
 
@@ -98,10 +96,11 @@ else is from reading.
 3. RV-B003 — a SID whose default song is not the first plays that song while the app believes it
    is on the first: wrong length, wrong strip, wrong order under "play all".
 4. RV-B005 — music started from a page link runs without the foreground service.
-5. RV-B004 — notices from the controller ignore the language chosen in the app.
-6. RV-B007 — a download that arrives but parses to nothing erases the index or table it replaces.
-7. RV-B008 — scanning a folder that is no longer reachable ends the app.
-8. RV-B006 — a malformed `%` in a Modland address ends the app (link, imported list).
+5. RV-B034 — somebody who declined notifications is asked again, and then sent to system settings,
+   at every start.
+6. RV-B004 — notices from the controller ignore the language chosen in the app.
+7. RV-B007 — a download that arrives but parses to nothing erases the index or table it replaces.
+8. RV-B008 — scanning a folder that is no longer reachable ends the app.
 9. RV-B014 — a database error in most write paths ends the app; only three areas handle one.
 10. RV-B012 — indexing Modland holds the whole 40 MB list and half a million rows in memory at once.
 
@@ -137,8 +136,9 @@ switch for AMP guards a toggle nothing can flip (RV-O021); code cites review doc
 in the repository (RV-O037). The fixes layered on fixes are visible mainly as special cases added
 where the symptom appeared rather than where the rule lives.
 
-**What was not reached** is listed in §10: most of `ui/` beyond mechanical checks, the rules and
-screens of `alarms/`, and the tests beyond a survey.
+**What was not reached** is listed in §10: most of the Compose screens (`ui/` and the three alarm
+screens) beyond mechanical checks and the shell's wiring, and the tests beyond a survey. Colour as
+the only carrier of information was not checked systematically.
 
 ## 3. Architecture as built
 
@@ -328,7 +328,8 @@ None found.
   in `player/PlaylistTransfer.kt:139-147`.
 - Mechanism: `Catalogue.owning`, `fileOf` and `sourceOf` call `pathFrom` on any id that starts with
   Modland's file base. None of the callers on the link and import paths catches.
-- Trigger: a link or an M3U holding `https://modland.com/pub/modules/%zz`.
+- Trigger: a link or an M3U holding `https://modland.com/pub/modules/%zz`; or a tapped Modland
+  address with a literal `%` in a file name that was not escaped — the manifest claims that host.
 - Impact: an uncaught exception on the main thread — the app closes.
 - Direction: `pathFrom` answers null for an address it cannot decode.
 - Already known: no.
@@ -460,6 +461,23 @@ None found.
 - Impact: the app closes; with a failed migration, on each launch, with no message.
 - Direction: one failure path for the scope, and stores that return a result where the caller can
   say something useful (RV-S005).
+- Already known: no.
+
+### RV-B034 — The notification permission is asked at every start, and then system settings open
+- Severity: Medium · Likelihood: plausible — anyone who declines · Evidence: unverified (reading)
+- Where: `ui/ProtracktorApp.kt:192-197` (a request in `LaunchedEffect(Unit)` at the top of the
+  shell, on Android 13 and later); `permissions/AccessRequestCoordinator.kt:55-73` (once the dialog
+  can no longer be shown, the request opens the app's notification settings instead).
+- Mechanism: the coordinator is built for a request somebody pressed a button for: if the system
+  will not show its dialog again, open Settings. The shell uses it unprompted each time it is
+  composed — every launch, and every recreation after a theme or language change. Nothing records
+  that the question was already answered; the stored flag only chooses between dialog and Settings.
+- Trigger: decline the dialog on first launch (it returns on the next); decline it again; from
+  then on each start opens the system's notification settings for the app.
+- Impact: an app that leaves for system settings by itself whenever it is opened, for exactly the
+  people who said no. The comment at `:190` says it is asked once.
+- Direction: ask once and remember; offer the way to Settings from a visible control, not from the
+  start-up path.
 - Already known: no.
 
 ### 4.4 Low
@@ -614,7 +632,8 @@ None found.
   `player/TrackFiles.kt:32-49` and `:66-106`, `player/OnPhone.kt` `checkFor`,
   `data/PlaylistFile.kt` `locationOf`, `player/QueueLink.kt` `pack`/`canSend`/`open`,
   `net/WebRemote.kt` `buildJson`, `player/SelectionShare.kt`, `player/PlaybackController.kt`
-  `localBytesFor`, `player/PlaybackReadAhead.kt:55`. `amp://` is tested for in seven places in the
+  `localBytesFor`, `player/PlaybackReadAhead.kt:55`, `alarms/AlarmSourcePolicy.kt` (catalogue ids by
+  name again). `amp://` is tested for in seven places in the
   controller alone. The `Catalogue` class (`net/Catalogue.kt`) covers identity and index parsing;
   how a track is read, what travels with it, whether it is on the phone, whether it may be
   prefetched, what it costs to download and which platform it is are all answered elsewhere, per
@@ -640,7 +659,8 @@ None found.
   local index (plus file name), playlist rows in `player/LibrarySearch.kt:45` (title and file name,
   not author), `player/PlaylistSearch.kt:14` (title, file, author, source), and
   `player/HistoryFilter.kt:10` (one literal phrase, no folding). "space ninja" finds
-  `space_ninja` everywhere except History.
+  `space_ninja` everywhere except History. The alarm music picker adds a sixth
+  (`alarms/AlarmMusicSource.kt`: title, file name and author).
 - **RV-O006 — What formats exist is kept in at least six lists.** `player/SupportedFormats.kt`
   (six sets), the native name checks (`engine.cpp` `worthTrying`, `claimsName`),
   `web/src/formats.tsv` (held to the Kotlin by a test), `player/Platforms.kt` (the extensions
@@ -682,6 +702,12 @@ None found.
   seek and nothing else. It holds today because every other caller is on the main thread.
 - **RV-O015 — Identity has two shapes.** Modland's and The Mod Archive's ids are their download
   addresses; ASMA, UnExoticA and AMP use `<id>://path`. `ModArchive.owns` exists beside `pathFrom`.
+
+- **RV-O045 — One-shot events have no listener when the screen is gone.** `reveal`, `showBrowse`,
+  `share` and `scan` are shared flows without replay, collected in `ui/ProtracktorApp.kt:229`,
+  `:271-275`, `:287`, `:353`. A share that finishes preparing after the app left the screen — an
+  audio render takes seconds — is dropped, or its chooser is refused as a background start, and
+  nothing says so.
 
 ### 5.3 Inconsistency
 
@@ -786,6 +812,12 @@ None found.
 - **RV-O043 — One lock for every loudness analysis** (`player/LoudnessPreparation.kt`): the tapped
   tune waits behind read-ahead measurements; the content hash is computed with normalisation off.
 
+- **RV-O046 — Accessibility, as far as it was looked at.** The subsong chips
+  (`ui/SubsongStrip.kt`) mark the tune playing by colour and expose neither a role nor a selected
+  state; the line above them says the position in words, so the information is not lost, but a
+  screen reader hears a row of bare numbers. 44 icons carry `contentDescription = null`; whether
+  each sits beside its own text was not checked.
+
 ### 5.9 Security notes that are not bugs by themselves
 
 - **RV-O044** — `MainActivity` is exported and accepts `file://` and any `http(s)` address in an
@@ -865,6 +897,7 @@ loaded it asks for the service through an injected hook (RV-B005). *Size S · ri
 
 | step | what | size | must exist first | only I can check on the phone |
 | --- | --- | --- | --- | --- |
+| 0 | RV-B034: ask for notifications once | S | — | decline twice, start again |
 | 1 | RV-S005: failure path and `Notices` | M | — | notices in the chosen language |
 | 2 | RV-S006 and the id allow-list (RV-B001, B006, B032) | S–M | — | a real link still opens |
 | 3 | RV-S008, RV-B002, RV-B003 | S | question 1, question 5 | subsong while paused; a SID with a start song |
@@ -983,8 +1016,8 @@ was read in full. "Code only" means every line of code was read and comment line
 | `permissions/`, app root | 6 | 581 | read — nothing found beyond observations |
 | manifest, XML configuration, build files, R8 rules, versions | 9 | — | read — findings |
 | string resources | 2 | 1 589 | key parity checked mechanically (647 = 647); texts not read |
-| `alarms/` | 34 | 3 163 | read in part: 9 files code only (entry points, service, coordinator, repository, file store, sound, playback observation) — nothing found; 25 not read |
-| `ui/` | 64 | 12 864 | read in part: mechanical checks over all files (text-only buttons, literal text, non-null assertions), wiring points in `ProtracktorApp.kt`, `MessageSnackbar.kt`; not read as code |
+| `alarms/` | 34 | 3 163 | 31 files read, code only (everything but the three screens) — nothing found beyond observations; `AlarmManagement.kt`, `AlarmMusicPicker.kt`, `AlarmRingingScreen.kt` not read beyond mechanical checks |
+| `ui/` | 64 | 12 864 | read in part: mechanical checks over all files (text-only buttons, literal text, non-null assertions); `ProtracktorApp.kt` (to line 901), `MessageSnackbar.kt`, `PlayedBefore.kt`, `SubsongStrip.kt`, `DatabaseGate.kt`, `ShellState.kt`, `HoldToConfirm.kt` read as code — findings; the other 57 not read as code |
 | tests | 262 | 32 067 | surveyed (§8); not reviewed |
 
 ### 10.2 By file
@@ -1007,39 +1040,39 @@ was read in full. "Code only" means every line of code was read and comment line
 | `native/lhasa/lha_extract.cpp` | 143 | read — findings |
 | `native/lhasa/lha_extract.h` | 35 | read — nothing found |
 | `native/patches/libopenmpt/0001-read-c1-text-as-cp437.patch` | 25 | read — nothing found |
-| `alarms/AlarmCodec.kt` | 103 | not read |
+| `alarms/AlarmCodec.kt` | 103 | read (code only) — nothing found |
 | `alarms/AlarmCoordinator.kt` | 148 | read (code only) — nothing found |
-| `alarms/AlarmFeatureLifecycle.kt` | 55 | not read |
+| `alarms/AlarmFeatureLifecycle.kt` | 55 | read (code only) — nothing found |
 | `alarms/AlarmFileStore.kt` | 67 | read (code only) — nothing found |
-| `alarms/AlarmManagement.kt` | 536 | not read |
-| `alarms/AlarmManagementViewModel.kt` | 114 | not read |
-| `alarms/AlarmMetadata.kt` | 37 | not read |
-| `alarms/AlarmModels.kt` | 141 | not read |
-| `alarms/AlarmMusicPicker.kt` | 194 | not read |
-| `alarms/AlarmMusicPreparer.kt` | 96 | not read |
-| `alarms/AlarmMusicQueue.kt` | 73 | not read |
-| `alarms/AlarmMusicSource.kt` | 66 | not read |
-| `alarms/AlarmNotifications.kt` | 62 | not read |
-| `alarms/AlarmPlanner.kt` | 49 | not read |
-| `alarms/AlarmPlatform.kt` | 24 | not read |
+| `alarms/AlarmManagement.kt` | 536 | read in part — mechanical checks only |
+| `alarms/AlarmManagementViewModel.kt` | 114 | read (code only) — nothing found |
+| `alarms/AlarmMetadata.kt` | 37 | read (code only) — nothing found |
+| `alarms/AlarmModels.kt` | 141 | read (code only) — nothing found |
+| `alarms/AlarmMusicPicker.kt` | 194 | read in part — mechanical checks only |
+| `alarms/AlarmMusicPreparer.kt` | 96 | read (code only) — nothing found |
+| `alarms/AlarmMusicQueue.kt` | 73 | read (code only) — nothing found |
+| `alarms/AlarmMusicSource.kt` | 66 | read (code only) — nothing found |
+| `alarms/AlarmNotifications.kt` | 62 | read (code only) — nothing found |
+| `alarms/AlarmPlanner.kt` | 49 | read (code only) — nothing found |
+| `alarms/AlarmPlatform.kt` | 24 | read (code only) — nothing found |
 | `alarms/AlarmPlaybackObservation.kt` | 64 | read (code only) — nothing found |
-| `alarms/AlarmQuizFactory.kt` | 51 | not read |
-| `alarms/AlarmReadiness.kt` | 52 | not read |
+| `alarms/AlarmQuizFactory.kt` | 51 | read (code only) — nothing found |
+| `alarms/AlarmReadiness.kt` | 52 | read (code only) — nothing found |
 | `alarms/AlarmReceiver.kt` | 48 | read (code only) — nothing found |
 | `alarms/AlarmRepository.kt` | 62 | read (code only) — nothing found |
-| `alarms/AlarmResults.kt` | 15 | not read |
-| `alarms/AlarmRingingActivity.kt` | 49 | not read |
-| `alarms/AlarmRingingScreen.kt` | 202 | not read |
-| `alarms/AlarmRingingViewModel.kt` | 107 | not read |
-| `alarms/AlarmRules.kt` | 132 | not read |
+| `alarms/AlarmResults.kt` | 15 | read (code only) — nothing found |
+| `alarms/AlarmRingingActivity.kt` | 49 | read (code only) — nothing found |
+| `alarms/AlarmRingingScreen.kt` | 202 | read in part — mechanical checks only |
+| `alarms/AlarmRingingViewModel.kt` | 107 | read (code only) — nothing found |
+| `alarms/AlarmRules.kt` | 132 | read (code only) — nothing found |
 | `alarms/AlarmService.kt` | 192 | read (code only) — nothing found |
 | `alarms/AlarmSound.kt` | 96 | read (code only) — nothing found |
-| `alarms/AlarmSourcePolicy.kt` | 17 | not read |
-| `alarms/AlarmSummaries.kt` | 43 | not read |
-| `alarms/AlarmTimeLabels.kt` | 34 | not read |
-| `alarms/AlarmsActivity.kt` | 82 | not read |
+| `alarms/AlarmSourcePolicy.kt` | 17 | read (code only) — nothing found |
+| `alarms/AlarmSummaries.kt` | 43 | read (code only) — nothing found |
+| `alarms/AlarmTimeLabels.kt` | 34 | read (code only) — nothing found |
+| `alarms/AlarmsActivity.kt` | 82 | read (code only) — nothing found |
 | `alarms/AndroidAlarmScheduler.kt` | 52 | read (code only) — nothing found |
-| `alarms/api/AlarmMusicSelection.kt` | 17 | not read |
+| `alarms/api/AlarmMusicSelection.kt` | 17 | read (code only) — nothing found |
 | `alarms/api/MusicAlarms.kt` | 83 | read (code only) — nothing found |
 | `data/CatalogueStore.kt` | 644 | read — findings |
 | `data/DatabaseAccess.kt` | 37 | read — findings |
@@ -1197,9 +1230,9 @@ was read in full. "Code only" means every line of code was read and comment line
 | `ui/AddToPlaylistDialog.kt` | 151 | read in part — mechanical checks only |
 | `ui/AlarmMenuItem.kt` | 15 | read in part — mechanical checks only |
 | `ui/BrowseFilters.kt` | 164 | read in part — mechanical checks only |
-| `ui/BrowseScreen.kt` | 2071 | read in part — mechanical checks and wiring points — findings |
+| `ui/BrowseScreen.kt` | 2071 | read in part — mechanical checks — findings |
 | `ui/BrowseScroll.kt` | 117 | read in part — mechanical checks only |
-| `ui/DatabaseGate.kt` | 85 | read in part — mechanical checks only |
+| `ui/DatabaseGate.kt` | 85 | read (code only) — nothing found |
 | `ui/DockCollapsed.kt` | 202 | read in part — mechanical checks only |
 | `ui/DockEdgeSeek.kt` | 147 | read in part — mechanical checks only |
 | `ui/DockMarquee.kt` | 29 | read in part — mechanical checks only |
@@ -1212,24 +1245,24 @@ was read in full. "Code only" means every line of code was read and comment line
 | `ui/FloatingDragContainer.kt` | 90 | read in part — mechanical checks only |
 | `ui/Haptics.kt` | 174 | read in part — mechanical checks only |
 | `ui/HistoryScroll.kt` | 25 | read in part — mechanical checks only |
-| `ui/HoldToConfirm.kt` | 157 | read in part — mechanical checks only |
+| `ui/HoldToConfirm.kt` | 157 | read (code only) — nothing found |
 | `ui/LabelledAction.kt` | 328 | read in part — mechanical checks only |
 | `ui/LegalScreens.kt` | 234 | read in part — mechanical checks only |
 | `ui/ListScrolling.kt` | 123 | read in part — mechanical checks only |
 | `ui/ManualQueueReorder.kt` | 157 | read in part — mechanical checks only |
 | `ui/MenuFocus.kt` | 70 | read in part — mechanical checks only |
-| `ui/MessageSnackbar.kt` | 33 | read in part — mechanical checks and wiring points — findings |
+| `ui/MessageSnackbar.kt` | 33 | read (code only) — findings |
 | `ui/NavSlots.kt` | 86 | read in part — mechanical checks only |
 | `ui/NavSlotsSetting.kt` | 131 | read in part — mechanical checks only |
 | `ui/NowPlaying.kt` | 278 | read in part — mechanical checks only |
-| `ui/PlayedBefore.kt` | 38 | read in part — mechanical checks only |
+| `ui/PlayedBefore.kt` | 38 | read (code only) — nothing found |
 | `ui/PlayerDock.kt` | 601 | read in part — mechanical checks only |
 | `ui/PlayerIcons.kt` | 493 | read in part — mechanical checks only |
 | `ui/PlaylistScreen.kt` | 785 | read in part — mechanical checks only |
 | `ui/PlaylistSearchHeader.kt` | 156 | read in part — mechanical checks only |
 | `ui/PlaylistSwitcher.kt` | 297 | read in part — mechanical checks only |
 | `ui/PreparingDatabase.kt` | 75 | read in part — mechanical checks only |
-| `ui/ProtracktorApp.kt` | 1092 | read in part — mechanical checks and wiring points — findings |
+| `ui/ProtracktorApp.kt` | 1092 | read (code only, to line 901) — findings |
 | `ui/QueueActions.kt` | 20 | read in part — mechanical checks only |
 | `ui/QueueCount.kt` | 52 | read in part — mechanical checks only |
 | `ui/QueueHelp.kt` | 105 | read in part — mechanical checks only |
@@ -1249,10 +1282,10 @@ was read in full. "Code only" means every line of code was read and comment line
 | `ui/SettingsScreen.kt` | 557 | read in part — mechanical checks only |
 | `ui/ShareMenu.kt` | 120 | read in part — mechanical checks only |
 | `ui/ShellNavigation.kt` | 170 | read in part — mechanical checks only |
-| `ui/ShellState.kt` | 133 | read in part — mechanical checks only |
+| `ui/ShellState.kt` | 133 | read (code only) — nothing found |
 | `ui/StereoMixSetting.kt` | 39 | read in part — mechanical checks only |
 | `ui/StorageSection.kt` | 210 | read in part — mechanical checks only |
-| `ui/SubsongStrip.kt` | 144 | read in part — mechanical checks only |
+| `ui/SubsongStrip.kt` | 144 | read (code only) — findings |
 | `ui/SwipeableSnackbar.kt` | 81 | read in part — mechanical checks only |
 | `ui/TrackInfo.kt` | 64 | read in part — mechanical checks only |
 | `ui/theme/LightColors.kt` | 41 | read in part — mechanical checks only |
@@ -1289,10 +1322,7 @@ was read in full. "Code only" means every line of code was read and comment line
 
 ## 12. Working notes
 
-Open threads, to be closed before this review is complete:
-
-- `alarms/`: rules, codec, planner, music preparer, quiz, metadata and all screens — not read.
-- `ui/`: every file as code — state, effects, accessibility (information by colour alone was not
-  checked at all).
-- Tests: whether the tests of the high-risk areas enter by the production path.
-- `player/TrackArtwork.kt`: body not read.
+No open thread remains from the areas that were read. What was not read is not a thread but a gap,
+and is stated in §10: 57 files of `ui/`, the three alarm screens, the body of
+`player/TrackArtwork.kt`, and the tests as code. A second pass over those would be the place to
+check state and side effects in Compose, and colour as the only carrier of information.
