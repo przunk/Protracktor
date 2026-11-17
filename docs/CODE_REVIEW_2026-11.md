@@ -1,8 +1,9 @@
 # Code review — Protracktor Android app, November 2026
 
-**Status: complete as far as this run reached.** The native code, `engine/`, `player/`, `data/`,
-`net/`, the alarms' logic and the build configuration were read; the Compose screens were read only
-in part and the tests only surveyed. The coverage ledger (§10) says exactly which, file by file.
+**Status: complete.** Every in-scope source file was read: the native code, `engine/`, `player/`,
+`data/`, `net/`, the alarms, the Compose screens and the build configuration. The tests were
+surveyed, as the secondary subject they were meant to be. The coverage ledger (§10) says how each
+file was read.
 
 ## 1. Header
 
@@ -12,7 +13,7 @@ in part and the tests only surveyed. The coverage ledger (§10) says exactly whi
 | Reviewed commit | `af2606123d0d6fc304eb3362d6823970233a86c7` (`af260612`), 2026-11-15 |
 | Tree at start | clean; no untracked files; one worktree; level with `origin/develop` |
 | `versionCode` at that commit | 1602 (commit count) |
-| Review dates | 2026-11-15 and 2026-11-16 |
+| Review dates | 2026-11-15 to 2026-11-17 (the screens in `ui/` and the three alarm screens on the last day) |
 | Reviewer | the agent (Claude), unattended, against `GOAL.md` |
 | Method | in-scope own files read in full once, in order of risk; cross-cutting concepts compared side by side; reading, not execution, unless a finding says otherwise |
 
@@ -85,7 +86,7 @@ reused.
 
 ## 2. Summary
 
-**Counts.** 34 bugs: 0 Critical, 1 High, 14 Medium, 19 Low. 39 observations, 14 suggestions,
+**Counts.** 40 bugs: 0 Critical, 1 High, 15 Medium, 24 Low. 44 observations, 17 suggestions,
 9 ideas, 5 questions. Four bugs are partially verified (RV-B003, B004, B006, B033); everything
 else is from reading.
 
@@ -104,6 +105,9 @@ else is from reading.
 9. RV-B014 — a database error in most write paths ends the app; only three areas handle one.
 10. RV-B012 — indexing Modland holds the whole 40 MB list and half a million rows in memory at once.
 
+From the screens, read last, the one to look at first is RV-B035: the QR scanner ends the app on a
+device without a back camera or when the camera fails to start.
+
 **Verdict on the three reasons**
 
 *(a) Could it have been written better — yes, and the gap has a clear shape.* The code is not
@@ -115,8 +119,11 @@ at least nine places (RV-O001), with AMP, Modland, The Mod Archive and UnExoticA
 inside generic code. The same holds one level down: "only the newest request may publish" exists
 twelve times under twelve names (RV-O002), there are five HTTP clients (RV-O003) and five search
 rules (RV-O005). `PlaybackController` is 3 825 lines and still owns playback, Random, sharing,
-pairing, scanning and playlist edits (RV-O029). A careful engineer would have written the same
-features with roughly the same rules and far fewer places to remember; §6.1 sketches that shape.
+pairing, scanning and playlist edits (RV-O029). The screens repeat the pattern at their own scale:
+the row for a tune is written three times (RV-O047), the seek bar twice (RV-O048), and one screen
+takes forty-six parameters because the same ten actions are handed down by name through four
+levels (RV-O031). A careful engineer would have written the same features with roughly the same
+rules and far fewer places to remember; §6.1 sketches that shape.
 
 *(b) Bugs and robustness — no critical defect found; the weak points are at the edges.* The native
 boundary is better defended than I feared: every JNI entry in `player_oboe.cpp` is guarded, the
@@ -126,7 +133,10 @@ findings: the LHA wrapper has no guard at all (RV-B009), `restart` skips the dec
 the recurring cause is one decision: the controller's coroutine scope has no failure path, so any
 exception in most `launch` blocks ends the process (RV-B008, RV-B014, RV-B007). Untrusted input
 arrives through three doors — a page link, an imported list, an intent — and none restricts where
-a tune may come from (RV-B001).
+a tune may come from (RV-B001). The screens themselves are sound: state is hoisted, lists are
+keyed, gestures have accessibility actions beside them. What they add is one unguarded camera start
+(RV-B035), a rule that drifted between the two forms of the dock (RV-B036), and state shown by
+colour alone in four places (RV-B037).
 
 *(c) Traces of lost context — plentiful, mostly harmless, a few misleading.* Comments still
 describe a threading model the engine left months ago (RV-O034); at least twenty KDoc blocks are
@@ -136,9 +146,9 @@ switch for AMP guards a toggle nothing can flip (RV-O021); code cites review doc
 in the repository (RV-O037). The fixes layered on fixes are visible mainly as special cases added
 where the symptom appeared rather than where the rule lives.
 
-**What was not reached** is listed in §10: most of the Compose screens (`ui/` and the three alarm
-screens) beyond mechanical checks and the shell's wiring, and the tests beyond a survey. Colour as
-the only carrier of information was not checked systematically.
+**What was not reached.** The tests were surveyed, not reviewed line by line (§8). The path data
+of the icons in `ui/PlayerIcons.kt` and the texts of the string resources were not read. Nothing
+was run on a phone, so every finding about the screen is from reading.
 
 ## 3. Architecture as built
 
@@ -417,12 +427,13 @@ None found.
 - Severity: Medium · Likelihood: plausible on phones with a small heap limit · Evidence:
   unverified — the figures are the agent's arithmetic from the code, not a measurement.
 - Where: `net/Catalogue.kt:189-216` (`Modland.parseIndex`); `data/CatalogueStore.kt:208`
-  (`replaceIndex` takes the list); the same shape for AMP's 45 MB map in
-  `player/StoreDownloadSources.kt:230-234`.
+  (`replaceIndex` takes the list); the same shape for AMP's 45 MB map, read as a stream but
+  collected into one list (`net/Amp.kt:59-75`) and handed on whole
+  (`player/StoreDownloadSources.kt:31-36`).
 - Mechanism: the 40 MB list is unzipped into one string — two bytes a character, since a few names
   are not ASCII — and then into about 516 000 `CatalogueEntry` objects of four fresh strings each,
   all alive until the last insert. Roughly 200 MB of Java heap at the peak.
-  `data/TrackMetadataStore.kt:281-286` describes this failure for a file a third the size and
+  `data/TrackMetadataStore.kt:54-58` describes this failure for a file a third the size and
   streams instead.
 - Trigger: download Modland's index on a phone whose heap limit is 192 MB or less.
 - Impact: `OutOfMemoryError` — the app closes mid-download and the index is not stored.
@@ -451,7 +462,7 @@ None found.
   `player/PlaylistSession.kt:72-88`, `:215-229`, `:243-264`, `:128-134`, `:199-211` (restore,
   create, rename, delete, write, discard — no `catch`); `player/PlaybackController.kt:2442-2468`,
   `:2476-2488`; `player/CatalogueBrowser.kt:62-173`; `player/LocalFolderBrowser.kt:35-87`; the
-  reads in the controller's `init` (`:730-736`).
+  reads in the controller's `init` (`player/PlaybackController.kt:730-736`).
 - Mechanism: an uncaught exception in a `launch` on a scope without a handler reaches the thread's
   default handler. History, Saved places, search and the playlist switch catch and report; the
   rest do not.
@@ -475,9 +486,34 @@ None found.
 - Trigger: decline the dialog on first launch (it returns on the next); decline it again; from
   then on each start opens the system's notification settings for the app.
 - Impact: an app that leaves for system settings by itself whenever it is opened, for exactly the
-  people who said no. The comment at `:190` says it is asked once.
+  people who said no. The comment at `ui/ProtracktorApp.kt:190` says it is asked once.
 - Direction: ask once and remember; offer the way to Settings from a visible control, not from the
   start-up path.
+- Already known: no.
+
+### RV-B035 — The QR scanner ends the app when the camera cannot be started
+- Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
+- Where: `ui/ScannerScreen.kt:150-177` (`CameraPreview`): `future.get()` at `:153` and
+  `provider.bindToLifecycle(…, CameraSelector.DEFAULT_BACK_CAMERA, …)` at `:170` run in a listener
+  on the main thread with nothing around them; `onDispose` at `:174` calls
+  `ProcessCameraProvider.getInstance(context).get()` again. `AndroidManifest.xml:26` declares
+  `android.hardware.camera.any` as not required.
+- Mechanism: the manifest lets the app install on a device whose only camera faces the front;
+  binding the back camera there throws `IllegalArgumentException`. A camera that fails to
+  initialise makes `get()` throw `ExecutionException`. Neither is caught, and both are thrown on
+  the main thread. The second `get()` in `onDispose` blocks the main thread until initialisation
+  ends and throws the same exception when it failed.
+- Trigger: press WEB in the More sheet with tunes in the playlist and no browser paired yet, or
+  hold it ("Scan a different browser"), on a tablet or Chromebook with a front camera only; or on
+  any device while the camera service is failing.
+- Impact: the app closes instead of saying the camera is not available. The screen already has
+  the words for a refused permission (`scan_refused`) and a way out that needs no camera ("Send as
+  link"); neither is reached.
+- A second, smaller defect in the same block: leaving the screen before the provider is ready
+  does not cancel the listener. It then binds the camera to the activity after the screen is gone,
+  and the camera stays open until the activity is destroyed.
+- Direction: catch both failures and show the refused state; keep the provider from the first
+  `get()` for `onDispose`; ignore the listener once disposed.
 - Already known: no.
 
 ### 4.4 Low
@@ -594,7 +630,7 @@ None found.
 
 ### RV-B029 — An interrupted replay download counts as installed
 - Severity: Low · Likelihood: rare · Evidence: unverified
-- Where: `net/Sc68Replays.kt:87` and `net/UadePlayers.kt:253-259` in the file (each file written as
+- Where: `net/Sc68Replays.kt:87` and `net/UadePlayers.kt:144-151` (each file written as
   it arrives, not atomically); `net/UadePlayers.kt:77` (`present` is "more than none").
 - Impact: a partial set shows as downloaded; the missing routines fail one format at a time; a
   truncated file is never replaced, because only missing files are copied in.
@@ -623,6 +659,72 @@ None found.
   (calls outside the per-decoder `catch (...)`).
 - Impact: such a file is reported with a generic failure and sc68, libopenmpt and UADE are never
   asked. Contained one level up, so nothing crashes.
+
+### RV-B036 — The collapsed dock's Play is dead where the full dock's is live
+- Severity: Low · Likelihood: plausible · Evidence: unverified
+- Where: `ui/PlayerDock.kt:315` (`loadingTrack || current != null || transportQueue.tracks.isNotEmpty()
+  || schedule.pending.isNotEmpty()`); `ui/DockCollapsed.kt:162` (`loaded != null ||
+  transportQueue.tracks.isNotEmpty()`).
+- Mechanism: one rule written twice; the full dock's copy gained two cases the collapsed copy did
+  not. The comment above the full dock's line gives the reason for one of them: Random pressed
+  with an empty playlist must still give something that can be stopped.
+- Trigger: collapse the dock with nothing loaded and an empty playlist, then (a) add a tune to the
+  queue from Browse — Play stays dead although the queue badge beside it counts one; or (b) start
+  Random — while the first pick is being fetched the button shows Stop and cannot be pressed.
+- Direction: one `canPlay` on the state, read by both.
+
+### RV-B037 — Four controls show their state by colour alone
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `ui/PlayerDock.kt:289-297` and `:346-359` with the tint at `:434-438` (shuffle on or off;
+  repeat off or whole list — the same glyph in `primary` or in `onSurfaceVariant`);
+  `ui/SearchScopePanel.kt:115-123` (the three scope tiles: container colour only, and no `selected`
+  state for a screen reader, which `ui/PlaylistSwitcher.kt:111` and `ui/ShellNavigation.kt:59` do
+  set); `ui/SearchScopePanel.kt:194`, `:220` and `ui/BrowseScreen.kt:554-576` (filter chips without
+  the tick Material's filter chip has for this: selected differs by fill).
+- Mechanism: the workshop rule is that information never depends on colour only. The comment at
+  `ui/PlayerDock.kt:346` says the rule is met because repeat-one has its own glyph; that covers one
+  of the three distinctions the two toggles make. The subsong chips are the fifth case and are
+  already in RV-O046.
+- Impact: somebody who cannot tell the accent colour from grey cannot see whether shuffle is on,
+  or which search scope is chosen. Screen readers are told, except for the scope tiles.
+- Direction: a filled or ticked form for "on" (RV-S017).
+
+### RV-B038 — Actions drawn as an icon without a name
+- Severity: Low · Likelihood: common · Evidence: unverified
+- Where: `ui/BrowseScreen.kt:1644-1655` (add the selection to another playlist — an icon between
+  two named actions in the selection bar), `:761` (forget a folder), `:1908` (download or refresh a
+  catalogue), `:1274`, `:1285` (history pages); `ui/StorageSection.kt:205` (delete stored data);
+  `ui/DockCollapsed.kt:156` (keep the tune, in the collapsed dock).
+- Mechanism: the other half of the project rule in RV-B030 — an icon alone does not say where it
+  goes. Not counted: the transport controls, the three-dot button on a row, the clear and back
+  buttons inside a text field, and dialogue buttons.
+- Forgetting a folder is also the only removal that happens on one tap with no confirmation and
+  no undo; it costs a rescan, not data (the playlists keep their tunes).
+
+### RV-B039 — A scrollbar drag can stop by itself in a list of unequal rows
+- Severity: Low · Likelihood: plausible · Evidence: unverified — inferred from the code; the
+  existing test (`ScrollbarBubbleTest`) uses rows of one height
+- Where: `ui/DraggableScrollbar.kt:87` (`pointerInput(total, visible)`), `:89-91` (the callbacks
+  that clear `dragFraction`).
+- Mechanism: the gesture handler is keyed on the number of rows currently visible. When that
+  number changes the handler is restarted, which abandons the gesture in progress without calling
+  `onDragEnd` or `onDragCancel`. In a list of equal rows the count is constant, because the drag
+  scrolls to whole rows. In a list that mixes row heights it changes as the list moves.
+- Trigger: drag the thumb through a folder that holds subfolders and tunes, or through filter
+  results with the "below" heading.
+- Impact: the list stops following the finger; the thumb and its bubble stay where they were until
+  the next touch.
+- Direction: key the handler on nothing and read the counts through `rememberUpdatedState`.
+
+### RV-B040 — The web player address cannot be emptied
+- Severity: Low · Likelihood: plausible · Evidence: unverified
+- Where: `ui/SettingsScreen.kt:391-406` (`remember(webPlayer)`, saved on every keystroke);
+  `AppTheme.kt:67-70` (an empty value falls back to the paired or default address), `:120-126`.
+- Mechanism: deleting the last character stores "no address", the stored value is read back as
+  the default, and the field is re-keyed on it.
+- Impact: backspacing through the address to type another one puts the whole default back at the
+  last character. Selecting everything and typing over it works.
+- Direction: keep the typed text in the field and save on Done or on leaving it.
 
 ## 5. Observations
 
@@ -682,6 +784,26 @@ None found.
   `undoRemoval()` (`ui/MessageSnackbar.kt:28`).
 - **RV-O010 — An icon with its name is drawn three ways**: `LabelledAction`, `IconLabel`, and
   `Icon`, `Spacer`, `Text` inline (`ui/ScannerScreen.kt:119-133`, `ui/PlaylistScreen.kt:765`).
+- **RV-O047 — The row for a tune is written three times.** `ui/PlaylistScreen.kt:519-715`
+  (`TrackRow`), `ui/BrowseScreen.kt:1690-1856` (`BrowseTrackRow`) and the row inside
+  `ui/QueueScreen.kt:115-141`. The first two share the same menu, the same "fetching" pulse
+  (`tween(550)`, `1f` to `0.45f`, at `PlaylistScreen.kt:675` and `BrowseScreen.kt:1815`), the same
+  tap and hold rules and the same leading status, and already differ: Info is the first menu entry
+  in a playlist and the third in Browse; a playlist row has Delete. Which actions a tune offers is
+  decided again at each call site from its id (`PlaylistScreen.kt:310`, `:315`,
+  `BrowseScreen.kt:1443`, `:1447`, `ShareMenu.kt:103`) — the screen-level face of RV-O001.
+- **RV-O048 — Two seek bars.** `ui/SeekBar.kt` (a `Slider`) and `ui/DockEdgeSeek.kt` (its own
+  gestures) each implement scrubbing, notch haptics and the dimmed state, with their own copies of
+  the constants (`SEEK_NOTCHES = 40` at `SeekBar.kt:271` and `NOTCHES = 40` at `DockEdgeSeek.kt:36`;
+  `DIMMED = 0.4f` at `SeekBar.kt:252` and `EDGE_DIMMED = 0.4f` at `DockEdgeSeek.kt:147`). A seek bar
+  that cannot seek is only dimmed, with nothing saying why (a tune whose decoder cannot seek). The
+  system's animation scale is read separately in `ui/PlayerDock.kt:111`, `ui/DockCollapsed.kt:96`
+  and `alarms/AlarmRingingScreen.kt:170`.
+- **RV-O049 — Smaller twins in the screens.** Two dialogs that ask for a playlist's name:
+  `ui/PlaylistSwitcher.kt:259` (capitalised words, Done saves) and `ui/AddToPlaylistDialog.kt:52`
+  (neither). Two private `Int.dp` extensions shadow Compose's (`ui/SwipeableSnackbar.kt:81`). Fixed
+  colours outside the theme in `ui/QueueSwipeRow.kt:159` (green and red behind a swipe; icon and
+  name carry the meaning, so it is not a colour-only case) and `ui/FloatingControlsPanel.kt:96`.
 
 ### 5.2 Brittleness
 
@@ -702,6 +824,13 @@ None found.
   seek and nothing else. It holds today because every other caller is on the main thread.
 - **RV-O015 — Identity has two shapes.** Modland's and The Mod Archive's ids are their download
   addresses; ASMA, UnExoticA and AMP use `<id>://path`. `ModArchive.owns` exists beside `pathFrom`.
+- **RV-O050 — Screens rebuild keys and ask the catalogue during drawing.**
+  `ui/ManualQueueReorder.kt:80` and `:103` look rows up by `"manual:$id"`, a key defined in
+  `player/PlaybackSchedule.kt:32`; a change of that format makes dragging in the queue silently do
+  nothing. `Catalogue.owning(id)` is evaluated for every visible row while composing
+  (`ui/PlaylistScreen.kt:310`, `:315`; `ui/BrowseScreen.kt:1443`, `:1447`; `ui/ShareMenu.kt:103`),
+  so the exception in RV-B006 would surface as a crash while drawing a list, not only at play.
+  The import path refuses such an id first (§11), which is why this is not a bug of its own.
 
 - **RV-O045 — One-shot events have no listener when the screen is gone.** `reveal`, `showBrowse`,
   `share` and `scan` are shared flows without replay, collected in `ui/ProtracktorApp.kt:229`,
@@ -754,7 +883,12 @@ None found.
   an adapter of their own.
 - **RV-O031 — Every action travels four hand-wired hops.** Controller method, a one-line forward
   in `PlayerViewModel` (about a hundred of them), a lambda in `ProtracktorApp` (144 references to
-  the view model), a parameter on the screen (`BrowseScreen` takes about forty).
+  the view model), a parameter on the screen. Inside the screens it goes further: `BrowseScreen`
+  takes 46 parameters (`ui/BrowseScreen.kt:105-170`), hands about ten track actions by name to four
+  domain composables, and each of them to `Selectable`, called five times with the same fifteen
+  arguments (`:709`, `:809`, `:836`, `:1113`, `:1214`); `SettingsScreen` takes 40 and passes 14 on
+  to `StorageSection`. `ShareActions` (`ui/ShareMenu.kt:29`) shows the holder that is missing one
+  level up (RV-S016).
 - **RV-O032 — History's view is five classes and four counters** for a paged list that can be
   cleared. Correct as far as read; heavier than the problem.
 
@@ -809,14 +943,21 @@ None found.
   size cap (a scan has one: 32 MB).
 - **RV-O042 — Position ticks share one state object with everything else**, collected at the root
   of the screen (`ui/ProtracktorApp.kt:119`). How far that recomposes was not measured.
+- **RV-O051 — Browse keeps a list position for every place it has been.** `ui/BrowseScroll.kt:37`
+  holds one `LazyListState` per level key for the life of the screen, and the search level's key
+  contains the query (`:112`), so each search typed adds one. Small, but it only grows.
 - **RV-O043 — One lock for every loudness analysis** (`player/LoudnessPreparation.kt`): the tapped
   tune waits behind read-ahead measurements; the content hash is computed with normalisation off.
 
 - **RV-O046 — Accessibility, as far as it was looked at.** The subsong chips
   (`ui/SubsongStrip.kt`) mark the tune playing by colour and expose neither a role nor a selected
   state; the line above them says the position in words, so the information is not lost, but a
-  screen reader hears a row of bare numbers. 44 icons carry `contentDescription = null`; whether
-  each sits beside its own text was not checked.
+  screen reader hears a row of bare numbers. 44 icons carry `contentDescription = null`; reading
+  the screens showed each of them beside its own text or inside a control that names itself, so
+  none is a missing label. The rest of what the screens do for a screen reader is careful: swipes
+  and drags have custom actions (`ui/QueueSwipeRow.kt:79-84`, `ui/ManualQueueReorder.kt:146-151`,
+  `ui/FloatingControlsPanel.kt:99-104`), the alarm's hold-to-stop has a confirmed tap instead
+  (`alarms/AlarmRingingScreen.kt:139`). The colour-only cases are RV-B037.
 
 ### 5.9 Security notes that are not bugs by themselves
 
@@ -898,6 +1039,7 @@ loaded it asks for the service through an injected hook (RV-B005). *Size S · ri
 | step | what | size | must exist first | only I can check on the phone |
 | --- | --- | --- | --- | --- |
 | 0 | RV-B034: ask for notifications once | S | — | decline twice, start again |
+| 0 | RV-B035: catch the camera failures in the scanner | S | — | a device without a back camera, if one is to hand |
 | 1 | RV-S005: failure path and `Notices` | M | — | notices in the chosen language |
 | 2 | RV-S006 and the id allow-list (RV-B001, B006, B032) | S–M | — | a real link still opens |
 | 3 | RV-S008, RV-B002, RV-B003 | S | question 1, question 5 | subsong while paused; a SID with a start song |
@@ -929,6 +1071,17 @@ model (`PlayQueue`, `ActiveQueue`, `PlaybackSchedule`), the schema and the alarm
 - **RV-S014** — A pass over comments: delete history that belongs to git, fix what RV-O034 to
   RV-O038 list. Comments that narrate past mistakes are a large part of this code base and the
   part that goes stale.
+- **RV-S015 — One row for a tune.** A `TrackRow` taking the tune, its marks and a list of actions,
+  used by the playlist, Browse, Random and the queue; the "fetching" pulse and the menu order live
+  in it once (RV-O047). Do it together with RV-S016, or the row only moves the parameters.
+- **RV-S016 — Hand screens a holder of actions, not forty lambdas.** A `TrackActions` (play, add,
+  queue, alarm, info, neighbours, the four shares) built once in `ProtracktorApp` from the view
+  model, and `actionsFor(track)` decided once from the catalogue (RV-S001), instead of each row
+  asking `Catalogue.owning` (RV-O031, RV-O050). `ShareActions` is the existing pattern to grow.
+- **RV-S017 — One "on" form for toggles and choices.** A filled or ticked variant used by the dock's
+  toggles, the scope tiles and the filter chips, with `selected` semantics (RV-B037). With it,
+  `canPlay` and the seek bar's dimmed state go on the state once and are read by both docks
+  (RV-B036, RV-O048).
 
 ## 7. Ideas
 
@@ -982,6 +1135,10 @@ net 98). What the survey shows:
   read from (RV-B004) or text that is not a `Message` (RV-B027).
 - **The test task lists its inputs by hand** (28 files); a new case table that is not added is a
   test Gradle will report as up to date.
+- **The screens are tested through Robolectric and screenshots, and the gaps match the findings.**
+  `DockCollapseUiTest` checks that the collapsed bar's Play is there, not when it is enabled
+  (RV-B036). `ScrollbarBubbleTest` drags over rows of one height, the case in which RV-B039 cannot
+  happen. Nothing reaches `ScannerScreen`'s camera path (RV-B035), which needs a device anyway.
 
 ## 9. Questions
 
@@ -1010,14 +1167,14 @@ was read in full. "Code only" means every line of code was read and comment line
 | --- | --- | --- | --- |
 | native engine and JNI | 16 | 5 061 | read in full — findings |
 | `engine/` | 5 | 598 | read in full — findings |
-| `player/` | 104 | 13 816 | read — findings; 26 files code only; `TrackArtwork.kt` in part |
+| `player/` | 104 | 13 816 | read — findings; 27 files code only |
 | `data/` | 25 | 3 652 | read in full — findings |
 | `net/` | 16 | 2 016 | read in full — findings |
 | `permissions/`, app root | 6 | 581 | read — nothing found beyond observations |
 | manifest, XML configuration, build files, R8 rules, versions | 9 | — | read — findings |
 | string resources | 2 | 1 589 | key parity checked mechanically (647 = 647); texts not read |
-| `alarms/` | 34 | 3 163 | 31 files read, code only (everything but the three screens) — nothing found beyond observations; `AlarmManagement.kt`, `AlarmMusicPicker.kt`, `AlarmRingingScreen.kt` not read beyond mechanical checks |
-| `ui/` | 64 | 12 864 | read in part: mechanical checks over all files (text-only buttons, literal text, non-null assertions); `ProtracktorApp.kt` (to line 901), `MessageSnackbar.kt`, `PlayedBefore.kt`, `SubsongStrip.kt`, `DatabaseGate.kt`, `ShellState.kt`, `HoldToConfirm.kt` read as code — findings; the other 57 not read as code |
+| `alarms/` | 34 | 3 163 | read in full, code only — findings in the ringing screen only (RV-O048); the rest nothing beyond observations |
+| `ui/` | 64 | 12 864 | read in full, code only — findings; `PlayerIcons.kt`: the builder, not the path data |
 | tests | 262 | 32 067 | surveyed (§8); not reviewed |
 
 ### 10.2 By file
@@ -1044,11 +1201,11 @@ was read in full. "Code only" means every line of code was read and comment line
 | `alarms/AlarmCoordinator.kt` | 148 | read (code only) — nothing found |
 | `alarms/AlarmFeatureLifecycle.kt` | 55 | read (code only) — nothing found |
 | `alarms/AlarmFileStore.kt` | 67 | read (code only) — nothing found |
-| `alarms/AlarmManagement.kt` | 536 | read in part — mechanical checks only |
+| `alarms/AlarmManagement.kt` | 536 | read (code only) — nothing found |
 | `alarms/AlarmManagementViewModel.kt` | 114 | read (code only) — nothing found |
 | `alarms/AlarmMetadata.kt` | 37 | read (code only) — nothing found |
 | `alarms/AlarmModels.kt` | 141 | read (code only) — nothing found |
-| `alarms/AlarmMusicPicker.kt` | 194 | read in part — mechanical checks only |
+| `alarms/AlarmMusicPicker.kt` | 194 | read (code only) — nothing found |
 | `alarms/AlarmMusicPreparer.kt` | 96 | read (code only) — nothing found |
 | `alarms/AlarmMusicQueue.kt` | 73 | read (code only) — nothing found |
 | `alarms/AlarmMusicSource.kt` | 66 | read (code only) — nothing found |
@@ -1062,7 +1219,7 @@ was read in full. "Code only" means every line of code was read and comment line
 | `alarms/AlarmRepository.kt` | 62 | read (code only) — nothing found |
 | `alarms/AlarmResults.kt` | 15 | read (code only) — nothing found |
 | `alarms/AlarmRingingActivity.kt` | 49 | read (code only) — nothing found |
-| `alarms/AlarmRingingScreen.kt` | 202 | read in part — mechanical checks only |
+| `alarms/AlarmRingingScreen.kt` | 202 | read (code only) — findings |
 | `alarms/AlarmRingingViewModel.kt` | 107 | read (code only) — nothing found |
 | `alarms/AlarmRules.kt` | 132 | read (code only) — nothing found |
 | `alarms/AlarmService.kt` | 192 | read (code only) — nothing found |
@@ -1222,75 +1379,75 @@ was read in full. "Code only" means every line of code was read and comment line
 | `player/SubsongAdvance.kt` | 55 | read — nothing found |
 | `player/SubsongNormalization.kt` | 64 | read — findings |
 | `player/SupportedFormats.kt` | 260 | read — findings |
-| `player/TrackArtwork.kt` | 155 | read in part — signatures and the seed rule |
+| `player/TrackArtwork.kt` | 155 | read (code only) — nothing found |
 | `player/TrackArtworkBitmaps.kt` | 76 | read (code only) — findings |
 | `player/TrackEditing.kt` | 41 | read — nothing found |
 | `player/TrackFiles.kt` | 137 | read — findings |
 | `player/TunesFound.kt` | 9 | read — nothing found |
-| `ui/AddToPlaylistDialog.kt` | 151 | read in part — mechanical checks only |
-| `ui/AlarmMenuItem.kt` | 15 | read in part — mechanical checks only |
-| `ui/BrowseFilters.kt` | 164 | read in part — mechanical checks only |
-| `ui/BrowseScreen.kt` | 2071 | read in part — mechanical checks — findings |
-| `ui/BrowseScroll.kt` | 117 | read in part — mechanical checks only |
+| `ui/AddToPlaylistDialog.kt` | 151 | read (code only) — findings |
+| `ui/AlarmMenuItem.kt` | 15 | read (code only) — nothing found |
+| `ui/BrowseFilters.kt` | 164 | read (code only) — nothing found |
+| `ui/BrowseScreen.kt` | 2071 | read (code only) — findings |
+| `ui/BrowseScroll.kt` | 117 | read (code only) — findings |
 | `ui/DatabaseGate.kt` | 85 | read (code only) — nothing found |
-| `ui/DockCollapsed.kt` | 202 | read in part — mechanical checks only |
-| `ui/DockEdgeSeek.kt` | 147 | read in part — mechanical checks only |
-| `ui/DockMarquee.kt` | 29 | read in part — mechanical checks only |
-| `ui/DownloadPicker.kt` | 211 | read in part — mechanical checks only |
-| `ui/DraggableScrollbar.kt` | 160 | read in part — mechanical checks only |
-| `ui/FeedbackRow.kt` | 84 | read in part — mechanical checks only |
-| `ui/FloatingControlsAction.kt` | 105 | read in part — mechanical checks only |
-| `ui/FloatingControlsPanel.kt` | 140 | read in part — mechanical checks only |
-| `ui/FloatingDismissTarget.kt` | 74 | read in part — mechanical checks only |
-| `ui/FloatingDragContainer.kt` | 90 | read in part — mechanical checks only |
-| `ui/Haptics.kt` | 174 | read in part — mechanical checks only |
-| `ui/HistoryScroll.kt` | 25 | read in part — mechanical checks only |
+| `ui/DockCollapsed.kt` | 202 | read (code only) — findings |
+| `ui/DockEdgeSeek.kt` | 147 | read (code only) — findings |
+| `ui/DockMarquee.kt` | 29 | read (code only) — nothing found |
+| `ui/DownloadPicker.kt` | 211 | read (code only) — nothing found |
+| `ui/DraggableScrollbar.kt` | 160 | read (code only) — findings |
+| `ui/FeedbackRow.kt` | 84 | read (code only) — nothing found |
+| `ui/FloatingControlsAction.kt` | 105 | read (code only) — nothing found |
+| `ui/FloatingControlsPanel.kt` | 140 | read (code only) — findings |
+| `ui/FloatingDismissTarget.kt` | 74 | read (code only) — nothing found |
+| `ui/FloatingDragContainer.kt` | 90 | read (code only) — nothing found |
+| `ui/Haptics.kt` | 174 | read (code only) — nothing found |
+| `ui/HistoryScroll.kt` | 25 | read (code only) — nothing found |
 | `ui/HoldToConfirm.kt` | 157 | read (code only) — nothing found |
-| `ui/LabelledAction.kt` | 328 | read in part — mechanical checks only |
-| `ui/LegalScreens.kt` | 234 | read in part — mechanical checks only |
-| `ui/ListScrolling.kt` | 123 | read in part — mechanical checks only |
-| `ui/ManualQueueReorder.kt` | 157 | read in part — mechanical checks only |
-| `ui/MenuFocus.kt` | 70 | read in part — mechanical checks only |
+| `ui/LabelledAction.kt` | 328 | read (code only) — nothing found |
+| `ui/LegalScreens.kt` | 234 | read (code only) — nothing found |
+| `ui/ListScrolling.kt` | 123 | read (code only) — nothing found |
+| `ui/ManualQueueReorder.kt` | 157 | read (code only) — findings |
+| `ui/MenuFocus.kt` | 70 | read (code only) — nothing found |
 | `ui/MessageSnackbar.kt` | 33 | read (code only) — findings |
-| `ui/NavSlots.kt` | 86 | read in part — mechanical checks only |
-| `ui/NavSlotsSetting.kt` | 131 | read in part — mechanical checks only |
-| `ui/NowPlaying.kt` | 278 | read in part — mechanical checks only |
+| `ui/NavSlots.kt` | 86 | read (code only) — nothing found |
+| `ui/NavSlotsSetting.kt` | 131 | read (code only) — nothing found |
+| `ui/NowPlaying.kt` | 278 | read (code only) — findings |
 | `ui/PlayedBefore.kt` | 38 | read (code only) — nothing found |
-| `ui/PlayerDock.kt` | 601 | read in part — mechanical checks only |
-| `ui/PlayerIcons.kt` | 493 | read in part — mechanical checks only |
-| `ui/PlaylistScreen.kt` | 785 | read in part — mechanical checks only |
-| `ui/PlaylistSearchHeader.kt` | 156 | read in part — mechanical checks only |
-| `ui/PlaylistSwitcher.kt` | 297 | read in part — mechanical checks only |
-| `ui/PreparingDatabase.kt` | 75 | read in part — mechanical checks only |
-| `ui/ProtracktorApp.kt` | 1092 | read (code only, to line 901) — findings |
-| `ui/QueueActions.kt` | 20 | read in part — mechanical checks only |
-| `ui/QueueCount.kt` | 52 | read in part — mechanical checks only |
-| `ui/QueueHelp.kt` | 105 | read in part — mechanical checks only |
-| `ui/QueueScreen.kt` | 161 | read in part — mechanical checks only |
-| `ui/QueueSwipeIntent.kt` | 17 | read in part — mechanical checks only |
-| `ui/QueueSwipeRow.kt` | 172 | read in part — mechanical checks only |
-| `ui/RandomDice.kt` | 56 | read in part — mechanical checks only |
-| `ui/RandomFilterState.kt` | 88 | read in part — mechanical checks only |
-| `ui/RandomScreen.kt` | 220 | read in part — mechanical checks only |
-| `ui/SavedPlacesScreen.kt` | 123 | read in part — mechanical checks only |
-| `ui/ScannerScreen.kt` | 203 | read in part — mechanical checks only |
-| `ui/ScrollingActionRow.kt` | 129 | read in part — mechanical checks only |
-| `ui/SearchQueryField.kt` | 99 | read in part — mechanical checks only |
-| `ui/SearchScopePanel.kt` | 260 | read in part — mechanical checks only |
-| `ui/SeekBar.kt` | 271 | read in part — mechanical checks only |
-| `ui/SettingChoice.kt` | 94 | read in part — mechanical checks only |
-| `ui/SettingsScreen.kt` | 557 | read in part — mechanical checks only |
-| `ui/ShareMenu.kt` | 120 | read in part — mechanical checks only |
-| `ui/ShellNavigation.kt` | 170 | read in part — mechanical checks only |
+| `ui/PlayerDock.kt` | 601 | read (code only) — findings |
+| `ui/PlayerIcons.kt` | 493 | read in part — the icon builder; path data not read |
+| `ui/PlaylistScreen.kt` | 785 | read (code only) — findings |
+| `ui/PlaylistSearchHeader.kt` | 156 | read (code only) — nothing found |
+| `ui/PlaylistSwitcher.kt` | 297 | read (code only) — findings |
+| `ui/PreparingDatabase.kt` | 75 | read (code only) — nothing found |
+| `ui/ProtracktorApp.kt` | 1092 | read (code only) — findings |
+| `ui/QueueActions.kt` | 20 | read (code only) — nothing found |
+| `ui/QueueCount.kt` | 52 | read (code only) — nothing found |
+| `ui/QueueHelp.kt` | 105 | read (code only) — nothing found |
+| `ui/QueueScreen.kt` | 161 | read (code only) — findings |
+| `ui/QueueSwipeIntent.kt` | 17 | read (code only) — nothing found |
+| `ui/QueueSwipeRow.kt` | 172 | read (code only) — findings |
+| `ui/RandomDice.kt` | 56 | read (code only) — nothing found |
+| `ui/RandomFilterState.kt` | 88 | read (code only) — nothing found |
+| `ui/RandomScreen.kt` | 220 | read (code only) — nothing found |
+| `ui/SavedPlacesScreen.kt` | 123 | read (code only) — nothing found |
+| `ui/ScannerScreen.kt` | 203 | read (code only) — findings |
+| `ui/ScrollingActionRow.kt` | 129 | read (code only) — nothing found |
+| `ui/SearchQueryField.kt` | 99 | read (code only) — nothing found |
+| `ui/SearchScopePanel.kt` | 260 | read (code only) — findings |
+| `ui/SeekBar.kt` | 271 | read (code only) — findings |
+| `ui/SettingChoice.kt` | 94 | read (code only) — nothing found |
+| `ui/SettingsScreen.kt` | 557 | read (code only) — findings |
+| `ui/ShareMenu.kt` | 120 | read (code only) — findings |
+| `ui/ShellNavigation.kt` | 170 | read (code only) — nothing found |
 | `ui/ShellState.kt` | 133 | read (code only) — nothing found |
-| `ui/StereoMixSetting.kt` | 39 | read in part — mechanical checks only |
-| `ui/StorageSection.kt` | 210 | read in part — mechanical checks only |
+| `ui/StereoMixSetting.kt` | 39 | read (code only) — nothing found |
+| `ui/StorageSection.kt` | 210 | read (code only) — findings |
 | `ui/SubsongStrip.kt` | 144 | read (code only) — findings |
-| `ui/SwipeableSnackbar.kt` | 81 | read in part — mechanical checks only |
-| `ui/TrackInfo.kt` | 64 | read in part — mechanical checks only |
-| `ui/theme/LightColors.kt` | 41 | read in part — mechanical checks only |
-| `ui/theme/SystemBars.kt` | 21 | read in part — mechanical checks only |
-| `ui/theme/Theme.kt` | 36 | read in part — mechanical checks only |
+| `ui/SwipeableSnackbar.kt` | 81 | read (code only) — findings |
+| `ui/TrackInfo.kt` | 64 | read (code only) — nothing found |
+| `ui/theme/LightColors.kt` | 41 | read (code only) — nothing found |
+| `ui/theme/SystemBars.kt` | 21 | read (code only) — nothing found |
+| `ui/theme/Theme.kt` | 36 | read (code only) — nothing found |
 | `app/build.gradle.kts` | 427 | read (comments not read) — findings |
 | `app/proguard-rules.pro` | 15 | read — findings |
 | `app/src/main/AndroidManifest.xml` | 437 | read — findings |
@@ -1317,12 +1474,21 @@ was read in full. "Code only" means every line of code was read and comment line
   address before storing it, so it fails there (RV-B006) and nothing is kept.
 - **Pairing with an address that was never validated** — the scanner checks the code's shape and,
   for plain `http`, that the host is local, before the controller sees it.
+- **A ringing alarm with neither a question nor the backup flag**
+  (`alarms/AlarmRingingScreen.kt:87`, `checkNotNull`) — every rule that drops the quiz sets
+  `backup` in the same copy (`alarms/AlarmRules.kt:62-63`, `:72`, `:122`).
+- **Duplicate keys in the lazy lists** — history and playlist rows are unique by their primary
+  keys, search results are de-duplicated in `player/SearchResults.kt`, the "below" list holds only
+  deeper tunes and its keys are prefixed, and Random keys by position.
+- **Forgetting a folder taking its tunes out of playlists** — it deletes `library_index` rows only
+  (`data/LibraryIndexStore.kt:284`); playlists reference `tracks`.
 - **Lost native handles when an open is cancelled** — ownership passes to `track` before the next
   suspension, and `prepareOrClose` covers the window before that.
 
 ## 12. Working notes
 
-No open thread remains from the areas that were read. What was not read is not a thread but a gap,
-and is stated in §10: 57 files of `ui/`, the three alarm screens, the body of
-`player/TrackArtwork.kt`, and the tests as code. A second pass over those would be the place to
-check state and side effects in Compose, and colour as the only carrier of information.
+No open thread remains. The screens in `ui/` and the three alarm screens, read last on 2026-11-17,
+were checked for state and side effects in Compose, keys in lists, gestures against their
+accessibility actions, and colour as the only carrier of information; what they produced is
+RV-B035 to RV-B040, RV-O047 to RV-O051 and RV-S015 to RV-S017. What remains unread is stated in
+§10: the icons' path data, the texts of the string resources, and the tests as code.
