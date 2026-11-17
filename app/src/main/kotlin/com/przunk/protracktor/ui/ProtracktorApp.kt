@@ -188,12 +188,10 @@ fun ProtracktorApp(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // The foreground service runs with or without this; only its notification is suppressed. Asked
-    // once, at the top, rather than in the middle of the user pressing play.
+    // once in the app's life, at the top, rather than in the middle of the user pressing play. An
+    // answer of no is respected: nothing asks again or opens settings unprompted.
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-        val notificationPermission = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, _ -> }
-        LaunchedEffect(Unit) {
-            notificationPermission.request(com.przunk.protracktor.permissions.AppAccess.NOTIFICATIONS)
-        }
+        com.przunk.protracktor.permissions.AskOnceUnprompted(com.przunk.protracktor.permissions.AppAccess.NOTIFICATIONS)
     }
 
     val folderPicker = rememberLauncherForActivityResult(
