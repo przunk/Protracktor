@@ -93,6 +93,11 @@ data class PlayerUiState(
     val notificationPlaylistSaving: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
+    /**
+     * A shared link naming addresses no catalogue serves, waiting for a yes before anything is
+     * fetched (RV-B001). Null when there is no such question.
+     */
+    val pendingLink: QueueLink.Opened? = null,
 ) {
     /** A selected source playlist stays live; leaving its view captures its current order. */
     val activePlayback: ActiveQueue

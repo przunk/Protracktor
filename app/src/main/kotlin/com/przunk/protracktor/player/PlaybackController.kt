@@ -2000,6 +2000,28 @@ class PlaybackController private constructor(private val context: Context) {
             }
             return
         }
+        // **Asked first when it names a server no catalogue is** (RV-B001): one tap on a link
+        // would otherwise download whatever it names and hand it to every decoder.
+        if (opened.foreign.isNotEmpty()) {
+            _state.update { it.copy(pendingLink = opened) }
+            return
+        }
+        playLink(opened)
+    }
+
+    /** The link [openLink] asked about, played after all. */
+    fun confirmLink() {
+        val opened = _state.value.pendingLink ?: return
+        _state.update { it.copy(pendingLink = null) }
+        playLink(opened)
+    }
+
+    /** The link [openLink] asked about, left: nothing is fetched. */
+    fun cancelLink() {
+        _state.update { it.copy(pendingLink = null) }
+    }
+
+    private fun playLink(opened: QueueLink.Opened) {
         playFromResults(opened.tracks, 0)
         val count = opened.tracks.size
         val said = context.resources.getQuantityString(R.plurals.notice_link_opened, count, count) +

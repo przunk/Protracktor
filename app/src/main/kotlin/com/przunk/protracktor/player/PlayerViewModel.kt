@@ -84,6 +84,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
     fun openLink(url: String) = controller.openLink(url)
+    fun confirmLink() = controller.confirmLink()
+    fun cancelLink() = controller.cancelLink()
 
     fun playExternal(uri: android.net.Uri, name: String? = null) {
         ensureServiceRunning()

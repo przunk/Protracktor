@@ -901,6 +901,10 @@ fun ProtracktorApp(
         )
     }
 
+    state.pendingLink?.let { link ->
+        ForeignLinkDialog(link.foreign, onPlay = viewModel::confirmLink, onCancel = viewModel::cancelLink)
+    }
+
     pendingSwitch?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingSwitch = null; pendingQueueSource = null },

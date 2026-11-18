@@ -61,6 +61,8 @@ object UnExoticA : Catalogue(
 
     override fun pathFrom(id: String): String? = id.removePrefix("unexotica://").takeIf { it != id }
 
+    override fun serves(address: String): Boolean = pathFrom(address) != null || address.startsWith(FILE_BASE)
+
     /**
      * The game's archive, which is a real address a person can open.
      *

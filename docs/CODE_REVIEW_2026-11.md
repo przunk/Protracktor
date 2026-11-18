@@ -252,6 +252,18 @@ None found.
   without a press.
 - Already known: no. `docs/OPEN_QUESTIONS.md` Q9 (playback in a separate process) discusses a
   malformed file taking the app down, not where files may come from.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a link's tunes are played at once only when a
+  catalogue serves every address (`Catalogue.serves`: its ids, and for ASMA and UnExoticA also their
+  web addresses); otherwise the app asks first, naming how many tunes and which servers
+  (`ForeignLinkDialog`, PL and EN), and Cancel fetches nothing -- question 3 taken on the review's
+  recommendation in my absence. A `content://` or `file://` row in a link is dropped. **Not done:**
+  a size bound on every download (`net/RemoteFiles.kt`, AMP only today) -- a fair cap needs the
+  largest real modules measured; cleartext allowed app-wide; imported lists, which do not play by
+  themselves. Checked: `LinkSafetyTest` (catalogue addresses not foreign; other servers, a private
+  address and a look-alike host foreign; document and file rows dropped; the hosts named once, three
+  at most), `ForeignLinkDialogTest`, and `LinkControllerTest` through the real controller (such a
+  link waits with nothing played, Cancel leaves the queue as it was, Play makes the link's tunes the
+  queue); each rule broken once to see a test fail. Not checked: the phone.
 
 ### 4.3 Medium
 
@@ -693,6 +705,10 @@ None found.
 - Severity: Low · Likelihood: rare · Evidence: unverified
 - Where: `player/QueueLink.kt:246` onwards (`decode`); `runCatching` there also swallows
   `OutOfMemoryError`.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `QueueLink.decode` stops at 1,000,000 inflated
+  bytes and answers null past that, catches only what bad base64 and bad deflate throw (no longer
+  `OutOfMemoryError`), and always ends the inflater. Checked: `LinkSafetyTest` (a list past the
+  bound is not read, one under it is), failing with the bound removed.
 
 ### RV-B033 — A ZXTune failure outside its own guards skips the decoders after it
 - Severity: Low · Likelihood: rare · Evidence: partially verified — `native/vendor/zxtune/include/error.h:20`

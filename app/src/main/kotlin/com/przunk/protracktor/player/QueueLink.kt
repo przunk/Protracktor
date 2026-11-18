@@ -218,7 +218,16 @@ object QueueLink {
      * a few to hear (`#play:`), otherwise a queue; the tunes that can play; and how many rows were
      * files that stayed on the phone that sent them.
      */
-    data class Opened(val play: Boolean, val tracks: List<TrackRef>, val stayed: Int)
+    data class Opened(
+        val play: Boolean,
+        val tracks: List<TrackRef>,
+        val stayed: Int,
+        /**
+         * The addresses among [tracks] no catalogue serves (RV-B001). A link may name any server;
+         * such tunes are downloaded and handed to the decoders only after a question.
+         */
+        val foreign: List<String> = emptyList(),
+    )
 
     /** [url]'s fragment read back into tracks, or null when it is not a link this can read. */
     fun open(url: String): Opened? {
@@ -233,30 +242,51 @@ object QueueLink {
             // A Modland row travels as its path, and becomes the id the app's own index gives it, so
             // a tune from a link is the same tune everywhere else in the app.
             val id = if ("://" in address) address else Modland.urlFor(address)
+            // A link travels between devices: a document or file address in it names something on
+            // this phone that the sender never saw, so it is not opened (RV-B001).
+            if (Catalogue.serving(id) == null && !id.startsWith("https://") && !id.startsWith("http://")) {
+                return@mapNotNull null
+            }
             // The Mod Archive names the file only in the fragment: `downloads.php?moduleid=42#lotus.mod`.
             val last = address.substringAfterLast('/')
             val file = Catalogue.fileOf(id) ?: if ('#' in last) last.substringAfter('#') else last.substringBefore('?')
             val source = Catalogue.sourceOf(id).orEmpty()
             TrackRef(id = id, title = title.ifBlank { file }, subtitle = source, fileName = file)
         }
-        return Opened(play, tracks, stayed)
+        return Opened(play, tracks, stayed, tracks.map { it.id }.filter { Catalogue.serving(it) == null })
     }
 
-    /** [encode] undone: URL-safe base64, inflated, one row per line. Null when it is not that. */
-    internal fun decode(fragment: String): List<String>? = runCatching {
-        val packed = java.util.Base64.getUrlDecoder().decode(fragment)
+    /**
+     * [encode] undone: URL-safe base64, inflated, one row per line. Null when it is not that.
+     *
+     * **Bounded** (RV-B032): a few hundred bytes of fragment can inflate to gigabytes, and this runs
+     * on the main thread. No list this app or the page makes comes near [MAX_INFLATED]; more than
+     * that is not a link this can read.
+     */
+    internal fun decode(fragment: String): List<String>? {
         val inflater = java.util.zip.Inflater()
-        inflater.setInput(packed)
-        val out = java.io.ByteArrayOutputStream()
-        val buffer = ByteArray(4096)
-        while (!inflater.finished()) {
-            val n = inflater.inflate(buffer)
-            if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) error("truncated")
-            out.write(buffer, 0, n)
+        return try {
+            inflater.setInput(java.util.Base64.getUrlDecoder().decode(fragment))
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(4096)
+            while (!inflater.finished()) {
+                val n = inflater.inflate(buffer)
+                if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) return null
+                if (out.size() + n > MAX_INFLATED) return null
+                out.write(buffer, 0, n)
+            }
+            out.toString(Charsets.UTF_8.name()).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        } catch (_: IllegalArgumentException) {
+            null // not base64
+        } catch (_: java.util.zip.DataFormatException) {
+            null // not deflate
+        } finally {
+            inflater.end()
         }
-        inflater.end()
-        out.toString(Charsets.UTF_8.name()).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
-    }.getOrNull()
+    }
+
+    /** The most a link's list may inflate to: about ten thousand rows of Modland paths. */
+    internal const val MAX_INFLATED = 1_000_000
 
     /** The whole address, given where the page is served from. */
     fun linkTo(base: String, fragment: String): String =
