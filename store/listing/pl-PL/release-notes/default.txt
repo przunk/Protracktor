@@ -1,10 +1,5 @@
-Nowy wygląd:
-- Pasek nawigacji: Playlista, Przeglądaj, Więcej i dwa miejsca wybrane w Ustawieniach.
-- Przesuń odtwarzacz w dół, by go zmniejszyć; pasek przewijania jest na jego krawędzi.
-- Ustawienia w czytelnych sekcjach; miks stereo to jeden przełącznik.
-
-Historia: szukanie na górnym pasku; „Wyczyść całą historię” wymaga przytrzymania 3 s, jak usuwanie playlisty i danych.
-
-Przeglądaj: listy autorów mają suwak z dymkiem pozycji.
-
-Poprawka: awaria przy zmianie utworu w trakcie przewijania.
+Playlisty: pokazane jako karty, otwarta jest zaznaczona.
+Kolejka: widok mówi, ile utworów czeka i ile dodałeś ręcznie; przycisk Kolejka pokazuje liczbę dodanych ręcznie.
+Odtwarzacz: akcje są w jednym rzędzie mniejszych przycisków, przewijanym w bok.
+AMP: mapa jest pobierana ponownie tylko wtedy, gdy się zmieniła.
+Poprawki: utwory z The Mod Archive pokazywały „MOD · MOD”; utwory z zaimportowanej playlisty pokazywały adres pobierania; aplikacja nie pyta już o powiadomienia przy każdym starcie.

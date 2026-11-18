@@ -490,6 +490,10 @@ None found.
 - Direction: ask once and remember; offer the way to Settings from a visible control, not from the
   start-up path.
 - Already known: no.
+- **Fixed 2026-11-17, merged into `develop` 2026-11-18** (`47452328`): the start-up ask shows only
+  the system dialog, and only while it was never shown; a button's request still ends in Settings.
+  Checked: the permission tests with a negative control, the full suite with lint. Not checked:
+  the phone -- I merged it without that check so the release need not wait.
 
 ### RV-B035 — The QR scanner ends the app when the camera cannot be started
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)

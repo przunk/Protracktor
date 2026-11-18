@@ -1,10 +1,5 @@
-New look:
-- A navigation bar: Playlist, Browse, More and two places you choose in Settings.
-- Swipe the player down to make it smaller; its seek bar sits on its edge.
-- Settings in clear sections; the stereo mix is one switch.
-
-History: search on the top bar; "Clear all history" is held for 3 seconds, as is deleting a playlist or stored data.
-
-Browse: author lists have a scrollbar, with a bubble showing where you are.
-
-Fixed: a crash when changing tune while seeking.
+Playlists: shown as cards, the open one marked.
+Queue: its view says how many tunes are coming and how many you added by hand; the Queue button shows the hand-added count.
+Now Playing: the actions sit in one row of smaller buttons that scrolls sideways.
+AMP: its map is downloaded again only when it has changed.
+Fixed: tunes from The Mod Archive read "MOD · MOD"; tunes from an imported playlist showed a download address; the app no longer asks for notifications at every start.
