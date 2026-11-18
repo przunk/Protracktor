@@ -285,6 +285,13 @@ None found.
   and the engine agree: either the controller starts playback properly, or the engine is told not
   to start.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a subsong chosen while paused plays: the controller
+  asks for audio focus first (a refusal says so and changes nothing), then marks the player playing
+  and resumes the schedule, as play does -- question 1 taken on the review's recommendation in my
+  absence. The service start for this entry is RV-B005. Partially checked: it compiles and the full
+  suite passes; no host test can open a native track, so the path itself is not run. Not checked:
+  the phone (pause a multi-tune file, tap another tune: the transport shows pause, the bar moves,
+  the notification says playing).
 
 ### RV-B003 — A SID that opens at its default song is treated as being on its first
 - Severity: Medium · Likelihood: plausible · Evidence: partially verified — the vendored header

@@ -2932,6 +2932,16 @@ class PlaybackController private constructor(private val context: Context) {
         val open = track ?: return
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
+        // **A tune chosen while paused is played** (RV-B002; the review's question 1, answered in
+        // my absence on its recommendation). The engine starts a stopped stream for a switch
+        // anyway, so the choice was never "stay paused": it was sound with the app showing pause,
+        // the poll idle, the end never handled and no audio focus. Asked first, as play is: a
+        // refusal leaves everything as it was.
+        val wasPaused = !now.playing
+        if (wasPaused && !audioFocus.acquire()) {
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+            return
+        }
         rememberLoudness()
         sampleListening()
         listening.baseline(0.0, playing = false)
@@ -2952,6 +2962,8 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update {
             it.copy(
                 subsong = index,
+                playing = true,
+                schedule = if (wasPaused) it.schedule.resumeCurrent() else it.schedule,
                 positionSeconds = 0.0,
                 // The length is per tune. Backends that know their own only know it after the
                 // switch has been applied on the audio thread, so this is cleared rather than left
