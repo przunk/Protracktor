@@ -380,6 +380,14 @@ None found.
 - Impact: the app closes.
 - Direction: a scan that cannot list its folder says so and marks the folder as needing access.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `MediaScanner.listFiles` answers null when the
+  provider refuses or fails to list the tree (security, argument, state and unsupported-operation
+  exceptions; cancellation still propagates), and `scanFolder` then clears the progress and says the
+  folder could not be read and should be added again (new `notice_scan_unreadable`, PL and EN). The
+  folder is not marked in the list as needing access: that would be new state, left for later.
+  Checked: `UnreadableFolderScanTest` with a provider that throws `SecurityException` and one that
+  throws `IllegalStateException`, failing with the guard narrowed. Not checked: the phone; the
+  notice itself (the controller path has no host test).
 
 ### RV-B009 — The LHA wrapper trusts the size an archive states and has no guard at the boundary
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)

@@ -1047,6 +1047,13 @@ class PlaybackController private constructor(private val context: Context) {
             val candidates = withContext(Dispatchers.IO) {
                 MediaScanner.listFiles(context, Uri.parse(folder.uri))
             }
+            if (candidates == null) {
+                _browse.update { it.copy(scanProgress = null) }
+                _state.update {
+                    it.copy(message = Message(context.getString(R.string.notice_scan_unreadable, folder.displayName)))
+                }
+                return@launch
+            }
             _browse.update { it.copy(scanProgress = 0 to candidates.size) }
 
             val fingerprint = NativeEngine.backendsFingerprint()
