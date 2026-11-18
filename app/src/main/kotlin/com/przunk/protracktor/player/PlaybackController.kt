@@ -42,10 +42,8 @@ import com.przunk.protracktor.net.UadePlayers
 import com.przunk.protracktor.net.UnExoticA
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -130,7 +128,20 @@ class PlaybackController private constructor(private val context: Context) {
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
     // itself moves to IO where it belongs.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    // One failure path for everything launched here (RV-B014): reported, not fatal.
+    private val scope = ControllerFailures.scope(::reportFailure)
+
+    private fun reportFailure(failure: Exception) {
+        android.util.Log.e("Protracktor", "Unhandled failure in the player's work", failure)
+        val said = context.getString(
+            if (ControllerFailures.isStorage(failure)) R.string.notice_failed_storage else R.string.notice_failed,
+            failure.javaClass.simpleName,
+        )
+        // The UI state is written on the main thread only; the failure may come from any.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            _state.update { it.copy(message = Message(said)) }
+        }
+    }
 
     /**
      * For work nobody asked for: identifying tracks in the background, and scanning a library.

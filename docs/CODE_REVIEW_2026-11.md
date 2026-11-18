@@ -494,6 +494,15 @@ None found.
 - Direction: one failure path for the scope, and stores that return a result where the caller can
   say something useful (RV-S005).
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the controller's scope is built by
+  `ControllerFailures.scope`, whose handler reports any `Exception` from its work -- logged, and a
+  notice on the main thread, worded for storage when it is a database or I/O failure (new
+  `notice_failed`, `notice_failed_storage`, PL and EN) -- while the supervisor keeps the scope
+  working; an `Error` still goes to the default handler. The stores do not yet return results a
+  caller could explain better (RV-S005, left). Checked: `ControllerFailuresTest` (a database failure
+  on the main thread and a state failure on IO are both reported, and the next launch runs), failing
+  with the handler removed. Not checked: the phone; a failed migration on start (no host test drives
+  the controller's init).
 
 ### RV-B034 — The notification permission is asked at every start, and then system settings open
 - Severity: Medium · Likelihood: plausible — anyone who declines · Evidence: unverified (reading)
