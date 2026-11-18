@@ -3,6 +3,7 @@
 package com.przunk.protracktor.permissions
 
 import android.app.Activity
+import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,6 +17,39 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 internal enum class AccessRequestResult { GRANTED, DENIED, UNAVAILABLE, BUSY }
+
+/**
+ * Which accesses have had the system's own dialog shown at least once. The coordinator reads it to
+ * know when that dialog will no longer appear; the start-up ask reads it to ask only once.
+ */
+internal object AccessHistory {
+    private const val FILE = "access-requests"
+    fun asked(context: Context, access: AppAccess): Boolean = prefs(context).getBoolean(access.name, false)
+    fun markAsked(context: Context, access: AppAccess) = prefs(context).edit().putBoolean(access.name, true).apply()
+    private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+}
+
+/**
+ * Whether the app may ask for [state]'s access without anybody having pressed anything: only through
+ * the system's dialog, and only if that dialog was never shown before.
+ *
+ * A request somebody pressed a button for may end in system settings; an unprompted one must not,
+ * or an app asked at start-up leaves for settings on every launch for the people who said no.
+ */
+internal fun mayAskUnprompted(state: AccessState, askedBefore: Boolean): Boolean =
+    state == AccessState.REQUEST_NEEDED && !askedBefore
+
+/** Asks for [access] once in the app's life, at the first composition that finds it missing. */
+@Composable
+internal fun AskOnceUnprompted(access: AppAccess) {
+    val context = LocalContext.current
+    val coordinator = rememberAccessRequestCoordinator { _, _ -> }
+    LaunchedEffect(access) {
+        if (mayAskUnprompted(SystemAccess.inspect(context, access), AccessHistory.asked(context, access))) {
+            coordinator.request(access)
+        }
+    }
+}
 internal class AccessRequestCoordinator(
     val request: (AppAccess) -> Unit,
     val openSettings: (AppAccess, Intent) -> Unit,
@@ -61,15 +95,14 @@ internal fun rememberAccessRequestCoordinator(onResult: (AppAccess, AccessReques
         val permission = SystemAccess.runtimePermission(access)
         val activity = generateSequence(context) { (it as? ContextWrapper)?.baseContext?.takeIf { base -> base !== it } }
             .filterIsInstance<Activity>().firstOrNull()
-        val history = context.getSharedPreferences("access-requests", android.content.Context.MODE_PRIVATE)
         val useSettings = override != null || state == AccessState.SETTINGS_NEEDED || permission == null ||
-            (history.getBoolean(access.name, false) && activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission))
+            (AccessHistory.asked(context, access) && activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission))
         try {
             if (useSettings) {
                 settingsPending = true
                 settings.launch(override ?: SystemAccess.settings(context, access))
             } else {
-                history.edit().putBoolean(access.name, true).apply()
+                AccessHistory.markAsked(context, access)
                 runtime.launch(checkNotNull(permission))
             }
         } catch (_: android.content.ActivityNotFoundException) {
