@@ -524,6 +524,14 @@ None found.
 - Direction: catch both failures and show the refused state; keep the provider from the first
   `get()` for `onDispose`; ignore the listener once disposed.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the listener starts the camera through
+  `CameraStart.attempt`, which catches the four ways a start fails; the screen then says the camera
+  could not be started (new `scan_unavailable`, PL and EN) and keeps "Send as link". A listener that
+  fires after the screen is gone binds nothing, and `onDispose` unbinds the provider the listener
+  got instead of a second blocking `get()`. Checked: `ScannerCameraTest` -- under Robolectric, which
+  has no back camera, the screen with the camera allowed threw `IllegalArgumentException: No
+  available camera can be found` with the guard removed, which reproduces the crash; with it, the
+  message shows. Not checked: the phone, and the late-listener case (no host test reaches it).
 
 ### 4.4 Low
 
