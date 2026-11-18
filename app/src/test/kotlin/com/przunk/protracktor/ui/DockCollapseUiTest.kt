@@ -103,6 +103,24 @@ class DockCollapseUiTest {
         assertFalse(collapsed.value)
     }
 
+    @Test fun `both docks let Play be pressed by the same rule (RV-B036)`() {
+        // Nothing loaded, an empty playlist, and one tune queued by hand from Browse.
+        state.value = PlayerUiState(schedule = com.przunk.protracktor.player.PlaybackSchedule().enqueue(tune))
+        assertTrue(state.value.canPlay)
+        collapsed.value = true
+        show()
+        frame()
+        compose.onNodeWithTag("dock-collapsed-play").assertIsEnabled()
+        // And while Random's first pick is being fetched: the button shows Stop and stops.
+        state.value = PlayerUiState(loadingTrack = true)
+        frame()
+        compose.onNodeWithTag("dock-collapsed-play").assertIsEnabled()
+        // With nothing at all, it is dead in both.
+        state.value = PlayerUiState()
+        frame()
+        compose.onNodeWithTag("dock-collapsed-play").assertIsNotEnabled()
+    }
+
     @Test fun `the collapsed bar seeks, and Play, Queue and + are there`() {
         collapsed.value = true
         // Playing from Random, so the tune is not the playlist's and + is offered.

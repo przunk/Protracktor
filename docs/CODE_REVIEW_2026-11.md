@@ -743,6 +743,11 @@ None found.
   queue from Browse — Play stays dead although the queue badge beside it counts one; or (b) start
   Random — while the first pick is being fetched the button shows Stop and cannot be pressed.
 - Direction: one `canPlay` on the state, read by both.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the rule is `PlayerUiState.canPlay`, read by both
+  docks, so the collapsed dock gains the loading and hand-queued cases the full one had. Checked:
+  `DockCollapseUiTest` (the collapsed Play is live with only a tune queued by hand and while a pick
+  is fetched, dead with nothing), failing with the collapsed dock's old rule put back. Not checked:
+  the phone.
 
 ### RV-B037 — Four controls show their state by colour alone
 - Severity: Low · Likelihood: common · Evidence: unverified

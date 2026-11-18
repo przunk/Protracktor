@@ -100,6 +100,15 @@ data class PlayerUiState(
     val pendingLink: QueueLink.Opened? = null,
 ) {
     /** A selected source playlist stays live; leaving its view captures its current order. */
+    /**
+     * Whether the dock's Play can be pressed: something is loaded or being fetched, or the queue or
+     * the schedule has something to start. A transient track counts -- Random pressed with an empty
+     * playlist must still give something that can be stopped. **One rule for both forms of the dock**
+     * (RV-B036): the collapsed one kept an older copy and was dead with a tune queued by hand.
+     */
+    val canPlay: Boolean
+        get() = loadingTrack || current != null || transportQueue.tracks.isNotEmpty() || schedule.pending.isNotEmpty()
+
     val activePlayback: ActiveQueue
         get() = playback?.let { if (it.belongsTo(activePlaylistId)) it.withOrder(queue) else it }
             ?: ActiveQueue(QueueSource.Playlist(activePlaylistId, activePlaylistName.orEmpty()), queue)
