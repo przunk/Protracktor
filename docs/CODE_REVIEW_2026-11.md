@@ -367,6 +367,14 @@ None found.
 - Direction: treat zero rows as a failed download everywhere, before anything is deleted; parse
   before storing an archive; catch what parsing throws.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a catalogue index is parsed before anything is
+  stored, a parse that throws counts as no rows, and no rows is a failed download for every
+  catalogue (not only AMP): nothing is replaced and, for an archive catalogue, the archive is not
+  overwritten. The three fact tables replace through one `replaceUnlessEmpty`, which rolls the
+  delete back when no row was written. Checked: `LibraryDownloadsTest` (Modland and ASMA bodies that
+  are not an index, zipped or not) and `EmptyDownloadKeepsTablesTest` (metadata, songdb lengths and
+  favourites keep their rows; a real replacement still replaces), each failing with its guard
+  removed. Not checked: the phone.
 
 ### RV-B008 — Scanning a folder that is no longer reachable ends the app
 - Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)

@@ -4,7 +4,6 @@
 package com.przunk.protracktor.data
 
 import android.content.Context
-import androidx.core.database.sqlite.transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -50,7 +49,7 @@ class SongDbLengthStore(context: Context) {
      */
     suspend fun replaceAllFrom(bytes: ByteArray): Int = withContext(Dispatchers.IO) {
         var written = 0
-        helper.writableDatabase.transaction {
+        helper.writableDatabase.replaceUnlessEmpty {
             delete("songdb_lengths", null, null)
             compileStatement(
                 "INSERT OR REPLACE INTO songdb_lengths (key, first_subsong, subsongs) VALUES (?, ?, ?)"
@@ -66,6 +65,7 @@ class SongDbLengthStore(context: Context) {
                     }
                 }
             }
+            written
         }
         written
     }

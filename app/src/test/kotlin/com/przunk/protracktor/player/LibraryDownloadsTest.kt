@@ -310,6 +310,25 @@ class LibraryDownloadsTest {
     }
 
     @Test
+    fun `an index that parses to nothing, or does not parse, replaces nothing (RV-B007)`() = runBlocking {
+        val bodies = listOf(
+            Modland to zip("allmods.txt" to "<html>maintenance</html>\n"),
+            Modland to "<html>maintenance</html>".toByteArray(),
+            Asma to "<html>maintenance</html>".toByteArray(),
+            Asma to zip(),
+        )
+        for ((catalogue, body) in bodies) {
+            val f = Fixture(this).apply { payloads[catalogue.indexUrl] = body }
+            f.downloads.indexCatalogue(catalogue.id)
+            drain()
+            assertTrue(f.indexed.isEmpty())
+            assertTrue(f.events.toString(), f.events.none { it.startsWith("archive:") })
+            assertEquals(listOf(DownloadNotice.IndexDownloadFailed(catalogue.displayName)), f.shown)
+            assertTrue(f.busy.isEmpty())
+        }
+    }
+
+    @Test
     fun `a failed favourites follow-up is reported without undoing the successful Modland index`() = runBlocking {
         val f = Fixture(this).apply { payloads[FAVOURITES] = null }
         f.downloads.indexCatalogue(Modland.id)

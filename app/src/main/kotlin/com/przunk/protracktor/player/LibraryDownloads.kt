@@ -173,6 +173,30 @@ internal class LibraryDownloads(
                 finish()
                 return Fetched(false, text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
             }
+            val entries = withContext(Dispatchers.Default) {
+                // **Everything the archive lists, and nothing decided here**
+                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
+                // each row as it is stored and re-decided locally when the format list changes, so
+                // the index is no longer a function of the decoders — and adding a format no longer
+                // costs every user the whole 40 MB again.
+                //
+                // **Parsed before anything is stored, and a body that is not an index is a failed
+                // download** (RV-B007): a corrupt zip throws, a maintenance page answered with 200
+                // parses to nothing. Either used to erase the index -- or for an archive the archive
+                // itself -- and stamp the catalogue complete with nothing in it; the exception ended
+                // the app.
+                try {
+                    catalogue.parseIndex(bytes)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            if (catalogue == Amp && !Amp.access.allows(ampTicket!!)) return null
+            if (entries.isEmpty()) {
+                return Fetched(false, text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
+            }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !sources.storeArchive(catalogue.id, bytes)) {
@@ -181,20 +205,6 @@ internal class LibraryDownloads(
                     false,
                     text.message(DownloadNotice.ArchiveStoreFailed(catalogue.displayName)),
                 )
-            }
-
-            val entries = withContext(Dispatchers.Default) {
-                // **Everything the archive lists, and nothing decided here**
-                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
-                // each row as it is stored and re-decided locally when the format list changes, so
-                // the index is no longer a function of the decoders — and adding a format no longer
-                // costs every user the whole 40 MB again.
-                catalogue.parseIndex(bytes)
-            }
-            if (catalogue == Amp) {
-                if (!Amp.access.allows(ampTicket!!)) return null
-                if (entries.isEmpty()) return Fetched(false,
-                    text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
             }
             val playable =
                 sources.replaceIndex(catalogue, entries)
