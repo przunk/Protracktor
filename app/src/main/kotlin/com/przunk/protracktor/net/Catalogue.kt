@@ -181,10 +181,20 @@ object Modland : Catalogue(
         if (!id.startsWith(FILE_BASE)) return null
         // Decoded segment by segment rather than whole, so a literal "+" in a filename survives:
         // URLDecoder turns "+" into a space, and urlFor deliberately encoded spaces as %20.
-        return id.removePrefix(FILE_BASE).split('/').map { segment ->
-            java.net.URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8")
-        }
+        return id.removePrefix(FILE_BASE).split('/').map { segment -> decodeSegment(segment) ?: return null }
     }
+
+    /**
+     * One segment of a Modland address, decoded; null when it cannot be (RV-B006). A `%` not
+     * followed by two hex digits makes `URLDecoder` throw, and the address arrives from links,
+     * imported lists and tapped URLs: such an address is simply not one of Modland's.
+     */
+    internal fun decodeSegment(segment: String): String? =
+        try {
+            java.net.URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8")
+        } catch (_: IllegalArgumentException) {
+            null
+        }
 
     override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> {
         val text = java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->

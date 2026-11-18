@@ -3,7 +3,6 @@
 
 package com.przunk.protracktor.player
 
-import java.net.URLDecoder
 
 /**
  * Why a track would not open — as a choice between four different things, not one apology.
@@ -98,8 +97,7 @@ object OpenFailure {
     fun modlandFormatOf(url: String): String? {
         if (!url.startsWith(MODLAND_FILES)) return null
         val segment = url.removePrefix(MODLAND_FILES).substringBefore('/', "")
-        // A literal `+` arrives escaped as %2B; URLDecoder would otherwise read a bare one as a space.
-        return URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8").takeIf { it.isNotBlank() }
+        return com.przunk.protracktor.net.Modland.decodeSegment(segment)?.takeIf { it.isNotBlank() }
     }
 
     /**

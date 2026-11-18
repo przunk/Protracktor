@@ -343,6 +343,11 @@ None found.
 - Impact: an uncaught exception on the main thread — the app closes.
 - Direction: `pathFrom` answers null for an address it cannot decode.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `Modland.decodeSegment` answers null for a segment
+  `URLDecoder` refuses, so such an address belongs to no catalogue; `OpenFailure.modlandFormatOf`
+  uses the same function instead of its own copy. Checked: `ModlandMalformedAddressTest` (owning,
+  sourceOf, fileOf, canonical and the format guess on three malformed addresses; good addresses
+  still decode), failing with the guard removed. Not checked: the phone.
 
 ### RV-B007 — A download that arrives but parses to nothing erases what it replaces
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
