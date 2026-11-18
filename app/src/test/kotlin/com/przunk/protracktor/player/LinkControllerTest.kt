@@ -96,6 +96,18 @@ class LinkControllerTest {
         assertEquals(queueBefore, controller.state.value.activePlayback)
     }
 
+    @Test fun `opening a link, answering it and choosing a subsong start the playback service (RV-B005)`() {
+        val viewModel = PlayerViewModel(app)
+        val shadow = shadowOf(app)
+        while (shadow.nextStartedService != null) Unit
+        viewModel.openLink(link("https://server.invalid/x.mod"))
+        assertEquals(PlaybackService::class.java.name, shadow.nextStartedService?.component?.className)
+        viewModel.confirmLink()
+        assertEquals(PlaybackService::class.java.name, shadow.nextStartedService?.component?.className)
+        viewModel.selectSubsong(1)
+        assertEquals(PlaybackService::class.java.name, shadow.nextStartedService?.component?.className)
+    }
+
     @Test fun `answered yes, the link's tunes become what plays`() {
         controller.openLink(link("https://server.invalid/x.mod", "https://server.invalid/y.mod"))
         shadowOf(Looper.getMainLooper()).idle()

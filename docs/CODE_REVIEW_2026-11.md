@@ -339,6 +339,12 @@ None found.
   from Random and Browse had no service) described, through a door added later.
 - Direction: the controller asks for the service when playback starts, in one place (RV-S008).
 - Already known: the class is (C43); this instance is not.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the view model starts the service before
+  `openLink`, `confirmLink` and `selectSubsong`, as its other entries that can make sound do. The
+  single place the review suggests (RV-S008, the controller asking when playback starts) is left for
+  the architectural work. Checked: `LinkControllerTest` (each of the three starts
+  `PlaybackService`), failing with the start removed from `openLink`. Not checked: the phone
+  (notification and lock screen after a cold start from a link).
 
 ### RV-B006 — A malformed `%` in a Modland address ends the app
 - Severity: Medium · Likelihood: rare · Evidence: partially verified — `URLDecoder.decode("%zz.mod")`

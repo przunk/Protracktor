@@ -82,9 +82,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun rescan() = controller.rescan()
     val scan get() = controller.scan
 
-    /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
-    fun openLink(url: String) = controller.openLink(url)
-    fun confirmLink() = controller.confirmLink()
+    /**
+     * A Protracktor link. Starts the service first, as every entry that can make sound does: this
+     * can arrive on a cold start, with nothing playing (RV-B005).
+     */
+    fun openLink(url: String) {
+        ensureServiceRunning()
+        controller.openLink(url)
+    }
+
+    fun confirmLink() {
+        ensureServiceRunning()
+        controller.confirmLink()
+    }
+
     fun cancelLink() = controller.cancelLink()
 
     fun playExternal(uri: android.net.Uri, name: String? = null) {
@@ -108,7 +119,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     internal suspend fun randomFilterAvailability() = controller.randomFilterAvailability()
 
 
-    fun selectSubsong(index: Int) = controller.selectSubsong(index)
+    /** Can start the sound of a paused tune (RV-B002), so it starts the service first (RV-B005). */
+    fun selectSubsong(index: Int) {
+        ensureServiceRunning()
+        controller.selectSubsong(index)
+    }
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
     fun setFallbackLength(seconds: Int) = controller.setFallbackLength(seconds)
