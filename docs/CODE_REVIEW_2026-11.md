@@ -489,6 +489,13 @@ None found.
 - Direction: every entry that touches the decoder takes the lock; `NativeLifetime` then has one
   thing less to protect.
 - Already known: no (C140 fixed close against seek only).
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `restart` rewinds under the decoder lock, after
+  counting itself as a newer request so a running seek gives way at its next chunk instead of
+  holding the lock -- and the main thread -- for the rest of its run. Checked: a new check in
+  `scripts/audio-host-test/player_test.cpp`, which compiles the real `player_oboe.cpp` on the host:
+  a slow seek is running when restart comes; with the lock removed the rewind ran inside the decoder
+  beside the seek, with the lock but no abandon restart waited for the whole seek, and with both
+  neither. Not checked: the phone.
 
 ### RV-B012 — Indexing Modland holds the whole list and every row in memory at once
 - Severity: Medium · Likelihood: plausible on phones with a small heap limit · Evidence:
