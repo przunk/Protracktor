@@ -310,9 +310,7 @@ fun PlayerDock(
                     onClick = onPlayPause,
                     onLongClick = onLongPlayPause,
                     longDescription = longPlayPauseLabel,
-                    // A transient track counts: pressing Random with an empty playlist must still
-                    // give you something you can pause.
-                    enabled = state.loadingTrack || state.current != null || state.transportQueue.tracks.isNotEmpty() || state.schedule.pending.isNotEmpty(),
+                    enabled = state.canPlay,
                 ) {
                     // Three states, not two. A track being fetched is not "paused", and the button
                     // that would restart the same download is the one press nobody wants twice.

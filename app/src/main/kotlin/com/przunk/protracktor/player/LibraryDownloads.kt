@@ -76,7 +76,6 @@ internal class LibraryDownloads(
          * built from -- it is one file, versioned, and the project that assembles it is the one
          * asking to be credited. GPL-2.0-or-later (`docs/LICENSES.md`).
          */
-        private const val TRACK_METADATA_LABEL = "Track metadata and lengths"
 
         /**
          * The songdb revision both files come from, **pinned** (`docs/PLAN_SONGDB_LENGTHS.md` D2).
@@ -106,12 +105,10 @@ internal class LibraryDownloads(
          * parsed into a shape somebody maintains. 142 KB, which is why this one download asks for
          * no warning about its size.
          */
-        private const val FAVOURITES_LABEL = "Modland favourites"
         private const val FAVOURITES_URL =
             "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/" +
                 "songdb/sources/site/modland_favourites.tsv"
 
-        private const val SONG_LENGTHS_LABEL = "SID song lengths"
     }
 
     /** The run of downloads the offer started, kept so that [cancelDownloads] has something to stop. */
@@ -173,6 +170,30 @@ internal class LibraryDownloads(
                 finish()
                 return Fetched(false, text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
             }
+            val entries = withContext(Dispatchers.Default) {
+                // **Everything the archive lists, and nothing decided here**
+                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
+                // each row as it is stored and re-decided locally when the format list changes, so
+                // the index is no longer a function of the decoders — and adding a format no longer
+                // costs every user the whole 40 MB again.
+                //
+                // **Parsed before anything is stored, and a body that is not an index is a failed
+                // download** (RV-B007): a corrupt zip throws, a maintenance page answered with 200
+                // parses to nothing. Either used to erase the index -- or for an archive the archive
+                // itself -- and stamp the catalogue complete with nothing in it; the exception ended
+                // the app.
+                try {
+                    catalogue.parseIndex(bytes)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            if (catalogue == Amp && !Amp.access.allows(ampTicket!!)) return null
+            if (entries.isEmpty()) {
+                return Fetched(false, text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
+            }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !sources.storeArchive(catalogue.id, bytes)) {
@@ -181,20 +202,6 @@ internal class LibraryDownloads(
                     false,
                     text.message(DownloadNotice.ArchiveStoreFailed(catalogue.displayName)),
                 )
-            }
-
-            val entries = withContext(Dispatchers.Default) {
-                // **Everything the archive lists, and nothing decided here**
-                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
-                // each row as it is stored and re-decided locally when the format list changes, so
-                // the index is no longer a function of the decoders — and adding a format no longer
-                // costs every user the whole 40 MB again.
-                catalogue.parseIndex(bytes)
-            }
-            if (catalogue == Amp) {
-                if (!Amp.access.allows(ampTicket!!)) return null
-                if (entries.isEmpty()) return Fetched(false,
-                    text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
             }
             val playable =
                 sources.replaceIndex(catalogue, entries)
@@ -251,7 +258,7 @@ internal class LibraryDownloads(
 
     /** HVSC's lengths, as one step. See [fetchCatalogue] for why the steps are shaped like this. */
     private suspend fun fetchSongLengths(): Fetched? {
-        if (!ui.begin(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return null
+        if (!ui.begin(DownloadKeys.SONG_LENGTHS, text.label(DownloadText.Label.SONG_LENGTHS))) return null
         val bytes = sources.fetchIndex(SONG_LENGTHS_URL)
         if (bytes == null) {
             ui.end(DownloadKeys.SONG_LENGTHS)
@@ -275,7 +282,7 @@ internal class LibraryDownloads(
 
     /** The songdb table, as one step. See [fetchCatalogue]. */
     private suspend fun fetchTrackMetadata(): Fetched? {
-        if (!ui.begin(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return null
+        if (!ui.begin(DownloadKeys.TRACK_METADATA, text.label(DownloadText.Label.TRACK_METADATA))) return null
         run {
             val bytes = sources.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
@@ -319,7 +326,7 @@ internal class LibraryDownloads(
 
     /** Modland's favourites, as one step. See [fetchCatalogue]. */
     private suspend fun fetchFavourites(): Fetched? {
-        if (!ui.begin(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return null
+        if (!ui.begin(DownloadKeys.FAVOURITES, text.label(DownloadText.Label.FAVOURITES))) return null
         val bytes = sources.fetchIndex(FAVOURITES_URL)
         if (bytes == null) {
             ui.end(DownloadKeys.FAVOURITES)

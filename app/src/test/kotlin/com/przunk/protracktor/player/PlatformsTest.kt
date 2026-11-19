@@ -104,6 +104,10 @@ class PlatformsTest {
         assertEquals("atari-8bit", Platforms.forCatalogueRow("asma", "Composers", "Bonio.sap")?.id)
         assertEquals("atari-8bit", Platforms.forCatalogueRow("asma", "Games", "whatever.xyz")?.id)
         assertEquals("amiga", Platforms.forCatalogueRow("unexotica", "Turrican", "mdat.title")?.id)
+        // RV-B028: an AMP row nothing else places is Amiga; one the table places keeps its answer.
+        assertEquals("amiga", Platforms.forCatalogueRow("amp", "XYZ", "XYZ.unlisted-prefix")?.id)
+        assertEquals(null, Platforms.forCatalogueRow("modland", "XYZ", "XYZ.unlisted-prefix")?.id)
+        assertEquals("atari-st", Platforms.forCatalogueRow("amp", "Face The Music", "FTM.song")?.id)
         // Modland: the directory first, even against the name -- `psm` under Spectrum is Spectrum.
         assertEquals("spectrum", Platforms.forCatalogueRow("modland", "Spectrum", "tune.psm")?.id)
         assertEquals("atari-8bit", Platforms.forCatalogueRow("modland", "Slight Atari Player", "a.sap")?.id)

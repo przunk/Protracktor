@@ -357,10 +357,19 @@ public:
     /** Back to the beginning and playing. For repeat-one, and for replaying a finished tune. */
     bool restart() {
         stop();
-        backend_->rewind();
-        continuousMeasurement_=false;
-        finished_.store(false, std::memory_order_release);
-        publishPosition();
+        {
+            // **Under the decoder lock, as a seek is** (RV-B011). Stopping the stream removes the
+            // audio thread but not a seek in flight on its worker, and rewinding beside it put two
+            // threads inside one emulator -- the class of crash C140 was. Counted as a newer
+            // request first, so a running seek gives up at its next chunk rather than holding the
+            // lock, and this thread, for the rest of its run.
+            seekRequests_.fetch_add(1, std::memory_order_acq_rel);
+            const std::lock_guard<std::mutex> held(decoderGuard_);
+            backend_->rewind();
+            continuousMeasurement_=false;
+            finished_.store(false, std::memory_order_release);
+            publishPosition();
+        }
         return start();
     }
 

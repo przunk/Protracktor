@@ -159,7 +159,7 @@ internal fun CollapsedDock(
             }
             FilledIconButton(
                 onClick = onPlayPause,
-                enabled = loaded != null || state.transportQueue.tracks.isNotEmpty(),
+                enabled = state.canPlay,
                 modifier = Modifier.size(44.dp).testTag("dock-collapsed-play"),
             ) {
                 Icon(

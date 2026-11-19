@@ -32,6 +32,9 @@ extern "C" {
 
 JNIEXPORT jobjectArray JNICALL
 Java_com_przunk_protracktor_net_Lha_nativeList(JNIEnv *env, jclass, jbyteArray archive) {
+    // Nothing thrown may cross into Java (RV-B009): an exception through a JNI frame is
+    // std::terminate. The player's entries are guarded the same way.
+    try {
     const jsize length = env->GetArrayLength(archive);
     std::vector<char> bytes(static_cast<std::size_t>(length));
     env->GetByteArrayRegion(archive, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
@@ -41,6 +44,7 @@ Java_com_przunk_protracktor_net_Lha_nativeList(JNIEnv *env, jclass, jbyteArray a
     jclass stringClass = env->FindClass("java/lang/String");
     jobjectArray result =
         env->NewObjectArray(static_cast<jsize>(names.size()), stringClass, nullptr);
+    if (result == nullptr) return nullptr;
     for (std::size_t i = 0; i < names.size(); ++i) {
         jstring name = env->NewStringUTF(names[i].c_str());
         env->SetObjectArrayElement(result, static_cast<jsize>(i), name);
@@ -49,11 +53,15 @@ Java_com_przunk_protracktor_net_Lha_nativeList(JNIEnv *env, jclass, jbyteArray a
         env->DeleteLocalRef(name);
     }
     return result;
+    } catch (...) {
+        return nullptr;
+    }
 }
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_przunk_protracktor_net_Lha_nativeExtract(JNIEnv *env, jclass, jbyteArray archive,
                                                   jstring member) {
+    try {
     const jsize length = env->GetArrayLength(archive);
     std::vector<char> bytes(static_cast<std::size_t>(length));
     env->GetByteArrayRegion(archive, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
@@ -64,9 +72,13 @@ Java_com_przunk_protracktor_net_Lha_nativeExtract(JNIEnv *env, jclass, jbyteArra
     if (found.empty()) return nullptr;
 
     jbyteArray result = env->NewByteArray(static_cast<jsize>(found.size()));
+    if (result == nullptr) return nullptr;  // out of memory: a Java error is already pending
     env->SetByteArrayRegion(result, 0, static_cast<jsize>(found.size()),
                             reinterpret_cast<const jbyte *>(found.data()));
     return result;
+    } catch (...) {
+        return nullptr;
+    }
 }
 
 }  // extern "C"

@@ -24,7 +24,7 @@ class PlatformColumnTest {
         DriverManager.getConnection("jdbc:sqlite::memory:").also { connection ->
             connection.createStatement().use { statement -> SchemaSql.CREATE.forEach(statement::execute) }
             connection.createStatement().use {
-                it.execute("INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland'), ('asma', 'ASMA'), ('unexotica', 'UnExoticA')")
+                it.execute("INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland'), ('asma', 'ASMA'), ('unexotica', 'UnExoticA'), ('amp', 'AMP')")
             }
         }
 
@@ -81,6 +81,9 @@ class PlatformColumnTest {
             add(Row("asma", "Composers", "Bonio.sap"))
             add(Row("asma", "Games", "anything.mod"))
             add(Row("unexotica", "Turrican", "mdat.turrican"))
+            // RV-B028: AMP placed by nothing else is Amiga; placed by the table, keeps that.
+            add(Row("amp", "XYZ", "XYZ.unlisted"))
+            add(Row("amp", "Face The Music", "FTM.song"))
             add(Row("modland", "Unmapped", "readme"))
             add(Row("modland", "Unmapped", "tune.zzz"))
         }

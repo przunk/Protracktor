@@ -6,7 +6,10 @@ package com.przunk.protracktor.player
 import android.content.Context
 import com.przunk.protracktor.R
 
-internal class AndroidPlaylistText(private val context: Context) {
+internal class AndroidPlaylistText(private val base: Context) {
+    // In the app's language, not the phone's (RV-B004).
+    private val context: Context get() = com.przunk.protracktor.AppLocale.localized(base)
+
     fun message(notice: PlaylistSessionState.Notice): Message = Message(when (notice) {
         PlaylistSessionState.Notice.CHANGES_DISCARDED -> context.getString(R.string.notice_changes_discarded)
         PlaylistSessionState.Notice.PLAYLIST_EMPTIED -> context.getString(R.string.notice_playlist_emptied)

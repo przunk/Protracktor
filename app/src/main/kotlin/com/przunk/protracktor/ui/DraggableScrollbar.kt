@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -76,6 +77,9 @@ internal fun DraggableScrollbar(
     val positionFraction = dragFraction
         ?: (listState.firstVisibleItemIndex.toFloat() / lastFirstIndex).coerceIn(0f, 1f)
 
+    // Read by the gesture as it is now, so the gesture need not restart when it changes (RV-B039).
+    val currentLastFirstIndex by rememberUpdatedState(lastFirstIndex)
+
     var trackHeight by remember { mutableStateOf(0) }
     Box(modifier.fillMaxHeight().width(TRACK_WIDTH)) {
     Column(
@@ -84,7 +88,11 @@ internal fun DraggableScrollbar(
             .width(TRACK_WIDTH)
             .padding(vertical = 4.dp)
             .onSizeChanged { trackHeight = it.height }
-            .pointerInput(total, visible) {
+            // **Keyed on nothing** (RV-B039). Keyed on the counts, the handler restarted whenever the
+            // number of visible rows changed -- which in a list of unequal rows it does as the list
+            // moves -- and a restart drops the gesture without onDragEnd: the list stopped
+            // following the finger and the thumb stayed where it was.
+            .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = { start -> dragFraction = (start.y / size.height).coerceIn(0f, 1f) },
                     onDragEnd = { dragFraction = null },
@@ -95,7 +103,7 @@ internal fun DraggableScrollbar(
                     dragFraction = moved
                     // scrollToItem, not animateScrollToItem: the list belongs under the thumb now,
                     // not on its way there. An animation chasing a finger reads as lag.
-                    scope.launch { listState.scrollToItem((lastFirstIndex * moved).roundToInt()) }
+                    scope.launch { listState.scrollToItem((currentLastFirstIndex * moved).roundToInt()) }
                 }
             },
     ) {

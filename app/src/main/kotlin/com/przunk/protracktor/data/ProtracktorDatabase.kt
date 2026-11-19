@@ -96,6 +96,24 @@ class ProtracktorDatabase private constructor(context: Context) :
         throw SQLiteException("Database schema $oldVersion requires a compatible app; supported schema is $newVersion")
 }
 
+/**
+ * Replaces a whole table in one transaction, **unless the replacement holds no rows** (RV-B007):
+ * [body] deletes, inserts and returns how many rows it wrote; zero undoes the delete and answers 0.
+ * A download that arrives and parses to nothing -- a maintenance page served with 200, a source
+ * that changed its shape -- is a failed download, not an empty table.
+ */
+internal inline fun SQLiteDatabase.replaceUnlessEmpty(body: SQLiteDatabase.() -> Int): Int {
+    var written = 0
+    beginTransaction()
+    try {
+        written = body()
+        if (written > 0) setTransactionSuccessful()
+    } finally {
+        endTransaction()
+    }
+    return written
+}
+
 internal inline fun SQLiteDatabase.transaction(body: SQLiteDatabase.() -> Unit) {
     beginTransaction()
     try {

@@ -4,7 +4,6 @@
 package com.przunk.protracktor.data
 
 import android.content.Context
-import androidx.core.database.sqlite.transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -39,7 +38,9 @@ class FavouriteStore(context: Context) {
     suspend fun playableCount(): Int = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM modland_favourites f " +
-                "JOIN catalogue_tracks t ON t.path = f.path AND t.catalogue_id = ?",
+                // Playable only (RV-B020): since schema 15 the index keeps every row, and the dice
+                // draws from `playable = 1`, so a count without it is larger than what Random can draw.
+                "JOIN catalogue_tracks t ON t.path = f.path AND t.catalogue_id = ? AND t.playable = 1",
             arrayOf(MODLAND_ID),
         ).use { row -> if (row.moveToFirst()) row.getInt(0) else 0 }
     }
@@ -58,7 +59,7 @@ class FavouriteStore(context: Context) {
      */
     suspend fun replaceAllFrom(bytes: ByteArray): Int = withContext(Dispatchers.IO) {
         var written = 0
-        helper.writableDatabase.transaction {
+        helper.writableDatabase.replaceUnlessEmpty {
             delete("modland_favourites", null, null)
             compileStatement("INSERT OR REPLACE INTO modland_favourites (path) VALUES (?)")
                 .use { statement ->
@@ -71,6 +72,7 @@ class FavouriteStore(context: Context) {
                         }
                     }
                 }
+            written
         }
         written
     }

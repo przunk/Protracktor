@@ -35,12 +35,23 @@ object NativeData {
 
         if (marker.isFile && marker.readText() == versionMarker) return target
 
+        unpack(target, versionMarker) { copyAssetTree(context, ASSET_ROOT, target) }
+        adoptDownloadedReplays(context, target)
+        return target
+    }
+
+    /**
+     * Rebuilds [target] with [copy] and marks it as [versionMarker]'s -- **only when every file was
+     * copied** (RV-B017). The marker is what stops the next start from unpacking again; written after
+     * a copy that failed half-way (a full disk on the first start after an update), it left Atari ST
+     * or Amiga formats broken until the next version, with nothing said. Unmarked, the next start
+     * tries again.
+     */
+    internal fun unpack(target: File, versionMarker: String, copy: () -> Boolean) {
+        val marker = File(target, ".unpacked")
         target.deleteRecursively()
         target.mkdirs()
-        copyAssetTree(context, ASSET_ROOT, target)
-        adoptDownloadedReplays(context, target)
-        runCatching { marker.writeText(versionMarker) }
-        return target
+        if (copy()) runCatching { marker.writeText(versionMarker) }
     }
 
     /**
@@ -65,7 +76,7 @@ object NativeData {
         val replays = File(target, "Replay").apply { mkdirs() }
         downloaded.forEach { source ->
             val destination = File(replays, source.name)
-            if (!destination.exists()) runCatching { source.copyTo(destination) }
+            if (!destination.exists()) copyWhole(source, destination)
         }
     }
 
@@ -92,11 +103,8 @@ object NativeData {
             return target
         }
 
-        target.deleteRecursively()
-        target.mkdirs()
-        copyAssetTree(context, UADE_ROOT, target)
+        unpack(target, versionMarker) { copyAssetTree(context, UADE_ROOT, target) }
         adoptDownloadedPlayers(context, target)
-        runCatching { marker.writeText(versionMarker) }
         return target
     }
 
@@ -120,17 +128,23 @@ object NativeData {
             // level down and are part of what upstream installs.
             downloaded.walkTopDown().filter { it.isFile }.forEach { source ->
                 val destination = File(File(target, "players"), source.relativeTo(downloaded).path)
-                if (!destination.exists()) {
-                    runCatching {
-                        destination.parentFile?.mkdirs()
-                        source.copyTo(destination)
-                    }
-                }
+                if (!destination.exists()) copyWhole(source, destination)
             }
         }
         val songConf = File(store, "song.conf")
         val installed = File(target, "song.conf")
-        if (songConf.isFile && !installed.exists()) runCatching { songConf.copyTo(installed) }
+        if (songConf.isFile && !installed.exists()) copyWhole(songConf, installed)
+    }
+
+    /**
+     * [source] copied to [destination] whole or not at all (RV-B029). Only missing files are copied
+     * in, so a copy cut short by a full disk was a truncated file nothing would ever replace.
+     */
+    private fun copyWhole(source: File, destination: File) {
+        runCatching {
+            destination.parentFile?.mkdirs()
+            com.przunk.protracktor.net.AtomicFileWrite.write(destination, source.readBytes())
+        }
     }
 
     /**
@@ -153,25 +167,36 @@ object NativeData {
      */
     fun uadeScratch(context: Context): File = File(context.cacheDir, "uade-scratch")
 
-    private fun copyAssetTree(context: Context, assetPath: String, destination: File) {
+    /** Copies an asset tree; false when any file could not be written. */
+    private fun copyAssetTree(context: Context, assetPath: String, destination: File): Boolean {
         val children = runCatching { context.assets.list(assetPath) }.getOrNull().orEmpty()
 
         if (children.isEmpty()) {
             // A leaf: assets.list() returns nothing for a file, which is also what it returns for an
-            // empty directory. Copying is the only way to tell them apart, so a failure here is
-            // expected for the latter and not worth reporting.
-            runCatching {
-                context.assets.open(assetPath).use { input ->
+            // empty directory. Opening is the only way to tell them apart: an empty directory cannot
+            // be opened, which is expected and fine. A file that opens and then cannot be written is
+            // a failed unpack (RV-B017).
+            val input = try {
+                context.assets.open(assetPath)
+            } catch (_: java.io.IOException) {
+                return true
+            }
+            return try {
+                input.use {
                     destination.parentFile?.mkdirs()
                     destination.outputStream().use(input::copyTo)
                 }
+                true
+            } catch (_: java.io.IOException) {
+                false
             }
-            return
         }
 
         destination.mkdirs()
+        var all = true
         children.forEach { child ->
-            copyAssetTree(context, "$assetPath/$child", File(destination, child))
+            if (!copyAssetTree(context, "$assetPath/$child", File(destination, child))) all = false
         }
+        return all
     }
 }

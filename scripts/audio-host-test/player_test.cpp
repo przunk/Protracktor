@@ -6,6 +6,9 @@
 #include <functional>
 #include <limits>
 #include <future>
+#include <atomic>
+#include <thread>
+#include <chrono>
 #include "../../native/engine/player_oboe.cpp"
 
 namespace protracktor {
@@ -500,6 +503,28 @@ int main() {
         const auto status=control.wait_for(std::chrono::milliseconds(200));
         busy->release.set_value(); seeking.get(); const auto seconds=control.get();
         require(status==std::future_status::ready && seconds==0,"UI waited for the decoder");
+    });
+    check("restart never rewinds beside a seek in flight, which gives way to it (RV-B011)", [] {
+        struct SlowSeek: Decoder {
+            std::atomic<int> inside{0}; std::atomic<bool> overlapped{false}; std::promise<void> entered;
+            void seek(double) override {
+                ++inside; entered.set_value();
+                for (int i=0; i<500 && !(seekAbandoned && seekAbandoned()); ++i)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                --inside;
+            }
+            void rewind() override { if (inside.load()!=0) overlapped=true; Decoder::rewind(); }
+        };
+        auto backend=std::make_unique<SlowSeek>(); auto* slow=backend.get(); Fixture f(std::move(backend));
+        f.player.start(); auto seeking=std::async(std::launch::async,[&]{ f.player.seek(20); });
+        slow->entered.get_future().wait();
+        const auto began=std::chrono::steady_clock::now();
+        f.player.restart();
+        const auto waited=std::chrono::steady_clock::now()-began;
+        seeking.get();
+        require(!slow->overlapped, "rewind ran inside the decoder beside a seek");
+        require(slow->rewinds==1, "restart did not rewind");
+        require(waited<std::chrono::seconds(1), "restart waited for the whole seek instead of abandoning it");
     });
     check("published Android metadata identifies the actual default subsong even without a backend text field", [] {
         Fixture f;

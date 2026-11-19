@@ -13,7 +13,7 @@ internal class LibrarySearch(private val sources: Sources) {
         suspend fun playlistTracks(): List<TrackRef>
         suspend fun searchCatalogues(query: String, ids: Set<String>, limit: Int, platforms: Set<String>): List<TrackRef>
         suspend fun searchLive(query: String): ModArchive.Outcome
-        suspend fun countLocal(query: String): Int
+        suspend fun countLocal(query: String, platforms: Set<String>): Int
         suspend fun countCatalogues(query: String, ids: Set<String>, platforms: Set<String>): Int
     }
 
@@ -102,7 +102,7 @@ internal class LibrarySearch(private val sources: Sources) {
         val capped = fromIndex.size == SearchResults.PER_SOURCE_LIMIT ||
             fromOnline.size == SearchResults.PER_SOURCE_LIMIT
         val matches = if (!capped) 0 else {
-            (if (searching.searchesLocal) sources.countLocal(request.query) else 0) +
+            (if (searching.searchesLocal) sources.countLocal(request.query, platformIds) else 0) +
                 (if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
                     sources.countCatalogues(request.query, dbCatalogues, platformIds)
                 } else {

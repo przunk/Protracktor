@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -95,6 +97,35 @@ class ScrollbarBubbleTest {
         compose.onNodeWithTag("scrollbar").performTouchInput { up() }
         compose.waitForIdle()
         compose.onNodeWithTag("scrollbar-bubble").assertDoesNotExist()
+    }
+
+    @Test fun `a drag through rows of unequal heights keeps following the finger (RV-B039)`() {
+        // Folders and tunes, a heading here and there: as the list moves, the number of rows on
+        // screen changes, which restarted the gesture when the handler was keyed on it.
+        activity.get().setContent {
+            MaterialTheme { Surface {
+                Box(Modifier.fillMaxSize()) {
+                    LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
+                        items((1..2_000).toList()) { i ->
+                            Text("Row $i", modifier = Modifier.testTag("row")
+                                .then(if (i % 7 == 0) Modifier.height(240.dp) else Modifier.height(24.dp)))
+                        }
+                    }
+                    DraggableScrollbar(state, Modifier.align(Alignment.CenterEnd).testTag("scrollbar"))
+                }
+            } }
+        }
+        compose.waitForIdle()
+        val positions = mutableListOf<Int>()
+        compose.onNodeWithTag("scrollbar").performTouchInput { down(Offset(centerX, 8f)) }
+        repeat(6) {
+            compose.onNodeWithTag("scrollbar").performTouchInput { moveBy(Offset(0f, height / 10f)) }
+            compose.waitForIdle()
+            positions += state.firstVisibleItemIndex
+        }
+        compose.onNodeWithTag("scrollbar").performTouchInput { up() }
+        compose.waitForIdle()
+        assertTrue(positions.toString(), positions.zipWithNext().all { (a, b) -> b > a })
     }
 
     @Test fun `a list that fits has no scrollbar`() {

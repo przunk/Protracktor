@@ -67,6 +67,13 @@ sealed class Catalogue(
         urlFor(path).takeIf { it.startsWith("https://") || it.startsWith("http://") }
 
     /**
+     * Whether [address] is one this catalogue serves: one of its ids, or -- for a catalogue whose
+     * files also have a web address ([fileUrlFor]) -- that address. What a shared link may name and
+     * have played without a question (RV-B001); anything else is asked about first.
+     */
+    open fun serves(address: String): Boolean = pathFrom(address) != null
+
+    /**
      * Whether the thing at [indexUrl] is the whole archive rather than a list of what is in it.
      *
      * Two shapes exist and they are not variations of one another. Modland publishes an index and
@@ -118,6 +125,9 @@ sealed class Catalogue(
 
         /** Which catalogue a track reference belongs to, if any. Each recognises only its own. */
         fun owning(trackId: String): Catalogue? = all.firstOrNull { it.pathFrom(trackId) != null }
+
+        /** The catalogue that serves [address], if any ([serves]). */
+        fun serving(address: String): Catalogue? = all.firstOrNull { it.serves(address) }
 
         /**
          * Where a catalogue tune is filed, the way the app shows it -- "Modland/Protracker/4-Mat",
@@ -181,10 +191,20 @@ object Modland : Catalogue(
         if (!id.startsWith(FILE_BASE)) return null
         // Decoded segment by segment rather than whole, so a literal "+" in a filename survives:
         // URLDecoder turns "+" into a space, and urlFor deliberately encoded spaces as %20.
-        return id.removePrefix(FILE_BASE).split('/').map { segment ->
-            java.net.URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8")
-        }
+        return id.removePrefix(FILE_BASE).split('/').map { segment -> decodeSegment(segment) ?: return null }
     }
+
+    /**
+     * One segment of a Modland address, decoded; null when it cannot be (RV-B006). A `%` not
+     * followed by two hex digits makes `URLDecoder` throw, and the address arrives from links,
+     * imported lists and tapped URLs: such an address is simply not one of Modland's.
+     */
+    internal fun decodeSegment(segment: String): String? =
+        try {
+            java.net.URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8")
+        } catch (_: IllegalArgumentException) {
+            null
+        }
 
     override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> {
         val text = java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
@@ -249,6 +269,8 @@ object Asma : Catalogue(
     indexUrl = "https://asma.atari.org/asmadb/asma.zip",
 ) {
     /** Read out of the stored archive rather than fetched. The player understands this scheme. */
+    override fun serves(address: String): Boolean = pathFrom(address) != null || address.startsWith(FILE_BASE)
+
     override fun urlFor(path: String): String = "asma://$path"
 
     override val homeUrl: String = "https://asma.atari.org/"

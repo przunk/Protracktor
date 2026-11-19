@@ -33,8 +33,6 @@ internal class ReplayDownloads(
     }
 
     private companion object {
-        const val REPLAYS_LABEL = "Atari ST replay routines"
-        const val PLAYERS_LABEL = "Amiga replay routines"
     }
 
     /**
@@ -43,10 +41,10 @@ internal class ReplayDownloads(
      * fetched rather than shipped.
      */
     private suspend fun fetchReplays(): Int? {
-        if (!ui.begin(DownloadKeys.REPLAYS, REPLAYS_LABEL)) return null
+        if (!ui.begin(DownloadKeys.REPLAYS, text.label(DownloadText.Label.ATARI_REPLAYS))) return null
         try {
             val fetched = native.downloadSc68 { done, total ->
-                ui.progress(DownloadKeys.REPLAYS, "$REPLAYS_LABEL $done/$total")
+                ui.progress(DownloadKeys.REPLAYS, "${text.label(DownloadText.Label.ATARI_REPLAYS)} $done/$total")
             }
             if (fetched == null || fetched == 0) return null
             // Put them where sc68 will look, now rather than at the next update. It is handed a
@@ -60,10 +58,10 @@ internal class ReplayDownloads(
 
     /** UADE's replay routines as one step: how many arrived, or null when none did. */
     private suspend fun fetchPlayers(): Int? {
-        if (!ui.begin(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return null
+        if (!ui.begin(DownloadKeys.PLAYERS, text.label(DownloadText.Label.AMIGA_REPLAYS))) return null
         try {
             val fetched = native.downloadUade { done, total ->
-                ui.progress(DownloadKeys.PLAYERS, "$PLAYERS_LABEL $done/$total")
+                ui.progress(DownloadKeys.PLAYERS, "${text.label(DownloadText.Label.AMIGA_REPLAYS)} $done/$total")
             }
             if (fetched == null || fetched == 0) return null
             withContext(backgroundWork) { native.configureUade() }

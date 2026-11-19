@@ -682,10 +682,14 @@ private fun LocalDomain(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Button(
+                    // An icon with its name, as every action is (RV-B030).
+                    LabelledAction(
+                        icon = PlayerIcons.Refresh,
+                        label = stringResource(R.string.action_scan_folder),
                         onClick = { onScanFolder(folder) },
                         modifier = Modifier.padding(vertical = 8.dp),
-                    ) { Text(stringResource(R.string.action_scan_folder)) }
+                        slim = true,
+                    )
                 }
             }
 
@@ -758,12 +762,15 @@ private fun LocalDomain(
                         headlineContent = { Text(folder.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingContent = { Icon(PlayerIcons.Folder, contentDescription = null) },
                         trailingContent = {
-                            IconButton(onClick = { onForgetFolder(folder.uri) }) {
-                                Icon(
-                                    PlayerIcons.Remove,
-                                    stringResource(R.string.a11y_forget_folder, folder.displayName),
-                                )
-                            }
+                            // Named on screen as well as for TalkBack (RV-B038).
+                            val said = stringResource(R.string.a11y_forget_folder, folder.displayName)
+                            LabelledAction(
+                                icon = PlayerIcons.Remove,
+                                label = stringResource(R.string.action_forget),
+                                onClick = { onForgetFolder(folder.uri) },
+                                modifier = Modifier.semantics { contentDescription = said },
+                                slim = true,
+                            )
                         },
                         modifier = Modifier.clickable {
                             scroll.descendingFrom(browse.levelKey(), folder.uri)
@@ -1629,30 +1636,30 @@ private fun Selectable(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(
+                // Every action here an icon with its name (RV-B030, RV-B038), as Share beside them is.
+                LabelledAction(
+                    icon = PlayerIcons.Add,
+                    label = pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
+                        (playlistName?.let { " \u2192 $it" } ?: ""),
                     onClick = {
                         onAdd(allTracks.filter { it.id in selected })
                         selected = emptySet()
                     },
                     modifier = Modifier.weight(1f),
-                ) {
-                    Text(
-                        pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
-                            (playlistName?.let { " \u2192 $it" } ?: "")
-                    )
-                }
-                IconButton(
+                    slim = true,
+                )
+                val addElsewhere = stringResource(R.string.action_add_to_playlist)
+                LabelledAction(
+                    icon = PlayerIcons.PlaylistAdd,
+                    label = stringResource(R.string.np_short_add),
                     onClick = {
                         val toAdd = allTracks.filter { it.id in selected }
                         selected = emptySet()
                         onAddToOtherPlaylist(toAdd)
                     },
-                ) {
-                    Icon(
-                        imageVector = PlayerIcons.PlaylistAdd,
-                        contentDescription = stringResource(R.string.action_add_to_playlist),
-                    )
-                }
+                    modifier = Modifier.semantics { contentDescription = addElsewhere },
+                    slim = true,
+                )
                 // Share for the whole selection (B59): files, links, or a Share with Protracktor list,
                 // where this bar used to offer only the last.
                 SelectionShareAction(
@@ -1905,8 +1912,22 @@ private fun DownloadAction(
             // **What the press will do, drawn as what it does.** Here: fetch it again to bring it up
             // to date. Missing: fetch it. The same arrow for both made one button look like two
             // different offers had been merged (decided 2026-09-21).
-            IconButton(onClick = { haptics.press(); onClick() }) {
-                Icon(if (held) PlayerIcons.Refresh else PlayerIcons.Download, description)
+            // The arrow with its word under it, in the box the spinner and its word use (RV-B038).
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) { haptics.press(); onClick() }
+                    .semantics(mergeDescendants = true) { contentDescription = description },
+            ) {
+                Icon(if (held) PlayerIcons.Refresh else PlayerIcons.Download, contentDescription = null)
+                Text(
+                    text = stringResource(if (held) R.string.browse_update_short else R.string.browse_download_short),
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
             }
         }
     }
@@ -2023,9 +2044,13 @@ private fun GroupItem(group: CatalogueGroup, onOpen: () -> Unit) {
 
 @Composable
 private fun SelectAllButton(all: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = onClick) {
-        Text(stringResource(if (all) R.string.browse_select_none else R.string.browse_select_all))
-    }
+    // An icon with its name (RV-B030): the selection bar is the example the project's rule gives.
+    LabelledAction(
+        icon = if (all) PlayerIcons.Close else PlayerIcons.SelectAll,
+        label = stringResource(if (all) R.string.browse_select_none else R.string.browse_select_all),
+        onClick = onClick,
+        slim = true,
+    )
 }
 
 /**

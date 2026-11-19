@@ -95,11 +95,11 @@ class ReplayDownloadsTest {
         drain()
         assertEquals(listOf(
             "begin:${DownloadKeys.REPLAY_ROUTINES}:REPLAY_ROUTINES",
-            "begin:${DownloadKeys.REPLAYS}:Atari ST replay routines",
-            "download-sc68", "progress:${DownloadKeys.REPLAYS}:Atari ST replay routines 2/3", "adopt-sc68",
+            "begin:${DownloadKeys.REPLAYS}:ATARI_REPLAYS",
+            "download-sc68", "progress:${DownloadKeys.REPLAYS}:ATARI_REPLAYS 2/3", "adopt-sc68",
             "end:${DownloadKeys.REPLAYS}",
-            "begin:${DownloadKeys.PLAYERS}:Amiga replay routines",
-            "download-uade", "progress:${DownloadKeys.PLAYERS}:Amiga replay routines 4/5", "configure-uade",
+            "begin:${DownloadKeys.PLAYERS}:AMIGA_REPLAYS",
+            "download-uade", "progress:${DownloadKeys.PLAYERS}:AMIGA_REPLAYS 4/5", "configure-uade",
             "end:${DownloadKeys.PLAYERS}", "notice", "end:${DownloadKeys.REPLAY_ROUTINES}", "refresh",
         ), f.events)
         assertEquals(listOf(DownloadNotice.ReplaysDownloaded(3, 5)), f.notices)

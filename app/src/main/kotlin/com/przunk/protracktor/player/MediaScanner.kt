@@ -88,6 +88,29 @@ object MediaScanner {
         context: Context,
         treeUri: Uri,
         maxBytes: Long = MAX_PROBE_BYTES,
+    ): List<Candidate>? = withContext(Dispatchers.IO) {
+        // **Null when the folder cannot be listed** (RV-B008): a grant withdrawn in system settings
+        // makes the provider throw `SecurityException`, a removed card or a lost share throws
+        // whatever its provider throws. Uncaught, that ended the app; the caller says so instead.
+        try {
+            listReachable(context, treeUri, maxBytes)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: SecurityException) {
+            null
+        } catch (_: IllegalArgumentException) {
+            null
+        } catch (_: IllegalStateException) {
+            null
+        } catch (_: UnsupportedOperationException) {
+            null
+        }
+    }
+
+    private suspend fun listReachable(
+        context: Context,
+        treeUri: Uri,
+        maxBytes: Long,
     ): List<Candidate> = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         val found = mutableListOf<Candidate>()

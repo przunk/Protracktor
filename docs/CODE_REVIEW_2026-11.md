@@ -252,6 +252,18 @@ None found.
   without a press.
 - Already known: no. `docs/OPEN_QUESTIONS.md` Q9 (playback in a separate process) discusses a
   malformed file taking the app down, not where files may come from.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a link's tunes are played at once only when a
+  catalogue serves every address (`Catalogue.serves`: its ids, and for ASMA and UnExoticA also their
+  web addresses); otherwise the app asks first, naming how many tunes and which servers
+  (`ForeignLinkDialog`, PL and EN), and Cancel fetches nothing -- question 3 taken on the review's
+  recommendation in my absence. A `content://` or `file://` row in a link is dropped. **Not done:**
+  a size bound on every download (`net/RemoteFiles.kt`, AMP only today) -- a fair cap needs the
+  largest real modules measured; cleartext allowed app-wide; imported lists, which do not play by
+  themselves. Checked: `LinkSafetyTest` (catalogue addresses not foreign; other servers, a private
+  address and a look-alike host foreign; document and file rows dropped; the hosts named once, three
+  at most), `ForeignLinkDialogTest`, and `LinkControllerTest` through the real controller (such a
+  link waits with nothing played, Cancel leaves the queue as it was, Play makes the link's tunes the
+  queue); each rule broken once to see a test fail. Not checked: the phone.
 
 ### 4.3 Medium
 
@@ -273,6 +285,13 @@ None found.
   and the engine agree: either the controller starts playback properly, or the engine is told not
   to start.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a subsong chosen while paused plays: the controller
+  asks for audio focus first (a refusal says so and changes nothing), then marks the player playing
+  and resumes the schedule, as play does -- question 1 taken on the review's recommendation in my
+  absence. The service start for this entry is RV-B005. Partially checked: it compiles and the full
+  suite passes; no host test can open a native track, so the path itself is not run. Not checked:
+  the phone (pause a multi-tune file, tap another tune: the transport shows pause, the bar moves,
+  the notification says playing).
 
 ### RV-B003 — A SID that opens at its default song is treated as being on its first
 - Severity: Medium · Likelihood: plausible · Evidence: partially verified — the vendored header
@@ -291,6 +310,13 @@ None found.
 - Already known: partly. `docs/STATUS.md` C30 (the web player believed every file was on its first
   tune) fixed what a backend reports after a switch and notes that ASAP's default is not always
   zero; the SID's own default at open was left.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the SID backend records the song libsidplayfp
+  actually selected at open (`selectSong(0)` returns it, counting from one) instead of leaving it at
+  the first -- question 5 taken on the review's recommendation in my absence: the file's own start
+  song, shown correctly. The web player gets the same code when its WebAssembly engine is next
+  built; it is not rebuilt here. Partially checked: compiles in the release build. Not checked: no
+  host test opens a real SID, so the path is not run; the phone (a multi-song SID whose header
+  starts elsewhere than song 1: the strip marks that song, its length is right).
 
 ### RV-B004 — Notices from the controller ignore the language chosen in the app
 - Severity: Medium · Likelihood: common for anyone whose app language differs from the phone's ·
@@ -311,6 +337,15 @@ None found.
 - Direction: one provider of localised text that wraps once, handed to everything that builds a
   notice (RV-S005). The test that exists for this purpose does not see it (§8).
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `AppLocale.localized` gives the application context
+  in the app's language, made once per language and application and kept; the controller reads every
+  string through it (89 `getString`, 13 plurals, History's relative times, the heart feedback), and
+  so do `AndroidDownloadText`, `AndroidMaintenanceText`, `AndroidPlaylistText` and the scan
+  notification. One provider of localised text for every notice (RV-S005) is left for the
+  architectural work; this is its first half. Checked: `LinkControllerTest` -- on an English phone
+  with the app set to Polish, the real controller's notice for an unreadable link was English with
+  the controller reading the bare context, which reproduces the defect, and Polish with the fix. Not
+  checked: the phone.
 
 ### RV-B005 — Music started from a page link plays without the foreground service
 - Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
@@ -327,6 +362,12 @@ None found.
   from Random and Browse had no service) described, through a door added later.
 - Direction: the controller asks for the service when playback starts, in one place (RV-S008).
 - Already known: the class is (C43); this instance is not.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the view model starts the service before
+  `openLink`, `confirmLink` and `selectSubsong`, as its other entries that can make sound do. The
+  single place the review suggests (RV-S008, the controller asking when playback starts) is left for
+  the architectural work. Checked: `LinkControllerTest` (each of the three starts
+  `PlaybackService`), failing with the start removed from `openLink`. Not checked: the phone
+  (notification and lock screen after a cold start from a link).
 
 ### RV-B006 — A malformed `%` in a Modland address ends the app
 - Severity: Medium · Likelihood: rare · Evidence: partially verified — `URLDecoder.decode("%zz.mod")`
@@ -343,6 +384,11 @@ None found.
 - Impact: an uncaught exception on the main thread — the app closes.
 - Direction: `pathFrom` answers null for an address it cannot decode.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `Modland.decodeSegment` answers null for a segment
+  `URLDecoder` refuses, so such an address belongs to no catalogue; `OpenFailure.modlandFormatOf`
+  uses the same function instead of its own copy. Checked: `ModlandMalformedAddressTest` (owning,
+  sourceOf, fileOf, canonical and the format guess on three malformed addresses; good addresses
+  still decode), failing with the guard removed. Not checked: the phone.
 
 ### RV-B007 — A download that arrives but parses to nothing erases what it replaces
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
@@ -362,6 +408,14 @@ None found.
 - Direction: treat zero rows as a failed download everywhere, before anything is deleted; parse
   before storing an archive; catch what parsing throws.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** a catalogue index is parsed before anything is
+  stored, a parse that throws counts as no rows, and no rows is a failed download for every
+  catalogue (not only AMP): nothing is replaced and, for an archive catalogue, the archive is not
+  overwritten. The three fact tables replace through one `replaceUnlessEmpty`, which rolls the
+  delete back when no row was written. Checked: `LibraryDownloadsTest` (Modland and ASMA bodies that
+  are not an index, zipped or not) and `EmptyDownloadKeepsTablesTest` (metadata, songdb lengths and
+  favourites keep their rows; a real replacement still replaces), each failing with its guard
+  removed. Not checked: the phone.
 
 ### RV-B008 — Scanning a folder that is no longer reachable ends the app
 - Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
@@ -375,6 +429,14 @@ None found.
 - Impact: the app closes.
 - Direction: a scan that cannot list its folder says so and marks the folder as needing access.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `MediaScanner.listFiles` answers null when the
+  provider refuses or fails to list the tree (security, argument, state and unsupported-operation
+  exceptions; cancellation still propagates), and `scanFolder` then clears the progress and says the
+  folder could not be read and should be added again (new `notice_scan_unreadable`, PL and EN). The
+  folder is not marked in the list as needing access: that would be new state, left for later.
+  Checked: `UnreadableFolderScanTest` with a provider that throws `SecurityException` and one that
+  throws `IllegalStateException`, failing with the guard narrowed. Not checked: the phone; the
+  notice itself (the controller path has no host test).
 
 ### RV-B009 — The LHA wrapper trusts the size an archive states and has no guard at the boundary
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
@@ -390,6 +452,11 @@ None found.
 - Direction: cap the stated length against the archive's own size and a ceiling; wrap both
   functions as the player's are.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** a member whose stated length passes 64 MiB, or
+  1,024 times the archive's own size, is not extracted (the archive is treated as damaged); both JNI
+  entries catch everything and answer null, check the arrays they make, and the Kotlin side reads a
+  null list as an empty one. Partially checked: compiles in the release build. Not checked: no host
+  test reads a crafted archive; the phone.
 
 ### RV-B010 — A subsong switch waits on the main thread behind a running seek
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
@@ -422,6 +489,13 @@ None found.
 - Direction: every entry that touches the decoder takes the lock; `NativeLifetime` then has one
   thing less to protect.
 - Already known: no (C140 fixed close against seek only).
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `restart` rewinds under the decoder lock, after
+  counting itself as a newer request so a running seek gives way at its next chunk instead of
+  holding the lock -- and the main thread -- for the rest of its run. Checked: a new check in
+  `scripts/audio-host-test/player_test.cpp`, which compiles the real `player_oboe.cpp` on the host:
+  a slow seek is running when restart comes; with the lock removed the rewind ran inside the decoder
+  beside the seek, with the lock but no abandon restart waited for the whole seek, and with both
+  neither. Not checked: the phone.
 
 ### RV-B012 — Indexing Modland holds the whole list and every row in memory at once
 - Severity: Medium · Likelihood: plausible on phones with a small heap limit · Evidence:
@@ -455,6 +529,11 @@ None found.
 - Direction: a buffer per call. The lookup also does file I/O on the main thread for every AMP
   play, which a suspend function would move.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** each lookup reads into its own 1 KB buffer.
+  **Left:** the lookup still does file I/O on the caller's thread, the main one when a tune is
+  played -- a suspend function is a wider change of its callers. Checked: `AmpModuleIdsTest` --
+  eight threads, 12,000 lookups in all: with the shared buffer 10,527 answers were wrong, which
+  reproduces the defect, with a buffer per call none. Not checked: the phone.
 
 ### RV-B014 — A database error in most write and read paths ends the app
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)
@@ -473,6 +552,15 @@ None found.
 - Direction: one failure path for the scope, and stores that return a result where the caller can
   say something useful (RV-S005).
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the controller's scope is built by
+  `ControllerFailures.scope`, whose handler reports any `Exception` from its work -- logged, and a
+  notice on the main thread, worded for storage when it is a database or I/O failure (new
+  `notice_failed`, `notice_failed_storage`, PL and EN) -- while the supervisor keeps the scope
+  working; an `Error` still goes to the default handler. The stores do not yet return results a
+  caller could explain better (RV-S005, left). Checked: `ControllerFailuresTest` (a database failure
+  on the main thread and a state failure on IO are both reported, and the next launch runs), failing
+  with the handler removed. Not checked: the phone; a failed migration on start (no host test drives
+  the controller's init).
 
 ### RV-B034 — The notification permission is asked at every start, and then system settings open
 - Severity: Medium · Likelihood: plausible — anyone who declines · Evidence: unverified (reading)
@@ -519,6 +607,14 @@ None found.
 - Direction: catch both failures and show the refused state; keep the provider from the first
   `get()` for `onDispose`; ignore the listener once disposed.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the listener starts the camera through
+  `CameraStart.attempt`, which catches the four ways a start fails; the screen then says the camera
+  could not be started (new `scan_unavailable`, PL and EN) and keeps "Send as link". A listener that
+  fires after the screen is gone binds nothing, and `onDispose` unbinds the provider the listener
+  got instead of a second blocking `get()`. Checked: `ScannerCameraTest` -- under Robolectric, which
+  has no back camera, the screen with the camera allowed threw `IllegalArgumentException: No
+  available camera can be found` with the guard removed, which reproduces the crash; with it, the
+  message shows. Not checked: the phone, and the late-listener case (no host test reaches it).
 
 ### 4.4 Low
 
@@ -550,6 +646,13 @@ None found.
 - Trigger: the disk is full on the first start after an update.
 - Impact: Atari ST or Amiga formats stay broken until the next version, with nothing said.
 - Direction: write the marker only when every copy succeeded.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** one `NativeData.unpack` rebuilds both sc68's and
+  UADE's trees and writes the version marker only when the copy reports every file written;
+  `copyAssetTree` now tells an empty directory (cannot be opened, fine) from a file that could not
+  be written (a failure). Unmarked, the next start unpacks again. Checked: `NativeDataUnpackTest` (a
+  failed copy leaves no marker, a complete one is marked, a rebuild replaces), failing with the
+  marker written regardless. Partially checked: that a real asset copy reports a write failure is
+  from reading. Not checked: the phone.
 
 ### RV-B018 — The offline renderer hands out a description the engine has not converted
 - Severity: Low · Likelihood: plausible · Evidence: unverified
@@ -576,11 +679,19 @@ None found.
   only playable ones.
 - Impact: the chip shows a larger number than Random draws from — the mismatch the function's own
   comment warns against.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the count joins only `playable = 1` rows, the set
+  Random draws from. Checked: `FavouriteCountTest` (two favourites, one in a format this build
+  cannot play: counted 1), failing with the condition removed. Not checked: the phone.
 
 ### RV-B021 — The total beside search results ignores the platform filter for local files
 - Severity: Low · Likelihood: rare · Evidence: unverified
 - Where: `data/LibraryIndexStore.kt:195` (`countMatches(query)` has no platform argument, while
   `search` filters by platform). The comment at `:223` says the query has no limit; it has one.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `countMatches` takes the platforms and, with a
+  filter on, counts the matching names by the same file-name rule `search` applies; the search
+  passes the filter through. The comment that said the query had no limit now says what the limit
+  is. Checked: `LocalCountPlatformTest` (three files on two platforms: 3 unfiltered, 2 under C64,
+  equal to what `search` returns), failing with the filter ignored. Not checked: the phone.
 
 ### RV-B022 — Tracks removed from every playlist still come up in search
 - Severity: Low · Likelihood: common · Evidence: unverified
@@ -625,12 +736,27 @@ None found.
   (the labels in the download banner, with "done/total" appended);
   `player/PlaybackController.kt:1627`, `:1662-1663` (share subjects);
   `player/PlaylistTransfer.kt` (the default names "playlist" and "Imported").
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the banner names of the song lengths, track
+  metadata, favourites and both replay downloads are `DownloadText.Label`s with PL and EN strings
+  (the exhaustive `when` in `AndroidDownloadText` makes a missing translation not compile); the
+  default names of an exported and an imported playlist, and the subject of a shared queue, are
+  string resources. Checked: `LinkControllerTest` (a banner name in Polish), `ReplayDownloadsTest`,
+  `PlaylistTransferTest`. Not checked: the phone.
 
 ### RV-B028 — AMP's tunes are missing from the Amiga platform where their prefix is not listed
 - Severity: Low · Likelihood: plausible · Evidence: unverified
 - Where: `player/Platforms.kt:238` (`wholeCatalogues` names ASMA and UnExoticA; AMP, which is
   entirely Amiga, is not there).
 - Impact: such rows are absent from the Amiga chip's search, count and Random.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** an AMP row that no directory, name or prefix
+  places is Amiga (`Platforms.lastResortCatalogues`, in the function and in the SQL `CASE` alike);
+  a row the table does place keeps that answer. **The review's premise was too wide:** AMP is not
+  wholly Amiga by this table -- its `FTM` is Face The Music, filed under Atari ST since C134, and a
+  first version of this fix that made every AMP row Amiga broke `AmpTest`, which records that. The
+  platforms fingerprint covers the new map, so stored indexes are re-decided locally. Checked:
+  `PlatformsTest` and `PlatformColumnTest` (an unplaced AMP row is Amiga, Face The Music on AMP
+  stays Atari ST, function and stored column agree), each failing with its half of the rule
+  removed. Not checked: the phone.
 
 ### RV-B029 — An interrupted replay download counts as installed
 - Severity: Low · Likelihood: rare · Evidence: unverified
@@ -638,6 +764,14 @@ None found.
   it arrives, not atomically); `net/UadePlayers.kt:77` (`present` is "more than none").
 - Impact: a partial set shows as downloaded; the missing routines fail one format at a time; a
   truncated file is never replaced, because only missing files are copied in.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** sc68's and UADE's downloads write each file through
+  `AtomicFileWrite` (a temporary file renamed into place), and the copies into the decoders'
+  directories go through one `copyWhole` that does the same, so no truncated file can stand in for a
+  routine. **Left:** `present` still means "more than none", so a set cut short shows as downloaded
+  until it is fetched again -- a stricter test risks disabling the Amiga formats whenever upstream
+  drops one routine. Partially checked: `UnpackPlayersTest`, `AtomicFileWriteTest` and the unpack
+  tests pass; a write cut short by a full disk is not reproduced on the host. Not checked: the
+  phone.
 
 ### RV-B030 — Three actions drawn as a word without an icon
 - Severity: Low · Likelihood: common · Evidence: unverified
@@ -645,6 +779,11 @@ None found.
   (Select all / none).
 - Mechanism: the project rule is an icon with its name for every action outside a dialogue's
   confirm and cancel. The selection bar is the example the rule itself gives.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** Scan folder, Add selected and Select all / none are
+  `LabelledAction`s (slim), an icon with the name. Checked: Browse's tests pass; the labels are on
+  screen. Partially checked: that each now carries an icon is from reading the code -- the icons
+  have no semantics a host test could find. Not checked: the phone (how the selection bar fits on a
+  narrow screen).
 
 ### RV-B031 — Two additions to another playlist at once can lose one
 - Severity: Low · Likelihood: rare · Evidence: unverified
@@ -655,6 +794,10 @@ None found.
 - Severity: Low · Likelihood: rare · Evidence: unverified
 - Where: `player/QueueLink.kt:246` onwards (`decode`); `runCatching` there also swallows
   `OutOfMemoryError`.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** `QueueLink.decode` stops at 1,000,000 inflated
+  bytes and answers null past that, catches only what bad base64 and bad deflate throw (no longer
+  `OutOfMemoryError`), and always ends the inflater. Checked: `LinkSafetyTest` (a list past the
+  bound is not read, one under it is), failing with the bound removed.
 
 ### RV-B033 — A ZXTune failure outside its own guards skips the decoders after it
 - Severity: Low · Likelihood: rare · Evidence: partially verified — `native/vendor/zxtune/include/error.h:20`
@@ -676,6 +819,11 @@ None found.
   queue from Browse — Play stays dead although the queue badge beside it counts one; or (b) start
   Random — while the first pick is being fetched the button shows Stop and cannot be pressed.
 - Direction: one `canPlay` on the state, read by both.
+- **Fixed on `fix/review-2026-11`, 2026-11-18:** the rule is `PlayerUiState.canPlay`, read by both
+  docks, so the collapsed dock gains the loading and hand-queued cases the full one had. Checked:
+  `DockCollapseUiTest` (the collapsed Play is live with only a tune queued by hand and while a pick
+  is fetched, dead with nothing), failing with the collapsed dock's old rule put back. Not checked:
+  the phone.
 
 ### RV-B037 — Four controls show their state by colour alone
 - Severity: Low · Likelihood: common · Evidence: unverified
@@ -704,6 +852,14 @@ None found.
   buttons inside a text field, and dialogue buttons.
 - Forgetting a folder is also the only removal that happens on one tap with no confirmation and
   no undo; it costs a rescan, not data (the playlists keep their tunes).
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the selection bar's other-playlist action shows
+  "Add" under its icon and keeps the whole name for TalkBack; forgetting a folder and deleting
+  stored data show "Forget" and "Delete" under the icon; a catalogue's download or update arrow
+  carries its word under it, in the box the spinner and its word already use (new `action_forget`,
+  `browse_download_short`, `browse_update_short`, PL and EN). **Left as they are:** the History page
+  arrows and the dock's +, both icon-only by my own earlier choice. Checked: `BrowseSelectionUiTest`
+  (the short label on screen, the full name for TalkBack), failing with the label emptied. Not
+  checked: the phone.
 
 ### RV-B039 — A scrollbar drag can stop by itself in a list of unequal rows
 - Severity: Low · Likelihood: plausible · Evidence: unverified — inferred from the code; the
@@ -719,6 +875,11 @@ None found.
 - Impact: the list stops following the finger; the thumb and its bubble stay where they were until
   the next touch.
 - Direction: key the handler on nothing and read the counts through `rememberUpdatedState`.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the drag handler is keyed on nothing and reads the
+  list's last start row through `rememberUpdatedState`. Checked: `ScrollbarBubbleTest` drags in six
+  steps through rows of two heights; with the old keys the list stopped after the third step
+  (positions 361, 561, 762, 762, 762, 762), which reproduces the defect, and with the fix every step
+  moves it on. Not checked: the phone.
 
 ### RV-B040 — The web player address cannot be emptied
 - Severity: Low · Likelihood: plausible · Evidence: unverified
@@ -729,6 +890,14 @@ None found.
 - Impact: backspacing through the address to type another one puts the whole default back at the
   last character. Selecting everything and typing over it works.
 - Direction: keep the typed text in the field and save on Done or on leaving it.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the field is no longer re-keyed on the stored
+  value; when that changes, `WebPlayerField.shown` keeps what was typed if the stored value is its
+  echo (the same text, or the fallback for an empty field) and shows anything else, which is a
+  pairing; an empty field shows the address used instead as its placeholder. Checked:
+  `WebPlayerFieldTest` (emptied stays empty, typing stays, a pairing replaces), failing with the
+  rule reduced to the stored value. Partially checked: the wiring in Settings is from reading -- a
+  text field's cursor keeps the host harness from settling, so it is not driven in a test. Not
+  checked: the phone.
 
 ## 5. Observations
 

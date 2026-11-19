@@ -125,6 +125,14 @@ std::vector<char> lhaExtract(const void *data, std::size_t size, const std::stri
         // `length` is what the header states. A short read means the archive is damaged, and the
         // vector is resized down to what actually arrived rather than left with a tail of zeros --
         // a decoder handed zeros reports a corrupt module instead of a truncated download.
+        // **Bounded** (RV-B009): the stated length is a 32-bit field anybody can write. A member
+        // claiming gigabytes made this allocate them, and `std::bad_alloc` crossing JNI ends the
+        // process. No module comes near the ceiling, nor compresses past the ratio; a member that
+        // claims more is a damaged or hostile archive and is not extracted.
+        constexpr std::size_t kMaxMember = 64u * 1024u * 1024u;
+        constexpr std::size_t kMaxRatio = 1024u;
+        const std::size_t ceiling = std::min(kMaxMember, size * kMaxRatio);
+        if (static_cast<std::size_t>(header->length) > ceiling) return false;
         result.resize(static_cast<std::size_t>(header->length));
         std::size_t filled = 0;
         while (filled < result.size()) {

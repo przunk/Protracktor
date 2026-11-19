@@ -75,6 +75,8 @@ com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.prot
         )
     }
     var refused by remember { mutableStateOf(false) }
+    // RV-B035: allowed, and still no camera -- only a front one, or one that failed to start.
+    var unavailable by remember { mutableStateOf(false) }
 
     val ask = com.przunk.protracktor.permissions.rememberAccessRequestCoordinator { _, result ->
         granted = result == com.przunk.protracktor.permissions.AccessRequestResult.GRANTED
@@ -92,8 +94,9 @@ com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.prot
     }
 
     Box(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-        if (granted) {
-            CameraPreview(onScanned = onScanned)
+        val live = granted && !unavailable
+        if (live) {
+            CameraPreview(onScanned = onScanned, onUnavailable = { unavailable = true })
         }
         Column(
             modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(24.dp),
@@ -102,10 +105,14 @@ com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.prot
         ) {
             Text(
                 text = stringResource(
-                    if (refused) R.string.scan_refused else R.string.scan_hint
+                    when {
+                        refused -> R.string.scan_refused
+                        unavailable -> R.string.scan_unavailable
+                        else -> R.string.scan_hint
+                    }
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (granted) Color.White else MaterialTheme.colorScheme.onSurface,
+                color = if (live) Color.White else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
             // **What sending involves, where it is decided.** A scanned code names a server, and the
@@ -113,7 +120,7 @@ com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.prot
             Text(
                 text = stringResource(R.string.scan_privacy),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (granted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (live) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             OutlinedButton(onClick = { readingPolicy = true }) {
@@ -136,7 +143,7 @@ com.przunk.protracktor.permissions.SystemAccess.allowed(context, com.przunk.prot
 }
 
 @Composable
-private fun CameraPreview(onScanned: (String) -> Unit) {
+private fun CameraPreview(onScanned: (String) -> Unit, onUnavailable: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     // **Once.** A QR sits in front of the camera for many frames, and every one of them decodes;
@@ -148,9 +155,16 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
     val executor = remember { java.util.concurrent.Executors.newSingleThreadExecutor() }
 
     DisposableEffect(Unit) {
+        // Left before the provider was ready: the listener must then bind nothing, or the camera
+        // stays open on the activity after the screen is gone (RV-B035).
+        var disposed = false
+        var bound: ProcessCameraProvider? = null
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener({
+            if (disposed) return@addListener
+            val started = CameraStart.attempt {
             val provider = future.get()
+            bound = provider
             val preview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
             val analysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -168,15 +182,42 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
             }
             provider.unbindAll()
             provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            }
+            if (!started) onUnavailable()
         }, ContextCompat.getMainExecutor(context))
 
         onDispose {
-            ProcessCameraProvider.getInstance(context).get().unbindAll()
+            disposed = true
+            // The provider the listener got, not a second blocking get() on the main thread.
+            bound?.let { provider -> CameraStart.attempt { provider.unbindAll() } }
             executor.shutdown()
         }
     }
 
     AndroidView(factory = { view }, modifier = Modifier.fillMaxSize())
+}
+
+/**
+ * Starting the camera, which can fail in ways nothing here can prevent (RV-B035): a device whose
+ * only camera faces the front -- the manifest does not require one at the back -- makes binding
+ * the back one throw `IllegalArgumentException`; a camera service that fails makes the provider's
+ * `get()` throw `ExecutionException`; others throw `IllegalStateException`. Each means the same
+ * thing to the person holding the phone, so all are caught here and the screen says so.
+ */
+internal object CameraStart {
+    fun attempt(start: () -> Unit): Boolean =
+        try {
+            start()
+            true
+        } catch (_: java.util.concurrent.ExecutionException) {
+            false
+        } catch (_: IllegalArgumentException) {
+            false
+        } catch (_: IllegalStateException) {
+            false
+        } catch (_: InterruptedException) {
+            false
+        }
 }
 
 private val reader = QRCodeReader()

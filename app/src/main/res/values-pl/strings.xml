@@ -419,6 +419,7 @@
     <string name="action_pair_again">Zeskanuj inną przeglądarkę</string>
     <string name="scan_hint">Skieruj na kod na stronie odtwarzacza.</string>
     <string name="scan_privacy">To, co wysyłasz — tytuły, adresy w archiwach i pliki z tego telefonu — trafia na serwer, na którym działa zeskanowana strona. Wysyłaj tylko do strony uruchomionej przez ciebie albo kogoś, komu ufasz.</string>
+    <string name="scan_unavailable">Nie udało się uruchomić aparatu na tym urządzeniu. Playlistę nadal można wysłać linkiem.</string>
     <string name="scan_refused">Bez aparatu nie da się odczytać kodu. Playlistę nadal można wysłać linkiem.</string>
     <string name="action_cancel">Anuluj</string>
     <string name="settings_web_player_section">Odtwarzacz webowy</string>
@@ -552,6 +553,28 @@
         <item quantity="other">Usunięto %1$,d utworu</item>
     </plurals>
     <string name="notice_scanned_timed">Przeskanowano %1$s: %2$,d do odtworzenia z %3$,d, w %4$s; %5$,d bez zmian, nieotwierane ponownie.</string>
+    <string name="link_foreign_play">Odtwórz</string>
+    <string name="link_foreign_title">Odtworzyć z innych adresów?</string>
+    <plurals name="link_foreign_body">
+        <item quantity="one">Ten link wskazuje %1$,d utwór spoza znanych katalogów, pod adresem %2$s. Odtworzenie pobierze plik i go otworzy. Odtwórz tylko wtedy, gdy ufasz osobie, która wysłała link.</item>
+        <item quantity="few">Ten link wskazuje %1$,d utwory spoza znanych katalogów, pod adresem %2$s. Odtworzenie pobierze pliki i je otworzy. Odtwórz tylko wtedy, gdy ufasz osobie, która wysłała link.</item>
+        <item quantity="many">Ten link wskazuje %1$,d utworów spoza znanych katalogów, pod adresem %2$s. Odtworzenie pobierze pliki i je otworzy. Odtwórz tylko wtedy, gdy ufasz osobie, która wysłała link.</item>
+        <item quantity="other">Ten link wskazuje %1$,d utworu spoza znanych katalogów, pod adresem %2$s. Odtworzenie pobierze pliki i je otworzy. Odtwórz tylko wtedy, gdy ufasz osobie, która wysłała link.</item>
+    </plurals>
+    <string name="action_forget">Zapomnij</string>
+    <string name="browse_download_short">pobierz</string>
+    <string name="browse_update_short">odśwież</string>
+    <string name="download_label_track_metadata">Metadane i długości utworów</string>
+    <string name="download_label_favourites">Ulubione Modlandu</string>
+    <string name="download_label_song_lengths">Długości utworów SID</string>
+    <string name="download_label_atari_replays">Procedury odtwarzania Atari ST</string>
+    <string name="download_label_amiga_replays">Procedury odtwarzania Amigi</string>
+    <string name="playlist_default_export_name">playlista</string>
+    <string name="playlist_default_import_name">Zaimportowana</string>
+    <string name="share_subject_queue">Kolejka z Protracktora</string>
+    <string name="notice_failed">Coś poszło nie tak (%1$s). Aplikacja działa dalej; spróbuj ponownie.</string>
+    <string name="notice_failed_storage">Nie udało się odczytać ani zapisać danych aplikacji (%1$s). Jeśli pamięć telefonu jest pełna, zwolnij trochę miejsca i spróbuj ponownie.</string>
+    <string name="notice_scan_unreadable">Nie da się odczytać folderu „%1$s”: zniknął albo aplikacja nie ma już do niego dostępu. Dodaj go ponownie, aby go przeskanować.</string>
     <string name="notice_scan_stopped">Skan zatrzymany na %1$,d z %2$,d plików. To, co znalazł, zostaje, a kolejny skan zacznie od tego miejsca.</string>
     <string name="action_stop_scan">Zatrzymaj</string>
     <string name="notification_channel_scanning">Skanowanie folderów</string>

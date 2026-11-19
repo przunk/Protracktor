@@ -451,7 +451,7 @@ class BrowseWorkflowTest {
             read("indexed:$query:${ids.sorted()}:$limit:${platforms.sorted()}"); return rows(query)
         }
         override suspend fun searchLive(query: String): ModArchive.Outcome { read("live:$query"); return live }
-        override suspend fun countLocal(query: String): Int { read("count-local:$query"); return 801 }
+        override suspend fun countLocal(query: String, platforms: Set<String>): Int { read("count-local:$query"); return 801 }
         override suspend fun countCatalogues(query: String, ids: Set<String>, platforms: Set<String>): Int {
             read("count-indexed:$query"); return 902
         }

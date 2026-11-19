@@ -39,6 +39,10 @@ internal class AmpModuleIds(private val file: File) {
     fun idFor(path: String): Long? {
         if (!file.isFile) return null
         val wanted = path.toByteArray(Charsets.UTF_8)
+        // **A buffer per lookup** (RV-B013): lookups run at once -- the on-phone marks on an IO
+        // thread, a tap on the main one -- and one shared array let each overwrite the other's line
+        // mid-parse, answering nothing or another module's number.
+        val chunk = ByteArray(CHUNK)
         return runCatching {
             RandomAccessFile(file, "r").use { raf ->
                 var low = 0L
@@ -47,9 +51,9 @@ internal class AmpModuleIds(private val file: File) {
                 // any, is the line starting in [low, high).
                 while (low < high) {
                     val mid = (low + high) / 2
-                    val start = lineStartAtOrAfter(raf, mid)
+                    val start = lineStartAtOrAfter(raf, mid, chunk)
                     if (start >= high) { high = mid; continue }
-                    val (key, id, next) = readLine(raf, start) ?: break
+                    val (key, id, next) = readLine(raf, start, chunk) ?: break
                     val order = compareBytes(key, wanted)
                     when {
                         order == 0 -> return@use id
@@ -58,7 +62,7 @@ internal class AmpModuleIds(private val file: File) {
                     }
                 }
                 // [low] may sit mid-line after the last step; check the line that starts there.
-                if (low < raf.length()) readLine(raf, lineStartAtOrAfter(raf, low))
+                if (low < raf.length()) readLine(raf, lineStartAtOrAfter(raf, low, chunk), chunk)
                     ?.takeIf { compareBytes(it.first, wanted) == 0 }?.second else null
             }
         }.getOrNull()
@@ -67,9 +71,7 @@ internal class AmpModuleIds(private val file: File) {
     // Read in chunks rather than byte by byte: a lookup is about eighteen probes, and the on-phone
     // marker asks for every visible AMP row, so per-byte reads (nearly a millisecond a lookup when
     // measured on the full map) would add up to seconds on a long list.
-    private val chunk = ByteArray(1024)
-
-    private fun lineStartAtOrAfter(raf: RandomAccessFile, position: Long): Long {
+    private fun lineStartAtOrAfter(raf: RandomAccessFile, position: Long, chunk: ByteArray): Long {
         if (position == 0L) return 0L
         var at = position - 1
         while (at < raf.length()) {
@@ -82,7 +84,7 @@ internal class AmpModuleIds(private val file: File) {
         return raf.length()
     }
 
-    private fun readLine(raf: RandomAccessFile, start: Long): Triple<ByteArray, Long, Long>? {
+    private fun readLine(raf: RandomAccessFile, start: Long, chunk: ByteArray): Triple<ByteArray, Long, Long>? {
         if (start >= raf.length()) return null
         val line = ByteArrayOutputStream()
         var at = start
@@ -104,6 +106,8 @@ internal class AmpModuleIds(private val file: File) {
     }
 
     companion object {
+        private const val CHUNK = 1024
+
         fun compareBytes(a: ByteArray, b: ByteArray): Int {
             for (i in 0 until minOf(a.size, b.size)) {
                 val d = (a[i].toInt() and 0xff) - (b[i].toInt() and 0xff)

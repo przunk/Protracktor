@@ -30,6 +30,24 @@ object AppLocale {
         return true
     }
 
+    private class Localized(val app: Context, val tag: String?, val context: Context)
+
+    @Volatile private var localizedApp: Localized? = null
+
+    /**
+     * The application's context in the app's own language, **for text made away from a screen**
+     * (RV-B004): the player's notices, the download banners, the scan notification. The language is
+     * applied by wrapping a context, and those were built from the bare application context, which
+     * follows the phone's -- so with the app set to English on a Polish phone the screen was English
+     * and the snackbars Polish. Made once per language and kept, since a wrap is not free.
+     */
+    fun localized(context: Context): Context {
+        val app = context.applicationContext
+        val tag = selected(app).languageTag
+        localizedApp?.let { if (it.app === app && it.tag == tag) return it.context }
+        return wrap(app).also { localizedApp = Localized(app, tag, it) }
+    }
+
     fun wrap(context: Context): Context {
         val tag = selected(context).languageTag ?: return context
         val locale = Locale.forLanguageTag(tag)

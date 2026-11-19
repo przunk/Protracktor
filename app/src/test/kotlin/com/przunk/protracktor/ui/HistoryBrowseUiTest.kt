@@ -92,7 +92,7 @@ class HistoryBrowseUiTest {
             override suspend fun playlistTracks() = emptyList<TrackRef>()
             override suspend fun searchCatalogues(query: String, ids: Set<String>, limit: Int, platforms: Set<String>) = emptyList<TrackRef>()
             override suspend fun searchLive(query: String) = ModArchive.Outcome.Found(emptyList())
-            override suspend fun countLocal(query: String) = 0
+            override suspend fun countLocal(query: String, platforms: Set<String>) = 0
             override suspend fun countCatalogues(query: String, ids: Set<String>, platforms: Set<String>) = 0
         }
         val actions = object : BrowseWorkflow.Actions {

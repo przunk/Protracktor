@@ -239,6 +239,16 @@ object Platforms {
     }
 
     /**
+     * Archives whose rows are this platform **when nothing else decides** (RV-B028). AMP is Amiga
+     * music, but not wholly by this table's rules: its `FTM` is Face The Music, which the table files
+     * under Atari ST (C134), and that answer stands. What AMP adds is the rows no directory, name or
+     * prefix places at all -- they were missing from the Amiga chip's search, count and dice.
+     */
+    val lastResortCatalogues: Map<String, Platform> by lazy {
+        mapOf("amp" to AMIGA)
+    }
+
+    /**
      * The platform of a catalogue row, **the one rule** the index stores in its `platform` column
      * and the filter, the chips and the dice read (C89): the archive when it is one machine's, then
      * the directory the archive files it under, then the file's own name. The name comes last
@@ -246,7 +256,7 @@ object Platforms {
      * directory knows which.
      */
     fun forCatalogueRow(catalogueId: String, format: String, fileName: String): Platform? =
-        wholeCatalogues[catalogueId] ?: forCatalogueFormat(format) ?: forFileName(fileName)
+        wholeCatalogues[catalogueId] ?: forCatalogueFormat(format) ?: forFileName(fileName) ?: lastResortCatalogues[catalogueId]
 
     /**
      * Changes whenever anything that decides a row's platform does, so an index stored before the
@@ -256,7 +266,8 @@ object Platforms {
     val fingerprint: String by lazy {
         val table = all.joinToString("|") { p ->
             p.id + ":" + p.catalogueFormats.sorted().joinToString(",") + ":" + p.names.sorted().joinToString(",")
-        } + "|" + wholeCatalogues.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value.id}" }
+        } + "|" + wholeCatalogues.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value.id}" } +
+            "|" + lastResortCatalogues.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value.id}" }
         "platforms:%08x".format(table.hashCode())
     }
 
@@ -283,6 +294,7 @@ object Platforms {
         val byNameGrouped = byName.entries.groupBy({ it.value }, { it.key })
         byNameGrouped.forEach { (platform, names) -> whenIn("ext", names, platform) }
         byNameGrouped.forEach { (platform, names) -> whenIn("pre", names, platform) }
+        lastResortCatalogues.forEach { (catalogue, platform) -> whenIn("catalogue_id", listOf(catalogue), platform) }
         parts.append(" ELSE '' END")
         return parts.toString() to arguments.toTypedArray()
     }
