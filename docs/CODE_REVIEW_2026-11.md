@@ -699,6 +699,12 @@ None found.
   passes the filter through. The comment that said the query had no limit now says what the limit
   is. Checked: `LocalCountPlatformTest` (three files on two platforms: 3 unfiltered, 2 under C64,
   equal to what `search` returns), failing with the filter ignored. Not checked: the phone.
+- **Correction, 2026-11-20:** the fix changed `LibrarySearch.Sources.countLocal` and updated three of
+  its four test fakes; `RecentSearchUiTest`'s was missed. The full-suite runs on the branch passed
+  only because Kotlin's incremental compilation did not recompile that file -- the counts they
+  reported included a test class compiled against the old interface. `release.sh 1.12.0 --check`,
+  building from scratch, did not compile it. Fixed on `fix/recent-search-test-signature`, checked
+  with a from-scratch compile of every test and a full suite after `clean`.
 
 ### RV-B022 — Tracks removed from every playlist still come up in search
 - Severity: Low · Likelihood: common · Evidence: unverified
