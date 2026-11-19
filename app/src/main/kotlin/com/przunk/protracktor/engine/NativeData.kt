@@ -76,7 +76,7 @@ object NativeData {
         val replays = File(target, "Replay").apply { mkdirs() }
         downloaded.forEach { source ->
             val destination = File(replays, source.name)
-            if (!destination.exists()) runCatching { source.copyTo(destination) }
+            if (!destination.exists()) copyWhole(source, destination)
         }
     }
 
@@ -128,17 +128,23 @@ object NativeData {
             // level down and are part of what upstream installs.
             downloaded.walkTopDown().filter { it.isFile }.forEach { source ->
                 val destination = File(File(target, "players"), source.relativeTo(downloaded).path)
-                if (!destination.exists()) {
-                    runCatching {
-                        destination.parentFile?.mkdirs()
-                        source.copyTo(destination)
-                    }
-                }
+                if (!destination.exists()) copyWhole(source, destination)
             }
         }
         val songConf = File(store, "song.conf")
         val installed = File(target, "song.conf")
-        if (songConf.isFile && !installed.exists()) runCatching { songConf.copyTo(installed) }
+        if (songConf.isFile && !installed.exists()) copyWhole(songConf, installed)
+    }
+
+    /**
+     * [source] copied to [destination] whole or not at all (RV-B029). Only missing files are copied
+     * in, so a copy cut short by a full disk was a truncated file nothing would ever replace.
+     */
+    private fun copyWhole(source: File, destination: File) {
+        runCatching {
+            destination.parentFile?.mkdirs()
+            com.przunk.protracktor.net.AtomicFileWrite.write(destination, source.readBytes())
+        }
     }
 
     /**

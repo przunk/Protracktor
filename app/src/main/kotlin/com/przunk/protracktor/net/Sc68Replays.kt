@@ -84,7 +84,9 @@ object Sc68Replays {
                     return@forEach
                 }
                 fetch("$FILE_BASE/$name?p=$REVISION")?.let { bytes ->
-                    runCatching { File(target, name).writeBytes(bytes) }.onSuccess { done++ }
+                    // Whole or not at all (RV-B029): a file cut short would count as installed and
+                    // never be fetched again, since only missing files are.
+                    if (AtomicFileWrite.write(File(target, name), bytes)) done++
                 }
                 onProgress(done, names.size)
             }

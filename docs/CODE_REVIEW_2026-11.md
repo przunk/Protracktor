@@ -730,6 +730,14 @@ None found.
   it arrives, not atomically); `net/UadePlayers.kt:77` (`present` is "more than none").
 - Impact: a partial set shows as downloaded; the missing routines fail one format at a time; a
   truncated file is never replaced, because only missing files are copied in.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** sc68's and UADE's downloads write each file through
+  `AtomicFileWrite` (a temporary file renamed into place), and the copies into the decoders'
+  directories go through one `copyWhole` that does the same, so no truncated file can stand in for a
+  routine. **Left:** `present` still means "more than none", so a set cut short shows as downloaded
+  until it is fetched again -- a stricter test risks disabling the Amiga formats whenever upstream
+  drops one routine. Partially checked: `UnpackPlayersTest`, `AtomicFileWriteTest` and the unpack
+  tests pass; a write cut short by a full disk is not reproduced on the host. Not checked: the
+  phone.
 
 ### RV-B030 — Three actions drawn as a word without an icon
 - Severity: Low · Likelihood: common · Evidence: unverified

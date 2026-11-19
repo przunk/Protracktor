@@ -145,10 +145,9 @@ object UadePlayers {
                 val bytes = ByteArray(size.toInt())
                 if (!tar.readFully(bytes)) break
                 val target = File(into, relative)
-                runCatching {
-                    target.parentFile?.mkdirs()
-                    target.writeBytes(bytes)
-                }.onSuccess { if (segments.size == 1) written++ }
+                // Whole or not at all (RV-B029), for the reason Sc68Replays gives.
+                target.parentFile?.mkdirs()
+                if (AtomicFileWrite.write(target, bytes) && segments.size == 1) written++
                 onProgress(written, EXPECTED)
             } else {
                 tar.skipFully(size)
