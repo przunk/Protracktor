@@ -17,7 +17,7 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C144 In landscape the list cannot be scrolled to its end: the dock covers it — fixed on a branch 2026-11-19
+## C144 In landscape the list cannot be scrolled to its end: the dock covers it — fixed 2026-11-19, merged 2026-11-20
 
 Reported by Ben (AMP) on 2026-11-19 after a couple of days with the app on a Fairphone 5: turned to
 landscape, the list of tunes can no longer be scrolled down, because what is left of it sits behind
@@ -37,8 +37,8 @@ dp left.
 collapsed; it can still be expanded, for that time only, and the form chosen for the upright phone
 is not overwritten. In the test the dock's top is now at 232 dp: the header and at least two rows
 fit above it. **Checked:** `LandscapeShellTest` (failing before the fix at 110 dp; expanding still
-works and leaves the stored form as it was), `DockCollapseUiTest`, `DockShellUiTest`. **Not
-checked:** the phone, and Ben's Fairphone 5. **Left:** the navigation bar keeps its 80 dp on its side
+works and leaves the stored form as it was), `DockCollapseUiTest`, `DockShellUiTest`. **Checked
+on my phone, 2026-11-20:** turning it works. **Not checked:** Ben's Fairphone 5. **Left:** the navigation bar keeps its 80 dp on its side
 too; a navigation rail beside the list would give more room and is a larger change.
 
 
