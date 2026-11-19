@@ -266,6 +266,12 @@ fun ProtracktorApp(
     val shareTitle = stringResource(R.string.share_chooser)
     // The dock's form, remembered across launches; expanded until chosen otherwise (redesign E2).
     var dockCollapsed by remember { mutableStateOf(com.przunk.protracktor.Appearance.dockCollapsed(context)) }
+    // **On a short screen the dock starts collapsed** (C144). A phone on its side is about 360 to 410
+    // dp tall, and the full dock with the navigation bar took 250 of them: the list was left behind
+    // the seek bar and the playing card. There it can still be expanded, for this time only; the
+    // form chosen for the upright phone is not overwritten by what suits it on its side.
+    val shortScreen = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < ShortScreen.HEIGHT_DP
+    var shortScreenExpanded by remember(shortScreen) { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         viewModel.share.collect { intent ->
             context.startActivity(Intent.createChooser(intent, shareTitle))
@@ -507,10 +513,14 @@ fun ProtracktorApp(
                         // The navigation bar is the bottom now and keeps clear of the system bar;
                         // under the scanner, which has no bar, the dock does as it did.
                         insetBottom = selectionPresence.count > 0,
-                        collapsed = dockCollapsed,
+                        collapsed = if (shortScreen) !shortScreenExpanded else dockCollapsed,
                         onCollapsedChange = {
-                            dockCollapsed = it
-                            com.przunk.protracktor.Appearance.selectDockCollapsed(context, it)
+                            if (shortScreen) {
+                                shortScreenExpanded = !it
+                            } else {
+                                dockCollapsed = it
+                                com.przunk.protracktor.Appearance.selectDockCollapsed(context, it)
+                            }
                         },
                         state = state,
                         onSeek = viewModel::seekTo,
@@ -1092,3 +1102,8 @@ private val TOP_BAR_SLOT_SEAM = 1.dp
  */
 private val LABELLED_ACTION_INSET = 3.dp
 
+
+/** Where a screen counts as short (C144): below this height the full dock leaves the list too little. */
+internal object ShortScreen {
+    const val HEIGHT_DP = 480
+}
