@@ -452,6 +452,11 @@ None found.
 - Direction: cap the stated length against the archive's own size and a ceiling; wrap both
   functions as the player's are.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** a member whose stated length passes 64 MiB, or
+  1,024 times the archive's own size, is not extracted (the archive is treated as damaged); both JNI
+  entries catch everything and answer null, check the arrays they make, and the Kotlin side reads a
+  null list as an empty one. Partially checked: compiles in the release build. Not checked: no host
+  test reads a crafted archive; the phone.
 
 ### RV-B010 — A subsong switch waits on the main thread behind a running seek
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)

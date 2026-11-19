@@ -176,7 +176,7 @@ object Lha {
     }
 
     /** Every member's name as `directory/file`. Empty when the bytes are not an archive. */
-    fun list(archive: ByteArray): List<String> = nativeList(archive).toList()
+    fun list(archive: ByteArray): List<String> = nativeList(archive)?.toList().orEmpty()
 
     /**
      * One member's bytes, or null when it is not in there.
@@ -187,6 +187,7 @@ object Lha {
      */
     fun extract(archive: ByteArray, member: String): ByteArray? = nativeExtract(archive, member)
 
-    @JvmStatic private external fun nativeList(archive: ByteArray): Array<String>
+    // Null when the archive could not be read at all (RV-B009: nothing thrown crosses JNI).
+    @JvmStatic private external fun nativeList(archive: ByteArray): Array<String>?
     @JvmStatic private external fun nativeExtract(archive: ByteArray, member: String): ByteArray?
 }
