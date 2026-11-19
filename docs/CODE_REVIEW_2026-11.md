@@ -222,6 +222,13 @@ notices and their text; settings; feature switches; length knowledge; store skel
 
 ## 4. Bugs
 
+**Fixes merged into `develop` on 2026-11-19** (`fix/review-2026-11`, merge `62bcbd60`): RV-B001,
+B002, B003, B004, B005, B006, B007, B008, B009, B011, B013, B014, B017, B020, B021, B027, B028,
+B029, B030, B032, B035, B036, B038, B039, B040; RV-B034 was merged on 2026-11-18. I checked most of
+them on the phone with APK 1634 (`8efd8294`) and accepted all as fixed; one that misbehaves is
+reopened by its number. Each entry's "Fixed" line says what the agent's tests covered. Still open:
+RV-B010, B012, B015, B016, B018, B019, B022, B023, B024, B025, B026, B031, B033, B037.
+
 ### 4.1 Critical
 
 None found.
