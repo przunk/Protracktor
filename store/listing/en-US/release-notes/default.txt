@@ -1,5 +1,5 @@
-Playlists: shown as cards, the open one marked.
-Queue: its view says how many tunes are coming and how many you added by hand; the Queue button shows the hand-added count.
-Now Playing: the actions sit in one row of smaller buttons that scrolls sideways.
-AMP: its map is downloaded again only when it has changed.
-Fixed: tunes from The Mod Archive read "MOD · MOD"; tunes from an imported playlist showed a download address; the app no longer asks for notifications at every start.
+Landscape: the player starts collapsed, so the list keeps its room.
+Links: a shared link naming a server outside the known catalogues asks before downloading.
+Notices, download names and History times follow the app's language.
+Every action in Browse and in Storage on this phone has an icon and a name.
+Fixed: crashes with no usable camera, an unreachable folder, a malformed Modland address or a full disk; a subsong chosen while paused plays; the scrollbar keeps up with the finger.

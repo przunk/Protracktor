@@ -1,5 +1,5 @@
-Playlisty: pokazane jako karty, otwarta jest zaznaczona.
-Kolejka: widok mówi, ile utworów czeka i ile dodałeś ręcznie; przycisk Kolejka pokazuje liczbę dodanych ręcznie.
-Odtwarzacz: akcje są w jednym rzędzie mniejszych przycisków, przewijanym w bok.
-AMP: mapa jest pobierana ponownie tylko wtedy, gdy się zmieniła.
-Poprawki: utwory z The Mod Archive pokazywały „MOD · MOD”; utwory z zaimportowanej playlisty pokazywały adres pobierania; aplikacja nie pyta już o powiadomienia przy każdym starcie.
+Poziomo: odtwarzacz startuje zwinięty, więc lista ma miejsce.
+Linki: link wskazujący serwer spoza znanych katalogów pyta przed pobraniem.
+Komunikaty, nazwy pobrań i godziny w Historii są w języku aplikacji.
+Każda akcja w Przeglądaj i w Miejscu na tym telefonie ma ikonę i nazwę.
+Poprawki: awarie przy niedziałającym aparacie, niedostępnym folderze, błędnym adresie Modlandu i pełnej pamięci; podutwór wybrany w pauzie gra; suwak nadąża za palcem.
