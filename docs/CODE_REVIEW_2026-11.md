@@ -702,6 +702,15 @@ None found.
 - Where: `player/Platforms.kt:238` (`wholeCatalogues` names ASMA and UnExoticA; AMP, which is
   entirely Amiga, is not there).
 - Impact: such rows are absent from the Amiga chip's search, count and Random.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** an AMP row that no directory, name or prefix
+  places is Amiga (`Platforms.lastResortCatalogues`, in the function and in the SQL `CASE` alike);
+  a row the table does place keeps that answer. **The review's premise was too wide:** AMP is not
+  wholly Amiga by this table -- its `FTM` is Face The Music, filed under Atari ST since C134, and a
+  first version of this fix that made every AMP row Amiga broke `AmpTest`, which records that. The
+  platforms fingerprint covers the new map, so stored indexes are re-decided locally. Checked:
+  `PlatformsTest` and `PlatformColumnTest` (an unplaced AMP row is Amiga, Face The Music on AMP
+  stays Atari ST, function and stored column agree), each failing with its half of the rule
+  removed. Not checked: the phone.
 
 ### RV-B029 — An interrupted replay download counts as installed
 - Severity: Low · Likelihood: rare · Evidence: unverified
