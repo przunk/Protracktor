@@ -1410,7 +1410,13 @@ public:
         if (!tune_.getStatus()) {
             throw std::runtime_error(std::string("the Commodore 64 decoder (libsidplayfp) does not see a SID here: ") + tune_.statusString());
         }
-        tune_.selectSong(0);
+        // **The song the file names, recorded** (RV-B003). Asked for with 0, libsidplayfp selects
+        // the header's own start song -- which need not be the first -- and says which, counting
+        // from one. `song_` stayed 0, so the app was told it was on the first: the length of
+        // another song, the wrong tune in the strip, and under "play all" the first never played
+        // while the start song played twice. ASAP and game-music-emu already record theirs.
+        const unsigned int active = tune_.selectSong(0);
+        song_ = active > 0 ? static_cast<int>(active) - 1 : 0;
         info_ = tune_.getInfo();
 
         // **A BASIC program, not machine code** (`docs/STATUS.md` C80). An RSID with this flag is

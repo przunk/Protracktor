@@ -310,6 +310,13 @@ None found.
 - Already known: partly. `docs/STATUS.md` C30 (the web player believed every file was on its first
   tune) fixed what a backend reports after a switch and notes that ASAP's default is not always
   zero; the SID's own default at open was left.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the SID backend records the song libsidplayfp
+  actually selected at open (`selectSong(0)` returns it, counting from one) instead of leaving it at
+  the first -- question 5 taken on the review's recommendation in my absence: the file's own start
+  song, shown correctly. The web player gets the same code when its WebAssembly engine is next
+  built; it is not rebuilt here. Partially checked: compiles in the release build. Not checked: no
+  host test opens a real SID, so the path is not run; the phone (a multi-song SID whose header
+  starts elsewhere than song 1: the strip marks that song, its length is right).
 
 ### RV-B004 — Notices from the controller ignore the language chosen in the app
 - Severity: Medium · Likelihood: common for anyone whose app language differs from the phone's ·
