@@ -330,6 +330,15 @@ None found.
 - Direction: one provider of localised text that wraps once, handed to everything that builds a
   notice (RV-S005). The test that exists for this purpose does not see it (§8).
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `AppLocale.localized` gives the application context
+  in the app's language, made once per language and application and kept; the controller reads every
+  string through it (89 `getString`, 13 plurals, History's relative times, the heart feedback), and
+  so do `AndroidDownloadText`, `AndroidMaintenanceText`, `AndroidPlaylistText` and the scan
+  notification. One provider of localised text for every notice (RV-S005) is left for the
+  architectural work; this is its first half. Checked: `LinkControllerTest` -- on an English phone
+  with the app set to Polish, the real controller's notice for an unreadable link was English with
+  the controller reading the bare context, which reproduces the defect, and Polish with the fix. Not
+  checked: the phone.
 
 ### RV-B005 — Music started from a page link plays without the foreground service
 - Severity: Medium · Likelihood: plausible · Evidence: unverified (reading)
@@ -708,6 +717,12 @@ None found.
   (the labels in the download banner, with "done/total" appended);
   `player/PlaybackController.kt:1627`, `:1662-1663` (share subjects);
   `player/PlaylistTransfer.kt` (the default names "playlist" and "Imported").
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the banner names of the song lengths, track
+  metadata, favourites and both replay downloads are `DownloadText.Label`s with PL and EN strings
+  (the exhaustive `when` in `AndroidDownloadText` makes a missing translation not compile); the
+  default names of an exported and an imported playlist, and the subject of a shared queue, are
+  string resources. Checked: `LinkControllerTest` (a banner name in Polish), `ReplayDownloadsTest`,
+  `PlaylistTransferTest`. Not checked: the phone.
 
 ### RV-B028 — AMP's tunes are missing from the Amiga platform where their prefix is not listed
 - Severity: Low · Likelihood: plausible · Evidence: unverified

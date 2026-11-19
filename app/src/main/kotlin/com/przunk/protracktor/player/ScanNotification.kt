@@ -27,7 +27,9 @@ object ScanNotification {
     private const val CHANNEL_ID = "scanning"
     private const val ID = 2
 
-    fun show(context: Context, folder: String, done: Int, total: Int) {
+    fun show(base: Context, folder: String, done: Int, total: Int) {
+        // In the app's language, not the phone's (RV-B004).
+        val context = com.przunk.protracktor.AppLocale.localized(base)
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
             NotificationChannel(

@@ -23,6 +23,9 @@ import org.robolectric.annotation.Config
 class AndroidMaintenanceTextTest {
     private fun context(language: String): Context {
         val app = RuntimeEnvironment.getApplication()
+        // The way the app sets it (RV-B004): its own language setting, which the providers follow
+        // whatever context they are handed. The configured context below gives the expected text.
+        com.przunk.protracktor.AppLocale.select(app, com.przunk.protracktor.AppLanguage.fromStored(language))
         val config = Configuration(app.resources.configuration).apply { setLocale(Locale.forLanguageTag(language)) }
         return app.createConfigurationContext(config)
     }

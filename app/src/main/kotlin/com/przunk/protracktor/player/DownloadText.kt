@@ -27,7 +27,11 @@ internal sealed interface DownloadNotice {
 
 /** Formats a notice when the workflow creates it, including notices retained for a later step. */
 internal interface DownloadText {
-    enum class Label { SONG_METADATA, ALL_RUNNING, REPLAY_ROUTINES }
+    enum class Label {
+        SONG_METADATA, ALL_RUNNING, REPLAY_ROUTINES,
+        // The banners' own names, once English constants (RV-B027).
+        TRACK_METADATA, FAVOURITES, SONG_LENGTHS, ATARI_REPLAYS, AMIGA_REPLAYS,
+    }
     fun label(label: Label): String
     fun message(notice: DownloadNotice): Message
 }

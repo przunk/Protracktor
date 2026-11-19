@@ -128,12 +128,15 @@ class PlaybackController private constructor(private val context: Context) {
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
     // itself moves to IO where it belongs.
+    /** Text the player makes is in the app's language, not the phone's (RV-B004). */
+    private val localized: Context get() = com.przunk.protracktor.AppLocale.localized(context)
+
     // One failure path for everything launched here (RV-B014): reported, not fatal.
     private val scope = ControllerFailures.scope(::reportFailure)
 
     private fun reportFailure(failure: Exception) {
         android.util.Log.e("Protracktor", "Unhandled failure in the player's work", failure)
-        val said = context.getString(
+        val said = localized.getString(
             if (ControllerFailures.isStorage(failure)) R.string.notice_failed_storage else R.string.notice_failed,
             failure.javaClass.simpleName,
         )
@@ -281,7 +284,7 @@ class PlaybackController private constructor(private val context: Context) {
      * the name is then the user's data, and switching the app's language does not rename what
      * somebody may have renamed themselves.
      */
-    private val defaultPlaylistName: String get() = context.getString(R.string.playlist_default_name)
+    private val defaultPlaylistName: String get() = localized.getString(R.string.playlist_default_name)
 
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
@@ -452,7 +455,7 @@ class PlaybackController private constructor(private val context: Context) {
         resolve = catalogueBrowser::resolveSavedPlace,
         show = catalogueBrowser::showSavedPlace,
         isShowingList = { _browse.value.domain == BrowseDomain.SAVED },
-        notice = { notice -> say(Message(context.getString(when (notice) {
+        notice = { notice -> say(Message(localized.getString(when (notice) {
             SavedPlaces.Notice.SAVED -> R.string.saved_place_added
             SavedPlaces.Notice.ALREADY_SAVED -> R.string.saved_place_exists
             SavedPlaces.Notice.REMOVED -> R.string.saved_place_removed
@@ -460,7 +463,7 @@ class PlaybackController private constructor(private val context: Context) {
             SavedPlaces.Notice.UNAVAILABLE -> R.string.saved_place_unavailable
         }))) },
         removed = { undo -> say(Message(
-            context.getString(R.string.saved_place_removed),
+            localized.getString(R.string.saved_place_removed),
             actionLabel = if (undo != null) UNDO else null,
             action = undo,
         )) },
@@ -520,6 +523,10 @@ class PlaybackController private constructor(private val context: Context) {
                 _share.tryEmit(AndroidPlaylistFiles.shareIntent(uri, subject))
             }
         },
+        names = {
+            PlaylistTransfer.Names(localized.getString(R.string.playlist_default_export_name),
+                localized.getString(R.string.playlist_default_import_name))
+        },
     )
 
     private val librarySearch = LibrarySearch(object : LibrarySearch.Sources {
@@ -551,7 +558,7 @@ class PlaybackController private constructor(private val context: Context) {
         onSubmitted = recentSearchHistory::record,
         onSearchFailed = { failure ->
             android.util.Log.w("Protracktor", "Search failed", failure)
-            val text = com.przunk.protracktor.AppLocale.wrap(context).getString(R.string.notice_search_failed)
+            val text = localized.getString(R.string.notice_search_failed)
             _state.update { it.copy(message = Message(text)) }
         },
         actions = object : BrowseWorkflow.Actions {
@@ -568,9 +575,9 @@ class PlaybackController private constructor(private val context: Context) {
         onLiveResult = { live ->
             when (live) {
                 is ModArchive.Outcome.NotReached ->
-                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreachable))) }
+                    _state.update { it.copy(message = Message(localized.getString(R.string.notice_modarchive_unreachable))) }
                 is ModArchive.Outcome.Unreadable ->
-                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreadable))) }
+                    _state.update { it.copy(message = Message(localized.getString(R.string.notice_modarchive_unreadable))) }
                 is ModArchive.Outcome.Found -> Unit
             }
         },
@@ -827,7 +834,7 @@ class PlaybackController private constructor(private val context: Context) {
                     }
                     OutputRecovery.FAILED -> {
                         pause()
-                        say(Message(context.getString(R.string.notice_audio_device_failed)))
+                        say(Message(localized.getString(R.string.notice_audio_device_failed)))
                         continue
                     }
                 }
@@ -935,7 +942,7 @@ class PlaybackController private constructor(private val context: Context) {
         } },
         resolveMetadata = ::resolveMetadataInBackground,
         notice = { outcome, heart ->
-            val text = PlaylistHeartActions.feedback(context, outcome, heart)
+            val text = PlaylistHeartActions.feedback(localized, outcome, heart)
             // Toast supplies background feedback; the notice remains available when returning.
             say(Message(text))
             android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
@@ -1061,7 +1068,7 @@ class PlaybackController private constructor(private val context: Context) {
             if (candidates == null) {
                 _browse.update { it.copy(scanProgress = null) }
                 _state.update {
-                    it.copy(message = Message(context.getString(R.string.notice_scan_unreadable, folder.displayName)))
+                    it.copy(message = Message(localized.getString(R.string.notice_scan_unreadable, folder.displayName)))
                 }
                 return@launch
             }
@@ -1096,7 +1103,7 @@ class PlaybackController private constructor(private val context: Context) {
                     ScanNotification.clear(context)
                     _browse.update { it.copy(scanProgress = null) }
                     _state.update {
-                        it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done, candidates.size)))
+                        it.copy(message = Message(localized.getString(R.string.notice_scan_stopped, done, candidates.size)))
                     }
                 },
             )
@@ -1113,7 +1120,7 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     message = Message(
                         // With the time it took and how much was kept, so "slow" has a number.
-                        context.getString(
+                        localized.getString(
                             R.string.notice_scanned_timed,
                             folder.displayName, indexed.size, candidates.size,
                             DateUtils.formatElapsedTime((SystemClock.elapsedRealtime() - startedAt) / 1000),
@@ -1199,12 +1206,12 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val bytes = trackFiles.read(ref)
             if (bytes == null) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_unreadable, ref.title))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_track_unreadable, ref.title))) }
                 return@launch
             }
             val uri = remoteFiles.shareableCopy(ref.fileNameOrTitle, bytes)
             if (uri == null) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_share_failed, ref.title))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_share_failed, ref.title))) }
                 return@launch
             }
             _share.tryEmit(
@@ -1240,14 +1247,14 @@ class PlaybackController private constructor(private val context: Context) {
                 if (uri == null) unreadable++ else uris += uri
             }
             if (uris.isEmpty()) {
-                say(Message(context.getString(R.string.notice_share_none_readable)))
+                say(Message(localized.getString(R.string.notice_share_none_readable)))
                 return@launch
             }
             _share.tryEmit(
                 Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                     type = "application/octet-stream"
                     putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
-                    putExtra(Intent.EXTRA_SUBJECT, context.resources.getQuantityString(R.plurals.share_subject_tunes, uris.size, uris.size))
+                    putExtra(Intent.EXTRA_SUBJECT, localized.resources.getQuantityString(R.plurals.share_subject_tunes, uris.size, uris.size))
                     // The read grant travels with ClipData for a multiple send; the flag alone covers one.
                     clipData = android.content.ClipData.newRawUri(null, uris.first()).also { clip ->
                         uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
@@ -1255,7 +1262,7 @@ class PlaybackController private constructor(private val context: Context) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             )
-            if (unreadable > 0) say(Message(context.resources.getQuantityString(
+            if (unreadable > 0) say(Message(localized.resources.getQuantityString(
                 R.plurals.notice_share_some_unreadable, unreadable, unreadable)))
         }
     }
@@ -1266,37 +1273,37 @@ class PlaybackController private constructor(private val context: Context) {
         if (tracks.isEmpty()) return
         val links = SelectionShare.links(tracks)
         if (links.shared == 0) {
-            say(Message(context.getString(R.string.notice_link_online_only)))
+            say(Message(localized.getString(R.string.notice_link_online_only)))
             return
         }
         _share.tryEmit(
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, links.text)
-                putExtra(Intent.EXTRA_SUBJECT, context.resources.getQuantityString(R.plurals.share_subject_tunes, links.shared, links.shared))
+                putExtra(Intent.EXTRA_SUBJECT, localized.resources.getQuantityString(R.plurals.share_subject_tunes, links.shared, links.shared))
             }
         )
-        if (links.without > 0) say(Message(context.resources.getQuantityString(
+        if (links.without > 0) say(Message(localized.resources.getQuantityString(
             R.plurals.notice_share_links_without, links.without, links.without)))
     }
 
     /** Capture the selected tune before asynchronous source reads. */
     fun useForAlarms(ref: TrackRef) {
         if (!com.przunk.protracktor.alarms.api.MusicAlarms.enabled) {
-            say(Message(context.getString(R.string.alarm_feature_unavailable))); return
+            say(Message(localized.getString(R.string.alarm_feature_unavailable))); return
         }
         val selected = alarmSelection(ref)
         scope.launch {
-            say(Message(context.getString(R.string.alarm_preparing, ref.title)))
+            say(Message(localized.getString(R.string.alarm_preparing, ref.title)))
             try {
                 com.przunk.protracktor.alarms.api.MusicAlarms.prepare(context, selected) { alarmMusicInput(ref) }
-                say(Message(context.getString(R.string.alarm_music_ready)))
+                say(Message(localized.getString(R.string.alarm_music_ready)))
             } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
-                say(Message(context.getString(R.string.alarm_prepare_failed)))
+                say(Message(localized.getString(R.string.alarm_prepare_failed)))
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (failure: Exception) {
                 android.util.Log.w("Protracktor", "Alarm preparation failed", failure)
-                say(Message(context.getString(R.string.alarm_prepare_failed)))
+                say(Message(localized.getString(R.string.alarm_prepare_failed)))
             }
         }
     }
@@ -1331,14 +1338,14 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun shareAsAudio(ref: TrackRef) {
         if (sharingAudio?.isActive == true) {
-            say(Message(context.getString(R.string.notice_share_audio_busy)))
+            say(Message(localized.getString(R.string.notice_share_audio_busy)))
             return
         }
         sharingAudio = scope.launch {
-            say(Message(context.getString(R.string.notice_share_audio_preparing, ref.title)))
+            say(Message(localized.getString(R.string.notice_share_audio_preparing, ref.title)))
             val bytes = trackFiles.read(ref)
             if (bytes == null) {
-                say(Message(context.getString(R.string.notice_track_unreadable, ref.title)))
+                say(Message(localized.getString(R.string.notice_track_unreadable, ref.title)))
                 return@launch
             }
             val companions = trackFiles.companions(ref)
@@ -1351,10 +1358,10 @@ class PlaybackController private constructor(private val context: Context) {
                     .getOrNull()
             }
             if (uri == null) {
-                say(Message(context.getString(R.string.notice_share_audio_failed, ref.title)))
+                say(Message(localized.getString(R.string.notice_share_audio_failed, ref.title)))
                 return@launch
             }
-            say(Message(context.getString(R.string.notice_share_audio_ready, ref.title)))
+            say(Message(localized.getString(R.string.notice_share_audio_ready, ref.title)))
             _share.tryEmit(
                 Intent(Intent.ACTION_SEND).apply {
                     type = "audio/mp4"
@@ -1413,7 +1420,7 @@ class PlaybackController private constructor(private val context: Context) {
         val text = SelectionShare.linkFor(ref)
         if (text == null) {
             _state.update {
-                it.copy(message = Message(context.getString(R.string.notice_link_online_only)))
+                it.copy(message = Message(localized.getString(R.string.notice_link_online_only)))
             }
             return
         }
@@ -1451,7 +1458,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueToBrowser() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_nothing_to_send))) }
             return
         }
         val paired = Appearance.pairedEndpoint(context)
@@ -1475,7 +1482,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
             _browse.update { it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context)) }
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_paired_empty))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_paired_empty))) }
             return
         }
         postQueue(endpoint, tracks, remember = true)
@@ -1490,7 +1497,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun forgetPairing() {
         Appearance.rememberPairing(context, null)
         _browse.update { it.copy(pairedBrowser = false) }
-        _state.update { it.copy(message = Message(context.getString(R.string.notice_pairing_forgotten))) }
+        _state.update { it.copy(message = Message(localized.getString(R.string.notice_pairing_forgotten))) }
     }
 
     /**
@@ -1551,11 +1558,11 @@ class PlaybackController private constructor(private val context: Context) {
                         it.copy(
                             message = Message(
                                 if (leftBehind == 0) {
-                                    context.resources.getQuantityString(
+                                    localized.resources.getQuantityString(
                                         R.plurals.notice_sent_to_browser, tracks.size, tracks.size,
                                     )
                                 } else {
-                                    context.getString(
+                                    localized.getString(
                                         R.string.notice_sent_some_too_big,
                                         tracks.size - leftBehind, leftBehind,
                                     )
@@ -1573,7 +1580,7 @@ class PlaybackController private constructor(private val context: Context) {
                         it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
                     }
                     _state.update {
-                        it.copy(message = Message(context.getString(R.string.notice_page_not_open)))
+                        it.copy(message = Message(localized.getString(R.string.notice_page_not_open)))
                     }
                 }
                 is WebRemote.Outcome.Unreachable -> {
@@ -1585,7 +1592,7 @@ class PlaybackController private constructor(private val context: Context) {
                     _state.update {
                         it.copy(
                             message = Message(
-                                context.getString(R.string.notice_browser_unreachable, outcome.reason)
+                                localized.getString(R.string.notice_browser_unreachable, outcome.reason)
                             )
                         )
                     }
@@ -1608,7 +1615,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueAsLink() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_nothing_to_send))) }
             return
         }
         shareQueueAsLink(tracks)
@@ -1619,7 +1626,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (packed.sent == 0) {
             _state.update {
                 it.copy(
-                    message = Message(context.getString(R.string.notice_link_none_sendable))
+                    message = Message(localized.getString(R.string.notice_link_none_sendable))
                 )
             }
             return
@@ -1633,7 +1640,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        context.getString(R.string.notice_link_truncated, packed.sent, packed.left)
+                        localized.getString(R.string.notice_link_truncated, packed.sent, packed.left)
                     )
                 )
             }
@@ -1642,7 +1649,7 @@ class PlaybackController private constructor(private val context: Context) {
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, link)
-                putExtra(Intent.EXTRA_SUBJECT, "Protracktor queue")
+                putExtra(Intent.EXTRA_SUBJECT, localized.getString(R.string.share_subject_queue))
             }
         )
     }
@@ -1666,11 +1673,11 @@ class PlaybackController private constructor(private val context: Context) {
                     message = Message(
                         when {
                             one != null && QueueLink.isMp3(one) ->
-                                context.getString(R.string.notice_send_mp3)
+                                localized.getString(R.string.notice_send_mp3)
                             one != null ->
-                                context.getString(R.string.notice_send_one_local)
+                                localized.getString(R.string.notice_send_one_local)
                             else ->
-                                context.getString(R.string.notice_send_none)
+                                localized.getString(R.string.notice_send_none)
                         }
                     )
                 )
@@ -1692,7 +1699,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        context.getString(
+                        localized.getString(
                             R.string.notice_send_partial,
                             sendable.size, tracks.size - sendable.size,
                         )
@@ -1725,7 +1732,7 @@ class PlaybackController private constructor(private val context: Context) {
             val from = Catalogue.owning(ref.id)
             if (from == null) {
                 _state.update {
-                    it.copy(message = Message(context.getString(R.string.notice_online_only_action)))
+                    it.copy(message = Message(localized.getString(R.string.notice_online_only_action)))
                 }
                 return@launch
             }
@@ -1738,7 +1745,7 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            context.getString(R.string.notice_no_author_live, from.displayName)
+                            localized.getString(R.string.notice_no_author_live, from.displayName)
                         )
                     )
                 }
@@ -1756,7 +1763,7 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            context.getString(R.string.notice_not_in_index, from.displayName)
+                            localized.getString(R.string.notice_not_in_index, from.displayName)
                         )
                     )
                 }
@@ -1836,7 +1843,7 @@ class PlaybackController private constructor(private val context: Context) {
         clear = { history.clear() },
         onFailure = {
             android.util.Log.w("Protracktor", "History read failed", it)
-            val text = com.przunk.protracktor.AppLocale.wrap(context).getString(R.string.notice_history_read_failed)
+            val text = localized.getString(R.string.notice_history_read_failed)
             _state.update { state -> state.copy(message = Message(text)) }
         },
     )
@@ -1880,7 +1887,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private fun whenPlayed(millis: Long): String =
         DateUtils.getRelativeDateTimeString(
-            context,
+            localized,
             millis,
             DateUtils.MINUTE_IN_MILLIS,
             DateUtils.WEEK_IN_MILLIS,
@@ -1896,10 +1903,10 @@ class PlaybackController private constructor(private val context: Context) {
         historyBrowser.clearAll(
             clearAction = {
                 cleared.await()
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_history_cleared))) }
             },
             onFailure = {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_history_clear_failed))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_history_clear_failed))) }
             },
         )
     }
@@ -1994,7 +2001,7 @@ class PlaybackController private constructor(private val context: Context) {
         val opened = QueueLink.open(url)
         if (opened == null || opened.tracks.isEmpty()) {
             _state.update {
-                it.copy(message = Message(context.getString(
+                it.copy(message = Message(localized.getString(
                     if (opened == null) R.string.notice_link_unreadable else R.string.notice_link_nothing_playable,
                 )))
             }
@@ -2024,8 +2031,8 @@ class PlaybackController private constructor(private val context: Context) {
     private fun playLink(opened: QueueLink.Opened) {
         playFromResults(opened.tracks, 0)
         val count = opened.tracks.size
-        val said = context.resources.getQuantityString(R.plurals.notice_link_opened, count, count) +
-            if (opened.stayed > 0) " " + context.resources.getQuantityString(R.plurals.notice_link_stayed, opened.stayed, opened.stayed) else ""
+        val said = localized.resources.getQuantityString(R.plurals.notice_link_opened, count, count) +
+            if (opened.stayed > 0) " " + localized.resources.getQuantityString(R.plurals.notice_link_stayed, opened.stayed, opened.stayed) else ""
         _state.update { it.copy(message = Message(said)) }
     }
 
@@ -2174,7 +2181,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (failedRandomPicks > maxFailedRandomPicks) {
             failedRandomPicks = 0
             _state.update {
-                it.copy(message = Message(context.getString(R.string.notice_random_gave_up)))
+                it.copy(message = Message(localized.getString(R.string.notice_random_gave_up)))
             }
             return
         }
@@ -2213,9 +2220,9 @@ class PlaybackController private constructor(private val context: Context) {
             // narrowed dice that comes back empty means the index went away underneath it -- and
             // being told to index a catalogue, having just indexed one, teaches nothing.
             val empty = when (_browse.value.randomScope) {
-                is RandomScope.Everything -> context.getString(R.string.notice_random_nothing_indexed)
-                is RandomScope.OnPlatform -> context.getString(R.string.notice_random_nothing_for_platform)
-                is RandomScope.Favourites -> context.getString(R.string.notice_random_no_favourites)
+                is RandomScope.Everything -> localized.getString(R.string.notice_random_nothing_indexed)
+                is RandomScope.OnPlatform -> localized.getString(R.string.notice_random_nothing_for_platform)
+                is RandomScope.Favourites -> localized.getString(R.string.notice_random_no_favourites)
             }
             _state.update { it.copy(message = Message(empty), randomExhausted = true) }
             return
@@ -2299,7 +2306,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun openQueueSource(expected: QueueSource, edits: SourcePlaylistEdits = SourcePlaylistEdits.KEEP,
         onOpened: (QueueSourceView) -> Unit) {
         val state = _state.value
-        fun unavailable() { _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unavailable))) } }
+        fun unavailable() { _state.update { it.copy(message = Message(localized.getString(R.string.queue_source_unavailable))) } }
         if (state.activePlayback.source != expected) { unavailable(); return }
         val destination = QueueSourceNavigation.destination(expected, state.playlists.map { it.id }.toSet(),
             randomSession, sessionBrowse) ?: run { unavailable(); return }
@@ -2308,7 +2315,7 @@ class PlaybackController private constructor(private val context: Context) {
                 val id = (expected as QueueSource.Playlist).id
                 if (id == state.activePlaylistId) { onOpened(destination); return }
                 if (state.dirty && edits == SourcePlaylistEdits.KEEP) {
-                    _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unsaved))) }
+                    _state.update { it.copy(message = Message(localized.getString(R.string.queue_source_unsaved))) }
                     return
                 }
                 if (state.dirty && edits == SourcePlaylistEdits.SAVE) {
@@ -2317,12 +2324,12 @@ class PlaybackController private constructor(private val context: Context) {
                         val current = _state.value
                         if (current.activePlaylistId != selectedId) return@savePlaylist
                         if (!saved) {
-                            _state.update { it.copy(message = Message(context.getString(R.string.queue_source_save_failed))) }
+                            _state.update { it.copy(message = Message(localized.getString(R.string.queue_source_save_failed))) }
                         } else if (current.activePlayback.source != expected) {
                             // Saving succeeded, but a new context superseded the navigation request.
                             return@savePlaylist
                         } else if (current.dirty) {
-                            _state.update { it.copy(message = Message(context.getString(R.string.queue_source_unsaved))) }
+                            _state.update { it.copy(message = Message(localized.getString(R.string.queue_source_unsaved))) }
                         } else openQueueSource(expected, SourcePlaylistEdits.KEEP, onOpened)
                     }
                     return
@@ -2378,9 +2385,9 @@ class PlaybackController private constructor(private val context: Context) {
         // on the way. Saying it once is both simpler and true regardless of ordering.
         appendTracks(listOf(ref)) { added, _ ->
             if (added > 0) {
-                Message(context.getString(R.string.notice_added_track, ref.title))
+                Message(localized.getString(R.string.notice_added_track, ref.title))
             } else {
-                Message(context.getString(R.string.notice_track_already_here, ref.title))
+                Message(localized.getString(R.string.notice_track_already_here, ref.title))
             }
         }
     }
@@ -2430,7 +2437,7 @@ class PlaybackController private constructor(private val context: Context) {
         // for both is the same, so the message says it rather than "could not be downloaded".
         if (!fetched) Amp.pathFrom(ref.id)?.let { path ->
             if (withContext(Dispatchers.IO) { remoteFiles.ampModuleIds.idFor(path) } == null)
-                return context.getString(R.string.open_failed_amp_unmapped, ref.title)
+                return localized.getString(R.string.open_failed_amp_unmapped, ref.title)
         }
         val name = ref.fileNameOrTitle
         val claimed = SupportedFormats.looksPlayable(name)
@@ -2438,25 +2445,25 @@ class PlaybackController private constructor(private val context: Context) {
             withContext(Dispatchers.IO) { !UadePlayers.present(context) }
         return when (OpenFailure.kindOf(fetched, claimed, reason, needsPlayers, missingCompanions.isNotEmpty())) {
             OpenFailure.Kind.COMPANION_MISSING ->
-                context.getString(R.string.open_failed_companion, ref.title, missingCompanions.joinToString())
+                localized.getString(R.string.open_failed_companion, ref.title, missingCompanions.joinToString())
             OpenFailure.Kind.NOT_FETCHED ->
-                context.getString(R.string.open_failed_not_fetched, ref.title)
+                localized.getString(R.string.open_failed_not_fetched, ref.title)
             OpenFailure.Kind.NEEDS_AMIGA_PLAYERS ->
-                context.getString(R.string.open_failed_needs_players, ref.title)
+                localized.getString(R.string.open_failed_needs_players, ref.title)
             OpenFailure.Kind.FORMAT_UNSUPPORTED ->
-                context.getString(
+                localized.getString(
                     R.string.open_failed_format,
                     OpenFailure.formatName(catalogueFormatOf(ref), name),
                 )
             OpenFailure.Kind.FILE_REFUSED_WITH_REASON -> {
-                val refused = context.getString(R.string.open_failed_file_because, ref.title, reason)
+                val refused = localized.getString(R.string.open_failed_file_because, ref.title, reason)
                 OpenFailure.modlandFormatOf(ref.id)
-                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+                    ?.let { localized.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
             }
             OpenFailure.Kind.FILE_REFUSED -> {
-                val refused = context.getString(R.string.open_failed_file, ref.title)
+                val refused = localized.getString(R.string.open_failed_file, ref.title)
                 OpenFailure.modlandFormatOf(ref.id)
-                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+                    ?.let { localized.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
             }
         }
     }
@@ -2496,13 +2503,13 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val message = when {
                 tracks.size == 1 && added == 1 ->
-                    Message(context.getString(R.string.notice_added_to_named_playlist, tracks.first().title, targetName))
+                    Message(localized.getString(R.string.notice_added_to_named_playlist, tracks.first().title, targetName))
                 tracks.size == 1 && added == 0 ->
-                    Message(context.getString(R.string.notice_already_in_playlist, tracks.first().title, targetName))
+                    Message(localized.getString(R.string.notice_already_in_playlist, tracks.first().title, targetName))
                 added > 0 ->
-                    Message(context.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, added, added, targetName))
+                    Message(localized.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, added, added, targetName))
                 else ->
-                    Message(context.getString(R.string.notice_all_already_in_playlist, targetName))
+                    Message(localized.getString(R.string.notice_all_already_in_playlist, targetName))
             }
             _state.update { it.copy(message = message) }
         }
@@ -2520,9 +2527,9 @@ class PlaybackController private constructor(private val context: Context) {
             val updated = store.playlists()
             _state.update { it.copy(playlists = updated) }
             val message = if (tracks.size == 1) {
-                Message(context.getString(R.string.notice_added_to_named_playlist, tracks.first().title, finalName))
+                Message(localized.getString(R.string.notice_added_to_named_playlist, tracks.first().title, finalName))
             } else {
-                Message(context.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, tracks.size, tracks.size, finalName))
+                Message(localized.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, tracks.size, tracks.size, finalName))
             }
             _state.update { it.copy(message = message) }
         }
@@ -2565,7 +2572,7 @@ class PlaybackController private constructor(private val context: Context) {
                 appendTracks(accepted, ::describeAdded)
                 return@launch
             }
-            val refusal = context.resources.getQuantityString(
+            val refusal = localized.resources.getQuantityString(
                 R.plurals.notice_picked_unplayable, refused.size, refused.size, PickedFiles.named(refused),
             )
             if (accepted.isEmpty()) say(Message(refusal))
@@ -2647,20 +2654,20 @@ class PlaybackController private constructor(private val context: Context) {
         // language.
         val where = _state.value.activePlaylistName
         return when {
-            added == 0 && skipped == 0 -> Message(context.getString(R.string.notice_nothing_playable))
-            added == 0 -> Message(context.getString(R.string.notice_all_already_here))
+            added == 0 && skipped == 0 -> Message(localized.getString(R.string.notice_nothing_playable))
+            added == 0 -> Message(localized.getString(R.string.notice_all_already_here))
             skipped == 0 && where != null -> Message(
-                context.resources.getQuantityString(
+                localized.resources.getQuantityString(
                     R.plurals.notice_added_count_to_playlist, added, added, where,
                 )
             )
             skipped == 0 -> Message(
-                context.resources.getQuantityString(R.plurals.notice_added_count, added, added)
+                localized.resources.getQuantityString(R.plurals.notice_added_count, added, added)
             )
             where != null -> Message(
-                context.getString(R.string.notice_added_some_already_named, added, where, skipped)
+                localized.getString(R.string.notice_added_some_already_named, added, where, skipped)
             )
-            else -> Message(context.getString(R.string.notice_added_some_already, added, skipped))
+            else -> Message(localized.getString(R.string.notice_added_some_already, added, skipped))
         }
     }
 
@@ -2717,9 +2724,9 @@ class PlaybackController private constructor(private val context: Context) {
                 dirty = true,
                 message = Message(
                     text = if (removed.size == 1) {
-                        context.getString(R.string.notice_removed_one, removed.first().track.title)
+                        localized.getString(R.string.notice_removed_one, removed.first().track.title)
                     } else {
-                        context.resources.getQuantityString(
+                        localized.resources.getQuantityString(
                             R.plurals.notice_removed_count, removed.size, removed.size,
                         )
                     },
@@ -2780,7 +2787,7 @@ class PlaybackController private constructor(private val context: Context) {
         when (com.przunk.protracktor.alarms.api.MusicAlarms.playbackGate(context)) {
             com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Clear -> return false
             is com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Ringing ->
-                say(Message(context.getString(R.string.alarm_finish_first)))
+                say(Message(localized.getString(R.string.alarm_finish_first)))
             com.przunk.protracktor.alarms.api.AlarmPlaybackGate.Loading -> {
                 retireAlarmIntent()
                 val intent = alarmIntent
@@ -2833,7 +2840,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Keep the edit's Undo action while explaining why its old playback request was retired.
             if (now.message?.actionLabel != null) android.widget.Toast.makeText(context,
                 R.string.notice_pending_playlist_changed, android.widget.Toast.LENGTH_LONG).show()
-            else say(Message(context.getString(R.string.notice_pending_playlist_changed)))
+            else say(Message(localized.getString(R.string.notice_pending_playlist_changed)))
             return
         }
         if (origin != null) sessionBrowse = origin
@@ -2939,7 +2946,7 @@ class PlaybackController private constructor(private val context: Context) {
         // refusal leaves everything as it was.
         val wasPaused = !now.playing
         if (wasPaused && !audioFocus.acquire()) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_audio_busy))) }
             return
         }
         rememberLoudness()
@@ -3053,7 +3060,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (!_state.value.playing && alarmBlocksPlayback { togglePlayPause() }) return
         val current = _state.value.current
         if (current?.id?.startsWith("amp://") == true && !Amp.access.enabled) {
-            say(Message(context.getString(R.string.notice_amp_disabled)))
+            say(Message(localized.getString(R.string.notice_amp_disabled)))
             return
         }
         // **A track being fetched can be called off.** Pressing play on something not cached
@@ -3069,7 +3076,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (subsongNormalization.pending) {
             val play = !_state.value.playing
             if (play && !audioFocus.acquire()) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_audio_busy))) }
                 return
             }
             if (!play) audioFocus.release()
@@ -3123,7 +3130,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Asking first, and not starting if refused: a player that talks over a phone call is
             // worse than one that does nothing.
             if (!audioFocus.acquire()) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_audio_busy))) }
                 return
             }
             // **Asked of both meanings of "finished".** The engine knows when a backend stopped
@@ -3334,11 +3341,11 @@ class PlaybackController private constructor(private val context: Context) {
         val before = _state.value
         val cleared = PlaybackPlan(before.activePlayback, before.schedule).clear()
         if (cleared == null) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_queue_already_clear))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_queue_already_clear))) }
             return
         }
         invalidateQueueWork()
-        val notice = Message(context.getString(R.string.notice_queue_cleared), actionLabel = UNDO)
+        val notice = Message(localized.getString(R.string.notice_queue_cleared), actionLabel = UNDO)
         _state.update { it.copy(playback = cleared.after.context, schedule = cleared.after.schedule,
             message = notice.copy(action = { undoQueueClear(cleared, notice.id) })) }
         if (cleared.after.schedule.current == null) {
@@ -3361,7 +3368,7 @@ class PlaybackController private constructor(private val context: Context) {
             live.queue.tracks.map { it.id } != cleared.before.context.order.tracks.map { it.id }
         val restored = if (editorChanged) null else cleared.undo(PlaybackPlan(live.activePlayback, live.schedule))
         if (restored == null) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_queue_undo_expired))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_queue_undo_expired))) }
             return
         }
         invalidateQueueWork()
@@ -3385,11 +3392,11 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun enqueueTrack(ref: TrackRef, fromHistory: Boolean = false) {
         if (CatalogueRetention.blocksReference(ref.id)) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_amp_disabled))) }
+            _state.update { it.copy(message = Message(localized.getString(R.string.notice_amp_disabled))) }
             return
         }
         _state.update { it.copy(schedule = it.schedule.enqueue(ref, fromHistory),
-            message = Message(context.getString(R.string.notice_queued_track, ref.title))) }
+            message = Message(localized.getString(R.string.notice_queued_track, ref.title))) }
         prefetchUpcoming()
     }
 
@@ -3418,7 +3425,7 @@ class PlaybackController private constructor(private val context: Context) {
         val next = _state.updateAndGet { it.copy(schedule = it.schedule.remove(id)) }.schedule
         val token = requireNotNull(next.removal)
         if (current != null) advanceAfterRemoval()
-        val notice = Message(context.getString(R.string.notice_removed_one, token.request.track.title), actionLabel = UNDO)
+        val notice = Message(localized.getString(R.string.notice_removed_one, token.request.track.title), actionLabel = UNDO)
         _state.update { it.copy(message = notice.copy(action = {
             if (_state.value.message?.id == notice.id) {
                 _state.update { state -> state.copy(schedule = state.schedule.undo(token.id), message = null) }
@@ -3451,7 +3458,7 @@ class PlaybackController private constructor(private val context: Context) {
         val generation = now.schedule.generation
         _state.update { it.withPlayback(it.activePlayback.omit(id)) }
         if (!now.manualCurrent && id == active.currentEntryId) advanceAfterRemoval()
-        val notice = Message(context.getString(R.string.notice_removed_one, active.order.tracks[index].title), actionLabel = UNDO)
+        val notice = Message(localized.getString(R.string.notice_removed_one, active.order.tracks[index].title), actionLabel = UNDO)
         _state.update { it.copy(message = notice.copy(action = {
             _state.update { state ->
                 if (state.message?.id == notice.id && state.schedule.generation == generation)
@@ -3483,7 +3490,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (ref.id.startsWith("amp://") && !Amp.access.enabled) {
             stopPlayback()
             _state.update { it.copy(playing = false, loadingTrack = false,
-                message = Message(context.getString(R.string.notice_amp_disabled))) }
+                message = Message(localized.getString(R.string.notice_amp_disabled))) }
             return
         }
         sampleListening()
@@ -3511,7 +3518,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             if (bytes == null) {
                 val failure = if (ref.id.startsWith("amp://")) {
-                    context.getString(if (Amp.access.enabled) R.string.notice_amp_unavailable else R.string.notice_amp_disabled)
+                    localized.getString(if (Amp.access.enabled) R.string.notice_amp_unavailable else R.string.notice_amp_disabled)
                 } else describeFailure(ref, fetched = false)
                 _state.update { it.copy(message = Message(failure)) }
                 if (_state.value.randomMode && !_state.value.manualCurrent) skipFailedRandomPick()
@@ -3587,7 +3594,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update { it.copy(loadingTrack=false) }
             if (!audioFocus.acquire()) {
                 opened.close()
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
+                _state.update { it.copy(message = Message(localized.getString(R.string.notice_audio_busy))) }
                 return@launch
             }
             track = opened
@@ -3663,7 +3670,7 @@ class PlaybackController private constructor(private val context: Context) {
                     subsongCount = opened.subsongCount().coerceAtLeast(1),
                     durationSeconds = duration,
                     positionSeconds = 0.0,
-                    message = if (started) it.message else Message(context.getString(R.string.notice_audio_device_failed)),
+                    message = if (started) it.message else Message(localized.getString(R.string.notice_audio_device_failed)),
                 )
             }
             // Recorded with the name the tune calls itself rather than the filename it arrived

@@ -76,7 +76,6 @@ internal class LibraryDownloads(
          * built from -- it is one file, versioned, and the project that assembles it is the one
          * asking to be credited. GPL-2.0-or-later (`docs/LICENSES.md`).
          */
-        private const val TRACK_METADATA_LABEL = "Track metadata and lengths"
 
         /**
          * The songdb revision both files come from, **pinned** (`docs/PLAN_SONGDB_LENGTHS.md` D2).
@@ -106,12 +105,10 @@ internal class LibraryDownloads(
          * parsed into a shape somebody maintains. 142 KB, which is why this one download asks for
          * no warning about its size.
          */
-        private const val FAVOURITES_LABEL = "Modland favourites"
         private const val FAVOURITES_URL =
             "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/" +
                 "songdb/sources/site/modland_favourites.tsv"
 
-        private const val SONG_LENGTHS_LABEL = "SID song lengths"
     }
 
     /** The run of downloads the offer started, kept so that [cancelDownloads] has something to stop. */
@@ -261,7 +258,7 @@ internal class LibraryDownloads(
 
     /** HVSC's lengths, as one step. See [fetchCatalogue] for why the steps are shaped like this. */
     private suspend fun fetchSongLengths(): Fetched? {
-        if (!ui.begin(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return null
+        if (!ui.begin(DownloadKeys.SONG_LENGTHS, text.label(DownloadText.Label.SONG_LENGTHS))) return null
         val bytes = sources.fetchIndex(SONG_LENGTHS_URL)
         if (bytes == null) {
             ui.end(DownloadKeys.SONG_LENGTHS)
@@ -285,7 +282,7 @@ internal class LibraryDownloads(
 
     /** The songdb table, as one step. See [fetchCatalogue]. */
     private suspend fun fetchTrackMetadata(): Fetched? {
-        if (!ui.begin(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return null
+        if (!ui.begin(DownloadKeys.TRACK_METADATA, text.label(DownloadText.Label.TRACK_METADATA))) return null
         run {
             val bytes = sources.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
@@ -329,7 +326,7 @@ internal class LibraryDownloads(
 
     /** Modland's favourites, as one step. See [fetchCatalogue]. */
     private suspend fun fetchFavourites(): Fetched? {
-        if (!ui.begin(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return null
+        if (!ui.begin(DownloadKeys.FAVOURITES, text.label(DownloadText.Label.FAVOURITES))) return null
         val bytes = sources.fetchIndex(FAVOURITES_URL)
         if (bytes == null) {
             ui.end(DownloadKeys.FAVOURITES)

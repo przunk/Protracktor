@@ -537,6 +537,14 @@
     <string name="action_forget">Forget</string>
     <string name="browse_download_short">download</string>
     <string name="browse_update_short">update</string>
+    <string name="download_label_track_metadata">Track metadata and lengths</string>
+    <string name="download_label_favourites">Modland favourites</string>
+    <string name="download_label_song_lengths">SID song lengths</string>
+    <string name="download_label_atari_replays">Atari ST replay routines</string>
+    <string name="download_label_amiga_replays">Amiga replay routines</string>
+    <string name="playlist_default_export_name">playlist</string>
+    <string name="playlist_default_import_name">Imported</string>
+    <string name="share_subject_queue">Protracktor queue</string>
     <string name="notice_failed">Something went wrong (%1$s). The app carries on; try again.</string>
     <string name="notice_failed_storage">The app\'s data could not be read or written (%1$s). If the phone\'s storage is full, free some space and try again.</string>
     <string name="notice_scan_unreadable">“%1$s” could not be read: the folder is gone, or this app may no longer open it. Add it again to scan it.</string>

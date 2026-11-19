@@ -108,6 +108,23 @@ class LinkControllerTest {
         assertEquals(PlaybackService::class.java.name, shadow.nextStartedService?.component?.className)
     }
 
+    @Test fun `the player's notices are in the app's language, not the phone's (RV-B004)`() {
+        // The phone is English here; the app is set to Polish.
+        com.przunk.protracktor.AppLocale.select(app, com.przunk.protracktor.AppLanguage.POLISH)
+        try {
+            controller.openLink("https://przunk.github.io/Protracktor/src/#@@not-a-list@@")
+            shadowOf(Looper.getMainLooper()).idle()
+            val polish = com.przunk.protracktor.AppLocale.wrap(app).getString(com.przunk.protracktor.R.string.notice_link_unreadable)
+            org.junit.Assert.assertNotEquals(app.getString(com.przunk.protracktor.R.string.notice_link_unreadable), polish)
+            assertEquals(polish, controller.state.value.message?.text)
+            // And the banners' names (RV-B027).
+            assertEquals(com.przunk.protracktor.AppLocale.wrap(app).getString(com.przunk.protracktor.R.string.download_label_favourites),
+                AndroidDownloadText(app).label(DownloadText.Label.FAVOURITES))
+        } finally {
+            com.przunk.protracktor.AppLocale.select(app, com.przunk.protracktor.AppLanguage.SYSTEM)
+        }
+    }
+
     @Test fun `answered yes, the link's tunes become what plays`() {
         controller.openLink(link("https://server.invalid/x.mod", "https://server.invalid/y.mod"))
         shadowOf(Looper.getMainLooper()).idle()

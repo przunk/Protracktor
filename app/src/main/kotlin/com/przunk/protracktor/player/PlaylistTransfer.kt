@@ -17,7 +17,11 @@ internal class PlaylistTransfer(
     private val store: Store,
     private val files: Files,
     private val ui: Ui,
+    /** Names for a playlist that has none of its own, in the app's language (RV-B027). */
+    private val names: () -> Names = { Names("playlist", "Imported") },
 ) {
+    data class Names(val exported: String, val imported: String)
+
     data class ExportSelection(
         val activePlaylistId: Long,
         val tracks: List<TrackRef>,
@@ -70,7 +74,7 @@ internal class PlaylistTransfer(
                 ui.say(Notice.EmptyPlaylist)
                 return@launch
             }
-            val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
+            val label = current.playlists.firstOrNull { it.id == id }?.name ?: names().exported
             val name = label.replace(Regex("[^\\w -]"), "_")
             val bytes = withContext(Dispatchers.Default) {
                 PlaylistFile.write(label, tracks).toByteArray()
@@ -123,7 +127,7 @@ internal class PlaylistTransfer(
             val name = PlaylistFile.nameIn(text)
                 ?: files.labelOf(uri).substringAfterLast('/').substringAfterLast(':')
                     .substringBeforeLast('.')
-                    .ifBlank { "Imported" }
+                    .ifBlank { names().imported }
             val playlistId = store.createPlaylist(name)
             store.replaceTracks(playlistId, found)
 

@@ -7,7 +7,10 @@ import android.content.Context
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.CacheBudget
 
-internal class AndroidMaintenanceText(private val context: Context) : LibraryMaintenance.Text {
+internal class AndroidMaintenanceText(private val base: Context) : LibraryMaintenance.Text {
+    // In the app's language, not the phone's (RV-B004).
+    private val context: Context get() = com.przunk.protracktor.AppLocale.localized(base)
+
     override fun deleting(): String = context.getString(R.string.browse_deleting_short)
 
     override fun message(notice: LibraryMaintenance.Notice): Message = Message(when (notice) {

@@ -564,6 +564,14 @@
     <string name="action_forget">Zapomnij</string>
     <string name="browse_download_short">pobierz</string>
     <string name="browse_update_short">odśwież</string>
+    <string name="download_label_track_metadata">Metadane i długości utworów</string>
+    <string name="download_label_favourites">Ulubione Modlandu</string>
+    <string name="download_label_song_lengths">Długości utworów SID</string>
+    <string name="download_label_atari_replays">Procedury odtwarzania Atari ST</string>
+    <string name="download_label_amiga_replays">Procedury odtwarzania Amigi</string>
+    <string name="playlist_default_export_name">playlista</string>
+    <string name="playlist_default_import_name">Zaimportowana</string>
+    <string name="share_subject_queue">Kolejka z Protracktora</string>
     <string name="notice_failed">Coś poszło nie tak (%1$s). Aplikacja działa dalej; spróbuj ponownie.</string>
     <string name="notice_failed_storage">Nie udało się odczytać ani zapisać danych aplikacji (%1$s). Jeśli pamięć telefonu jest pełna, zwolnij trochę miejsca i spróbuj ponownie.</string>
     <string name="notice_scan_unreadable">Nie da się odczytać folderu „%1$s”: zniknął albo aplikacja nie ma już do niego dostępu. Dodaj go ponownie, aby go przeskanować.</string>

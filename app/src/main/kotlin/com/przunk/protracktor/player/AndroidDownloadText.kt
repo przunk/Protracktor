@@ -6,11 +6,19 @@ package com.przunk.protracktor.player
 import android.content.Context
 import com.przunk.protracktor.R
 
-internal class AndroidDownloadText(private val context: Context) : DownloadText {
+internal class AndroidDownloadText(private val base: Context) : DownloadText {
+    // In the app's language, not the phone's (RV-B004).
+    private val context: Context get() = com.przunk.protracktor.AppLocale.localized(base)
+
     override fun label(label: DownloadText.Label): String = context.getString(when (label) {
         DownloadText.Label.SONG_METADATA -> R.string.song_metadata_title
         DownloadText.Label.ALL_RUNNING -> R.string.download_all_running
         DownloadText.Label.REPLAY_ROUTINES -> R.string.replay_routines_title
+        DownloadText.Label.TRACK_METADATA -> R.string.download_label_track_metadata
+        DownloadText.Label.FAVOURITES -> R.string.download_label_favourites
+        DownloadText.Label.SONG_LENGTHS -> R.string.download_label_song_lengths
+        DownloadText.Label.ATARI_REPLAYS -> R.string.download_label_atari_replays
+        DownloadText.Label.AMIGA_REPLAYS -> R.string.download_label_amiga_replays
     })
 
     override fun message(notice: DownloadNotice): Message = Message(when (notice) {
