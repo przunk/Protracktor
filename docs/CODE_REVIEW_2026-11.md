@@ -618,6 +618,13 @@ None found.
 - Trigger: the disk is full on the first start after an update.
 - Impact: Atari ST or Amiga formats stay broken until the next version, with nothing said.
 - Direction: write the marker only when every copy succeeded.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** one `NativeData.unpack` rebuilds both sc68's and
+  UADE's trees and writes the version marker only when the copy reports every file written;
+  `copyAssetTree` now tells an empty directory (cannot be opened, fine) from a file that could not
+  be written (a failure). Unmarked, the next start unpacks again. Checked: `NativeDataUnpackTest` (a
+  failed copy leaves no marker, a complete one is marked, a rebuild replaces), failing with the
+  marker written regardless. Partially checked: that a real asset copy reports a write failure is
+  from reading. Not checked: the phone.
 
 ### RV-B018 — The offline renderer hands out a description the engine has not converted
 - Severity: Low · Likelihood: plausible · Evidence: unverified
