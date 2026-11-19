@@ -708,6 +708,11 @@ None found.
   (Select all / none).
 - Mechanism: the project rule is an icon with its name for every action outside a dialogue's
   confirm and cancel. The selection bar is the example the rule itself gives.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** Scan folder, Add selected and Select all / none are
+  `LabelledAction`s (slim), an icon with the name. Checked: Browse's tests pass; the labels are on
+  screen. Partially checked: that each now carries an icon is from reading the code -- the icons
+  have no semantics a host test could find. Not checked: the phone (how the selection bar fits on a
+  narrow screen).
 
 ### RV-B031 — Two additions to another playlist at once can lose one
 - Severity: Low · Likelihood: rare · Evidence: unverified
@@ -776,6 +781,14 @@ None found.
   buttons inside a text field, and dialogue buttons.
 - Forgetting a folder is also the only removal that happens on one tap with no confirmation and
   no undo; it costs a rescan, not data (the playlists keep their tunes).
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the selection bar's other-playlist action shows
+  "Add" under its icon and keeps the whole name for TalkBack; forgetting a folder and deleting
+  stored data show "Forget" and "Delete" under the icon; a catalogue's download or update arrow
+  carries its word under it, in the box the spinner and its word already use (new `action_forget`,
+  `browse_download_short`, `browse_update_short`, PL and EN). **Left as they are:** the History page
+  arrows and the dock's +, both icon-only by my own earlier choice. Checked: `BrowseSelectionUiTest`
+  (the short label on screen, the full name for TalkBack), failing with the label emptied. Not
+  checked: the phone.
 
 ### RV-B039 — A scrollbar drag can stop by itself in a list of unequal rows
 - Severity: Low · Likelihood: plausible · Evidence: unverified — inferred from the code; the

@@ -89,6 +89,14 @@ class BrowseSelectionUiTest {
         compose.onNodeWithText(label).performClick(); compose.waitForIdle()
         assertEquals(listOf(tracks[0], tracks[2]), added); assertEquals(0, played); assertEquals(0, count())
     }
+    @Test fun `the selection bar's actions are named on screen, and the short one whole for TalkBack (RV-B030, RV-B038)`() {
+        hold(0)
+        val app = activity.get()
+        // "Add" to another playlist used to be an icon alone; now its word is on screen too.
+        compose.onNodeWithText(app.getString(R.string.np_short_add), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription(app.getString(R.string.action_add_to_playlist)).assertIsDisplayed().performClick()
+    }
+
     @Test fun `Select all and none and first Back only leave selection`() {
         hold(1)
         compose.onNodeWithText("Select all").performClick(); compose.onNodeWithText(selected(3)).assertIsDisplayed()

@@ -3,6 +3,9 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -202,9 +205,15 @@ private fun StorageRow(title: String, detail: String, onDelete: () -> Unit) {
         headlineContent = { Text(title) },
         supportingContent = { Text(detail, style = MaterialTheme.typography.bodySmall) },
         trailingContent = {
-            IconButton(onClick = onDelete) {
-                Icon(PlayerIcons.Remove, stringResource(R.string.a11y_delete_storage, title))
-            }
+            // Named on screen as well as for TalkBack (RV-B038).
+            val said = stringResource(R.string.a11y_delete_storage, title)
+            LabelledAction(
+                icon = PlayerIcons.Remove,
+                label = stringResource(R.string.action_delete),
+                onClick = onDelete,
+                modifier = Modifier.semantics { contentDescription = said },
+                slim = true,
+            )
         },
     )
 }

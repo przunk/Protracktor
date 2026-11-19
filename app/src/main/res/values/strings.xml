@@ -534,6 +534,9 @@
         <item quantity="one">This link names %1$,d tune that is not from a known catalogue, at %2$s. Playing it downloads the file and opens it. Play it only if you trust whoever sent the link.</item>
         <item quantity="other">This link names %1$,d tunes that are not from a known catalogue, at %2$s. Playing them downloads the files and opens them. Play them only if you trust whoever sent the link.</item>
     </plurals>
+    <string name="action_forget">Forget</string>
+    <string name="browse_download_short">download</string>
+    <string name="browse_update_short">update</string>
     <string name="notice_failed">Something went wrong (%1$s). The app carries on; try again.</string>
     <string name="notice_failed_storage">The app\'s data could not be read or written (%1$s). If the phone\'s storage is full, free some space and try again.</string>
     <string name="notice_scan_unreadable">“%1$s” could not be read: the folder is gone, or this app may no longer open it. Add it again to scan it.</string>
