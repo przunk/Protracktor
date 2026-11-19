@@ -644,6 +644,9 @@ None found.
   only playable ones.
 - Impact: the chip shows a larger number than Random draws from — the mismatch the function's own
   comment warns against.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the count joins only `playable = 1` rows, the set
+  Random draws from. Checked: `FavouriteCountTest` (two favourites, one in a format this build
+  cannot play: counted 1), failing with the condition removed. Not checked: the phone.
 
 ### RV-B021 — The total beside search results ignores the platform filter for local files
 - Severity: Low · Likelihood: rare · Evidence: unverified
