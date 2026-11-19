@@ -819,6 +819,14 @@ None found.
 - Impact: backspacing through the address to type another one puts the whole default back at the
   last character. Selecting everything and typing over it works.
 - Direction: keep the typed text in the field and save on Done or on leaving it.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the field is no longer re-keyed on the stored
+  value; when that changes, `WebPlayerField.shown` keeps what was typed if the stored value is its
+  echo (the same text, or the fallback for an empty field) and shows anything else, which is a
+  pairing; an empty field shows the address used instead as its placeholder. Checked:
+  `WebPlayerFieldTest` (emptied stays empty, typing stays, a pairing replaces), failing with the
+  rule reduced to the stored value. Partially checked: the wiring in Settings is from reading -- a
+  text field's cursor keeps the host harness from settling, so it is not driven in a test. Not
+  checked: the phone.
 
 ## 5. Observations
 

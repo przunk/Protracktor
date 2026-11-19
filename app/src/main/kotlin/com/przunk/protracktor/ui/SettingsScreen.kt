@@ -21,6 +21,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -386,9 +387,10 @@ fun SettingsScreen(
         // It changes as the page moves -- a local server today, a tunnel next, a host eventually --
         // which is exactly why it is stored rather than compiled in (`docs/PLAN_HANDOFF.md` §3).
         item {
-            // Keyed on the stored value, so an address that arrives from a pairing shows up here
-            // instead of the field sitting on a stale copy of what it was built with.
-            var editing by remember(webPlayer) { mutableStateOf(webPlayer) }
+            // An address that arrives from a pairing shows up here instead of the field sitting on
+            // a stale copy -- but what was just typed is not replaced (RV-B040): see WebPlayerField.
+            var editing by remember { mutableStateOf(webPlayer) }
+            LaunchedEffect(webPlayer) { editing = WebPlayerField.shown(editing, webPlayer) }
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_web_player)) },
                 supportingContent = {
@@ -404,6 +406,8 @@ fun SettingsScreen(
                             // from. A half-typed address costs nothing, because it is read when
                             // something is sent and not before.
                             onValueChange = { editing = it; onWebPlayerChanged(it) },
+                            // Emptied, the field says which address is used instead.
+                            placeholder = { Text(webPlayer) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -554,4 +558,18 @@ private fun Section(label: Int) {
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
     )
+}
+
+/**
+ * What the web player's address field shows when the stored address changes (RV-B040).
+ *
+ * The field saves on every keystroke, and an empty value is stored as "no address of my own", which
+ * reads back as the paired or default address. Keyed on the stored value, the field was then refilled
+ * with that address the moment its last character was deleted, so it could never be emptied. What
+ * was typed stays when the stored value is its echo -- the same text, or the fallback for an empty
+ * field; anything else came from elsewhere (a pairing) and is shown.
+ */
+internal object WebPlayerField {
+    fun shown(editing: String, stored: String): String =
+        if (editing.isBlank() || editing.trim() == stored) editing else stored
 }
