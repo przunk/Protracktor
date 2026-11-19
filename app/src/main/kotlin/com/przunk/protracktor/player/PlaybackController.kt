@@ -535,7 +535,7 @@ class PlaybackController private constructor(private val context: Context) {
 
         override suspend fun searchLive(query: String) = ModArchive.search(query)
 
-        override suspend fun countLocal(query: String) = libraryIndex.countMatches(query)
+        override suspend fun countLocal(query: String, platforms: Set<String>) = libraryIndex.countMatches(query, platforms)
 
         override suspend fun countCatalogues(query: String, ids: Set<String>, platforms: Set<String>) =
             catalogues.countMatches(query, ids, platforms)

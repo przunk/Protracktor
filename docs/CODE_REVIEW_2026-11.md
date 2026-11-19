@@ -652,6 +652,11 @@ None found.
 - Severity: Low · Likelihood: rare · Evidence: unverified
 - Where: `data/LibraryIndexStore.kt:195` (`countMatches(query)` has no platform argument, while
   `search` filters by platform). The comment at `:223` says the query has no limit; it has one.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** `countMatches` takes the platforms and, with a
+  filter on, counts the matching names by the same file-name rule `search` applies; the search
+  passes the filter through. The comment that said the query had no limit now says what the limit
+  is. Checked: `LocalCountPlatformTest` (three files on two platforms: 3 unfiltered, 2 under C64,
+  equal to what `search` returns), failing with the filter ignored. Not checked: the phone.
 
 ### RV-B022 — Tracks removed from every playlist still come up in search
 - Severity: Low · Likelihood: common · Evidence: unverified

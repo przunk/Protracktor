@@ -192,12 +192,27 @@ class LibraryIndexStore(context: Context) {
      */
     private val PLATFORM_SCAN_FACTOR = 5
 
-    suspend fun countMatches(query: String): Int = withContext(Dispatchers.IO) {
+    /**
+     * How many local files match [query] -- **under the same platform filter as [search]**
+     * (RV-B021), or the total beside the results counts files the filter hides. The filter is the
+     * file-name rule [search] applies, so with one on the names are walked here as they are there.
+     */
+    suspend fun countMatches(query: String, platforms: Set<String> = emptySet()): Int = withContext(Dispatchers.IO) {
         val words = SearchTerms.sqlFor(query, "title", "file_name", "author", sparse = "folded")
+        if (platforms.isEmpty()) {
+            return@withContext helper.readableDatabase.rawQuery(
+                "SELECT COUNT(*) FROM library_index WHERE ${words.first}",
+                words.second,
+            ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+        }
         helper.readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM library_index WHERE ${words.first}",
+            "SELECT file_name FROM library_index WHERE ${words.first}",
             words.second,
-        ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+        ).use { row ->
+            var count = 0
+            while (row.moveToNext()) if (Platforms.matches(row.getString(0), platforms)) count++
+            count
+        }
     }
 
     /**
@@ -220,8 +235,9 @@ class LibraryIndexStore(context: Context) {
         helper.readableDatabase.rawQuery(
             "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
                 "WHERE ${words.first} ORDER BY title LIMIT ?",
-            // No SQL limit: the platform filter runs below, and a limit applied first would cut
-            // rows the filter was going to keep. The loop stops itself once it has enough.
+            // A generous limit rather than the wanted count: the platform filter runs below, and the
+            // wanted count applied first would cut rows the filter was going to keep. The loop stops
+            // itself once it has enough.
             words.second + arrayOf((limit * PLATFORM_SCAN_FACTOR).toString()),
         ).use { row ->
             buildList {

@@ -52,7 +52,7 @@ class LibrarySearchTest {
             return live
         }
 
-        override suspend fun countLocal(query: String): Int {
+        override suspend fun countLocal(query: String, platforms: Set<String>): Int {
             calls += "count-local:$query"
             return localCount
         }
