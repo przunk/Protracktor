@@ -804,6 +804,11 @@ None found.
 - Impact: the list stops following the finger; the thumb and its bubble stay where they were until
   the next touch.
 - Direction: key the handler on nothing and read the counts through `rememberUpdatedState`.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** the drag handler is keyed on nothing and reads the
+  list's last start row through `rememberUpdatedState`. Checked: `ScrollbarBubbleTest` drags in six
+  steps through rows of two heights; with the old keys the list stopped after the third step
+  (positions 361, 561, 762, 762, 762, 762), which reproduces the defect, and with the fix every step
+  moves it on. Not checked: the phone.
 
 ### RV-B040 — The web player address cannot be emptied
 - Severity: Low · Likelihood: plausible · Evidence: unverified
