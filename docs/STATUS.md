@@ -17,6 +17,17 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C144 In landscape the list cannot be scrolled to its end: the dock covers it — open, reported 2026-11-19
+
+Reported by Ben (AMP) on 2026-11-19 after a couple of days with the app on a Fairphone 5: turned to
+landscape, the list of tunes can no longer be scrolled down, because what is left of it sits behind
+the seek bar and the playing tune's card. **Not reproduced here; mechanism not yet read in the
+code.** The likely shape is that the dock keeps its portrait height while the screen's height
+shrinks to about a third, so the list gets little or no room; whether the list's bottom padding
+follows the dock's height in landscape is the first thing to check. Possible directions, to choose
+from once the mechanism is known: the dock collapsed by default in landscape, or a layout that puts
+the dock beside the list.
+
 ## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — fixed 2026-11-15
 
 Seen on the store screenshots I took on 2026-11-15 (APK 1594): in the playlist a Mod Archive tune's

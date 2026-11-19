@@ -10,6 +10,26 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B70. AMP's own knowledge through its API: the right replay timing, and the real authors — open, raised 2026-11-19
+
+Raised by Ben (AMP) on 2026-11-19, with two problems the daily module map cannot solve:
+
+- **CIA or VBL timing.** A few Protracker modules -- under one percent of AMP's -- were written for
+  VBL timing and play far too slowly under CIA, which is what the app uses. The file cannot say
+  which it is; AMP measures both durations with its own tool, listens where they differ, and records
+  the right replay per module. Ben's own Komeplipop is the example he offered: the version under
+  S/Superbee runs over 14 minutes with CIA and about 6 with VBL, and the later Komeplipop-5.0 under
+  M/Monty was rewritten for CIA. The right replay is part of a module's details in AMP's API.
+- **Authors.** AMP's folders are only where the download routine finds a file; the module's number
+  is its identity, and who wrote it -- including co-authors -- lives in AMP's database. Taking the
+  author from the folder files some modules under the wrong artist, splits one artist across several
+  folders, and never shows co-authors. Ben suggests remapping by the authors listed in the catalogue
+  file, which could be heavy for a phone, and recommends the API.
+
+Both, and AMP on the website, point to the same piece of work: reading AMP's API. Open questions
+before any of it: what access the API allows an app (keys, limits), whether UADE or libopenmpt can be
+told to use VBL timing for one file, and whether the per-module details can be fetched in bulk.
+
 ## B69. Now Playing's actions in one scrolling row — merged into develop 2026-11-15
 
 Raised 2026-11-14 before new store screenshots: the actions in Now Playing were too large for the
