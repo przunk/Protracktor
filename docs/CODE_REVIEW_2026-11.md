@@ -501,6 +501,11 @@ None found.
 - Direction: a buffer per call. The lookup also does file I/O on the main thread for every AMP
   play, which a suspend function would move.
 - Already known: no.
+- **Fixed on `fix/review-2026-11`, 2026-11-19:** each lookup reads into its own 1 KB buffer.
+  **Left:** the lookup still does file I/O on the caller's thread, the main one when a tune is
+  played -- a suspend function is a wider change of its callers. Checked: `AmpModuleIdsTest` --
+  eight threads, 12,000 lookups in all: with the shared buffer 10,527 answers were wrong, which
+  reproduces the defect, with a buffer per call none. Not checked: the phone.
 
 ### RV-B014 — A database error in most write and read paths ends the app
 - Severity: Medium · Likelihood: rare · Evidence: unverified (reading)

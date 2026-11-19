@@ -52,4 +52,23 @@ class AmpModuleIdsTest {
         assertTrue(ids.write(listOf("0-9/708/XM.Serenity.gz" to 14L, "0-9/708/XM.Serenity.gz" to 120610L)))
         assertEquals(14L, ids.idFor("0-9/708/XM.Serenity.gz"))
     }
+
+    @Test fun `lookups at once on several threads each get their own answer (RV-B013)`() {
+        val ids = table()
+        val pairs = (1..5_000).map { "A/Author ${it % 97}/MOD.tune-number-$it-with-a-longer-name.gz" to it.toLong() }
+        assertTrue(ids.write(pairs))
+        val wrong = java.util.concurrent.atomic.AtomicInteger()
+        val threads = (0 until 8).map { t ->
+            Thread {
+                val random = java.util.Random(t.toLong())
+                repeat(1_500) {
+                    val (path, id) = pairs[random.nextInt(pairs.size)]
+                    if (ids.idFor(path) != id) wrong.incrementAndGet()
+                }
+            }
+        }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+        org.junit.Assert.assertEquals(0, wrong.get())
+    }
 }
