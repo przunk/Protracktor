@@ -17,7 +17,7 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C144 In landscape the list cannot be scrolled to its end: the dock covers it — open, reported 2026-11-19
+## C144 In landscape the list cannot be scrolled to its end: the dock covers it — fixed on a branch 2026-11-19
 
 Reported by Ben (AMP) on 2026-11-19 after a couple of days with the app on a Fairphone 5: turned to
 landscape, the list of tunes can no longer be scrolled down, because what is left of it sits behind
@@ -27,6 +27,20 @@ shrinks to about a third, so the list gets little or no room; whether the list's
 follows the dock's height in landscape is the first thing to check. Possible directions, to choose
 from once the mechanism is known: the dock collapsed by default in landscape, or a layout that puts
 the dock beside the list.
+
+**Mechanism, reproduced in a test:** the dock keeps its portrait height on a phone on its side. In
+`LandscapeShellTest` (the real shell at 800 × 360 dp) the expanded dock and the navigation bar took
+250 dp of the 360, the dock's top at 110 dp, so under the playlist header the list had a few dozen
+dp left.
+
+**Fixed on `fix/c144-landscape-dock`, 2026-11-19:** below 480 dp of height the dock starts
+collapsed; it can still be expanded, for that time only, and the form chosen for the upright phone
+is not overwritten. In the test the dock's top is now at 232 dp: the header and at least two rows
+fit above it. **Checked:** `LandscapeShellTest` (failing before the fix at 110 dp; expanding still
+works and leaves the stored form as it was), `DockCollapseUiTest`, `DockShellUiTest`. **Not
+checked:** the phone, and Ben's Fairphone 5. **Left:** the navigation bar keeps its 80 dp on its side
+too; a navigation rail beside the list would give more room and is a larger change.
+
 
 ## C143 Tunes from The Mod Archive read "MOD · MOD" and show a download address — fixed 2026-11-15
 

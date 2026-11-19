@@ -47,15 +47,19 @@ abstract class PlaybackShellTest {
     protected val browse get() = ReflectionHelpers.getField<MutableStateFlow<BrowseState>>(controller, "_browse")
     protected val tune = TrackRef("content://navigation.test/current.mod", "Current tune", author = "Known author")
 
+    /** The window in pixels, portrait unless a test class says otherwise (C144). */
+    protected open val windowPx: Pair<Int, Int> = 720 to 1600
+
     @Before fun startShell() {
         Appearance.selectCacheAhead(application, CacheAhead.OFF)
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
         controller = PlaybackController.get(application)
         activity.get().setContent { MaterialTheme { ProtracktorApp(viewModel = PlayerViewModel(application)) } }
         val view = activity.get().window.decorView
-        view.measure(View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY))
-        view.layout(0, 0, 720, 1600)
+        val (width, height) = windowPx
+        view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+        view.layout(0, 0, width, height)
         compose.waitUntil(10_000) {
             shadowOf(Looper.getMainLooper()).idle()
             controller.state.value.restored && controller.browse.value.knowsWhatIsHeld
