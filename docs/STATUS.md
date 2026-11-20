@@ -17,6 +17,15 @@ versionCode is the source commit count; later documentation commits do not relab
 Production-access reapplication submitted 2026-10-26 at 21:06; reviewed 2026-10-27 at 23:08, as displayed by Play Console. Google requires an additional 14 days of closed testing with real testers before applying again.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C145 A web page check failed once: an obsolete refusal and a newer Browse visit — open, seen 2026-11-20
+
+In the full suite run after `clean` on `fix/recent-search-test-signature`, the page check "an obsolete
+destination refusal cannot replace feedback in a newer Browse visit" failed once; three page runs
+straight after (1431 of 1431 each) and the next full suite passed. No web code had changed. The log
+of the failing run is `/tmp/protracktor-Protracktor-page.log` from that run (not kept); the failure
+message was not captured beyond the check's name. **Not investigated:** the mechanism. Like C139,
+C141 and C142, an intermittent test; the next step is to make the check say what it saw.
+
 ## C144 In landscape the list cannot be scrolled to its end: the dock covers it — fixed 2026-11-19, merged 2026-11-20
 
 Reported by Ben (AMP) on 2026-11-19 after a couple of days with the app on a Fairphone 5: turned to
